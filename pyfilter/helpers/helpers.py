@@ -24,12 +24,22 @@ def choose(array, indices):
     :param indices:
     :return:
     """
-    if array.ndim > indices.ndim:
-        row_mask = np.arange(array.shape[1])[:, None]
-        return array[:, row_mask, indices]
 
-    row_mask = np.arange(array.shape[0])[:, None]
-    return array[row_mask, indices]
+    if isinstance(array, list):
+        out = list()
+        for it in array:
+            out.append(choose(it, indices))
+
+        return out
+
+    return array[indices]
+
+    # if array.ndim > indices.ndim:
+    #     row_mask = np.arange(array.shape[1])[:, None]
+    #     return array[:, row_mask, indices]
+    #
+    # row_mask = np.arange(array.shape[0])[:, None]
+    # return array[row_mask, indices]
 
 
 def solve_quadratic(a, b, c):

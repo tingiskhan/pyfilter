@@ -1,22 +1,26 @@
 import pandas as pd
 import numpy as np
+import pyfilter.helpers.normalization as norm
 
 
 class BaseFilter(object):
-    def __init__(self, model, parameters, particles, *args, **kwargs):
+    def __init__(self, model, particles, *args, **kwargs):
         """
-        Implements the base functionality of a particle filter
-        :param model:
+        Implements the base functionality of a particle filter.
+        :param model: The state-space model to filter
+        :type model: pyfilter.model.StateSpaceModel
         :param parameters:
         :param args:
         :param kwargs:
         """
         self._model = model
-        self.parameters = parameters
         self._particles = particles
 
         self._old_y = None
         self._old_x = None
+
+        self.s_x = list()
+        self.s_w = list()
 
     def initialize(self):
         """
@@ -24,7 +28,9 @@ class BaseFilter(object):
         :return:
         """
 
-        self._old_x = self._model.sample_initial(self.parameters)
+        self._old_x = self._model.initialize(self._particles)
+
+        return self
 
     def filter(self, y):
         """
@@ -51,3 +57,16 @@ class BaseFilter(object):
             self.filter(data[i])
 
         return self
+
+    def filtermeans(self):
+        """
+        Calculates the filter means and returns a timeseries.
+        :return:
+        """
+
+        w = np.array(self.s_w)
+        x = np.array(self.s_x)
+
+        normalized = norm.normalize(w)
+
+        return np.average(x, axis=-1, weights=normalized[:, None, :])
