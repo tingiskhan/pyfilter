@@ -78,6 +78,6 @@ class Tests(unittest.TestCase):
     def test_Weight2D(self):
         sample = self.linear.i_sample(size=(500, 200))
 
-        obs = 0
+        obs = 1
 
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
