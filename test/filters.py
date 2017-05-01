@@ -2,8 +2,9 @@ from pyfilter.model import StateSpaceModel
 import pyfilter.timeseries.meta as ts
 import unittest
 import scipy.stats as stats
-import matplotlib.pyplot as plt
 import pyfilter.filters.bootstrap as sisr
+import pykalman
+import numpy as np
 
 
 def f(x, alpha, sigma):
@@ -46,7 +47,7 @@ class Tests(unittest.TestCase):
 
         x, y = self.model.sample(500)
 
-        filt = sisr.Bootstrap(self.model, 1000).initialize()
+        filt = sisr.Bootstrap(self.model, 5000).initialize()
 
         filt = filt.longfilter(y)
 
@@ -54,9 +55,9 @@ class Tests(unittest.TestCase):
 
         estimates = filt.filtermeans()
 
-        fig, ax = plt.subplots()
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        filterestimates = kf.filter(y)
 
-        ax.plot(x)
-        ax.plot(estimates)
+        maxerr = np.abs(estimates - filterestimates[0]).max()
 
-        plt.show()
+        assert maxerr < 0.5
