@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Base(object):
     def __init__(self, initial, funcs, theta, noise, q=None):
         """
@@ -63,4 +66,43 @@ class Base(object):
         :return:
         """
 
-        return self.noise(y, loc=self.mean(x), scale=self.scale(x))
+        return self.noise.logpdf(y, loc=self.mean(x), scale=self.scale(x))
+
+    def i_sample(self, size=None, **kwargs):
+        """
+        Samples from the initial distribution.
+        :param size: The number of samples
+        :param kwargs: kwargs passed to the noise class
+        :return:
+        """
+
+        return self.noise0.rvs(loc=self.i_mean(), scale=self.i_scale(), size=size, **kwargs)
+
+    def propagate(self, x, **kwargs):
+        """
+        Propagates the model forward conditional on the previous state and current parameters.
+        :param x: The previous states
+        :param kwargs: kwargs passed to the noise class
+        :return:
+        """
+
+        return self.noise.rvs(loc=self.mean(x), scale=self.scale(x), **kwargs)
+
+    def sample(self, steps, samples=None, **kwargs):
+        """
+        Samples an entire trajectory from the model.
+        :param steps: The number of steps
+        :type steps: int
+        :param samples: Number of sample paths.
+        :type samples: int
+        :param kwargs:
+        :return:
+        """
+
+        out = list()
+        out.append(self.i_sample(size=samples, **kwargs))
+
+        for i in range(1, steps):
+            out.append(self.propagate(out[i-1], **kwargs))
+
+        return np.array(out)
