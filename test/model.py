@@ -3,6 +3,7 @@ import pyfilter.timeseries.meta as ts
 import unittest
 import scipy.stats as stats
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def f(x, alpha, sigma):
@@ -31,7 +32,7 @@ def go(x, alpha, sigma):
 
 class Tests(unittest.TestCase):
     linear = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
-    linearobs = ts.Base((f0, g0), (fo, go), (1, 1), (stats.norm, stats.norm))
+    linearobs = ts.Base((f0, g0), (fo, go), (1, 0.1), (stats.norm, stats.norm))
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeModel1D(self):
@@ -62,3 +63,16 @@ class Tests(unittest.TestCase):
 
         assert np.allclose(w, truew)
 
+    def test_Sample(self):
+        x, y = self.model.sample(50)
+
+        assert len(x) == 50 and len(y) == 50
+
+        fig, ax = plt.subplots(ncols=2)
+
+        ax[0].plot(x)
+        ax[1].plot(y)
+
+        ax[0].set_title('Should look roughly the same')
+
+        plt.show()

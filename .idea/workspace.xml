@@ -2,9 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="90f4655b-1776-4a2a-8d05-ed99de4a44ce" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/test/model.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/test/filters.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/filters/base.py" afterPath="$PROJECT_DIR$/pyfilter/filters/base.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/filters/bootstrap.py" afterPath="$PROJECT_DIR$/pyfilter/filters/bootstrap.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/helpers/helpers.py" afterPath="$PROJECT_DIR$/pyfilter/helpers/helpers.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/model.py" afterPath="$PROJECT_DIR$/pyfilter/model.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/model.py" afterPath="$PROJECT_DIR$/test/model.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -19,21 +23,23 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="model.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
+      <file leaf-file-name="filters.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/test/filters.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="816">
-              <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
-              <folding />
+            <state relative-caret-position="725">
+              <caret line="46" column="0" lean-forward="true" selection-start-line="46" selection-start-column="0" selection-end-line="46" selection-end-column="0" />
+              <folding>
+                <element signature="e#0#42#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="meta.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
+      <file leaf-file-name="model.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="162">
-              <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
+            <state relative-caret-position="572">
+              <caret line="60" column="29" lean-forward="true" selection-start-line="60" selection-start-column="29" selection-end-line="60" selection-end-column="29" />
               <folding />
             </state>
           </provider>
@@ -42,8 +48,8 @@
       <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/test/model.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="759">
-              <caret line="62" column="0" lean-forward="false" selection-start-line="62" selection-start-column="0" selection-end-line="62" selection-end-column="0" />
+            <state relative-caret-position="1258">
+              <caret line="74" column="0" lean-forward="true" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
               <folding>
                 <element signature="e#0#42#0" expanded="true" />
               </folding>
@@ -75,17 +81,18 @@
         <option value="$PROJECT_DIR$/pyfilter/timeseries.py" />
         <option value="$PROJECT_DIR$/pyfilter/distributions.py" />
         <option value="$PROJECT_DIR$/pyfilter/filters.py" />
-        <option value="$PROJECT_DIR$/pyfilter/filters/base.py" />
         <option value="$PROJECT_DIR$/pyfilter/helpers/resampling.py" />
-        <option value="$PROJECT_DIR$/pyfilter/filters/bootstrap.py" />
         <option value="$PROJECT_DIR$/test/distributions.py" />
         <option value="$PROJECT_DIR$/pyfilter/parameters.py" />
         <option value="$PROJECT_DIR$/pyfilter/distributions/timeseries.py" />
-        <option value="$PROJECT_DIR$/pyfilter/helpers/helpers.py" />
         <option value="$PROJECT_DIR$/shit.py" />
         <option value="$PROJECT_DIR$/pyfilter/distributions/continuous.py" />
         <option value="$PROJECT_DIR$/pyfilter/timeseries/meta.py" />
         <option value="$PROJECT_DIR$/test/timeseries.py" />
+        <option value="$PROJECT_DIR$/pyfilter/helpers/helpers.py" />
+        <option value="$PROJECT_DIR$/pyfilter/filters/base.py" />
+        <option value="$PROJECT_DIR$/pyfilter/filters/bootstrap.py" />
+        <option value="$PROJECT_DIR$/test/filters.py" />
         <option value="$PROJECT_DIR$/pyfilter/model.py" />
         <option value="$PROJECT_DIR$/test/model.py" />
       </list>
@@ -185,43 +192,7 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="helpers" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="filters" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="pyfilter" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="distributions" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -242,8 +213,8 @@
       <recent name="C:\Users\victo\Desktop\pyfilter\pyfilter\distributions" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Nosetest Tests.test_Weight">
-    <configuration default="false" name="Nosetest Tests.test_InitializeModel" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python tests.Nosetest Tests.test_Sample">
+    <configuration default="false" name="Nosetests in timeseries" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs />
@@ -253,28 +224,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/model.py" />
-      <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_InitializeModel" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_METHOD" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="Nosetests in model" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/model.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/timeseries.py" />
       <option name="CLASS_NAME" value="" />
       <option name="METHOD_NAME" value="" />
       <option name="FOLDER_NAME" value="" />
@@ -285,7 +235,7 @@
       <option name="USE_PARAM" value="false" />
       <method />
     </configuration>
-    <configuration default="false" name="Nosetest Tests.test_Propagate" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+    <configuration default="false" name="Nosetest Tests.test_Filter" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs />
@@ -295,9 +245,9 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/model.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
       <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_Propagate" />
+      <option name="METHOD_NAME" value="test_Filter" />
       <option name="FOLDER_NAME" value="" />
       <option name="TEST_TYPE" value="TEST_METHOD" />
       <option name="PATTERN" value="" />
@@ -306,7 +256,7 @@
       <option name="USE_PARAM" value="false" />
       <method />
     </configuration>
-    <configuration default="false" name="Nosetest Tests.test_InitializeModel1D" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+    <configuration default="false" name="Nosetest Tests.test_WeightFilter" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs />
@@ -316,9 +266,9 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/model.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
       <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_InitializeModel1D" />
+      <option name="METHOD_NAME" value="test_WeightFilter" />
       <option name="FOLDER_NAME" value="" />
       <option name="TEST_TYPE" value="TEST_METHOD" />
       <option name="PATTERN" value="" />
@@ -327,7 +277,28 @@
       <option name="USE_PARAM" value="false" />
       <method />
     </configuration>
-    <configuration default="false" name="Nosetest Tests.test_Weight" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+    <configuration default="false" name="Nosetest Tests.test_WeightFilter (1)" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="pyfilter" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
+      <option name="CLASS_NAME" value="Tests" />
+      <option name="METHOD_NAME" value="test_WeightFilter" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_METHOD" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Nosetest Tests.test_Sample" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs />
@@ -339,7 +310,7 @@
       <module name="pyfilter" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/model.py" />
       <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_Weight" />
+      <option name="METHOD_NAME" value="test_Sample" />
       <option name="FOLDER_NAME" value="" />
       <option name="TEST_TYPE" value="TEST_METHOD" />
       <option name="PATTERN" value="" />
@@ -483,24 +454,27 @@
       <method />
     </configuration>
     <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_InitializeModel" />
-      <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetests in model" />
-      <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Propagate" />
-      <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_InitializeModel1D" />
-      <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Weight" />
+      <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetests in timeseries" />
+      <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Filter" />
+      <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter" />
+      <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter (1)" />
+      <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Sample" />
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Weight" />
-        <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_InitializeModel1D" />
-        <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Propagate" />
-        <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_InitializeModel" />
-        <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetests in model" />
+        <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Sample" />
+        <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter" />
+        <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter (1)" />
+        <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Filter" />
+        <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetests in timeseries" />
       </list>
     </recent_temporary>
   </component>
   <component name="ShelveChangesManager" show_recycled="false">
     <option name="remove_strategy" value="false" />
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -552,44 +526,51 @@
       <option name="project" value="LOCAL" />
       <updated>1493648196662</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Adds the `StateSpaceModel` class and its tests">
+      <created>1493654227907</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1493654227907</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="Nosetest_Tests_test_InitializeModel - 2017.05.01 at 17h 45m 33s.xml">
-      <configuration name="Nosetest Tests.test_InitializeModel" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 43m 10s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_InitializeModel1D - 2017.05.01 at 17h 47m 49s.xml">
-      <configuration name="Nosetest Tests.test_InitializeModel1D" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 46m 31s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 52m 24s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 47m 38s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 54m 24s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 47m 58s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 55m 14s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 48m 15s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 55m 19s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 48m 22s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 55m 55s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 48m 58s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 56m 02s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 49m 06s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 56m 09s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_Sample - 2017.05.01 at 20h 49m 14s.xml">
+      <configuration name="Nosetest Tests.test_Sample" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_Weight - 2017.05.01 at 17h 56m 31s.xml">
-      <configuration name="Nosetest Tests.test_Weight" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_WeightFilter - 2017.05.01 at 20h 38m 06s.xml">
+      <configuration name="Nosetest Tests.test_WeightFilter" configurationId="tests" />
     </history-entry>
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.12065332" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -597,7 +578,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33044422" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.33044422" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -618,11 +599,12 @@
     <MESSAGE value="Initial commit" />
     <MESSAGE value="Adds a way of simulating the SSM" />
     <MESSAGE value="Adds a tests for verifying that the weighting works as intended" />
-    <option name="LAST_COMMIT_MESSAGE" value="Adds a tests for verifying that the weighting works as intended" />
+    <MESSAGE value="Adds the `StateSpaceModel` class and its tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="Adds the `StateSpaceModel` class and its tests" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="29" />
+      <option name="time" value="35" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -791,13 +773,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Anaconda3/Lib/unittest/case.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="200">
-          <caret line="600" column="0" lean-forward="false" selection-start-line="600" selection-start-column="0" selection-end-line="600" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/Anaconda3/Lib/site-packages/theano/tensor/basic.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="288">
@@ -816,13 +791,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="350">
           <caret line="1686" column="0" lean-forward="false" selection-start-line="1686" selection-start-column="0" selection-end-line="1686" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/helpers/helpers.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="759">
-          <caret line="154" column="0" lean-forward="true" selection-start-line="154" selection-start-column="0" selection-end-line="154" selection-end-column="0" />
         </state>
       </provider>
     </entry>
@@ -872,14 +840,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/filters/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="119">
-          <caret line="8" column="21" lean-forward="true" selection-start-line="8" selection-start-column="21" selection-end-line="8" selection-end-column="21" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/shit.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="352">
@@ -898,34 +858,68 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/filters/bootstrap.py">
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/unittest/case.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="187">
-          <caret line="13" column="23" lean-forward="true" selection-start-line="13" selection-start-column="23" selection-end-line="13" selection-end-column="23" />
+        <state relative-caret-position="200">
+          <caret line="600" column="0" lean-forward="false" selection-start-line="600" selection-start-column="0" selection-end-line="600" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
+    <entry file="file://$PROJECT_DIR$/pyfilter/helpers/helpers.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="816">
-          <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
+        <state relative-caret-position="451">
+          <caret line="34" column="24" lean-forward="false" selection-start-line="34" selection-start-column="24" selection-end-line="34" selection-end-column="24" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyfilter/filters/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="249">
+          <caret line="21" column="24" lean-forward="false" selection-start-line="21" selection-start-column="24" selection-end-line="21" selection-end-column="24" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyfilter/filters/bootstrap.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="204">
+          <caret line="14" column="0" lean-forward="true" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="162">
+        <state relative-caret-position="97">
           <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/filters.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="725">
+          <caret line="46" column="0" lean-forward="true" selection-start-line="46" selection-start-column="0" selection-end-line="46" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="60" column="29" lean-forward="true" selection-start-line="60" selection-start-column="29" selection-end-line="60" selection-end-column="29" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test/model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="759">
-          <caret line="62" column="0" lean-forward="false" selection-start-line="62" selection-start-column="0" selection-end-line="62" selection-end-column="0" />
+        <state relative-caret-position="1258">
+          <caret line="74" column="0" lean-forward="true" selection-start-line="74" selection-start-column="0" selection-end-line="74" selection-end-column="0" />
           <folding>
             <element signature="e#0#42#0" expanded="true" />
           </folding>
