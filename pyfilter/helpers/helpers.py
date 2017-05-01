@@ -34,13 +34,6 @@ def choose(array, indices):
 
     return array[indices]
 
-    # if array.ndim > indices.ndim:
-    #     row_mask = np.arange(array.shape[1])[:, None]
-    #     return array[:, row_mask, indices]
-    #
-    # row_mask = np.arange(array.shape[0])[:, None]
-    # return array[row_mask, indices]
-
 
 def solve_quadratic(a, b, c):
     """
