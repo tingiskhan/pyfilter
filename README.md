@@ -1,6 +1,6 @@
 # Documentation
 
-## Install the package
+## Installing the package
 Install the package by typing the following in a `git shell` or similar
 ```
 pip install git+https://github.com/tingiskhan/pyfilter.git
