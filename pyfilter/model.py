@@ -72,3 +72,16 @@ class StateSpaceModel(object):
             obs.append(y)
 
         return hidden, obs
+
+    def propagate_apf(self, x):
+        """
+        Propagates one step ahead using the mean of the hidden timeseries distribution - used in the APF.
+        :param x: Previous states
+        :return:
+        """
+
+        out = list()
+        for ts, xi in zip(self.hidden, x):
+            out.append(ts.mean(xi))
+
+        return out
