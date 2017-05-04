@@ -3,6 +3,7 @@ import pyfilter.timeseries.meta as ts
 import unittest
 import scipy.stats as stats
 import pyfilter.filters.bootstrap as sisr
+import pyfilter.filters.apf as apf
 import pykalman
 import numpy as np
 
@@ -48,6 +49,24 @@ class Tests(unittest.TestCase):
         x, y = self.model.sample(500)
 
         filt = sisr.Bootstrap(self.model, 5000).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_x) > 0
+
+        estimates = filt.filtermeans()
+
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        filterestimates = kf.filter(y)
+
+        maxerr = np.abs(estimates - filterestimates[0]).max()
+
+        assert maxerr < 0.5
+
+    def test_APF(self):
+        x, y = self.model.sample(500)
+
+        filt = apf.APF(self.model, 5000).initialize()
 
         filt = filt.longfilter(y)
 
