@@ -28,7 +28,7 @@ class BaseFilter(object):
         Initializes the filter.
         :return:
         """
-
+        # TODO: The shape should be based on the number of particles as well as parameters if dim > 0
         self._old_x = self._model.initialize(self._particles)
 
         return self
@@ -70,4 +70,4 @@ class BaseFilter(object):
 
         normalized = norm.normalize(w)
 
-        return np.average(x, axis=-1, weights=normalized[:, None, :])
+        return np.average(x, axis=-1, weights=normalized[:, None, ...])
