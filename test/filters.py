@@ -93,4 +93,22 @@ class Tests(unittest.TestCase):
         ax.plot(apft.s_l, label='APF')
         ax.plot(sisrt.s_l, label='SISR')
 
+        ax.set_title('Verify that APF > SISR in general')
+        plt.show()
+
+    def test_MultiDimensional(self):
+        x, y = self.model.sample(50)
+
+        shape = 50, 1
+
+        linear = ts.Base((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
+        self.model.hidden = (linear,)
+
+        apft = apf.APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
+
+        filtermeans = apft.filtermeans()
+
+        for i in range(shape[0]):
+            plt.plot(filtermeans[:, :, i])
+
         plt.show()

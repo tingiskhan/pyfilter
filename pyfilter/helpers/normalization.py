@@ -30,19 +30,19 @@ def _matrix(weights):
     :param weights:
     :return:
     """
-    n = weights.shape[1]
+    n = weights.shape[-1]
 
-    max_weight = np.nanmax(weights, axis=1)
+    max_weight = np.nanmax(weights, axis=-1)
 
-    altered_weights = np.exp(weights - max_weight[:, None])
-    sum_of_weights = np.nansum(altered_weights, axis=1)[:, None]
+    altered_weights = np.exp(weights - max_weight[..., None])
+    sum_of_weights = np.nansum(altered_weights, axis=-1)[..., None]
     normalized = altered_weights / sum_of_weights
     normalized[np.isnan(normalized)] = 0
 
     # ===== Remove Nans from normalized ===== #
 
     uniform_probability = 1 / n * np.ones(n)
-    zero_rows = np.where(np.sum(normalized, axis=1) == 0)
+    zero_rows = np.where(np.sum(normalized, axis=-1) == 0)
     normalized[zero_rows, :] = uniform_probability
 
     return normalized
