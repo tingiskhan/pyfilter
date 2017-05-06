@@ -21,6 +21,7 @@ class BaseFilter(object):
 
         self.s_x = list()
         self.s_w = list()
+        self.s_l = list()
 
     def initialize(self):
         """
