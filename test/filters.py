@@ -6,6 +6,7 @@ import pyfilter.filters.bootstrap as sisr
 import pyfilter.filters.apf as apf
 import pykalman
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def f(x, alpha, sigma):
@@ -80,3 +81,16 @@ class Tests(unittest.TestCase):
         maxerr = np.abs(estimates - filterestimates[0]).max()
 
         assert maxerr < 0.5
+
+    def test_Likelihood(self):
+        x, y = self.model.sample(500)
+
+        apft = apf.APF(self.model, 1000).initialize().longfilter(y)
+        sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
+
+        fig, ax = plt.subplots()
+
+        ax.plot(apft.s_l, label='APF')
+        ax.plot(sisrt.s_l, label='SISR')
+
+        plt.show()

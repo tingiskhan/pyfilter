@@ -15,5 +15,6 @@ class Bootstrap(BaseFilter):
 
         self.s_x.append(t_x)
         self.s_w.append(weights)
+        self.s_l.append(weights.mean(axis=-1))
 
         return self
