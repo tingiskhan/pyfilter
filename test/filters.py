@@ -4,9 +4,11 @@ import unittest
 import scipy.stats as stats
 import pyfilter.filters.bootstrap as sisr
 import pyfilter.filters.apf as apf
+from pyfilter.filters.rapf import RAPF
 import pykalman
 import numpy as np
 import matplotlib.pyplot as plt
+from pyfilter.distributions.continuous import Normal, Gamma
 
 
 def f(x, alpha, sigma):
@@ -34,8 +36,8 @@ def go(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    linear = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
-    linearobs = ts.Base((f0, g0), (fo, go), (1, 1), (stats.norm, stats.norm))
+    linear = ts.Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
+    linearobs = ts.Base((f0, g0), (fo, go), (1, 1), (Normal(), Normal()))
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeFilter(self):
@@ -112,3 +114,23 @@ class Tests(unittest.TestCase):
             plt.plot(filtermeans[:, :, i])
 
         plt.show()
+
+    def test_RAPFSimpleModel(self):
+        x, y = self.model.sample(500)
+
+        linear = ts.Base((f0, g0), (f, g), (Gamma(a=1, scale=2), 1), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        rapf = RAPF(self.model, 5000).initialize()
+
+        assert rapf._model.hidden[0].theta[0].shape == (5000,)
+
+        rapf = rapf.longfilter(y)
+
+        estimates = rapf._model.hidden[0].theta[0]
+
+        mean = np.mean(estimates)
+        std = np.std(estimates)
+
+        assert mean - 2 * std < 1 < mean + 2 * std
+
