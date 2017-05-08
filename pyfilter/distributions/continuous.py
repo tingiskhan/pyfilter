@@ -81,3 +81,6 @@ class Gamma(Distribution):
         scale = _get(scale, self.scale)
 
         return loc + np.random.gamma(a, scale, size=size)
+
+    def bounds(self, x):
+        return x >= self.loc
