@@ -33,10 +33,9 @@ class Distribution(object):
         """
         raise NotImplementedError()
 
-    def bounds(self, x):
+    def bounds(self):
         """
-        Checks if bounds are satisfied.
-        :param x:
+        Return the bounds on which the RV is defined.
         :return:
         """
 
@@ -58,8 +57,8 @@ class Normal(Distribution):
 
         return np.random.normal(loc=m, scale=s, size=size)
 
-    def bounds(self, x):
-        return np.abs(x) <= np.infty
+    def bounds(self):
+        return -np.infty, np.infty
 
 
 class Gamma(Distribution):
@@ -82,5 +81,5 @@ class Gamma(Distribution):
 
         return loc + np.random.gamma(a, scale, size=size)
 
-    def bounds(self, x):
-        return x >= self.loc
+    def bounds(self):
+        return self.loc, np.infty
