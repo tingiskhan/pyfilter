@@ -118,16 +118,17 @@ class Tests(unittest.TestCase):
     def test_RAPFSimpleModel(self):
         x, y = self.model.sample(500)
 
-        linear = ts.Base((f0, g0), (f, g), (Gamma(a=1, scale=2), 1), (Normal(), Normal()))
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
 
         self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
-        assert rapf._model.hidden[0].theta[0].shape == (5000,)
+        assert rapf._model.hidden[0].theta[1].shape == (5000,)
 
         rapf = rapf.longfilter(y)
 
-        estimates = rapf._model.hidden[0].theta[0]
+        estimates = rapf._model.hidden[0].theta[1]
 
         mean = np.mean(estimates)
         std = np.std(estimates)
