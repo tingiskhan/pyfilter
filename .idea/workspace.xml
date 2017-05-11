@@ -2,9 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="90f4655b-1776-4a2a-8d05-ed99de4a44ce" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/examples/sinus.py" />
       <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/examples/stochvol.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/examples/taylor.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/model.py" afterPath="$PROJECT_DIR$/pyfilter/model.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyfilter/timeseries/meta.py" afterPath="$PROJECT_DIR$/pyfilter/timeseries/meta.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -19,38 +21,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="rapf.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyfilter/filters/rapf.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="691">
-              <caret line="145" column="23" lean-forward="false" selection-start-line="145" selection-start-column="23" selection-end-line="145" selection-end-column="23" />
-              <folding>
-                <element signature="e#336#806#0" expanded="false" />
-                <element signature="e#336#461#1" expanded="false" />
-                <element signature="e#523#573#0" expanded="false" />
-                <element signature="e#918#1062#0" expanded="false" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="filters.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/test/filters.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="538">
-              <caret line="122" column="37" lean-forward="false" selection-start-line="122" selection-start-column="37" selection-end-line="122" selection-end-column="37" />
-              <folding>
-                <element signature="e#0#42#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="stochvol.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/examples/stochvol.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="231">
-              <caret line="30" column="0" lean-forward="true" selection-start-line="30" selection-start-column="0" selection-end-line="30" selection-end-column="0" />
+            <state relative-caret-position="962">
+              <caret line="79" column="43" lean-forward="true" selection-start-line="79" selection-start-column="43" selection-end-line="79" selection-end-column="43" />
               <folding>
                 <element signature="e#0#42#0" expanded="true" />
               </folding>
@@ -58,21 +33,21 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="meta.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
+      <file leaf-file-name="model.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="196">
-              <caret line="57" column="0" lean-forward="false" selection-start-line="57" selection-start-column="0" selection-end-line="57" selection-end-column="0" />
+              <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="model.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
+      <file leaf-file-name="meta.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="196">
-              <caret line="68" column="43" lean-forward="false" selection-start-line="68" selection-start-column="43" selection-end-line="68" selection-end-column="43" />
+            <state relative-caret-position="353">
+              <caret line="67" column="0" lean-forward="true" selection-start-line="67" selection-start-column="0" selection-end-line="67" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -108,18 +83,20 @@
         <option value="$PROJECT_DIR$/pyfilter/distributions/timeseries.py" />
         <option value="$PROJECT_DIR$/shit.py" />
         <option value="$PROJECT_DIR$/test/timeseries.py" />
-        <option value="$PROJECT_DIR$/test/model.py" />
         <option value="$PROJECT_DIR$/pyfilter/filters/apf.py" />
         <option value="$PROJECT_DIR$/pyfilter/filters/bootstrap.py" />
         <option value="$PROJECT_DIR$/pyfilter/helpers/normalization.py" />
         <option value="$PROJECT_DIR$/pyfilter/helpers/helpers.py" />
         <option value="$PROJECT_DIR$/pyfilter/filters/base.py" />
-        <option value="$PROJECT_DIR$/pyfilter/timeseries/meta.py" />
         <option value="$PROJECT_DIR$/pyfilter/distributions/continuous.py" />
         <option value="$PROJECT_DIR$/pyfilter/filters/rapf.py" />
         <option value="$PROJECT_DIR$/test/filters.py" />
-        <option value="$PROJECT_DIR$/examples/stochvol.py" />
+        <option value="$PROJECT_DIR$/examples/sinus.py" />
+        <option value="$PROJECT_DIR$/examples/taylor.py" />
         <option value="$PROJECT_DIR$/pyfilter/model.py" />
+        <option value="$PROJECT_DIR$/test/model.py" />
+        <option value="$PROJECT_DIR$/examples/stochvol.py" />
+        <option value="$PROJECT_DIR$/pyfilter/timeseries/meta.py" />
       </list>
     </option>
   </component>
@@ -288,6 +265,48 @@
     </key>
   </component>
   <component name="RunManager" selected="Python.stochvol">
+    <configuration default="false" name="Nosetest Tests.test_RAPFSimpleModel" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="pyfilter" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
+      <option name="CLASS_NAME" value="Tests" />
+      <option name="METHOD_NAME" value="test_RAPFSimpleModel" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_METHOD" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Nosetest Tests.test_Likelihood" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="pyfilter" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
+      <option name="CLASS_NAME" value="Tests" />
+      <option name="METHOD_NAME" value="test_Likelihood" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_METHOD" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
     <configuration default="false" name="Nosetest Tests.test_APF" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -309,67 +328,21 @@
       <option name="USE_PARAM" value="false" />
       <method />
     </configuration>
-    <configuration default="false" name="Nosetest Tests.test_WeightFilter" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
+    <configuration default="false" name="taylor" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/examples" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
-      <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_WeightFilter" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_METHOD" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="Nosetest Tests.test_MultiDimensional" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
-      <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_MultiDimensional" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_METHOD" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="Nosetest Tests.test_RAPFSimpleModel" type="tests" factoryName="Nosetests" temporary="true" nameIsGenerated="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="pyfilter" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test/filters.py" />
-      <option name="CLASS_NAME" value="Tests" />
-      <option name="METHOD_NAME" value="test_RAPFSimpleModel" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_METHOD" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <option name="PARAMS" value="" />
-      <option name="USE_PARAM" value="false" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/examples/taylor.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
     <configuration default="false" name="stochvol" type="PythonConfigurationType" factoryName="Python" temporary="true">
@@ -524,19 +497,19 @@
       <method />
     </configuration>
     <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_APF" />
-      <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter" />
-      <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_MultiDimensional" />
-      <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_RAPFSimpleModel" />
+      <item index="0" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_RAPFSimpleModel" />
+      <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Likelihood" />
+      <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_APF" />
+      <item index="3" class="java.lang.String" itemvalue="Python.taylor" />
       <item index="4" class="java.lang.String" itemvalue="Python.stochvol" />
     </list>
     <recent_temporary>
       <list size="5">
         <item index="0" class="java.lang.String" itemvalue="Python.stochvol" />
-        <item index="1" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_RAPFSimpleModel" />
+        <item index="1" class="java.lang.String" itemvalue="Python.taylor" />
         <item index="2" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_APF" />
-        <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_MultiDimensional" />
-        <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_WeightFilter" />
+        <item index="3" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_Likelihood" />
+        <item index="4" class="java.lang.String" itemvalue="Python tests.Nosetest Tests.test_RAPFSimpleModel" />
       </list>
     </recent_temporary>
   </component>
@@ -701,39 +674,53 @@
       <option name="project" value="LOCAL" />
       <updated>1494445453681</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="Unpacks timeseries">
+      <created>1494484970495</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1494484970495</updated>
+    </task>
+    <task id="LOCAL-00023" summary="Overhauls multivariate timeseries">
+      <created>1494488168097</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1494488168097</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.10 at 21h 11m 24s.xml">
+    <history-entry file="Nosetest_Tests_test_APF - 2017.05.11 at 09h 35m 32s.xml">
+      <configuration name="Nosetest Tests.test_APF" configurationId="tests" />
+    </history-entry>
+    <history-entry file="Nosetest_Tests_test_Likelihood - 2017.05.11 at 09h 35m 28s.xml">
+      <configuration name="Nosetest Tests.test_Likelihood" configurationId="tests" />
+    </history-entry>
+    <history-entry file="Nosetest_Tests_test_MultiDimensional - 2017.05.11 at 09h 35m 17s.xml">
+      <configuration name="Nosetest Tests.test_MultiDimensional" configurationId="tests" />
+    </history-entry>
+    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.11 at 09h 35m 22s.xml">
       <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.10 at 21h 12m 37s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_SampleBivariate - 2017.05.11 at 09h 32m 24s.xml">
+      <configuration name="Nosetest Tests.test_SampleBivariate" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.10 at 21h 13m 46s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_SampleBivariate - 2017.05.11 at 09h 32m 58s.xml">
+      <configuration name="Nosetest Tests.test_SampleBivariate" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.10 at 21h 41m 02s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_SampleBivariate - 2017.05.11 at 09h 33m 37s.xml">
+      <configuration name="Nosetest Tests.test_SampleBivariate" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.10 at 21h 43m 38s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
+    <history-entry file="Nosetest_Tests_test_SampleBivariate - 2017.05.11 at 09h 35m 00s.xml">
+      <configuration name="Nosetest Tests.test_SampleBivariate" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.11 at 07h 38m 22s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
+    <history-entry file="Nosetests_in_model - 2017.05.11 at 09h 35m 05s.xml">
+      <configuration name="Nosetests in model" configurationId="tests" />
     </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.11 at 07h 38m 40s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
-    </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.11 at 07h 39m 56s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
-    </history-entry>
-    <history-entry file="Nosetest_Tests_test_RAPFSimpleModel - 2017.05.11 at 07h 42m 40s.xml">
-      <configuration name="Nosetest Tests.test_RAPFSimpleModel" configurationId="tests" />
-    </history-entry>
-    <history-entry file="Nosetest_Tests_test_WeightFilter - 2017.05.10 at 21h 42m 42s.xml">
-      <configuration name="Nosetest Tests.test_WeightFilter" configurationId="tests" />
+    <history-entry file="Nosetests_in_timeseries - 2017.05.11 at 09h 32m 19s.xml">
+      <configuration name="Nosetests in timeseries" configurationId="tests" />
     </history-entry>
   </component>
   <component name="ToolWindowManager">
@@ -750,7 +737,7 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.31852654" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.31838074" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -781,58 +768,24 @@
     <MESSAGE value="Revises the `bounds()` method" />
     <MESSAGE value="Remove the former implementation of the RAPF - was not correct" />
     <MESSAGE value="Adds a functioning RAPF" />
-    <option name="LAST_COMMIT_MESSAGE" value="Adds a functioning RAPF" />
+    <MESSAGE value="Unpacks timeseries" />
+    <MESSAGE value="Overhauls multivariate timeseries" />
+    <option name="LAST_COMMIT_MESSAGE" value="Overhauls multivariate timeseries" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="169" />
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pyfilter/filters/rapf.py</url>
+          <line>133</line>
+          <option name="timeStamp" value="175" />
+        </line-breakpoint>
+      </breakpoints>
+      <option name="time" value="177" />
     </breakpoint-manager>
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/test/filters.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#42#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/filters/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="918">
-          <caret line="56" column="0" lean-forward="false" selection-start-line="56" selection-start-column="0" selection-end-line="56" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/filters.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="969">
-          <caret line="63" column="0" lean-forward="true" selection-start-line="63" selection-start-column="0" selection-end-line="63" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#42#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/shit.py" />
-    <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1088">
-          <caret line="64" column="0" lean-forward="false" selection-start-line="64" selection-start-column="0" selection-end-line="64" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/test/timeseries.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -951,13 +904,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/test/model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-651">
-          <caret line="38" column="0" lean-forward="true" selection-start-line="38" selection-start-column="0" selection-end-line="38" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyfilter/helpers/normalization.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="748">
@@ -988,22 +934,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/filters/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="529">
-          <caret line="57" column="0" lean-forward="false" selection-start-line="57" selection-start-column="0" selection-end-line="57" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test/timeseries.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
-          <caret line="19" column="21" lean-forward="true" selection-start-line="19" selection-start-column="21" selection-end-line="19" selection-end-column="21" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyfilter/helpers/resampling.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="640">
@@ -1020,10 +950,60 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="377">
+          <caret line="1595" column="0" lean-forward="false" selection-start-line="1595" selection-start-column="0" selection-end-line="1595" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/site-packages/pandas/tools/plotting.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="198">
+          <caret line="1095" column="0" lean-forward="false" selection-start-line="1095" selection-start-column="0" selection-end-line="1095" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/contextlib.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="334">
+          <caret line="94" column="0" lean-forward="false" selection-start-line="94" selection-start-column="0" selection-end-line="94" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Anaconda3/Lib/codecs.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="198">
+          <caret line="308" column="0" lean-forward="false" selection-start-line="308" selection-start-column="0" selection-end-line="308" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/examples/sinus.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="350">
+          <caret line="43" column="13" lean-forward="true" selection-start-line="43" selection-start-column="13" selection-end-line="43" selection-end-column="13" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyfilter/filters/base.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="529">
+          <caret line="57" column="0" lean-forward="false" selection-start-line="57" selection-start-column="0" selection-end-line="57" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/pyfilter/filters/rapf.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="691">
-          <caret line="145" column="23" lean-forward="false" selection-start-line="145" selection-start-column="23" selection-end-line="145" selection-end-column="23" />
+        <state relative-caret-position="478">
+          <caret line="133" column="0" lean-forward="false" selection-start-line="133" selection-start-column="0" selection-end-line="133" selection-end-column="0" />
           <folding>
             <element signature="e#336#806#0" expanded="false" />
             <element signature="e#336#461#1" expanded="false" />
@@ -1033,10 +1013,34 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/test/timeseries.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-660">
+          <caret line="15" column="21" lean-forward="true" selection-start-line="15" selection-start-column="21" selection-end-line="15" selection-end-column="21" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="38" column="0" lean-forward="true" selection-start-line="38" selection-start-column="0" selection-end-line="38" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/test/filters.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="538">
-          <caret line="122" column="37" lean-forward="false" selection-start-line="122" selection-start-column="37" selection-end-line="122" selection-end-column="37" />
+        <state relative-caret-position="104">
+          <caret line="70" column="0" lean-forward="true" selection-start-line="70" selection-start-column="0" selection-end-line="70" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/examples/taylor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-7">
+          <caret line="40" column="0" lean-forward="true" selection-start-line="40" selection-start-column="0" selection-end-line="40" selection-end-column="0" />
           <folding>
             <element signature="e#0#42#0" expanded="true" />
           </folding>
@@ -1045,26 +1049,26 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/examples/stochvol.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="231">
-          <caret line="30" column="0" lean-forward="true" selection-start-line="30" selection-start-column="0" selection-end-line="30" selection-end-column="0" />
+        <state relative-caret-position="962">
+          <caret line="79" column="43" lean-forward="true" selection-start-line="79" selection-start-column="43" selection-end-line="79" selection-end-column="43" />
           <folding>
             <element signature="e#0#42#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
+    <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="196">
-          <caret line="57" column="0" lean-forward="false" selection-start-line="57" selection-start-column="0" selection-end-line="57" selection-end-column="0" />
+          <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyfilter/model.py">
+    <entry file="file://$PROJECT_DIR$/pyfilter/timeseries/meta.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="196">
-          <caret line="68" column="43" lean-forward="false" selection-start-line="68" selection-start-column="43" selection-end-line="68" selection-end-column="43" />
+        <state relative-caret-position="353">
+          <caret line="67" column="0" lean-forward="true" selection-start-line="67" selection-start-column="0" selection-end-line="67" selection-end-column="0" />
           <folding />
         </state>
       </provider>

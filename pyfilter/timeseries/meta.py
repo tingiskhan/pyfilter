@@ -39,25 +39,25 @@ class Base(object):
 
         return self.g0(*self.theta)
 
-    def mean(self, x):
+    def mean(self, x, *args):
         """
         Calculates the mean of the process conditional on the state and parameters.
         :param x: The state of the process.
         :return:
         """
 
-        return self.f(x, *self.theta)
+        return self.f(x, *args, *self.theta)
 
-    def scale(self, x):
+    def scale(self, x, *args):
         """
         Calculates the scale of the process conditional on the state and parameters.
         :param x: The state of the process
         :return:
         """
 
-        return self.g(x, *self.theta)
+        return self.g(x, *args, *self.theta)
 
-    def weight(self, y, x):
+    def weight(self, y, x, *args):
         """
         Weights the process of the current observation x_t with the previous x_{t-1}. Used whenever the proposal
         distribution is different from the underlying.
@@ -66,7 +66,7 @@ class Base(object):
         :return:
         """
 
-        return self.noise.logpdf(y, loc=self.mean(x), scale=self.scale(x))
+        return self.noise.logpdf(y, loc=self.mean(x, *args), scale=self.scale(x, *args))
 
     def i_sample(self, size=None, **kwargs):
         """
@@ -78,7 +78,7 @@ class Base(object):
 
         return self.noise0.rvs(loc=self.i_mean(), scale=self.i_scale(), size=size, **kwargs)
 
-    def propagate(self, x, **kwargs):
+    def propagate(self, x, *args, **kwargs):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous states
@@ -86,7 +86,7 @@ class Base(object):
         :return:
         """
 
-        return self.noise.rvs(loc=self.mean(x), scale=self.scale(x), **kwargs)
+        return self.noise.rvs(loc=self.mean(x, *args), scale=self.scale(x, *args), **kwargs)
 
     def sample(self, steps, samples=None, **kwargs):
         """
