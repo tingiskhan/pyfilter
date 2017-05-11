@@ -59,14 +59,14 @@ class StateSpaceModel(object):
         hidden, obs = list(), list()
 
         x = self.initialize()
-        y = self.observable.propagate(x, **kwargs)
+        y = self.observable.propagate(*x, **kwargs)
 
         hidden.append(x)
         obs.append(y)
 
         for i in range(1, steps):
             x = self.propagate(x)
-            y = self.observable.propagate(x)
+            y = self.observable.propagate(*x)
 
             hidden.append(x)
             obs.append(y)
