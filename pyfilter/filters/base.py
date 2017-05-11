@@ -70,4 +70,8 @@ class BaseFilter(object):
 
         normalized = norm.normalize(w)
 
-        return np.average(x, axis=-1, weights=normalized[:, None, ...])
+        weighted = tuple()
+        for i in range(x.shape[1]):
+            weighted += (np.average(x[:, i], axis=-1, weights=normalized),)
+
+        return np.array(weighted).swapaxes(0, 1)
