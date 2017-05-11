@@ -30,11 +30,11 @@ def go(x, alpha, sigma):
     return sigma
 
 
-def foo(x, alpha, sigma):
-    return alpha * x[0] + x[1]
+def foo(x1, x2, alpha, sigma):
+    return alpha * x1 + x2
 
 
-def goo(x, alpha, sigma):
+def goo(x1, x2, alpha, sigma):
     return sigma
 
 
