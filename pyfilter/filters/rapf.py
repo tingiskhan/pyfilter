@@ -21,12 +21,10 @@ def _propose(bounds, params, indices, h, particles):
     std = h * params.std()
 
     # TODO: Check the truncnorm - doesn't seem to work
-    # proposed = stats.truncnorm.rvs(*bounds, means, std, size=self._particles)
+    a = (bounds[0] - means) / std
+    b = (bounds[1] - means) / std
 
-    if bounds[0] >= 0:
-        return np.abs(means + std * np.random.normal(size=particles))
-
-    return means + std * np.random.normal(size=particles)
+    return stats.truncnorm.rvs(a, b, means, std, size=particles)
 
 
 class RAPF(BaseFilter):
