@@ -133,5 +133,5 @@ class Tests(unittest.TestCase):
         mean = np.mean(estimates)
         std = np.std(estimates)
 
-        assert mean - 2 * std < 1 < mean + 2 * std
+        assert mean - 3 * std < 1 < mean + 3 * std
 
