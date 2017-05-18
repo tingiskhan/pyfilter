@@ -1,24 +1,38 @@
 from .base import BaseFilter
 from ..distributions.continuous import Distribution
-import numpy as np
-from ..helpers.normalization import normalize
 from math import sqrt
 from ..helpers.resampling import systematic
 from ..helpers.helpers import choose
 import scipy.stats as stats
+import numpy as np
+from ..helpers.normalization import normalize
 
 
-def _propose(bounds, params, indices, h, particles):
+def _shrink(parameter, shrink):
+    """
+    Helper class for shrink parameters
+    :param parameter: 
+    :param shrink: 
+    :return: 
+    """
+
+    return shrink * parameter + (1 - shrink) * parameter.mean()
+
+
+def _propose(bounds, params, indices, h, particles, weights):
     """
     Helper class for proposing a parameter
     :param bounds:
     :param params:
     :param indices:
+    :param weights:
     :return:
     """
 
-    means = params[indices]
-    std = h * params.std()
+    normalized = normalize(weights)
+
+    means = _shrink(params[indices], sqrt(1 - h ** 2))
+    std = h * np.sqrt(np.average((params - params.mean()) ** 2, weights=normalized))
 
     # TODO: Check the truncnorm - doesn't seem to work
     a = (bounds[0] - means) / std
@@ -83,7 +97,7 @@ class RAPF(BaseFilter):
             parameters = tuple()
             for j, p in enumerate(ts.theta):
                 if j in self._h_params[i].keys():
-                    parameters += (self.a * p + (1 - self.a) * p.mean(),)
+                    parameters += (_shrink(p, self.a),)
                 else:
                     parameters += (p,)
 
@@ -94,7 +108,7 @@ class RAPF(BaseFilter):
         parameters = tuple()
         for j, p in enumerate(self._model.observable.theta):
             if j in self._o_params.keys():
-                parameters += (self.a * p + (1 - self.a) * p.mean(),)
+                parameters += (_shrink(p, self.a),)
             else:
                 parameters += (p,)
 
@@ -102,13 +116,13 @@ class RAPF(BaseFilter):
 
         return self
 
-    def _propagate_parameters(self, indices):
+    def _propagate_parameters(self, indices, weights):
         # ===== HIDDEN ===== #
         for i, ts in enumerate(self._model.hidden):
             parameters = tuple()
             for j, p in enumerate(ts.theta):
                 if j in self._h_params[i].keys():
-                    parameters += (_propose(self._h_params[i][j], p, indices, self.h, self._particles),)
+                    parameters += (_propose(self._h_params[i][j], p, indices, self.h, self._particles, weights),)
                 else:
                     parameters += (p,)
 
@@ -118,7 +132,7 @@ class RAPF(BaseFilter):
         parameters = tuple()
         for j, p in enumerate(self._model.observable.theta):
             if j in self._o_params.keys():
-                parameters += (_propose(self._o_params[j], p, indices, self.h, self._particles),)
+                parameters += (_propose(self._o_params[j], p, indices, self.h, self._particles, weights),)
             else:
                 parameters += (p,)
 
@@ -127,7 +141,8 @@ class RAPF(BaseFilter):
         return self
 
     def filter(self, y):
-        self._shrink()
+        # TODO: Implement a way of sampling using other parameters
+        # self._shrink()
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
@@ -136,7 +151,7 @@ class RAPF(BaseFilter):
         except IndexError:
             resampled_indices = systematic(t_weights)
 
-        self._propagate_parameters(resampled_indices)
+        self._propagate_parameters(resampled_indices, t_weights)
         x = self._model.propagate(choose(self._old_x, resampled_indices))
         weights = self._model.weight(y, x)
 
