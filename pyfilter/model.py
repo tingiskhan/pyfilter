@@ -1,3 +1,5 @@
+import copy
+
 
 class StateSpaceModel(object):
     def __init__(self, hidden, observable):
@@ -85,3 +87,11 @@ class StateSpaceModel(object):
             out.append(ts.mean(xi))
 
         return out
+
+    def copy(self):
+        """
+        Returns a copy of the model.
+        :return: 
+        """
+
+        return copy.deepcopy(self)

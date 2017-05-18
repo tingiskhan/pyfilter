@@ -49,6 +49,7 @@ class RAPF(BaseFilter):
 
         self.a = (3 * shrinkage - 1) / 2 / shrinkage
         self.h = sqrt(1 - self.a ** 2)
+        self._copy = self._model.copy()
 
     def _initialize_parameters(self):
 
@@ -101,7 +102,7 @@ class RAPF(BaseFilter):
                 else:
                     parameters += (p,)
 
-            ts.theta = parameters
+            self._copy.hidden[i].theta = parameters
 
         # ===== OBSERVABLE ===== #
 
@@ -112,7 +113,7 @@ class RAPF(BaseFilter):
             else:
                 parameters += (p,)
 
-        self._model.observable.theta = parameters
+        self._copy.observable.theta = parameters
 
         return self
 
@@ -142,9 +143,9 @@ class RAPF(BaseFilter):
 
     def filter(self, y):
         # TODO: Implement a way of sampling using other parameters
-        # self._shrink()
-        t_x = self._model.propagate_apf(self._old_x)
-        t_weights = self._model.weight(y, t_x)
+        self._shrink()
+        t_x = self._copy.propagate_apf(self._old_x)
+        t_weights = self._copy.weight(y, t_x)
 
         try:
             resampled_indices = systematic(t_weights + self.s_w[-1])
