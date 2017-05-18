@@ -39,23 +39,25 @@ class Base(object):
 
         return self.g0(*self.theta)
 
-    def mean(self, x, *args):
+    def mean(self, x, *args, params=None):
         """
         Calculates the mean of the process conditional on the state and parameters.
         :param x: The state of the process.
+        :param params: Used for overriding the parameters
         :return:
         """
 
-        return self.f(x, *args, *self.theta)
+        return self.f(x, *args, *(params or self.theta))
 
-    def scale(self, x, *args):
+    def scale(self, x, *args, params=None):
         """
         Calculates the scale of the process conditional on the state and parameters.
         :param x: The state of the process
+        :param params: Used for overriding the parameters
         :return:
         """
 
-        return self.g(x, *args, *self.theta)
+        return self.g(x, *args, *(params or self.theta))
 
     def weight(self, y, x, *args):
         """
@@ -78,15 +80,19 @@ class Base(object):
 
         return self.noise0.rvs(loc=self.i_mean(), scale=self.i_scale(), size=size, **kwargs)
 
-    def propagate(self, x, *args, **kwargs):
+    def propagate(self, x, *args, params=None, **kwargs):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous states
+        :param params: If you wish to override the parameters used for sampling
         :param kwargs: kwargs passed to the noise class
         :return:
         """
 
-        return self.noise.rvs(loc=self.mean(x, *args), scale=self.scale(x, *args), **kwargs)
+        loc = self.mean(x, *args, params=params)
+        scale = self.scale(x, *args, params=params)
+
+        return self.noise.rvs(loc=loc, scale=scale, **kwargs)
 
     def sample(self, steps, samples=None, **kwargs):
         """
