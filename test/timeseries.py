@@ -81,3 +81,10 @@ class Tests(unittest.TestCase):
         obs = 1
 
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
+
+    def test_OverrideParameters(self):
+        "Just make sure it runs"
+        sample = self.linear.i_sample(size=500)
+
+        x = self.linear.propagate(sample, params=(2, 2))
+
