@@ -1,5 +1,6 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries.meta import Base
+from pyfilter.timeseries.observable import Observable
 from pyfilter.filters.rapf import RAPF
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
@@ -35,7 +36,7 @@ def fo(vol, mu):
 
 fig, ax = plt.subplots(2)
 
-stock = data.DataReader('^gspc', 'yahoo', start='2010-01-01')
+stock = data.DataReader('aapl', 'yahoo', start='2010-01-01')
 
 y = stock['Adj Close'].pct_change().iloc[1:] * 100
 
@@ -43,7 +44,7 @@ ax[0].plot(y)
 
 logvol = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
 
-obs = Base((None, None), (go, fo), (Normal(),), (None, Normal()))
+obs = Observable((go, fo), (Normal(),), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
