@@ -1,5 +1,6 @@
 from pyfilter.model import StateSpaceModel
 import pyfilter.timeseries.meta as ts
+from pyfilter.timeseries.observable import Observable
 import unittest
 import scipy.stats as stats
 import pyfilter.filters.bootstrap as sisr
@@ -37,7 +38,7 @@ def go(x, alpha, sigma):
 
 class Tests(unittest.TestCase):
     linear = ts.Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
-    linearobs = ts.Base((f0, g0), (fo, go), (1, 1), (Normal(), Normal()))
+    linearobs = Observable((fo, go), (1, 1), Normal())
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeFilter(self):

@@ -1,5 +1,6 @@
 from pyfilter.model import StateSpaceModel
 import pyfilter.timeseries.meta as ts
+from pyfilter.timeseries.observable import Observable
 import unittest
 import scipy.stats as stats
 import numpy as np
@@ -42,8 +43,8 @@ class Tests(unittest.TestCase):
     linear = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
     linear2 = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
 
-    linearobs = ts.Base((f0, g0), (fo, go), (1, 0.1), (stats.norm, stats.norm))
-    linearobs2 = ts.Base((f0, g0), (foo, goo), (1, 0.1), (stats.norm, stats.norm))
+    linearobs = Observable((fo, go), (1, 1), stats.norm)
+    linearobs2 = Observable((foo, goo), (1, 1), stats.norm)
 
     model = StateSpaceModel(linear, linearobs)
 

@@ -1,5 +1,6 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries.meta import Base
+from pyfilter.timeseries.observable import Observable
 from pyfilter.filters.rapf import RAPF
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
@@ -33,7 +34,7 @@ def fo(x, beta):
 # ===== SIMULATE SSM ===== #
 
 sinus = Base((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
-obs = Base((None, None), (go, fo), (1,), (None, Normal()))
+obs = Observable((go, fo), (1,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
@@ -46,7 +47,7 @@ ax[1].plot(x)
 # ===== INFER VALUES ===== #
 
 sinus = Base((fh0, gh0), (fh, gh), (Gamma(1), 1), (Normal(), Normal()))
-obs = Base((None, None), (go, fo), (Gamma(1),), (None, Normal()))
+obs = Observable((go, fo), (Gamma(1),), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
