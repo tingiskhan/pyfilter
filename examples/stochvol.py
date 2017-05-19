@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pandas_datareader import data
+import quandl
 
 
 def fh0(kappa, gamma, sigma):
@@ -36,9 +37,8 @@ def fo(vol, mu):
 
 fig, ax = plt.subplots(2)
 
-stock = data.DataReader('aapl', 'yahoo', start='2010-01-01')
-
-y = stock['Adj Close'].pct_change().iloc[1:] * 100
+y = quandl.get('WIKI/AAPL', start_date='2010-01-01', api_key='<APIKEY>', column_index=11, transform='rdiff')
+y *= 100
 
 ax[0].plot(y)
 
