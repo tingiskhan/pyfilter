@@ -160,3 +160,19 @@ def summation_axis(array):
     return tmp if len(tmp) > 0 else 0
 
 
+def loglikelihood(w):
+    """
+    Calculates the estimated loglikehood given weights.
+    :param w: The log weights, corresponding to likelihood
+    :type w: np.ndarray
+    :return: 
+    """
+
+    logl = np.log(np.exp(w).mean(axis=-1))
+
+    if isinstance(logl, np.ndarray):
+        logl[~np.isfinite(logl)] = -999
+
+    return logl
+
+

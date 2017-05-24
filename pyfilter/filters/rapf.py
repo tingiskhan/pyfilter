@@ -2,7 +2,7 @@ from .base import BaseFilter
 from ..distributions.continuous import Distribution
 from math import sqrt
 from ..helpers.resampling import systematic
-from ..helpers.helpers import choose
+from ..helpers.helpers import choose, loglikelihood
 import scipy.stats as stats
 import numpy as np
 from ..helpers.normalization import normalize
@@ -32,7 +32,7 @@ def _propose(bounds, params, indices, h, particles, weights):
     normalized = normalize(weights)
 
     means = _shrink(params[indices], sqrt(1 - h ** 2))
-    std = h * np.sqrt(np.average((params - params.mean()) ** 2, weights=normalized))
+    std = h * np.sqrt(np.average((params - params.mean()) ** 2, weights=normalized, axis=0))
 
     # TODO: Check the truncnorm - doesn't seem to work
     a = (bounds[0] - means) / std
@@ -51,6 +51,8 @@ class RAPF(BaseFilter):
         self.h = sqrt(1 - self.a ** 2)
         self._copy = self._model.copy()
 
+        self._p_particles = self._particles if not isinstance(self._particles, tuple) else (self._particles[0], 1)
+
     def _initialize_parameters(self):
 
         # ===== HIDDEN ===== #
@@ -62,7 +64,7 @@ class RAPF(BaseFilter):
             for j, p in enumerate(ts.theta):
                 if isinstance(p, Distribution):
                     temp[j] = p.bounds()
-                    parameters += (p.rvs(size=self._particles),)
+                    parameters += (p.rvs(size=self._p_particles),)
                 else:
                     parameters += (p,)
 
@@ -76,7 +78,7 @@ class RAPF(BaseFilter):
         for j, p in enumerate(self._model.observable.theta):
             if isinstance(p, Distribution):
                 self._o_params[j] = p.bounds()
-                parameters += (p.rvs(size=self._particles),)
+                parameters += (p.rvs(size=self._p_particles),)
             else:
                 parameters += (p,)
 
@@ -123,7 +125,7 @@ class RAPF(BaseFilter):
             parameters = tuple()
             for j, p in enumerate(ts.theta):
                 if j in self._h_params[i].keys():
-                    parameters += (_propose(self._h_params[i][j], p, indices, self.h, self._particles, weights),)
+                    parameters += (_propose(self._h_params[i][j], p, indices, self.h, self._p_particles, weights),)
                 else:
                     parameters += (p,)
 
@@ -133,7 +135,7 @@ class RAPF(BaseFilter):
         parameters = tuple()
         for j, p in enumerate(self._model.observable.theta):
             if j in self._o_params.keys():
-                parameters += (_propose(self._o_params[j], p, indices, self.h, self._particles, weights),)
+                parameters += (_propose(self._o_params[j], p, indices, self.h, self._p_particles, weights),)
             else:
                 parameters += (p,)
 
