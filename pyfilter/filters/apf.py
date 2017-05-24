@@ -22,6 +22,6 @@ class APF(BaseFilter):
 
         self.s_x.append(t_x)
         self.s_w.append(weights - helps.choose(t_weights, resampled_indices))
-        self.s_l.append(weights.mean(axis=-1))
+        self.s_l.append(helps.loglikelihood(weights))
 
         return self
