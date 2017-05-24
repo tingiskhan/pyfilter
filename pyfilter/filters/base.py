@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import pyfilter.helpers.normalization as norm
 from ..distributions.continuous import Distribution
+import copy
 
 
 class BaseFilter(object):
@@ -112,3 +113,11 @@ class BaseFilter(object):
             weighted += (np.average(x[:, i], axis=-1, weights=normalized),)
 
         return np.array(weighted).swapaxes(0, 1)
+
+    def copy(self):
+        """
+        Returns a copy of itself.
+        :return: self
+        """
+
+        return copy.deepcopy(self)
