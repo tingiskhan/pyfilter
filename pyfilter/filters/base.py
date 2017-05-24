@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pyfilter.helpers.normalization as norm
+from ..distributions.continuous import Distribution
 
 
 class BaseFilter(object):
@@ -14,7 +15,10 @@ class BaseFilter(object):
         :param kwargs:
         """
         self._model = model
+        self._copy = self._model.copy()
+
         self._particles = particles
+        self._p_particles = self._particles if not isinstance(self._particles, tuple) else (self._particles[0], 1)
 
         self._old_y = None
         self._old_x = None
@@ -23,12 +27,45 @@ class BaseFilter(object):
         self.s_w = list()
         self.s_l = list()
 
+    def _initialize_parameters(self):
+
+        # ===== HIDDEN ===== #
+
+        self._h_params = list()
+        for i, ts in enumerate(self._model.hidden):
+            temp = dict()
+            parameters = tuple()
+            for j, p in enumerate(ts.theta):
+                if isinstance(p, Distribution):
+                    temp[j] = p.bounds()
+                    parameters += (p.rvs(size=self._p_particles),)
+                else:
+                    parameters += (p,)
+
+            ts.theta = parameters
+            self._h_params.append(temp)
+
+        # ===== OBSERVABLE ===== #
+
+        self._o_params = dict()
+        parameters = tuple()
+        for j, p in enumerate(self._model.observable.theta):
+            if isinstance(p, Distribution):
+                self._o_params[j] = p.bounds()
+                parameters += (p.rvs(size=self._p_particles),)
+            else:
+                parameters += (p,)
+
+        self._model.observable.theta = parameters
+
+        return self
+
     def initialize(self):
         """
         Initializes the filter.
         :return:
         """
-        # TODO: The shape should be based on the number of particles as well as parameters if dim > 0
+        self._initialize_parameters()
         self._old_x = self._model.initialize(self._particles)
 
         return self
