@@ -122,7 +122,7 @@ class BaseFilter(object):
         :param kwargs: kwargs to pass to self._model
         :return: 
         """
-        x, y = self._model.sample(steps, x_s=self._old_x, **kwargs)
+        x, y = self._model.sample(steps+1, x_s=self._old_x, **kwargs)
 
         return x[1:], y[1:]
 
