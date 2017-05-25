@@ -50,17 +50,18 @@ class StateSpaceModel(object):
 
         return self.observable.weight(y, *x)
 
-    def sample(self, steps, **kwargs):
+    def sample(self, steps, x_s=None, **kwargs):
         """
         Constructs a sample trajectory for both the observable and the hidden density.
         :param steps: The number of steps
+        :param x_s: The starting value
         :param kwargs: Any kwargs
         :return:
         """
 
         hidden, obs = list(), list()
 
-        x = self.initialize()
+        x = x_s if x_s is not None else self.initialize()
         y = self.observable.propagate(*x, **kwargs)
 
         hidden.append(x)

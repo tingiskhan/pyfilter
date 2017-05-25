@@ -114,6 +114,18 @@ class BaseFilter(object):
 
         return np.array(weighted).swapaxes(0, 1)
 
+    def predict(self, steps, **kwargs):
+        """
+        Predicts `steps` ahead using the latest available information.
+        :param steps: The number of steps forward to predict
+        :type steps: int
+        :param kwargs: kwargs to pass to self._model
+        :return: 
+        """
+        x, y = self._model.sample(steps, x_s=self._old_x, **kwargs)
+
+        return x[1:], y[1:]
+
     def copy(self):
         """
         Returns a copy of itself.

@@ -136,3 +136,24 @@ class Tests(unittest.TestCase):
 
         assert mean - 3 * std < 1 < mean + 3 * std
 
+    def test_Predict(self):
+        x, y = self.model.sample(550)
+
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        rapf = RAPF(self.model, 5000).initialize()
+
+        assert rapf._model.hidden[0].theta[1].shape == (5000,)
+
+        rapf = rapf.longfilter(y[:500])
+
+        x_pred, y_pred = rapf.predict(50)
+
+        for i in range(len(y_pred)):
+            lower = np.percentile(y_pred[i], 1)
+            upper = np.percentile(y_pred[i], 99)
+
+            assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
+
