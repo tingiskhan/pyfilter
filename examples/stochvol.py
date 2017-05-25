@@ -42,18 +42,23 @@ y *= 100
 
 ax[0].plot(y)
 
+predictions = 30
+
 logvol = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
 
 obs = Observable((go, fo), (Normal(),), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
-rapf = RAPF(ssm, 30000).initialize()
+rapf = RAPF(ssm, 3000).initialize()
 
-rapf = rapf.longfilter(y)
+rapf = rapf.longfilter(y[:-predictions])
 
 ax[1].plot(rapf.filtermeans())
 
+p_x, p_y = rapf.predict(predictions)
+
+ax[0].plot(y.index[-predictions:], p_y, alpha=0.03, color='r')
 
 # ===== PLOT KDE ===== #
 

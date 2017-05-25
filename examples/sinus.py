@@ -38,7 +38,9 @@ obs = Observable((go, fo), (1,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
-x, y = ssm.sample(500)
+predictions = 40
+
+x, y = ssm.sample(500 + predictions)
 
 fig, ax = plt.subplots(2)
 ax[0].plot(y)
@@ -53,7 +55,7 @@ ssm = StateSpaceModel(sinus, obs)
 
 rapf = RAPF(ssm, 10000).initialize()
 
-rapf = rapf.longfilter(y)
+rapf = rapf.longfilter(y[:-predictions])
 
 ax[1].plot(rapf.filtermeans())
 
@@ -66,5 +68,13 @@ beta = pd.Series(ssm.observable.theta[0])
 
 sigma.plot(kind='kde', ax=ax2[0])
 beta.plot(kind='kde', ax=ax2[1])
+
+
+# ===== Plot prediction ===== #
+
+p_x, p_y = rapf.predict(predictions)
+leny = len(y)
+
+ax[0].plot(range(leny-predictions, leny), p_y, alpha=0.03, color='r')
 
 plt.show()
