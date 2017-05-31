@@ -96,3 +96,17 @@ class StateSpaceModel(object):
         """
 
         return copy.deepcopy(self)
+
+    def p_apply(self, func):
+        """
+        Applies func to each of the parameters of the model.
+        :param func: Function to apply, must be of the structure func(param).
+        :return: 
+        """
+
+        for ts in self.hidden:
+            ts.p_apply(func)
+
+        self.observable.p_apply(func)
+
+        return self

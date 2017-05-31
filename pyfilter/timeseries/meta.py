@@ -112,3 +112,18 @@ class Base(object):
             out.append(self.propagate(out[i-1], **kwargs))
 
         return np.array(out)
+
+    def p_apply(self, func):
+        """
+        Applies `func` to each parameter of the model. 
+        :param func: Function to apply, must be of the structure func(param).
+        :return: 
+        """
+        out = tuple()
+
+        for p in self.theta:
+            out += (func(p),)
+
+        self.theta = out
+
+        return self

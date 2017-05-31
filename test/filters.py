@@ -6,6 +6,7 @@ import scipy.stats as stats
 import pyfilter.filters.bootstrap as sisr
 import pyfilter.filters.apf as apf
 from pyfilter.filters.rapf import RAPF
+from pyfilter.filters.ness import NESS
 import pykalman
 import numpy as np
 import matplotlib.pyplot as plt
@@ -157,3 +158,13 @@ class Tests(unittest.TestCase):
 
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
+    def test_NESS(self):
+        x, y = self.model.sample(550)
+
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        ness = NESS(self.model, (500, 500))
+
+        ness = ness.longfilter(y[:500])
