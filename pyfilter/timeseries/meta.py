@@ -122,7 +122,10 @@ class Base(object):
         out = tuple()
 
         for p in self.theta:
-            out += (func(p),)
+            try:
+                out += (func(p),)
+            except Exception:
+                out += (p,)
 
         self.theta = out
 

@@ -159,12 +159,19 @@ class Tests(unittest.TestCase):
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
     def test_NESS(self):
-        x, y = self.model.sample(550)
+        x, y = self.model.sample(500)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
-        ness = NESS(self.model, (500, 500))
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        ness = NESS(self.model, (600, 600))
 
         ness = ness.longfilter(y[:500])
+
+        estimates = ness._filter._model.hidden[0].theta[1]
+
+        mean = np.mean(estimates)
+        std = np.std(estimates)
+
+        assert mean - 3 * std < 1 < mean + 3 * std

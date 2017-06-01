@@ -3,6 +3,7 @@ import numpy as np
 import pyfilter.helpers.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
+from ..helpers.helpers import choose
 
 
 class BaseFilter(object):
@@ -133,3 +134,15 @@ class BaseFilter(object):
         """
 
         return copy.deepcopy(self)
+
+    def resample(self, indices):
+        """
+        Resamples the particles along the first axis.
+        :param indices: The indices to choose
+        :return: 
+        """
+
+        self._old_x = choose(self._old_x, indices)
+        self._model.p_apply(lambda x: choose(x, indices))
+
+        return self

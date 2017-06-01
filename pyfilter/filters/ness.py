@@ -1,15 +1,18 @@
 from .base import BaseFilter
 from .bootstrap import Bootstrap
 from ..helpers.resampling import systematic
+import numpy as np
+import math
 
 
-def jitter(params, weights):
+def jitter(params):
     """
     Jitters the parameters.
     :param params: 
-    :param weights: 
     :return: 
     """
+    # TODO: Fix this to use truncated
+    return np.abs(params + math.sqrt(20 / params.size ** (3 / 2)) * np.random.normal(size=params.shape))
 
 
 class NESS(BaseFilter):
@@ -17,7 +20,6 @@ class NESS(BaseFilter):
         super().__init__(model, particles, *args, **kwargs)
 
         self._filter = filt(model, particles).initialize()
-        self._c_filter = self._filter.copy()
 
     def initialize(self):
         """
@@ -31,7 +33,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: x)
+        self._model.p_apply(jitter)
 
         # ===== PROPAGATE FILTER ===== #
 
