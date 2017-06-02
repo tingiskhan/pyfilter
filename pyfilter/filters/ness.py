@@ -12,7 +12,7 @@ def jitter(params):
     :return: 
     """
     # TODO: Fix this to use truncated
-    return np.abs(params + math.sqrt(20 / params.size ** (3 / 2)) * np.random.normal(size=params.shape))
+    return np.abs(params + math.sqrt(5 / params.size ** (3 / 2)) * np.random.normal(size=params.shape))
 
 
 class NESS(BaseFilter):
@@ -45,3 +45,6 @@ class NESS(BaseFilter):
         self._filter = self._filter.resample(indices)
 
         return self
+
+    def predict(self, steps, **kwargs):
+        return self._filter.predict(steps, **kwargs)
