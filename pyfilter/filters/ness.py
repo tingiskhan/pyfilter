@@ -48,3 +48,6 @@ class NESS(BaseFilter):
 
     def predict(self, steps, **kwargs):
         return self._filter.predict(steps, **kwargs)
+
+    def filtermeans(self):
+        return self._filter.filtermeans()
