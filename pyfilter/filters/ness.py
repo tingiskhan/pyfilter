@@ -11,9 +11,7 @@ def jitter(params):
     :param params: 
     :return: 
     """
-    # TODO: Fix this to use truncated
-
-    std = math.sqrt(5 / params[0].size ** (3 / 2))
+    std = 2 * params[1].std() / math.sqrt(params[0].size ** (3 / 2))
 
     a = (params[1].bounds()[0] - params[0]) / std
     b = (params[1].bounds()[1] - params[0]) / std
