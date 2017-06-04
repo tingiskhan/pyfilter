@@ -165,7 +165,7 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = (linear,)
         self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESS(self.model, (600, 600))
+        ness = NESS(self.model, (300, 300))
 
         ness = ness.longfilter(y[:500])
 
@@ -174,4 +174,4 @@ class Tests(unittest.TestCase):
         mean = np.mean(estimates)
         std = np.std(estimates)
 
-        assert mean - 3 * std < 1 < mean + 3 * std
+        assert mean - std < 1 < mean + std
