@@ -1,4 +1,5 @@
 import numpy as np
+from ..distributions.continuous import Distribution
 
 
 class Base(object):
@@ -20,6 +21,7 @@ class Base(object):
         self.f0, self.g0 = initial
         self.f, self.g = funcs
         self.theta = theta
+        self._o_theta = theta
         self.noise0, self.noise = noise
         self.q = q
 
@@ -121,10 +123,10 @@ class Base(object):
         """
         out = tuple()
 
-        for p in self.theta:
-            try:
-                out += (func(p),)
-            except Exception:
+        for p, op in zip(self.theta, self._o_theta):
+            if isinstance(op, Distribution):
+                out += (func((p, op)),)
+            else:
                 out += (p,)
 
         self.theta = out

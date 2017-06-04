@@ -1,7 +1,7 @@
 from .base import BaseFilter
 from .bootstrap import Bootstrap
 from ..helpers.resampling import systematic
-import numpy as np
+import scipy.stats as stats
 import math
 
 
@@ -12,7 +12,13 @@ def jitter(params):
     :return: 
     """
     # TODO: Fix this to use truncated
-    return np.abs(params + math.sqrt(5 / params.size ** (3 / 2)) * np.random.normal(size=params.shape))
+
+    std = math.sqrt(5 / params[0].size ** (3 / 2))
+
+    a = (params[1].bounds()[0] - params[0]) / std
+    b = (params[1].bounds()[1] - params[0]) / std
+
+    return stats.truncnorm.rvs(a, b, params[0], std, size=params[0].shape)
 
 
 class NESS(BaseFilter):

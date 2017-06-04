@@ -143,6 +143,6 @@ class BaseFilter(object):
         """
 
         self._old_x = choose(self._old_x, indices)
-        self._model.p_apply(lambda x: choose(x, indices))
+        self._model.p_apply(lambda x: choose(x[0], indices))
 
         return self
