@@ -19,6 +19,19 @@ def jitter(params):
     return stats.truncnorm.rvs(a, b, params[0], std, size=params[0].shape)
 
 
+def flattener(a):
+    """
+    Flattens array a.
+    :param a: 
+    :return: 
+    """
+
+    if a.ndim < 3:
+        return a.flatten()
+
+    return a.reshape(a.shape[0], a.shape[1] * a.shape[2])
+
+
 class NESS(BaseFilter):
     def __init__(self, model, particles, *args, filt=Bootstrap, **kwargs):
         super().__init__(model, particles, *args, **kwargs)
@@ -51,7 +64,16 @@ class NESS(BaseFilter):
         return self
 
     def predict(self, steps, **kwargs):
-        return self._filter.predict(steps, **kwargs)
+        xp, yp = self._filter.predict(steps, **kwargs)
+
+        xout = list()
+        yout = list()
+
+        for xt, yt in zip(xp, yp):
+            xout.append([flattener(x) for x in xt])
+            yout.append(flattener(yt))
+
+        return xout, yout
 
     def filtermeans(self):
         return self._filter.filtermeans()
