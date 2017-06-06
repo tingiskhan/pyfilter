@@ -56,9 +56,9 @@ class Normal(Distribution):
         self.scale = scale
 
     def logpdf(self, x, loc=None, scale=None, size=None, **kwargs):
-        m, s = _get(loc, self.loc), _get(scale, self.scale) ** 2
+        m, s = _get(loc, self.loc), _get(scale, self.scale)
 
-        return - 0.5 * np.log(2 * s * pi) - (x - m) ** 2 / 2 / s
+        return - 0.5 * np.log(2 * s * pi) - (x - m) ** 2 / 2 / s ** 2
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         m, s = _get(loc, self.loc), _get(scale, self.scale)
