@@ -76,4 +76,4 @@ class NESS(BaseFilter):
         return xout, yout
 
     def filtermeans(self):
-        return self._filter.filtermeans()
+        raise NotImplementedError()
