@@ -12,6 +12,7 @@ class Bootstrap(BaseFilter):
 
         self._old_x = helps.choose(t_x, resampled_indices)
         self._old_y = y
+        self._old_w = weights
 
         self.s_l.append(helps.loglikelihood(weights))
 
