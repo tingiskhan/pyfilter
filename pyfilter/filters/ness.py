@@ -11,7 +11,7 @@ def jitter(params):
     :param params: 
     :return: 
     """
-    std = 2 * params[1].std() / math.sqrt(params[0].size ** (3 / 2))
+    std = params[1].std() / math.sqrt(params[0].size ** (3 / 2))
 
     a = (params[1].bounds()[0] - params[0]) / std
     b = (params[1].bounds()[1] - params[0]) / std
@@ -36,7 +36,7 @@ class NESS(BaseFilter):
     def __init__(self, model, particles, *args, filt=Bootstrap, **kwargs):
         super().__init__(model, particles, *args, **kwargs)
 
-        self._filter = filt(model, particles).initialize()
+        self._filter = filt(model, particles, saveall=False).initialize()
 
     def initialize(self):
         """
