@@ -8,9 +8,9 @@ class APF(BaseFilter):
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
-        try:
-            resampled_indices = resamp.systematic(t_weights + self.s_w[-1])
-        except IndexError:
+        if self._old_w is not None:
+            resampled_indices = resamp.systematic(t_weights + self._old_w)
+        else:
             resampled_indices = resamp.systematic(t_weights)
 
         resampled_x = helps.choose(self._old_x, resampled_indices)
