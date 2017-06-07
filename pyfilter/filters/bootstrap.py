@@ -13,8 +13,10 @@ class Bootstrap(BaseFilter):
         self._old_x = helps.choose(t_x, resampled_indices)
         self._old_y = y
 
-        self.s_x.append(t_x)
-        self.s_w.append(weights)
         self.s_l.append(helps.loglikelihood(weights))
+
+        if self.saveall:
+            self.s_x.append(t_x)
+            self.s_w.append(weights)
 
         return self

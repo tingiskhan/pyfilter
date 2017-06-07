@@ -7,7 +7,7 @@ from ..helpers.helpers import choose
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, **kwargs):
+    def __init__(self, model, particles, *args, saveall=True, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
@@ -24,9 +24,14 @@ class BaseFilter(object):
 
         self._old_y = None
         self._old_x = None
+        self._old_w = None
 
-        self.s_x = list()
-        self.s_w = list()
+        self.saveall = saveall
+
+        if saveall:
+            self.s_x = list()
+            self.s_w = list()
+
         self.s_l = list()
 
     def _initialize_parameters(self):
