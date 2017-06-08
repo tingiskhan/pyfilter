@@ -46,10 +46,9 @@ y *= 100
 # ===== DEFINE MODEL ===== #
 
 logvol = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
-mu = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
-obs = Observable((go, fo), (), Normal())
+obs = Observable((go, fo), (Normal(),), Normal())
 
-ssm = StateSpaceModel((logvol, mu), obs)
+ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
@@ -81,22 +80,16 @@ plt.legend()
 
 # ===== PLOT KDEs ===== #
 
-fig2, ax2 = plt.subplots(3, 2)
+fig2, ax2 = plt.subplots(4)
 
+mu = pd.DataFrame(ssm.observable.theta[0])
 kappa = pd.DataFrame(ssm.hidden[0].theta[0])
 gamma = pd.DataFrame(ssm.hidden[0].theta[1])
 sigma = pd.DataFrame(ssm.hidden[0].theta[2])
 
-alpha = pd.DataFrame(ssm.hidden[1].theta[0])
-beta = pd.DataFrame(ssm.hidden[1].theta[1])
-delta = pd.DataFrame(ssm.hidden[1].theta[2])
-
-kappa.plot(kind='kde', ax=ax2[0, 0])
-gamma.plot(kind='kde', ax=ax2[1, 0])
-sigma.plot(kind='kde', ax=ax2[2, 0])
-
-alpha.plot(kind='kde', ax=ax2[0, 1])
-beta.plot(kind='kde', ax=ax2[1, 1])
-delta.plot(kind='kde', ax=ax2[2, 1])
+mu.plot(kind='kde', ax2=ax[0])
+kappa.plot(kind='kde', ax=ax2[1])
+gamma.plot(kind='kde', ax=ax2[2])
+sigma.plot(kind='kde', ax=ax2[3])
 
 plt.show()
