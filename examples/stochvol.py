@@ -1,77 +1,102 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries.meta import Base
 from pyfilter.timeseries.observable import Observable
-from pyfilter.filters.rapf import RAPF
+from pyfilter.filters.ness import NESS
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from pandas_datareader import data
 import quandl
+import time
 
 
-def fh0(kappa, gamma, sigma):
-    return gamma
+def fh0(reversion, level, std):
+    return level
 
 
-def gh0(kappa, gamma, sigma):
-    return sigma / np.sqrt(2 * kappa)
+def gh0(reversion, level, std):
+    return std / np.sqrt(2 * reversion)
 
 
-def fh(x, kappa, gamma, sigma):
-    return x + kappa * (gamma - x)
+def fh(x, reversion, level, std):
+    return x + reversion * (level - x)
 
 
-def gh(x, kappa, gamma, sigma):
-    return sigma
+def gh(x, reversion, level, std):
+    return std
 
 
-def go(vol, mu):
-    return mu
+def go(vol, level):
+    return level
 
 
-def fo(vol, mu):
+def fo(vol, level):
     return np.exp(vol / 2)
+
+
+# ===== GET DATA ===== #
+
+fig, ax = plt.subplots()
+
+stock = 'AAPL'
+y = quandl.get('WIKI/{:s}'.format(stock), start_date='2012-01-01', column_index=11, transform='rdiff')
+y *= 100
+
+
+# ===== DEFINE MODEL ===== #
+
+logvol = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
+mu = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
+obs = Observable((go, fo), (), Normal())
+
+ssm = StateSpaceModel((logvol, mu), obs)
 
 # ===== INFER VALUES ===== #
 
-fig, ax = plt.subplots(2)
-
-y = quandl.get('WIKI/AAPL', start_date='2010-01-01', api_key='<APIKEY>', column_index=11, transform='rdiff')
-y *= 100
-
-ax[0].plot(y)
+alg = NESS(ssm, (500, 500)).initialize()
 
 predictions = 30
 
-logvol = Base((fh0, gh0), (fh, gh), (Gamma(1), Normal(), Gamma(1)), (Normal(), Normal()))
+start = time.time()
+alg = alg.longfilter(y[:-predictions])
+print('Took {:.1f} seconds to finish'.format(time.time() - start))
 
-obs = Observable((go, fo), (Normal(),), Normal())
+# ===== PREDICT ===== #
 
-ssm = StateSpaceModel(logvol, obs)
+p_x, p_y = alg.predict(predictions)
 
-rapf = RAPF(ssm, 3000).initialize()
+ascum = np.cumsum(np.array(p_y), axis=0)
 
-rapf = rapf.longfilter(y[:-predictions])
+up = np.percentile(ascum, 95, axis=1)
+down = np.percentile(ascum, 5, axis=1)
 
-ax[1].plot(rapf.filtermeans())
+ax.plot(y.index[-predictions:], up, alpha=0.6, color='r', label='95%')
+ax.plot(y.index[-predictions:], down, alpha=0.6, color='r', label='5%')
+ax.plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 
-p_x, p_y = rapf.predict(predictions)
+actual = y.iloc[-predictions:].cumsum()
+ax.plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[0].plot(y.index[-predictions:], p_y, alpha=0.03, color='r')
+plt.legend()
 
-# ===== PLOT KDE ===== #
+# ===== PLOT KDEs ===== #
 
-fig2, ax2 = plt.subplots(4)
+fig2, ax2 = plt.subplots(3, 2)
 
-mu = pd.Series(ssm.observable.theta[0])
-kappa = pd.Series(ssm.hidden[0].theta[0])
-gamma = pd.Series(ssm.hidden[0].theta[1])
-sigma = pd.Series(ssm.hidden[0].theta[2])
+kappa = pd.DataFrame(ssm.hidden[0].theta[0])
+gamma = pd.DataFrame(ssm.hidden[0].theta[1])
+sigma = pd.DataFrame(ssm.hidden[0].theta[2])
 
-mu.plot(kind='kde', ax=ax2[0])
-kappa.plot(kind='kde', ax=ax2[1])
-gamma.plot(kind='kde', ax=ax2[2])
-sigma.plot(kind='kde', ax=ax2[3])
+alpha = pd.DataFrame(ssm.hidden[1].theta[0])
+beta = pd.DataFrame(ssm.hidden[1].theta[1])
+delta = pd.DataFrame(ssm.hidden[1].theta[2])
+
+kappa.plot(kind='kde', ax=ax2[0, 0])
+gamma.plot(kind='kde', ax=ax2[1, 0])
+sigma.plot(kind='kde', ax=ax2[2, 0])
+
+alpha.plot(kind='kde', ax=ax2[0, 1])
+beta.plot(kind='kde', ax=ax2[1, 1])
+delta.plot(kind='kde', ax=ax2[2, 1])
 
 plt.show()
