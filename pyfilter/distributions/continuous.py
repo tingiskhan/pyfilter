@@ -117,3 +117,30 @@ class Beta(Distribution):
 
     def std(self):
         return stats.beta(a=self.a, b=self.b).std()
+
+
+class MultivariateNormal(Distribution):
+    def __init__(self, mean=np.zeros(2), cov=np.eye(2)):
+        self.mean = mean
+        self.cov = cov
+
+        self._hmean = np.zeros_like(mean)
+
+    def rvs(self, loc=None, scale=None, size=None, **kwargs):
+        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
+
+        rvs = np.random.multivariate_normal(mean=self._hmean, cov=self.cov, size=size)
+
+        return loc + np.einsum('ij...,...i->i...', scale, rvs)
+
+    def logpdf(self, x, loc=None, scale=None, **kwargs):
+        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
+        # TODO: Figure out a way to calculate the log pdf
+        raise NotImplementedError()
+
+    def bounds(self):
+        bound = np.infty * np.ones_like(self.mean)
+        return -bound, bound
+
+    def std(self):
+        return self.cov
