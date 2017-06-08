@@ -8,9 +8,9 @@ class APF(BaseFilter):
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
-        try:
-            resampled_indices = resamp.systematic(t_weights + self.s_w[-1])
-        except IndexError:
+        if self._old_w is not None:
+            resampled_indices = resamp.systematic(t_weights + self._old_w)
+        else:
             resampled_indices = resamp.systematic(t_weights)
 
         resampled_x = helps.choose(self._old_x, resampled_indices)
@@ -19,9 +19,12 @@ class APF(BaseFilter):
 
         self._old_y = y
         self._old_x = t_x
+        self._old_w = weights - helps.choose(t_weights, resampled_indices)
 
-        self.s_x.append(t_x)
-        self.s_w.append(weights - helps.choose(t_weights, resampled_indices))
-        self.s_l.append(weights.mean(axis=-1))
+        self.s_l.append(helps.loglikelihood(weights))
+
+        if self.saveall:
+            self.s_x.append(t_x)
+            self.s_w.append(self._old_w)
 
         return self

@@ -1,4 +1,5 @@
 import numpy as np
+from ..distributions.continuous import Distribution
 
 
 class Base(object):
@@ -20,6 +21,7 @@ class Base(object):
         self.f0, self.g0 = initial
         self.f, self.g = funcs
         self.theta = theta
+        self._o_theta = theta
         self.noise0, self.noise = noise
         self.q = q
 
@@ -112,3 +114,21 @@ class Base(object):
             out.append(self.propagate(out[i-1], **kwargs))
 
         return np.array(out)
+
+    def p_apply(self, func):
+        """
+        Applies `func` to each parameter of the model. 
+        :param func: Function to apply, must be of the structure func(param).
+        :return: 
+        """
+        out = tuple()
+
+        for p, op in zip(self.theta, self._o_theta):
+            if isinstance(op, Distribution):
+                out += (func((p, op)),)
+            else:
+                out += (p,)
+
+        self.theta = out
+
+        return self

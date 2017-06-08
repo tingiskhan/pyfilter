@@ -41,6 +41,14 @@ class Distribution(object):
 
         raise NotImplementedError()
 
+    def std(self):
+        """
+        Returns the standard deviation of the RV.
+        :return: 
+        """
+
+        raise NotImplementedError()
+
 
 class Normal(Distribution):
     def __init__(self, loc=0, scale=1):
@@ -48,9 +56,9 @@ class Normal(Distribution):
         self.scale = scale
 
     def logpdf(self, x, loc=None, scale=None, size=None, **kwargs):
-        m, s = _get(loc, self.loc), _get(scale, self.scale) ** 2
+        m, s = _get(loc, self.loc), _get(scale, self.scale)
 
-        return - 0.5 * np.log(2 * s * pi) - (x - m) ** 2 / 2 / s
+        return stats.norm.logpdf(x, loc=m, scale=s)
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         m, s = _get(loc, self.loc), _get(scale, self.scale)
@@ -59,6 +67,9 @@ class Normal(Distribution):
 
     def bounds(self):
         return -np.infty, np.infty
+
+    def std(self):
+        return stats.norm(loc=self.loc, scale=self.scale).std()
 
 
 class Gamma(Distribution):
@@ -84,6 +95,9 @@ class Gamma(Distribution):
     def bounds(self):
         return self.loc, np.infty
 
+    def std(self):
+        return stats.gamma(a=self.a, loc=self.loc, scale=self.scale).std()
+
 
 class Beta(Distribution):
     def __init__(self, a, b):
@@ -100,3 +114,6 @@ class Beta(Distribution):
 
     def bounds(self):
         return 0, 1
+
+    def std(self):
+        return stats.beta(a=self.a, b=self.b).std()
