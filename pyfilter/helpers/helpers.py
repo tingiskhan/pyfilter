@@ -176,3 +176,14 @@ def loglikelihood(w):
     return logl
 
 
+def dot(a, b):
+    """
+    Helper function for calculating the dot product between two matrices.
+    :param a: The A array
+    :type a: np.ndarray
+    :param b: The B array
+    :type b: np.ndarray
+    :return: 
+    """
+
+    return np.einsum('ij...,i...->i...', a, b)
