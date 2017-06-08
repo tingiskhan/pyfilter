@@ -1,5 +1,4 @@
 from .base import BaseFilter
-from ..distributions.continuous import Distribution
 from math import sqrt
 from ..helpers.resampling import systematic
 from ..helpers.helpers import choose, loglikelihood
@@ -121,6 +120,6 @@ class RAPF(BaseFilter):
 
         self.s_w.append(weights - choose(t_weights, resampled_indices))
         self.s_x.append(x)
-        self.s_l.append(weights.mean(axis=-1))
+        self.s_l.append(loglikelihood(weights))
 
         return self
