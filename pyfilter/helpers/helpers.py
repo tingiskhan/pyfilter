@@ -187,3 +187,17 @@ def dot(a, b):
     """
 
     return np.einsum('ij...,i...->i...', a, b)
+
+
+def outer(a, b):
+    """
+    Calculates the outer product B * X * B^t.
+    :param a: The B-matrix
+    :param b: The X-matrix
+    :return: 
+    """
+
+    xbt = np.einsum('ij...,kj...->ik...', b, a)
+    bxbt = np.einsum('ij...,jk...->ik...', a, xbt)
+
+    return bxbt
