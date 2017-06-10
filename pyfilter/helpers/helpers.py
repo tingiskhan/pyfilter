@@ -201,3 +201,14 @@ def outer(a, b):
     bxbt = np.einsum('ij...,jk...->ik...', a, xbt)
 
     return bxbt
+
+
+def square(a, b):
+    """
+    Calculates the square product x^t * A * x.
+    :param a: The vector x
+    :param b: The matrix A 
+    :return: 
+    """
+
+    return np.einsum('i...,j...->...', a, dot(b, a))

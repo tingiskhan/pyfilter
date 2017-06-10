@@ -124,6 +124,7 @@ class MultivariateNormal(Distribution):
     def __init__(self, mean=np.zeros(2), cov=np.eye(2)):
         self.mean = mean
         self.cov = cov
+        self.dim = cov.shape[0]
 
         self._hmean = np.zeros_like(mean)
 
@@ -139,7 +140,10 @@ class MultivariateNormal(Distribution):
 
         cov = helps.outer(scale, self.cov)
 
-        return stats.multivariate_normal.logpdf(x, loc, cov)
+        t1 = - 0.5 * np.log((2 * np.pi) ** self.dim * np.linalg.det(cov.T))
+        t2 = - helps.square((x.T - loc.T).T, cov)
+
+        return t1 + t2
 
     def bounds(self):
         bound = np.infty * np.ones_like(self.mean)
