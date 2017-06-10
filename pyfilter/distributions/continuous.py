@@ -1,6 +1,7 @@
 import numpy as np
 from math import pi
 import scipy.stats as stats
+import pyfilter.helpers.helpers as helps
 
 
 def _get(x, y):
@@ -127,16 +128,18 @@ class MultivariateNormal(Distribution):
         self._hmean = np.zeros_like(mean)
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
+        loc, scale = _get(loc, self.mean), _get(scale, 1)
 
         rvs = np.random.multivariate_normal(mean=self._hmean, cov=self.cov, size=size)
 
         return loc + np.einsum('ij...,...i->i...', scale, rvs)
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
-        # TODO: Figure out a way to calculate the log pdf
-        raise NotImplementedError()
+        loc, scale = _get(loc, self.mean), _get(scale, np.eye(self.cov.shape[0]))
+
+        cov = helps.outer(scale, self.cov)
+
+        return stats.multivariate_normal.logpdf(x, loc, cov)
 
     def bounds(self):
         bound = np.infty * np.ones_like(self.mean)
