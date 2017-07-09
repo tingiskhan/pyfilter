@@ -21,7 +21,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        return sum(h.ndim for h in self.hidden)
+        return tuple(h.ndim for h in self.hidden)
 
     @property
     def obs_ndim(self):
