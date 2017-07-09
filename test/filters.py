@@ -7,6 +7,7 @@ import pyfilter.filters.bootstrap as sisr
 import pyfilter.filters.apf as apf
 from pyfilter.filters.rapf import RAPF
 from pyfilter.filters.ness import NESS
+from pyfilter.filters.upf import UPF
 import pykalman
 import numpy as np
 import matplotlib.pyplot as plt
@@ -194,3 +195,12 @@ class Tests(unittest.TestCase):
             upper = np.percentile(y_pred[i], 99)
 
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
+
+    def test_UPF(self):
+        upf = UPF(self.model, 500).initialize()
+
+        assert upf._extendedmean.shape == (3,) and upf._extendedcov.shape == (3, 3)
+
+        upfmd = UPF(self.model, (500, 300)).initialize()
+
+        assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
