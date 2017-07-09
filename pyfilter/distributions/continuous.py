@@ -1,5 +1,5 @@
 import numpy as np
-from math import pi
+import abc
 import scipy.stats as stats
 import pyfilter.helpers.helpers as helps
 
@@ -51,7 +51,18 @@ class Distribution(object):
         raise NotImplementedError()
 
 
-class Normal(Distribution):
+class OneDimensional(Distribution):
+    ndim = 1
+
+
+class MultiDimensional(Distribution):
+    @abc.abstractmethod
+    @property
+    def ndim(self):
+        return 2
+
+
+class Normal(OneDimensional):
     def __init__(self, loc=0, scale=1):
         self.loc = loc
         self.scale = scale
@@ -73,7 +84,7 @@ class Normal(Distribution):
         return stats.norm(loc=self.loc, scale=self.scale).std()
 
 
-class Gamma(Distribution):
+class Gamma(OneDimensional):
     def __init__(self, a, loc=0, scale=1):
         self.a = a
         self.loc = loc
@@ -100,7 +111,7 @@ class Gamma(Distribution):
         return stats.gamma(a=self.a, loc=self.loc, scale=self.scale).std()
 
 
-class Beta(Distribution):
+class Beta(OneDimensional):
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -120,13 +131,17 @@ class Beta(Distribution):
         return stats.beta(a=self.a, b=self.b).std()
 
 
-class MultivariateNormal(Distribution):
+class MultivariateNormal(MultiDimensional):
     def __init__(self, mean=np.zeros(2), cov=np.eye(2)):
         self.mean = mean
         self.cov = cov
         self.dim = cov.shape[0]
 
         self._hmean = np.zeros_like(mean)
+
+    @property
+    def ndim(self):
+        return self.mean.size
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, 1)
