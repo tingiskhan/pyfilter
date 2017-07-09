@@ -57,7 +57,6 @@ class OneDimensional(Distribution):
 
 class MultiDimensional(Distribution):
     @abc.abstractmethod
-    @property
     def ndim(self):
         return 2
 
@@ -141,7 +140,7 @@ class MultivariateNormal(MultiDimensional):
 
     @property
     def ndim(self):
-        return self.mean.size
+        return self.mean
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, 1)
