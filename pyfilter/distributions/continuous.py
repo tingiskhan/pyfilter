@@ -54,11 +54,17 @@ class Distribution(object):
 class OneDimensional(Distribution):
     ndim = 1
 
+    def cov(self):
+        return self.std() ** 2
+
 
 class MultiDimensional(Distribution):
     @abc.abstractmethod
     def ndim(self):
         return 2
+
+    def cov(self):
+        return self.std()
 
 
 class Normal(OneDimensional):
