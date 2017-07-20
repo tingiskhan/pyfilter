@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -7,7 +7,7 @@ setup(
     author='Victor Tingström',
     author_email='victor.tingstrom@gmail.com',
     description='Package for performing online Bayesian inference in state space models',
-    packages=['pyfilter'],
+    packages=find_packages(),
     install_requires=[
         'numpy>=1.11.3',
         'matplotlib>=2.0.0',
