@@ -151,9 +151,9 @@ class MultivariateNormal(MultiDimensional):
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, 1)
 
-        rvs = np.random.multivariate_normal(mean=self._hmean, cov=self.cov, size=size)
+        rvs = np.random.multivariate_normal(mean=self._hmean, cov=self.cov, size=(size or loc.shape[1:]))
 
-        return loc + np.einsum('ij...,...i->i...', scale, rvs)
+        return (loc.T + np.einsum('ij...,...i->i...', scale, rvs).T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, np.eye(self.cov.shape[0]))

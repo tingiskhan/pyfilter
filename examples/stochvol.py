@@ -38,8 +38,8 @@ def fo(vol, level):
 
 fig, ax = plt.subplots()
 
-stock = 'MSFT'
-y = quandl.get('WIKI/{:s}'.format(stock), start_date='2000-01-01', end_date='2008-07-30', column_index=11, transform='rdiff')
+stock = 'QCOM'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2000-01-01', end_date='2016-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
@@ -52,13 +52,13 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (300, 300)).initialize()
+alg = NESS(ssm, (600, 600)).initialize()
 
 predictions = 30
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])
-print('Took {:.1f} seconds to finish'.format(time.time() - start))
+print('Took {:.1f} seconds to finish for {:s}'.format(time.time() - start, stock))
 
 # ===== PREDICT ===== #
 
@@ -66,8 +66,8 @@ p_x, p_y = alg.predict(predictions)
 
 ascum = np.cumsum(np.array(p_y), axis=0)
 
-up = np.percentile(ascum, 95, axis=1)
-down = np.percentile(ascum, 5, axis=1)
+up = np.percentile(ascum, 99, axis=1)
+down = np.percentile(ascum, 1, axis=1)
 
 ax.plot(y.index[-predictions:], up, alpha=0.6, color='r', label='95%')
 ax.plot(y.index[-predictions:], down, alpha=0.6, color='r', label='5%')
@@ -91,5 +91,11 @@ mu.plot(kind='kde', ax=ax2[0])
 kappa.plot(kind='kde', ax=ax2[1])
 gamma.plot(kind='kde', ax=ax2[2])
 sigma.plot(kind='kde', ax=ax2[3])
+
+
+fig3, ax3 = plt.subplots()
+
+pd.Series(ascum[-1]).plot(kind='kde', ax=ax3)
+ax3.plot(y.iloc[-predictions:].sum(), 0, 'ro')
 
 plt.show()
