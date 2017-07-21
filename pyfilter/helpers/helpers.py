@@ -32,10 +32,12 @@ def choose(array, indices):
 
         return out
 
-    if indices.ndim < 2:
+    if (indices.ndim < 2) & (array.ndim > 2):
+        return array[:, indices]
+    elif indices.ndim < 2:
         return array[indices]
 
-    return array[..., np.arange(array.shape[0])[:, None], indices]
+    return array[..., np.arange(array.shape[-2])[:, None], indices]
 
 
 def solve_quadratic(a, b, c):

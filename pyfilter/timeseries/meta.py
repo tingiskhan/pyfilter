@@ -13,7 +13,7 @@ class Base(object):
         :param theta: The parameters governing the dynamics
         :type theta: tuple
         :param noise: The noise governing the noise process.
-        :type noise: tuple
+        :type noise: tuple of Distribution
         :param q: The correlation of the noise processes
         :type q: numpy.ndarray
         """
@@ -24,6 +24,14 @@ class Base(object):
         self._o_theta = theta
         self.noise0, self.noise = noise
         self.q = q
+
+    @property
+    def ndim(self):
+        """
+        Returns the dimension of the timeseries
+        :return:
+        """
+        return self.noise.ndim
 
     def i_mean(self):
         """

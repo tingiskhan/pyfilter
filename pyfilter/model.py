@@ -14,6 +14,24 @@ class StateSpaceModel(object):
         self.hidden = hidden if isinstance(hidden, tuple) else (hidden,)
         self.observable = observable
 
+    @property
+    def hidden_ndim(self):
+        """
+        Returns the dimension of the hidden process.
+        :return:
+        """
+
+        return tuple(h.ndim for h in self.hidden)
+
+    @property
+    def obs_ndim(self):
+        """
+        Returns the dimension of the observable process
+        :return:
+        """
+
+        return self.observable.ndim
+
     def initialize(self, size=None, **kwargs):
         """
         Initializes the algorithm and samples from the hidden densities.
