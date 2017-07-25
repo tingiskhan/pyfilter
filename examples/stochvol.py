@@ -1,7 +1,7 @@
 from pyfilter.model import StateSpaceModel
-from pyfilter.timeseries.meta import Base
-from pyfilter.timeseries.observable import Observable
-from pyfilter.filters.ness import NESS
+from pyfilter.timeseries import Base
+from pyfilter.timeseries import Observable
+from pyfilter.filters import NESS, APF
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,11 +26,11 @@ def gh(x, reversion, level, std):
     return std
 
 
-def go(vol, level):
-    return level
+def go(vol, level, beta):
+    return level + (beta - 1) * np.exp(vol)
 
 
-def fo(vol, level):
+def fo(vol, level, beta):
     return np.exp(vol / 2)
 
 
@@ -38,21 +38,21 @@ def fo(vol, level):
 
 fig, ax = plt.subplots()
 
-stock = 'QCOM'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2000-01-01', end_date='2016-01-01', column_index=11, transform='rdiff') + 1)
+stock = 'mmm'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2014-01-01', end_date='2017-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
 # ===== DEFINE MODEL ===== #
 
 logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 3), Normal(scale=0.3), Gamma(1)), (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(),), Normal())
+obs = Observable((go, fo), (Normal(), Normal(1, 0.2)), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (600, 600)).initialize()
+alg = NESS(ssm, (600, 600), filt=APF).initialize()
 
 predictions = 30
 

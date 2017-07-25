@@ -32,10 +32,9 @@ def choose(array, indices):
 
         return out
 
-    if (indices.ndim < 2) & (array.ndim > 2):
-        return array[:, indices]
-    elif indices.ndim < 2:
-        return array[indices]
+    if indices.ndim < 2:
+        shapematch = np.cumsum([s == indices.shape[0] for s in array.shape])
+        return np.take(array, indices, axis=shapematch.tolist().index(1))
 
     return array[..., np.arange(array.shape[-2])[:, None], indices]
 

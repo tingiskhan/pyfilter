@@ -110,15 +110,17 @@ class BaseFilter(object):
         """
 
         w = np.array(self.s_w)
-        x = np.array(self.s_x)
-
         normalized = norm.normalize(w)
+        out = tuple()
 
-        weighted = tuple()
-        for i in range(x.shape[1]):
-            weighted += (np.average(x[:, i], axis=-1, weights=normalized),)
+        for t, xt in enumerate(self.s_x):
+            weighted = tuple()
+            for s in xt:
+                weighted += (np.average(s, axis=-1, weights=normalized[t]),)
 
-        return np.array(weighted).swapaxes(0, 1)
+            out += weighted
+
+        return out
 
     def predict(self, steps, **kwargs):
         """

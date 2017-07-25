@@ -65,9 +65,9 @@ class Tests(unittest.TestCase):
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        maxerr = np.abs(estimates - filterestimates[0]).max()
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
-        assert maxerr < 0.5
+        assert rmse < 0.05
 
     def test_APF(self):
         x, y = self.model.sample(500)
@@ -83,9 +83,9 @@ class Tests(unittest.TestCase):
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        maxerr = np.abs(estimates - filterestimates[0]).max()
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
-        assert maxerr < 0.5
+        assert rmse < 0.05
 
     def test_Likelihood(self):
         x, y = self.model.sample(500)
