@@ -27,6 +27,7 @@ class BaseFilter(object):
         self._old_w = None
 
         self.saveall = saveall
+        self._td = None
 
         if saveall:
             self.s_x = list()
@@ -98,6 +99,9 @@ class BaseFilter(object):
         elif isinstance(data, list):
             data = np.array(data)
 
+        # ===== SMC2 needs the entire dataset ==== #
+        self._td = data
+
         for i in range(data.shape[0]):
             self.filter(data[i])
 
@@ -152,5 +156,50 @@ class BaseFilter(object):
         self._old_x = choose(self._old_x, indices)
         self._model.p_apply(lambda x: choose(x[0], indices))
         self._old_w = choose(self._old_w, indices)
+
+        self.s_l = list(np.array(self.s_l)[:, indices])
+
+        return self
+
+    def reset(self):
+        """
+        Resets the filter.
+        :return:
+        """
+
+        self._old_y = None
+        self._old_x = self._model.initialize(self._particles)
+        self._old_w = None
+
+        if self.saveall:
+            self.s_x = list()
+            self.s_w = list()
+
+        self.s_l = list()
+
+        return self
+
+    def replace(self, indices, ofilt):
+        """
+        Replaces the self instance with `ofilt`.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param ofilt: The filter
+        :type ofilt: BaseFilter
+        :return:
+        """
+
+        newoldx = list()
+        for tso, tsn in zip(self._old_x, ofilt._old_x):
+            tso[indices] = tsn[indices]
+
+            newoldx.append(tso)
+
+        self._old_x = newoldx
+
+        newsl = np.array(self.s_l)
+        newsl[:, indices] = np.array(ofilt.s_l)[:, indices]
+
+        self.s_l = list(newsl)
 
         return self

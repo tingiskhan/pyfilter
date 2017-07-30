@@ -3,11 +3,13 @@ import pyfilter.timeseries.meta as ts
 from pyfilter.timeseries.observable import Observable
 import unittest
 import scipy.stats as stats
-import pyfilter.filters.bootstrap as sisr
-import pyfilter.filters.apf as apf
-from pyfilter.filters.rapf import RAPF
-from pyfilter.filters.ness import NESS
+import pyfilter.filters as sisr
+import pyfilter.filters as apf
+from pyfilter.filters import RAPF
+from pyfilter.filters import NESS
 from pyfilter.filters.upf import UPF
+from pyfilter.filters import SMC2
+from pyfilter.helpers.normalization import normalize
 import pykalman
 import numpy as np
 import matplotlib.pyplot as plt
@@ -204,3 +206,21 @@ class Tests(unittest.TestCase):
         upfmd = UPF(self.model, (500, 300)).initialize()
 
         assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
+
+    def test_SMC2(self):
+        x, y = self.model.sample(500)
+
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        smc2 = SMC2(self.model, (3000, 100), filt=apf.APF)
+
+        smc2 = smc2.longfilter(y)
+
+        weights = normalize(smc2._recw)
+
+        mean = np.average(smc2._filter._model.hidden[0].theta[1], weights=weights[:, None])
+        std = np.sqrt(np.average((smc2._filter._model.hidden[0].theta[1] - mean) ** 2, weights=weights[:, None]))
+
+        assert mean - std < 1 < mean + std
