@@ -116,6 +116,33 @@ class Gamma(OneDimensional):
         return stats.gamma(a=self.a, loc=self.loc, scale=self.scale).std()
 
 
+class InverseGamma(OneDimensional):
+    def __init__(self, a, loc=0, scale=1):
+        self.a = a
+        self.loc = loc
+        self.scale = scale
+
+    def std(self):
+        return stats.invgamma(a=self.a, loc=self.loc, scale=self.scale).std()
+
+    def logpdf(self, x, a=None, loc=None, scale=None, size=None, **kwargs):
+        a = _get(a, self.a)
+        loc = _get(loc, self.loc)
+        scale = _get(scale, self.scale)
+
+        return stats.invgamma.logpdf(x, a=a, loc=loc, scale=scale, **kwargs)
+
+    def rvs(self, a=None, loc=None, scale=None, size=None, **kwargs):
+        a = _get(a, self.a)
+        loc = _get(loc, self.loc)
+        scale = _get(scale, self.scale)
+
+        return stats.invgamma(a, scale=scale, loc=loc).rvs(size=size)
+
+    def bounds(self):
+        return self.loc, np.infty
+
+
 class Beta(OneDimensional):
     def __init__(self, a, b):
         self.a = a
