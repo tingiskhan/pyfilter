@@ -140,3 +140,19 @@ class Base(object):
         self.theta = out
 
         return self
+
+    def p_prior(self):
+        """
+        Calculates the prior log likelihood of the current values.
+        :return:
+        """
+
+        out = 0
+
+        for p, op in zip(self.theta, self._o_theta):
+            if isinstance(op, Distribution):
+                out += op.logpdf(p)
+            else:
+                out += 0
+
+        return out

@@ -128,3 +128,15 @@ class StateSpaceModel(object):
         self.observable.p_apply(func)
 
         return self
+
+    def p_prior(self):
+        """
+        Calculates the prior likelihood of current values of parameters.
+        :return:
+        """
+
+        out = 0
+        for ts in self.hidden:
+            out += ts.p_prior()
+
+        return out + self.observable.p_prior()
