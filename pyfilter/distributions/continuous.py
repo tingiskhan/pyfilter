@@ -100,7 +100,7 @@ class Gamma(OneDimensional):
         loc = _get(loc, self.loc)
         scale = _get(scale, self.scale)
 
-        return stats.gamma.logpdf(x, a=a, loc=loc, scale=scale, size=size, **kwargs)
+        return stats.gamma.logpdf(x, a=a, loc=loc, scale=scale, **kwargs)
 
     def rvs(self, a=None, loc=None, scale=None, size=None, **kwargs):
         a = _get(a, self.a)
