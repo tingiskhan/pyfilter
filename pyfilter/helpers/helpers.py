@@ -1,5 +1,18 @@
 import numpy as np
-import math
+from .normalization import normalize
+
+
+def get_ess(w):
+    """
+    Calculates the ESS from an array of log weights.
+    :param w: The log weights
+    :type w: np.ndarray
+    :return:
+    """
+
+    normalized = normalize(w)
+
+    return np.sum(normalized, axis=-1) ** 2 / np.sum(normalized ** 2, axis=-1)
 
 
 def searchsorted2d(a, b):
