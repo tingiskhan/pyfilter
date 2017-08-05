@@ -105,6 +105,8 @@ class BaseFilter(object):
         for i in range(data.shape[0]):
             self.filter(data[i])
 
+        self._td = None
+
         return self
 
     def filtermeans(self):
