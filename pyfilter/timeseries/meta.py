@@ -140,13 +140,7 @@ class Base(object):
         :return:
         """
 
-        priors = self.p_map(lambda x: x[1].logpdf(x[0]), default=0)
-
-        out = 0
-        for p in priors:
-            out += p
-
-        return out
+        return sum(self.p_map(lambda x: x[1].logpdf(x[0]), default=0))
 
     def p_map(self, func, default=None):
         """
