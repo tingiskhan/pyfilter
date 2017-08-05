@@ -1,17 +1,20 @@
 from .base import BaseFilter
 from .bootstrap import Bootstrap
 from ..helpers.resampling import systematic
+from ..helpers.helpers import get_ess
 import scipy.stats as stats
 import math
+import numpy as np
 
 
-def jitter(params):
+def jitter(params, p):
     """
     Jitters the parameters.
-    :param params: 
+    :param params:
+    :param p:
     :return: 
     """
-    std = params[1].std() / math.sqrt(params[0].size ** (3 / 2))
+    std = params[1].std() / math.sqrt(params[0].size ** ((p + 2) / p))
 
     a = (params[1].bounds()[0] - params[0]) / std
     b = (params[1].bounds()[1] - params[0]) / std
@@ -33,10 +36,25 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, *args, filt=Bootstrap, **kwargs):
+    def __init__(self, model, particles, *args, filt=Bootstrap, threshold=0.8, p=4, **kwargs):
+        """
+        Implements the NESS alorithm by Miguez and Crisan.
+        :param model: See BaseFilter
+        :param particles: See BaseFilter
+        :param args: See BaseFilter
+        :param filt: See BaseFilter
+        :param threshold: The threshold for when to resample the parameters.
+        :param p: A parameter controlling the variance of the jittering kernel. The greater the value, the higher the
+                  variance.
+        :param kwargs: See BaseFilter
+        """
+
         super().__init__(model, particles, *args, **kwargs)
 
         self._filter = filt(model, particles, saveall=False).initialize()
+        self._recw = 0  # type: np.ndarray
+        self._th = threshold
+        self._p = p
 
     def initialize(self):
         """
@@ -50,7 +68,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(jitter)
+        self._model.p_apply(lambda x: jitter(x, self._p))
 
         # ===== PROPAGATE FILTER ===== #
 
@@ -58,8 +76,15 @@ class NESS(BaseFilter):
 
         # ===== RESAMPLE PARTICLES ===== #
 
-        indices = systematic(self._filter.s_l[-1])
-        self._filter = self._filter.resample(indices)
+        self._recw += self._filter.s_l[-1]
+
+        ess = get_ess(self._recw)
+
+        if ess < self._th * self._filter._particles[0]:
+            indices = systematic(self._recw)
+            self._filter = self._filter.resample(indices)
+
+            self._recw = 0  # type: np.ndarray
 
         return self
 
