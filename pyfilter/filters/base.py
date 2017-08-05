@@ -163,19 +163,22 @@ class BaseFilter(object):
 
         return self
 
-    def reset(self):
+    def reset(self, particles=None):
         """
         Resets the filter.
+        :param particles: Size of filter to reset.
         :return:
         """
 
         self._old_y = None
-        self._old_x = self._model.initialize(self._particles)
+        self._old_x = self._model.initialize(particles if particles is not None else self._particles)
         self._old_w = None
 
         if self.saveall:
             self.s_x = list()
             self.s_w = list()
+
+        self._particles = particles if particles is not None else self._particles
 
         self.s_l = list()
 
