@@ -129,15 +129,8 @@ class Base(object):
         :param func: Function to apply, must be of the structure func(param).
         :return: 
         """
-        out = tuple()
 
-        for p, op in zip(self.theta, self._o_theta):
-            if isinstance(op, Distribution):
-                out += (func((p, op)),)
-            else:
-                out += (p,)
-
-        self.theta = out
+        self.theta = self.p_map(func)
 
         return self
 
@@ -147,12 +140,28 @@ class Base(object):
         :return:
         """
 
+        priors = self.p_map(lambda x: x[1].logpdf(x[0]), default=0)
+
         out = 0
+        for p in priors:
+            out += p
+
+        return out
+
+    def p_map(self, func, default=None):
+        """
+        Applies the func to the parameters and returns a tuple of objects.
+        :param func: The function to apply to parameters.
+        :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value.
+        :return:
+        """
+
+        out = tuple()
 
         for p, op in zip(self.theta, self._o_theta):
             if isinstance(op, Distribution):
-                out += op.logpdf(p)
+                out += (func((p, op)),)
             else:
-                out += 0
+                out += (default if default is not None else p,)
 
         return out
