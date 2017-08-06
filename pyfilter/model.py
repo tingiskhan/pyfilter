@@ -68,6 +68,16 @@ class StateSpaceModel(object):
 
         return self.observable.weight(y, *x)
 
+    def h_weight(self, y, x):
+        """
+        Weights the process of the current hidden state x_t, with the previous x_{t-1}.
+        :param y: The current hidden state.
+        :param x: The previous hidden state.
+        :return:
+        """
+
+        return sum(h.weight(y[i], x[i]) for i, h in enumerate(self.hidden))
+
     def sample(self, steps, x_s=None, **kwargs):
         """
         Constructs a sample trajectory for both the observable and the hidden density.
@@ -140,3 +150,16 @@ class StateSpaceModel(object):
             out += ts.p_prior()
 
         return out + self.observable.p_prior()
+
+    def p_map(self, func, **kwargs):
+        """
+        Applies func to each of the parameters of the model and returns result as tuple.
+        :param func: Function to apply, must of structure func(params).
+        :return:
+        """
+
+        h_out = tuple()
+        for ts in self.hidden:
+            h_out += ts.p_map(func, **kwargs)
+
+        return h_out, self.observable.p_map(func, **kwargs)
