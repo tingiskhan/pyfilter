@@ -1,6 +1,6 @@
 from .base import BaseFilter
 from .bootstrap import Bootstrap
-from ..helpers.resampling import systematic
+from ..helpers.resampling import systematic, multinomial
 from ..helpers.helpers import get_ess
 import scipy.stats as stats
 import math
@@ -81,7 +81,7 @@ class NESS(BaseFilter):
         ess = get_ess(self._recw)
 
         if ess < self._th * self._filter._particles[0]:
-            indices = systematic(self._recw)
+            indices = self._resamp(self._recw)
             self._filter = self._filter.resample(indices)
 
             self._recw = 0  # type: np.ndarray

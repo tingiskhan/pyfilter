@@ -4,14 +4,17 @@ import pyfilter.helpers.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
 from ..helpers.helpers import choose
+from ..helpers.resampling import multinomial, systematic
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=True, **kwargs):
+    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: pyfilter.model.StateSpaceModel
+        :param resampling: Which resampling method to use
+        :type resampling: function
         :param parameters:
         :param args:
         :param kwargs:
@@ -25,6 +28,8 @@ class BaseFilter(object):
         self._old_y = None
         self._old_x = None
         self._old_w = None
+
+        self._resamp = resampling
 
         self.saveall = saveall
         self._td = None
@@ -170,41 +175,19 @@ class BaseFilter(object):
         :return:
         """
 
+        self._particles = particles if particles is not None else self._particles
+
         self._old_y = None
-        self._old_x = self._model.initialize(particles if particles is not None else self._particles)
+        self._old_x = self._model.initialize(self._particles)
         self._old_w = None
 
         if self.saveall:
             self.s_x = list()
             self.s_w = list()
 
-        self._particles = particles if particles is not None else self._particles
-
         self.s_l = list()
 
         return self
 
-    def replace(self, indices, ofilt):
-        """
-        Replaces the self instance with `ofilt`.
-        :param indices: The indices to exchange
-        :type indices: np.ndarray
-        :param ofilt: The filter
-        :type ofilt: BaseFilter
-        :return:
-        """
-
-        newoldx = list()
-        for tso, tsn in zip(self._old_x, ofilt._old_x):
-            tso[indices] = tsn[indices]
-
-            newoldx.append(tso)
-
-        self._old_x = newoldx
-
-        newsl = np.array(self.s_l)
-        newsl[:, indices] = np.array(ofilt.s_l)[:, indices]
-
-        self.s_l = list(newsl)
-
-        return self
+    def replace(self, indices, nfilter):
+        raise NotImplementedError()

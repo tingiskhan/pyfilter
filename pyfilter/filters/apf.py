@@ -1,5 +1,4 @@
 from .base import BaseFilter
-import pyfilter.helpers.resampling as resamp
 import pyfilter.helpers.helpers as helps
 
 
@@ -9,9 +8,9 @@ class APF(BaseFilter):
         t_weights = self._model.weight(y, t_x)
 
         if self._old_w is not None:
-            resampled_indices = resamp.systematic(t_weights + self._old_w)
+            resampled_indices = self._resamp(t_weights + self._old_w)
         else:
-            resampled_indices = resamp.systematic(t_weights)
+            resampled_indices = self._resamp(t_weights)
 
         resampled_x = helps.choose(self._old_x, resampled_indices)
         t_x = self._model.propagate(resampled_x)
