@@ -113,12 +113,11 @@ class Tests(unittest.TestCase):
 
         apft = apf.APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
-        filtermeans = apft.filtermeans()
+        filtermeans = np.array(apft.filtermeans())
 
-        for i in range(shape[0]):
-            plt.plot(filtermeans[:, :, i])
+        rmse = np.sqrt(np.mean((filtermeans[:, 0:1] - filtermeans[:, 1:]) ** 2))
 
-        plt.show()
+        assert rmse < 0.1
 
     def test_RAPFSimpleModel(self):
         x, y = self.model.sample(500)
@@ -214,7 +213,7 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = (linear,)
         self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        smc2 = SMC2(self.model, (3000, 100), filt=apf.APF)
+        smc2 = SMC2(self.model, (1000, 100))
 
         smc2 = smc2.longfilter(y)
 
