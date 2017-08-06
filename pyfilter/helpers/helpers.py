@@ -66,7 +66,7 @@ def loglikelihood(w):
         if isinstance(logl, np.ndarray):
             logl[~np.isfinite(logl)] = -1e200
         else:
-            logl = -1e200
+            logl = logl if np.isfinite(logl) else -1e200
 
     return logl
 
