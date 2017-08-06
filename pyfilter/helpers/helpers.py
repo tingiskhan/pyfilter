@@ -60,7 +60,9 @@ def loglikelihood(w):
     :return: 
     """
 
-    logl = np.log(np.exp(w).mean(axis=-1))
+    with np.errstate(divide='ignore'):
+        logl = np.log(np.exp(w).mean(axis=-1))
+        logl[~np.isfinite(logl)] = -1e200
 
     return logl
 
