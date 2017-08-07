@@ -95,13 +95,9 @@ class Tests(unittest.TestCase):
         apft = apf.APF(self.model, 1000).initialize().longfilter(y)
         sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
 
-        fig, ax = plt.subplots()
+        rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
 
-        ax.plot(apft.s_l, label='APF')
-        ax.plot(sisrt.s_l, label='SISR')
-
-        ax.set_title('Verify that APF > SISR in general')
-        plt.show()
+        assert rmse < 0.1
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
