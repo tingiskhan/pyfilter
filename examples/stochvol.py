@@ -19,11 +19,11 @@ def gh0(reversion, level, std):
 
 
 def fh(x, reversion, level, std):
-    return x + reversion * (level - x)
+    return x * np.exp(-reversion) + level * (1 - np.exp(-reversion))
 
 
 def gh(x, reversion, level, std):
-    return std
+    return std / np.sqrt(2 * reversion) * (1 - np.exp(-reversion))
 
 
 def go(vol, level, beta):
@@ -38,23 +38,23 @@ def fo(vol, level, beta):
 
 fig, ax = plt.subplots()
 
-stock = 'mmm'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2014-01-01', end_date='2017-01-01', column_index=11, transform='rdiff') + 1)
+stock = 'cop'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', end_date='2017-07-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
 # ===== DEFINE MODEL ===== #
 
 logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 3), Normal(scale=0.3), Gamma(1)), (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), Normal(1, 0.2)), Normal())
+obs = Observable((go, fo), (Normal(), 1), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (600, 600), filt=APF).initialize()
+alg = NESS(ssm, (800, 800), filt=APF).initialize()
 
-predictions = 30
+predictions = 15
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])

@@ -73,9 +73,9 @@ class Normal(OneDimensional):
         self.scale = scale
 
     def logpdf(self, x, loc=None, scale=None, size=None, **kwargs):
-        m, s = _get(loc, self.loc), _get(scale, self.scale)
+        m, s = _get(loc, self.loc), _get(scale, self.scale) ** 2
 
-        return stats.norm.logpdf(x, loc=m, scale=s)
+        return -np.log(2 * np.pi * s) / 2 - (x - m) ** 2 / 2 / s
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         m, s = _get(loc, self.loc), _get(scale, self.scale)
