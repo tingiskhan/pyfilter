@@ -154,6 +154,7 @@ class Beta(OneDimensional):
         return np.random.beta(a, b, size=size)
 
     def logpdf(self, x, a=None, b=None, size=None, **kwargs):
+        a, b = _get(a, self.a), _get(b, self.b)
         return stats.beta.logpdf(x, a, b)
 
     def bounds(self):
