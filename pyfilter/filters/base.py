@@ -199,4 +199,37 @@ class BaseFilter(object):
         :return:
         """
 
-        raise NotImplementedError()
+        # ===== Exchange parameters ===== #
+
+        self._model.exchange(indices, newfilter._model)
+
+        # ===== Exchange old likelihoods and weights ===== #
+
+        ots_l = np.array(self.s_l)
+        nts_l = np.array(newfilter.s_l)
+
+        ots_l[:, indices] = nts_l[:, indices]
+        self.s_l = list(ots_l)
+        self._old_w[indices] = newfilter._old_w[indices]
+
+        # ===== Exchange old states ===== #
+
+        for i, x in enumerate(newfilter._old_x):
+            if x.ndim > self._old_w.ndim:
+                self._old_x[i][:, indices] = newfilter._old_x[i][:, indices]
+            else:
+                self._old_x[i][indices] = newfilter._old_x[i][indices]
+
+        # ===== Exchange particle history ===== #
+
+        if self.saveall:
+            for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
+                for i, xi in enumerate(x):
+                    if xi.ndim > w.ndim:
+                        self.s_x[t][i][:, indices] = xi[:, indices]
+                    else:
+                        self.s_x[t][i][indices] = xi[indices]
+
+                self.s_w[t][indices] = w[indices]
+
+        return self
