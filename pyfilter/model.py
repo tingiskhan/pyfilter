@@ -1,4 +1,5 @@
 import copy
+from .distributions.continuous import Distribution
 
 
 class StateSpaceModel(object):
@@ -163,3 +164,28 @@ class StateSpaceModel(object):
             h_out += ts.p_map(func, **kwargs)
 
         return h_out, self.observable.p_map(func, **kwargs)
+
+    def exchange(self, indices, newmodel):
+        """
+        Exchanges the parameters of `self` with `newmodel` at indices.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newmodel: The model which to exchange with
+        :type newmodel: StateSpaceModel
+        :return:
+        """
+
+        # ===== Exchange hidden parameters ===== #
+
+        for j, (htso, htsn) in enumerate(zip(self.hidden, newmodel.hidden)):
+            for i, param in enumerate(htso._o_theta):
+                if isinstance(param, Distribution):
+                    self.hidden[j].theta[i][indices] = htsn.theta[i][indices]
+
+        # ===== Exchange observable parameters ====== #
+
+        for i, param in enumerate(self.observable._o_theta):
+            if isinstance(param, Distribution):
+                self.observable.theta[i][indices] = newmodel.observable.theta[i][indices]
+
+        return self
