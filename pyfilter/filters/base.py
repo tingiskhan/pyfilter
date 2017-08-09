@@ -189,5 +189,14 @@ class BaseFilter(object):
 
         return self
 
-    def replace(self, indices, nfilter):
+    def exchange(self, indices, newfilter):
+        """
+        Exchanges particles of `self` with `indices` of `newfilter`.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newfilter: The new filter to exchange with.
+        :type newfilter: BaseFilter
+        :return:
+        """
+
         raise NotImplementedError()
