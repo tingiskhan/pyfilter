@@ -22,7 +22,7 @@ class NESSMC2(SMC2):
         else:
             if not self._switched:
                 print('\n===== Switching to NESS =====')
-                self._ness._filter = self._smc2._filter
+                self._ness._recw = self._smc2._recw
                 self._switched = True
 
             self._ness.filter(y)
