@@ -12,7 +12,6 @@ from pyfilter.filters import SMC2
 from pyfilter.helpers.normalization import normalize
 import pykalman
 import numpy as np
-import matplotlib.pyplot as plt
 from pyfilter.distributions.continuous import Normal, Gamma
 
 
@@ -98,6 +97,14 @@ class Tests(unittest.TestCase):
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
 
         assert rmse < 0.1
+
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        kalmanloglikelihood = kf.loglikelihood(y)
+
+        apferror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
+        sisrerror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
+
+        assert (apferror < 0.01) and (sisrerror < 0.01)
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
@@ -203,13 +210,13 @@ class Tests(unittest.TestCase):
         assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
 
     def test_SMC2(self):
-        x, y = self.model.sample(500)
+        x, y = self.model.sample(300)
 
         linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = (linear,)
         self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        smc2 = SMC2(self.model, (1000, 100))
+        smc2 = SMC2(self.model, (1000, 100), filt=apf.APF)
 
         smc2 = smc2.longfilter(y)
 
