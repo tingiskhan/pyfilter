@@ -36,7 +36,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, *args, filt=Bootstrap, threshold=0.8, p=4, **kwargs):
+    def __init__(self, model, particles, *args, filt=Bootstrap, threshold=1, p=4, **kwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
