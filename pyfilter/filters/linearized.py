@@ -23,8 +23,10 @@ def _get_derivs(x, func, h=1e-3):
         upx, lowx = x.copy(), x.copy()
         upx[i], lowx[i] = up, low
 
-        first += ((func(upx) - func(lowx)) / 2 / h,)
-        second += ((func(upx) - 2 * func(x) + func(lowx)) / h ** 2,)
+        fupx, flowx = func(upx), func(lowx)
+
+        first += ((fupx - flowx) / 2 / h,)
+        second += ((fupx - 2 * func(x) + flowx) / h ** 2,)
 
     return first, second
 
