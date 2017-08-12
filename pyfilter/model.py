@@ -1,4 +1,5 @@
 import copy
+from .distributions.continuous import Distribution
 
 
 class StateSpaceModel(object):
@@ -68,6 +69,16 @@ class StateSpaceModel(object):
 
         return self.observable.weight(y, *x)
 
+    def h_weight(self, y, x):
+        """
+        Weights the process of the current hidden state x_t, with the previous x_{t-1}.
+        :param y: The current hidden state.
+        :param x: The previous hidden state.
+        :return:
+        """
+
+        return sum(h.weight(y[i], x[i]) for i, h in enumerate(self.hidden))
+
     def sample(self, steps, x_s=None, **kwargs):
         """
         Constructs a sample trajectory for both the observable and the hidden density.
@@ -126,5 +137,55 @@ class StateSpaceModel(object):
             ts.p_apply(func)
 
         self.observable.p_apply(func)
+
+        return self
+
+    def p_prior(self):
+        """
+        Calculates the prior likelihood of current values of parameters.
+        :return:
+        """
+
+        out = 0
+        for ts in self.hidden:
+            out += ts.p_prior()
+
+        return out + self.observable.p_prior()
+
+    def p_map(self, func, **kwargs):
+        """
+        Applies func to each of the parameters of the model and returns result as tuple.
+        :param func: Function to apply, must of structure func(params).
+        :return:
+        """
+
+        h_out = tuple()
+        for ts in self.hidden:
+            h_out += ts.p_map(func, **kwargs)
+
+        return h_out, self.observable.p_map(func, **kwargs)
+
+    def exchange(self, indices, newmodel):
+        """
+        Exchanges the parameters of `self` with `newmodel` at indices.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newmodel: The model which to exchange with
+        :type newmodel: StateSpaceModel
+        :return:
+        """
+
+        # ===== Exchange hidden parameters ===== #
+
+        for j, (htso, htsn) in enumerate(zip(self.hidden, newmodel.hidden)):
+            for i, param in enumerate(htso._o_theta):
+                if isinstance(param, Distribution):
+                    self.hidden[j].theta[i][indices] = htsn.theta[i][indices]
+
+        # ===== Exchange observable parameters ====== #
+
+        for i, param in enumerate(self.observable._o_theta):
+            if isinstance(param, Distribution):
+                self.observable.theta[i][indices] = newmodel.observable.theta[i][indices]
 
         return self

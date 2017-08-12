@@ -4,14 +4,17 @@ import pyfilter.helpers.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
 from ..helpers.helpers import choose
+from ..helpers.resampling import multinomial, systematic
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=True, **kwargs):
+    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: pyfilter.model.StateSpaceModel
+        :param resampling: Which resampling method to use
+        :type resampling: function
         :param parameters:
         :param args:
         :param kwargs:
@@ -26,7 +29,10 @@ class BaseFilter(object):
         self._old_x = None
         self._old_w = None
 
+        self._resamp = resampling
+
         self.saveall = saveall
+        self._td = None
 
         if saveall:
             self.s_x = list()
@@ -98,8 +104,13 @@ class BaseFilter(object):
         elif isinstance(data, list):
             data = np.array(data)
 
+        # ===== SMC2 needs the entire dataset ==== #
+        self._td = data
+
         for i in range(data.shape[0]):
             self.filter(data[i])
+
+        self._td = None
 
         return self
 
@@ -152,5 +163,73 @@ class BaseFilter(object):
         self._old_x = choose(self._old_x, indices)
         self._model.p_apply(lambda x: choose(x[0], indices))
         self._old_w = choose(self._old_w, indices)
+
+        self.s_l = list(np.array(self.s_l)[:, indices])
+
+        return self
+
+    def reset(self, particles=None):
+        """
+        Resets the filter.
+        :param particles: Size of filter to reset.
+        :return:
+        """
+
+        self._particles = particles if particles is not None else self._particles
+
+        self._old_y = None
+        self._old_x = self._model.initialize(self._particles)
+        self._old_w = None
+
+        if self.saveall:
+            self.s_x = list()
+            self.s_w = list()
+
+        self.s_l = list()
+
+        return self
+
+    def exchange(self, indices, newfilter):
+        """
+        Exchanges particles of `self` with `indices` of `newfilter`.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newfilter: The new filter to exchange with.
+        :type newfilter: BaseFilter
+        :return:
+        """
+
+        # ===== Exchange parameters ===== #
+
+        self._model.exchange(indices, newfilter._model)
+
+        # ===== Exchange old likelihoods and weights ===== #
+
+        ots_l = np.array(self.s_l)
+        nts_l = np.array(newfilter.s_l)
+
+        ots_l[:, indices] = nts_l[:, indices]
+        self.s_l = list(ots_l)
+        self._old_w[indices] = newfilter._old_w[indices]
+
+        # ===== Exchange old states ===== #
+
+        for i, x in enumerate(newfilter._old_x):
+            if x.ndim > self._old_w.ndim:
+                self._old_x[i][:, indices] = newfilter._old_x[i][:, indices]
+            else:
+                self._old_x[i][indices] = newfilter._old_x[i][indices]
+
+        # ===== Exchange particle history ===== #
+
+        if self.saveall:
+            for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
+                for i, xi in enumerate(x):
+                    if xi.ndim > w.ndim:
+                        self.s_x[t][i][:, indices] = xi[:, indices]
+                    else:
+                        self.s_x[t][i][indices] = xi[indices]
+
+                self.s_w[t][indices] = w[indices]
 
         return self

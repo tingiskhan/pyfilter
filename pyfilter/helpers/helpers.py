@@ -1,5 +1,18 @@
 import numpy as np
-import math
+from .normalization import normalize
+
+
+def get_ess(w):
+    """
+    Calculates the ESS from an array of log weights.
+    :param w: The log weights
+    :type w: np.ndarray
+    :return:
+    """
+
+    normalized = normalize(w)
+
+    return np.sum(normalized, axis=-1) ** 2 / np.sum(normalized ** 2, axis=-1)
 
 
 def searchsorted2d(a, b):
@@ -39,128 +52,6 @@ def choose(array, indices):
     return array[..., np.arange(array.shape[-2])[:, None], indices]
 
 
-def solve_quadratic(a, b, c):
-    """
-    Solves a quadratic function f(x) = ax^2 + bx + c
-    :param a:
-    :param b:
-    :param c:
-    :return:
-    """
-    return (-b + math.sqrt(b ** 2 - 4 * a * c)) / 2 / a
-
-
-def solve_sum(s):
-    """
-    Backs out the number of integers required to sum up to `s`.
-    :param s:
-    :return:
-    """
-    return solve_quadratic(1, 1, -2 * s)
-
-
-def makediag3d(a):
-    """
-    Takes a 2D array `a` as inputs and constructs a diagonal 3D array from the rows of the 2D array.
-    :param a:
-    :return:
-    """
-    size = a.shape[-1]
-    x = np.zeros((a.shape[0], a.shape[1], a.shape[1]))
-    mask = np.eye(size) == np.ones((size, size))
-
-    x[:, mask] = a
-
-    return x
-
-
-def getdiag3d(a):
-    """
-    Flattens a diagonal 3D array to 2D.
-    :param a:
-    :return:
-    """
-    size = a.shape[-1]
-    mask = np.eye(size) == np.ones((size, size))
-
-    x = a[:, mask]
-
-    return x
-
-
-def makeuppdiag3d(a):
-    """
-    Constructs a 3D upper diagonal matrix given a 2D array where each row corresponds to the upper diagonal matrix.
-    :param a:
-    :return:
-    """
-    size = solve_sum(a.shape[-1])
-
-    x = np.zeros((a.shape[0], size, size))
-    mask = np.arange(size)[:, None] <= np.arange(size)
-
-    x[:, mask] = a
-
-    return x
-
-
-def makediag4d(a):
-    size = a.shape[-1]
-    x = np.zeros((a.shape[0], a.shape[1], a.shape[2], a.shape[2]))
-    mask = np.eye(size) == np.ones((size, size))
-
-    x[:, :, mask] = a
-
-    return x
-
-
-def makeuppdiag4d(a):
-    size = solve_sum(a.shape[2])
-
-    x = np.zeros((a.shape[0], a.shape[1], size, size))
-    mask = np.arange(size)[:, None] <= np.arange(size)
-
-    x[:, :, mask] = a
-
-    return x
-
-
-def expand_dimensions(a, b):
-    """
-    Expands the dimension of `a` to be that of `b`.
-    :param a:
-    :param b:
-    :return:
-    """
-    try:
-        if a.shape == b.shape:
-            return a
-        elif (a.ndim == b.ndim) and (a.shape[0] == b.shape[0]):
-            return a
-        elif a.ndim > 1:
-            return a[:, :, None]
-
-        return a[None, :, None]
-
-    except AttributeError:
-        return a
-
-
-def standardize(data):
-    """
-    Standardizes data.
-    :type data: pandas.DataFrame
-    :rtype: pandas.DataFrame
-    """
-
-    return data.subtract(data.mean()).div(data.std())
-
-
-def summation_axis(array):
-    tmp = tuple([ax for ax in range(array.ndim) if ax > 0])
-    return tmp if len(tmp) > 0 else 0
-
-
 def loglikelihood(w):
     """
     Calculates the estimated loglikehood given weights.
@@ -169,10 +60,13 @@ def loglikelihood(w):
     :return: 
     """
 
-    logl = np.log(np.exp(w).mean(axis=-1))
+    with np.errstate(divide='ignore'):
+        logl = np.log(np.exp(w).mean(axis=-1))
 
-    if isinstance(logl, np.ndarray):
-        logl[~np.isfinite(logl)] = -999
+        if isinstance(logl, np.ndarray):
+            logl[~np.isfinite(logl)] = -1e200
+        else:
+            logl = logl if np.isfinite(logl) else -1e200
 
     return logl
 

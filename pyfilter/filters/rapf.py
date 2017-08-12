@@ -1,6 +1,5 @@
 from .base import BaseFilter
 from math import sqrt
-from ..helpers.resampling import systematic
 from ..helpers.helpers import choose, loglikelihood
 import scipy.stats as stats
 import numpy as np
@@ -107,9 +106,9 @@ class RAPF(BaseFilter):
         t_weights = self._copy.weight(y, t_x)
 
         try:
-            resampled_indices = systematic(t_weights + self.s_w[-1])
+            resampled_indices = self._resamp(t_weights + self.s_w[-1])
         except IndexError:
-            resampled_indices = systematic(t_weights)
+            resampled_indices = self._resamp(t_weights)
 
         self._propagate_parameters(resampled_indices, t_weights)
         x = self._model.propagate(choose(self._old_x, resampled_indices))

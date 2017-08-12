@@ -73,9 +73,9 @@ class Normal(OneDimensional):
         self.scale = scale
 
     def logpdf(self, x, loc=None, scale=None, size=None, **kwargs):
-        m, s = _get(loc, self.loc), _get(scale, self.scale)
+        m, s = _get(loc, self.loc), _get(scale, self.scale) ** 2
 
-        return stats.norm.logpdf(x, loc=m, scale=s)
+        return -np.log(2 * np.pi * s) / 2 - (x - m) ** 2 / 2 / s
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         m, s = _get(loc, self.loc), _get(scale, self.scale)
@@ -100,7 +100,7 @@ class Gamma(OneDimensional):
         loc = _get(loc, self.loc)
         scale = _get(scale, self.scale)
 
-        return stats.gamma.logpdf(x, a=a, loc=loc, scale=scale, size=size, **kwargs)
+        return stats.gamma.logpdf(x, a=a, loc=loc, scale=scale, **kwargs)
 
     def rvs(self, a=None, loc=None, scale=None, size=None, **kwargs):
         a = _get(a, self.a)
@@ -116,6 +116,33 @@ class Gamma(OneDimensional):
         return stats.gamma(a=self.a, loc=self.loc, scale=self.scale).std()
 
 
+class InverseGamma(OneDimensional):
+    def __init__(self, a, loc=0, scale=1):
+        self.a = a
+        self.loc = loc
+        self.scale = scale
+
+    def std(self):
+        return stats.invgamma(a=self.a, loc=self.loc, scale=self.scale).std()
+
+    def logpdf(self, x, a=None, loc=None, scale=None, size=None, **kwargs):
+        a = _get(a, self.a)
+        loc = _get(loc, self.loc)
+        scale = _get(scale, self.scale)
+
+        return stats.invgamma.logpdf(x, a=a, loc=loc, scale=scale, **kwargs)
+
+    def rvs(self, a=None, loc=None, scale=None, size=None, **kwargs):
+        a = _get(a, self.a)
+        loc = _get(loc, self.loc)
+        scale = _get(scale, self.scale)
+
+        return stats.invgamma(a, scale=scale, loc=loc).rvs(size=size)
+
+    def bounds(self):
+        return self.loc, np.infty
+
+
 class Beta(OneDimensional):
     def __init__(self, a, b):
         self.a = a
@@ -127,6 +154,7 @@ class Beta(OneDimensional):
         return np.random.beta(a, b, size=size)
 
     def logpdf(self, x, a=None, b=None, size=None, **kwargs):
+        a, b = _get(a, self.a), _get(b, self.b)
         return stats.beta.logpdf(x, a, b)
 
     def bounds(self):

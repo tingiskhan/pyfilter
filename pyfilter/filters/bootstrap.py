@@ -8,7 +8,7 @@ class Bootstrap(BaseFilter):
         t_x = self._model.propagate(self._old_x)
         weights = self._model.weight(y, t_x)
 
-        resampled_indices = resamp.systematic(weights)
+        resampled_indices = self._resamp(weights)
 
         self._old_x = helps.choose(t_x, resampled_indices)
         self._old_y = y

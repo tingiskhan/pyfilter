@@ -56,3 +56,42 @@ def systematic(w):
         return _matrix(w)
 
     return _vector(w)
+
+
+def _mn_vector(weights):
+    """
+    Resamples a vector array of weights using multinomial resampling.
+    :param weights:
+    :return:
+    """
+    normalized = norm.normalize(weights)
+
+    return np.random.choice(weights.size, weights.size, p=normalized)
+
+
+def _mn_matrix(weights):
+    """
+    Resamples a matrix array of weights using multinomial resampling.
+    :param weights:
+    :return:
+    """
+
+    out = np.empty_like(weights, dtype=int)
+
+    for i in range(weights.shape[0]):
+        out[i] = _mn_vector(weights[i])
+
+    return out
+
+
+def multinomial(w):
+    """
+    Performs multinomial resampling on either a 1D or 2D array.
+    :param w:
+    :return:
+    """
+
+    if w.ndim > 1:
+        return _mn_matrix(w)
+
+    return _mn_vector(w)

@@ -3,14 +3,16 @@ import pyfilter.timeseries.meta as ts
 from pyfilter.timeseries.observable import Observable
 import unittest
 import scipy.stats as stats
-import pyfilter.filters.bootstrap as sisr
-import pyfilter.filters.apf as apf
-from pyfilter.filters.rapf import RAPF
-from pyfilter.filters.ness import NESS
+import pyfilter.filters as sisr
+import pyfilter.filters as apf
+from pyfilter.filters import RAPF
+from pyfilter.filters import NESS
 from pyfilter.filters.upf import UPF
+from pyfilter.filters import SMC2
+from pyfilter.helpers.normalization import normalize
+from pyfilter.filters.linearized import Linearized
 import pykalman
 import numpy as np
-import matplotlib.pyplot as plt
 from pyfilter.distributions.continuous import Normal, Gamma
 
 
@@ -92,14 +94,21 @@ class Tests(unittest.TestCase):
 
         apft = apf.APF(self.model, 1000).initialize().longfilter(y)
         sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
+        linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
-        fig, ax = plt.subplots()
+        rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
+        rmse2 = np.sqrt(np.mean((np.array(linearizedt.s_l) - np.array(sisrt.s_l)) ** 2))
 
-        ax.plot(apft.s_l, label='APF')
-        ax.plot(sisrt.s_l, label='SISR')
+        assert (rmse < 0.1) and (rmse2 < 0.1)
 
-        ax.set_title('Verify that APF > SISR in general')
-        plt.show()
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        kalmanloglikelihood = kf.loglikelihood(y)
+
+        apferror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
+        sisrerror = np.abs((kalmanloglikelihood - np.array(sisrt.s_l).sum()) / kalmanloglikelihood)
+        linerror = np.abs((kalmanloglikelihood - np.array(linearizedt.s_l).sum()) / kalmanloglikelihood)
+
+        assert (apferror < 0.01) and (sisrerror < 0.01) and (linerror < 0.01)
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
@@ -111,12 +120,11 @@ class Tests(unittest.TestCase):
 
         apft = apf.APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
-        filtermeans = apft.filtermeans()
+        filtermeans = np.array(apft.filtermeans())
 
-        for i in range(shape[0]):
-            plt.plot(filtermeans[:, :, i])
+        rmse = np.sqrt(np.mean((filtermeans[:, 0:1] - filtermeans[:, 1:]) ** 2))
 
-        plt.show()
+        assert rmse < 0.1
 
     def test_RAPFSimpleModel(self):
         x, y = self.model.sample(500)
@@ -204,3 +212,39 @@ class Tests(unittest.TestCase):
         upfmd = UPF(self.model, (500, 300)).initialize()
 
         assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
+
+    def test_SMC2(self):
+        x, y = self.model.sample(300)
+
+        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        smc2 = SMC2(self.model, (1000, 100), filt=apf.APF)
+
+        smc2 = smc2.longfilter(y)
+
+        weights = normalize(smc2._recw)
+
+        mean = np.average(smc2._filter._model.hidden[0].theta[1], weights=weights[:, None])
+        std = np.sqrt(np.average((smc2._filter._model.hidden[0].theta[1] - mean) ** 2, weights=weights[:, None]))
+
+        assert mean - std < 1 < mean + std
+
+    def test_Linearized(self):
+        x, y = self.model.sample(500)
+
+        filt = Linearized(self.model, 5000).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_x) > 0
+
+        estimates = filt.filtermeans()
+
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+
+        assert rmse < 0.05

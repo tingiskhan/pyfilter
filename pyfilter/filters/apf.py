@@ -1,18 +1,27 @@
 from .base import BaseFilter
-import pyfilter.helpers.resampling as resamp
 import pyfilter.helpers.helpers as helps
+from ..helpers.normalization import normalize
+import numpy as np
 
 
 class APF(BaseFilter):
     def filter(self, y):
+
+        # ===== Perform "auxiliary sampling ===== #
+
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
         if self._old_w is not None:
-            resampled_indices = resamp.systematic(t_weights + self._old_w)
+            resamp_w = t_weights + self._old_w
+            normalized = normalize(self._old_w)
         else:
-            resampled_indices = resamp.systematic(t_weights)
+            resamp_w = t_weights
+            normalized = 1 / t_weights.shape[-1]
 
+        # ===== Resample and propagate ===== #
+
+        resampled_indices = self._resamp(resamp_w)
         resampled_x = helps.choose(self._old_x, resampled_indices)
         t_x = self._model.propagate(resampled_x)
         weights = self._model.weight(y, t_x)
@@ -21,7 +30,10 @@ class APF(BaseFilter):
         self._old_x = t_x
         self._old_w = weights - helps.choose(t_weights, resampled_indices)
 
-        self.s_l.append(helps.loglikelihood(weights))
+        # ===== Calculate log likelihood ===== #
+
+        with np.errstate(divide='ignore'):
+            self.s_l.append(helps.loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
 
         if self.saveall:
             self.s_x.append(t_x)
