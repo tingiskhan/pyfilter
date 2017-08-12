@@ -10,6 +10,7 @@ from pyfilter.filters import NESS
 from pyfilter.filters.upf import UPF
 from pyfilter.filters import SMC2
 from pyfilter.helpers.normalization import normalize
+from pyfilter.filters.linearized import Linearized
 import pykalman
 import numpy as np
 from pyfilter.distributions.continuous import Normal, Gamma
@@ -93,18 +94,21 @@ class Tests(unittest.TestCase):
 
         apft = apf.APF(self.model, 1000).initialize().longfilter(y)
         sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
+        linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
+        rmse2 = np.sqrt(np.mean((np.array(linearizedt.s_l) - np.array(sisrt.s_l)) ** 2))
 
-        assert rmse < 0.1
+        assert (rmse < 0.1) and (rmse2 < 0.1)
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         kalmanloglikelihood = kf.loglikelihood(y)
 
         apferror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
-        sisrerror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
+        sisrerror = np.abs((kalmanloglikelihood - np.array(sisrt.s_l).sum()) / kalmanloglikelihood)
+        linerror = np.abs((kalmanloglikelihood - np.array(linearizedt.s_l).sum()) / kalmanloglikelihood)
 
-        assert (apferror < 0.01) and (sisrerror < 0.01)
+        assert (apferror < 0.01) and (sisrerror < 0.01) and (linerror < 0.01)
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
@@ -226,3 +230,21 @@ class Tests(unittest.TestCase):
         std = np.sqrt(np.average((smc2._filter._model.hidden[0].theta[1] - mean) ** 2, weights=weights[:, None]))
 
         assert mean - std < 1 < mean + std
+
+    def test_Linearized(self):
+        x, y = self.model.sample(500)
+
+        filt = Linearized(self.model, 5000).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_x) > 0
+
+        estimates = filt.filtermeans()
+
+        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+
+        assert rmse < 0.05
