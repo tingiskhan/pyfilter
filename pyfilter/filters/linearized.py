@@ -43,7 +43,7 @@ class Linearized(BaseFilter):
 
         # ===== Define kernels ===== #
 
-        kernels = [Normal(x + m, np.sqrt(v)) for x, m, v in zip(self._old_x, mean, variances)]
+        kernels = [Normal(x + m, np.sqrt(v)) for x, m, v in zip(t_x, mean, variances)]
         newx = [kernel.rvs() for kernel in kernels]
 
         # ===== Weight and model ===== #
