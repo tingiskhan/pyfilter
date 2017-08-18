@@ -111,8 +111,10 @@ class RAPF(BaseFilter):
             resampled_indices = self._resamp(t_weights)
 
         self._propagate_parameters(resampled_indices, t_weights)
-        x = self._model.propagate(choose(self._old_x, resampled_indices))
-        weights = self._model.weight(y, x)
+
+        resampled_x = choose(self._old_x, resampled_indices)
+        x = self._proposal.draw(y, resampled_x)
+        weights = self._proposal.weight(y, x, resampled_x)
 
         self._old_x = x
         self._old_y = y
