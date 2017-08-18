@@ -23,8 +23,9 @@ class APF(BaseFilter):
 
         resampled_indices = self._resamp(resamp_w)
         resampled_x = helps.choose(self._old_x, resampled_indices)
-        t_x = self._model.propagate(resampled_x)
-        weights = self._model.weight(y, t_x)
+
+        t_x = self._proposal.draw(y, resampled_x)
+        weights = self._proposal.weight(y, t_x, resampled_x)
 
         self._old_y = y
         self._old_x = t_x

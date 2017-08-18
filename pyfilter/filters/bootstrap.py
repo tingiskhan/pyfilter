@@ -1,12 +1,11 @@
 from .base import BaseFilter
-import pyfilter.helpers.resampling as resamp
 import pyfilter.helpers.helpers as helps
 
 
 class Bootstrap(BaseFilter):
     def filter(self, y):
-        t_x = self._model.propagate(self._old_x)
-        weights = self._model.weight(y, t_x)
+        t_x = self._proposal.draw(y, self._old_x, size=self._particles)
+        weights = self._proposal.weight(y, t_x, self._old_x)
 
         resampled_indices = self._resamp(weights)
 

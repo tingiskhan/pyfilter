@@ -5,10 +5,11 @@ from ..distributions.continuous import Distribution
 import copy
 from ..helpers.helpers import choose
 from ..helpers.resampling import multinomial, systematic
+from ..proposals.bootstrap import Bootstrap
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, **kwargs):
+    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, proposal=Bootstrap, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
@@ -33,6 +34,7 @@ class BaseFilter(object):
 
         self.saveall = saveall
         self._td = None
+        self._proposal = proposal(self._model)
 
         if saveall:
             self.s_x = list()
