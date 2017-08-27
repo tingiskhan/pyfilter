@@ -10,10 +10,11 @@ from pyfilter.filters import NESS
 from pyfilter.filters.upf import UPF
 from pyfilter.filters import SMC2
 from pyfilter.helpers.normalization import normalize
-from pyfilter.filters.linearized import Linearized
+from pyfilter.filters import Linearized
 import pykalman
 import numpy as np
 from pyfilter.distributions.continuous import Normal, Gamma
+from pyfilter.proposals import Linearized as Linz
 
 
 def f(x, alpha, sigma):
@@ -92,7 +93,7 @@ class Tests(unittest.TestCase):
     def test_Likelihood(self):
         x, y = self.model.sample(500)
 
-        apft = apf.APF(self.model, 1000).initialize().longfilter(y)
+        apft = apf.APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
         sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
