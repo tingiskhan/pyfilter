@@ -1,8 +1,9 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries import Base
 from pyfilter.timeseries import Observable
-from pyfilter.filters import NESS, APF
+from pyfilter.filters import NESS, APF, NESSMC2, Linearized, SMC2, SISR, RAPF
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
+from pyfilter.proposals import Linearized as Linz
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -38,8 +39,8 @@ def fo(vol, level, beta):
 
 fig, ax = plt.subplots()
 
-stock = 'cop'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', end_date='2017-07-01', column_index=11, transform='rdiff') + 1)
+stock = 'ES'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2012-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
@@ -52,9 +53,9 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (800, 800), filt=APF).initialize()
+alg = RAPF(ssm, 10000).initialize()
 
-predictions = 15
+predictions = 30
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])
@@ -81,7 +82,6 @@ plt.legend()
 # ===== PLOT KDEs ===== #
 
 fig2, ax2 = plt.subplots(4)
-
 mu = pd.DataFrame(ssm.observable.theta[0])
 kappa = pd.DataFrame(ssm.hidden[0].theta[0])
 gamma = pd.DataFrame(ssm.hidden[0].theta[1])

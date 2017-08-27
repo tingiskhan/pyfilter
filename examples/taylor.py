@@ -1,7 +1,8 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries.meta import Base
 from pyfilter.timeseries.observable import Observable
-from pyfilter.filters.rapf import RAPF
+from pyfilter.filters import NESSMC2, Linearized, APF, RAPF
+from pyfilter.proposals import Linearized as Linz
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,7 +34,7 @@ def fo(x, beta):
 
 # ===== SIMULATE SSM ===== #
 
-logvol = Base((fh0, gh0), (fh, gh), (1, 0.1), (Normal(), Normal()))
+logvol = Base((fh0, gh0), (fh, gh), (1, 0.25), (Normal(), Normal()))
 obs = Observable((go, fo), (1,), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
@@ -51,7 +52,7 @@ obs = Observable((go, fo), (Gamma(1),), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
-rapf = RAPF(ssm, 10000).initialize()
+rapf = RAPF(ssm, 5000, proposal=Linz).initialize()
 
 rapf = rapf.longfilter(y)
 
@@ -61,8 +62,8 @@ ax[1].plot(rapf.filtermeans())
 
 fig2, ax2 = plt.subplots(2)
 
-sigma = pd.Series(ssm.hidden[0].theta[1])
-beta = pd.Series(ssm.observable.theta[0])
+sigma = pd.DataFrame(ssm.hidden[0].theta[1])
+beta = pd.DataFrame(ssm.observable.theta[0])
 
 sigma.plot(kind='kde', ax=ax2[0])
 beta.plot(kind='kde', ax=ax2[1])
