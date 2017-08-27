@@ -2,7 +2,7 @@ from .base import BaseFilter
 import pyfilter.helpers.helpers as helps
 
 
-class Bootstrap(BaseFilter):
+class SISR(BaseFilter):
     def filter(self, y):
         t_x = self._proposal.draw(y, self._old_x, size=self._particles)
         weights = self._proposal.weight(y, t_x, self._old_x)

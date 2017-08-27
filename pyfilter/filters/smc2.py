@@ -43,9 +43,9 @@ def _kernel(params, new_params):
 
 
 class SMC2(NESS):
-    def __init__(self, model, particles, *args, threshold=0.2, disp=True, **kwargs):
+    def __init__(self, model, particles, threshold=0.2, disp=True, **filtkwargs):
 
-        super().__init__(model, particles, *args, **kwargs)
+        super().__init__(model, particles, **filtkwargs)
 
         self._th = threshold
         self._recw = 0      # type: np.ndarray

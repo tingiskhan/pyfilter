@@ -1,5 +1,5 @@
 from .base import BaseFilter
-from .bootstrap import Bootstrap
+from .sisr import SISR
 from ..helpers.resampling import systematic, multinomial
 from ..helpers.helpers import get_ess
 import scipy.stats as stats
@@ -36,7 +36,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, *args, filt=Bootstrap, threshold=0.9, p=4, **kwargs):
+    def __init__(self, model, particles, filt=SISR, threshold=0.9, p=4, **filtkwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
@@ -46,12 +46,12 @@ class NESS(BaseFilter):
         :param threshold: The threshold for when to resample the parameters.
         :param p: A parameter controlling the variance of the jittering kernel. The greater the value, the higher the
                   variance.
-        :param kwargs: See BaseFilter
+        :param filtkwargs: See BaseFilter
         """
 
-        super().__init__(model, particles, *args, **kwargs)
+        super().__init__(model, particles)
 
-        self._filter = filt(self._model, particles, saveall=False, **kwargs).initialize()
+        self._filter = filt(self._model, particles, saveall=False, **filtkwargs).initialize()
         self._recw = 0  # type: np.ndarray
         self._th = threshold
         self._p = p

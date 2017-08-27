@@ -1,5 +1,5 @@
 from .apf import APF
-from .bootstrap import Bootstrap
+from .sisr import SISR
 from .ness import NESS
 from .rapf import RAPF
 from .smc2 import SMC2

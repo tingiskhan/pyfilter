@@ -47,7 +47,7 @@ class Tests(unittest.TestCase):
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeFilter(self):
-        filt = sisr.Bootstrap(self.model, 1000)
+        filt = sisr.SISR(self.model, 1000)
 
         filt.initialize()
 
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
 
         x, y = self.model.sample(500)
 
-        filt = sisr.Bootstrap(self.model, 5000).initialize()
+        filt = sisr.SISR(self.model, 5000).initialize()
 
         filt = filt.longfilter(y)
 
@@ -94,7 +94,7 @@ class Tests(unittest.TestCase):
         x, y = self.model.sample(500)
 
         apft = apf.APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
-        sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
+        sisrt = sisr.SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
@@ -221,7 +221,7 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = (linear,)
         self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        smc2 = SMC2(self.model, (1000, 100), filt=apf.APF)
+        smc2 = SMC2(self.model, (300, 300))
 
         smc2 = smc2.longfilter(y)
 
