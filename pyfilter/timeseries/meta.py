@@ -33,6 +33,14 @@ class Base(object):
         """
         return self.noise.ndim
 
+    @property
+    def priors(self):
+        """
+        Returns the priors of the time series.
+        :return:
+        """
+        return self._o_theta
+
     def i_mean(self):
         """
         Calculates the mean of the initial distribution.
@@ -69,16 +77,17 @@ class Base(object):
 
         return self.g(x, *args, *(params or self.theta))
 
-    def weight(self, y, x, *args):
+    def weight(self, y, x, *args, params=None):
         """
         Weights the process of the current observation x_t with the previous x_{t-1}. Used whenever the proposal
         distribution is different from the underlying.
         :param y: The value at x_t
         :param x: The value at x_{t-1}
+        :param params: The value of the parameters.
         :return:
         """
 
-        return self.noise.logpdf(y, loc=self.mean(x, *args), scale=self.scale(x, *args))
+        return self.noise.logpdf(y, loc=self.mean(x, *args, params=params), scale=self.scale(x, *args, params=params))
 
     def i_sample(self, size=None, **kwargs):
         """
