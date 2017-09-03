@@ -1,5 +1,6 @@
 import numpy as np
 from ..distributions.continuous import Distribution
+import autograd as ag
 
 
 class Base(object):
@@ -166,5 +167,25 @@ class Base(object):
                 out += (func((p, op)),)
             else:
                 out += (default if default is not None else p,)
+
+        return out
+
+    def p_grad(self, y, x, *args, h=1e-3):
+        """
+        Calculates the gradient of the model for the current state y with the previous state x, using h as step size.
+        :param y: The current state
+        :param x: The previous state
+        :param h: The step size.
+        :return:
+        """
+
+        out = tuple()
+        for i, (p, op) in enumerate(zip(self.theta, self._o_theta)):
+            if isinstance(op, Distribution):
+                up, low = list(self.theta).copy(), list(self.theta).copy()
+                up[i], low[i] = p + h, p - h
+                out += ((self.weight(y, x, *args, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
+            else:
+                out += (0,)
 
         return out

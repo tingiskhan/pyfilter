@@ -165,6 +165,24 @@ class StateSpaceModel(object):
 
         return h_out, self.observable.p_map(func, **kwargs)
 
+    def p_grad(self, y, x, xo, h=1e-3):
+        """
+        Calculates the gradient of the parameters at the current values.
+        :param y: The current observation
+        :param x: The current state
+        :param xo: The previous state.
+        :param h: The finite difference approximation to use.
+        :return:
+        """
+
+        # ===== Hidden part ===== #
+
+        out = list()
+        for ts, xi, xio in zip(self.hidden, x, xo):
+            out.append(ts.p_grad(xi, xio, h=h))
+
+        return out, self.observable.p_grad(y, *x, h=h)
+
     def exchange(self, indices, newmodel):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
@@ -178,13 +196,13 @@ class StateSpaceModel(object):
         # ===== Exchange hidden parameters ===== #
 
         for j, (htso, htsn) in enumerate(zip(self.hidden, newmodel.hidden)):
-            for i, param in enumerate(htso._o_theta):
+            for i, param in enumerate(htso.priors):
                 if isinstance(param, Distribution):
                     self.hidden[j].theta[i][indices] = htsn.theta[i][indices]
 
         # ===== Exchange observable parameters ====== #
 
-        for i, param in enumerate(self.observable._o_theta):
+        for i, param in enumerate(self.observable.priors):
             if isinstance(param, Distribution):
                 self.observable.theta[i][indices] = newmodel.observable.theta[i][indices]
 
