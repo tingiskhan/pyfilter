@@ -249,3 +249,22 @@ class Tests(unittest.TestCase):
         rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
         assert rmse < 0.05
+
+    def test_Gradient(self):
+        x, y = self.model.sample(500)
+
+        linear = ts.Base((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+
+        rapf = RAPF(self.model, 3000).initialize().longfilter(y)
+
+        grad = self.model.p_grad(y[-1], rapf.s_x[-1], rapf.s_x[-2])
+
+        def truderiv(obs, mu, sigma):
+            return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
+
+        truederiv = truderiv(y[-1], rapf.s_x[-1][0], self.model.observable.theta[-1])
+
+        assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
