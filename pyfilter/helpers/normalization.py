@@ -4,7 +4,8 @@ import numpy as np
 def _vector(weights):
     """
     Normalizes a 1D array of log weights.
-    :param weights:
+    :param weights: The weights
+    :type weights: np.ndarray
     :return:
     """
     n = weights.shape[0]
@@ -27,7 +28,8 @@ def _vector(weights):
 def _matrix(weights):
     """
     Normalizes a 2D array of log weights along the second axis.
-    :param weights:
+    :param weights: The weights
+    :type weights: np.ndarray
     :return:
     """
     n = weights.shape[-1]
@@ -51,7 +53,8 @@ def _matrix(weights):
 def normalize(weights):
     """
     Normalizes a 1D or 2D array of log weights.
-    :param weights:
+    :param weights: The weights
+    :type weights: np.ndarray
     :return:
     """
 
