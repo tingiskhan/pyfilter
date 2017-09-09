@@ -14,6 +14,7 @@ class SISR(BaseFilter):
         self._old_w = weights
 
         self.s_l.append(helps.loglikelihood(weights))
+        self.s_mx.append([x.mean(axis=-1) for x in self._old_x])
 
         if self.saveall:
             self.s_x.append(t_x)

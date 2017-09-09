@@ -57,22 +57,22 @@ class RAPF(BaseFilter):
         t_x = self._copy.propagate_apf(self._old_x)
         t_weights = self._copy.weight(y, t_x)
 
-        try:
-            resampled_indices = self._resamp(t_weights + self.s_w[-1])
-        except IndexError:
-            resampled_indices = self._resamp(t_weights)
+        resampled_indices = self._resamp(t_weights + self._old_w)
 
         self._model.p_apply(lambda u: _propose(u, resampled_indices, self.h, self._p_particles, t_weights))
 
         resampled_x = choose(self._old_x, resampled_indices)
         x = self._proposal.draw(y, resampled_x)
-        weights = self._proposal.weight(y, x, resampled_x)
+        self._old_w = self._proposal.weight(y, x, resampled_x)
 
         self._old_x = x
         self._old_y = y
 
-        self.s_w.append(weights - choose(t_weights, resampled_indices))
-        self.s_x.append(x)
-        self.s_l.append(loglikelihood(weights))
+        self.s_l.append(loglikelihood(self._old_w))
+        self.s_mx.append([tx.mean(axis=-1) for tx in x])
+
+        if self.saveall:
+            self.s_w.append(self._old_w - choose(t_weights, resampled_indices))
+            self.s_x.append(x)
 
         return self

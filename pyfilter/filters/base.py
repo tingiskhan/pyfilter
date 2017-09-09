@@ -27,7 +27,7 @@ class BaseFilter(object):
 
         self._old_y = None
         self._old_x = None
-        self._old_w = None
+        self._old_w = 0
 
         self._resamp = resampling
 
@@ -40,6 +40,7 @@ class BaseFilter(object):
             self.s_w = list()
 
         self.s_l = list()
+        self.s_mx = list()
 
     def _initialize_parameters(self):
 
@@ -121,18 +122,7 @@ class BaseFilter(object):
         :return:
         """
 
-        w = np.array(self.s_w)
-        normalized = norm.normalize(w)
-        out = tuple()
-
-        for t, xt in enumerate(self.s_x):
-            weighted = tuple()
-            for s in xt:
-                weighted += (np.average(s, axis=-1, weights=normalized[t]),)
-
-            out += weighted
-
-        return out
+        return self.s_mx
 
     def predict(self, steps, **kwargs):
         """
