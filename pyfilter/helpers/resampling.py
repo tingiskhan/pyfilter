@@ -32,7 +32,8 @@ def _matrix(weights):
 def _vector(weights):
     """
     Performs systematic resampling of a 1D array log weights.
-    :param weights:
+    :param weights: The weights
+    :type weights: np.ndarray
     :rtype: np.ndarray
     """
     n = weights.size
@@ -49,7 +50,8 @@ def _vector(weights):
 def systematic(w):
     """
     Performs systematic resampling on either a 1D or 2D array.
-    :param w:
+    :param w: The weights
+    :type w: np.ndarray
     :return:
     """
     if w.ndim > 1:
@@ -72,7 +74,8 @@ def _mn_vector(weights):
 def _mn_matrix(weights):
     """
     Resamples a matrix array of weights using multinomial resampling.
-    :param weights:
+    :param weights: The weights
+    :type weights: np.ndarray
     :return:
     """
 
