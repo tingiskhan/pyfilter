@@ -7,7 +7,6 @@ import pyfilter.filters as sisr
 import pyfilter.filters as apf
 from pyfilter.filters import RAPF
 from pyfilter.filters import NESS
-from pyfilter.filters.upf import UPF
 from pyfilter.filters import SMC2
 from pyfilter.helpers.normalization import normalize
 from pyfilter.filters import Linearized
