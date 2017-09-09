@@ -204,15 +204,6 @@ class Tests(unittest.TestCase):
 
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
-    def test_UPF(self):
-        upf = UPF(self.model, 500).initialize()
-
-        assert upf._extendedmean.shape == (3,) and upf._extendedcov.shape == (3, 3)
-
-        upfmd = UPF(self.model, (500, 300)).initialize()
-
-        assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
-
     def test_SMC2(self):
         x, y = self.model.sample(300)
 

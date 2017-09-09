@@ -1,7 +1,0 @@
-from .sisr import SISR
-from ..proposals.linearized import Linearized as Linz
-
-
-class Linearized(SISR):
-    def __init__(self, model, particles, *args, **kwargs):
-        super().__init__(model, particles, *args, proposal=Linz, **kwargs)
