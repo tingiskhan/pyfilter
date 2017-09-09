@@ -51,7 +51,7 @@ class NESS(BaseFilter):
 
         super().__init__(model, particles)
 
-        self._filter = filt(self._model, particles, saveall=False, **filtkwargs).initialize()
+        self._filter = filt(self._model, particles, **filtkwargs).initialize()
         self._recw = 0  # type: np.ndarray
         self._th = threshold
         self._p = p

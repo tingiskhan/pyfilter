@@ -9,14 +9,13 @@ from ..proposals.bootstrap import Bootstrap
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, proposal=Bootstrap, **kwargs):
+    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: pyfilter.model.StateSpaceModel
         :param resampling: Which resampling method to use
         :type resampling: function
-        :param parameters:
         :param args:
         :param kwargs:
         """

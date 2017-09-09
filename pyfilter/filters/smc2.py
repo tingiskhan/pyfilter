@@ -86,9 +86,9 @@ class SMC2(NESS):
         out = 0
         for nts, ots in zip(copy._model.hidden, self._filter._model.hidden):
             for i in range(len(nts.theta)):
-                if isinstance(nts._o_theta[i], Distribution):
-                    newkernel = _kernel((nts.theta[i], nts._o_theta[i]), ots.theta[i])
-                    oldkernel = _kernel((ots.theta[i], ots._o_theta[i]), nts.theta[i])
+                if isinstance(nts.priors[i], Distribution):
+                    newkernel = _kernel((nts.theta[i], nts.priors[i]), ots.theta[i])
+                    oldkernel = _kernel((ots.theta[i], ots.priors[i]), nts.theta[i])
 
                     out += newkernel - oldkernel
 
@@ -97,8 +97,8 @@ class SMC2(NESS):
 
         for i in range(len(otso.theta)):
             if isinstance(otso.theta[i], Distribution):
-                newkernel = _kernel((ntso.theta[i], ntso._o_theta[i]), otso.theta[i])
-                oldkernel = _kernel((otso.theta[i], otso._o_theta[i]), ntso.theta[i])
+                newkernel = _kernel((ntso.theta[i], ntso.priors[i]), otso.theta[i])
+                oldkernel = _kernel((otso.theta[i], otso.priors[i]), ntso.theta[i])
 
                 out += newkernel - oldkernel
 
