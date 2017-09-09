@@ -6,7 +6,7 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import pyfilter.distributions.continuous as cont
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 
 
 def f(x, alpha, sigma):

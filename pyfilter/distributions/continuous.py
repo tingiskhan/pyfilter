@@ -1,7 +1,7 @@
 import numpy as np
 import abc
 import scipy.stats as stats
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 
 
 def _get(x, y):

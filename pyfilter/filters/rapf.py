@@ -1,9 +1,9 @@
 from .base import BaseFilter
 from math import sqrt
-from ..helpers.helpers import choose, loglikelihood
+from ..utils.utils import choose, loglikelihood
 import scipy.stats as stats
 import numpy as np
-from ..helpers.normalization import normalize
+from ..utils.normalization import normalize
 
 
 def _shrink(parameter, shrink):

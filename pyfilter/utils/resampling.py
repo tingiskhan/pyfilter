@@ -1,5 +1,5 @@
 import numpy as np
-import pyfilter.helpers.normalization as norm
+import pyfilter.utils.normalization as norm
 
 
 def _matrix(weights):

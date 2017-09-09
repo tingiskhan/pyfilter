@@ -1,5 +1,5 @@
 from .base import BaseFilter
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 
 
 class SISR(BaseFilter):

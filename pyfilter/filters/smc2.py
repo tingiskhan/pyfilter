@@ -1,5 +1,5 @@
 from .ness import NESS
-from ..helpers.helpers import get_ess
+from ..utils.utils import get_ess
 import numpy as np
 import scipy.stats as stats
 from ..distributions.continuous import Distribution

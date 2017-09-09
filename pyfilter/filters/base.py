@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
-import pyfilter.helpers.normalization as norm
+import pyfilter.utils.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
-from ..helpers.helpers import choose
-from ..helpers.resampling import multinomial, systematic
+from ..utils.utils import choose
+from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap
 
 

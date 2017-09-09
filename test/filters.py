@@ -8,7 +8,7 @@ import pyfilter.filters as apf
 from pyfilter.filters import RAPF
 from pyfilter.filters import NESS
 from pyfilter.filters import SMC2
-from pyfilter.helpers.normalization import normalize
+from pyfilter.utils.normalization import normalize
 from pyfilter.filters import Linearized
 import pykalman
 import numpy as np

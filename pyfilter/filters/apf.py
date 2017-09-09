@@ -1,6 +1,6 @@
 from .base import BaseFilter
-import pyfilter.helpers.helpers as helps
-from ..helpers.normalization import normalize
+import pyfilter.utils.utils as helps
+from ..utils.normalization import normalize
 import numpy as np
 
 
