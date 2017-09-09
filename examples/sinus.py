@@ -1,8 +1,7 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries.meta import Base
 from pyfilter.timeseries.observable import Observable
-from pyfilter.filters import NESSMC2, APF, Linearized, NESS, RAPF
-from pyfilter.proposals import Linearized as Linz
+from pyfilter.filters import Linearized, NESS
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,7 +34,7 @@ def fo(x, beta):
 # ===== SIMULATE SSM ===== #
 np.random.seed(123)
 sinus = Base((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
-obs = Observable((go, fo), (2,), Normal())
+obs = Observable((go, fo), (1,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
@@ -54,11 +53,11 @@ obs = Observable((go, fo), (Gamma(1),), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
-rapf = RAPF(ssm, 3000, proposal=Linz).initialize()
+alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
 
-rapf = rapf.longfilter(y[:-predictions])
+alg = alg.longfilter(y[:-predictions])
 
-ax[1].plot(rapf.filtermeans())
+# ax[1].plot(rapf.filtermeans())
 
 # ===== PLOT KDE ===== #
 
@@ -73,7 +72,7 @@ beta.plot(kind='kde', ax=ax2[1])
 
 # ===== Plot prediction ===== #
 
-p_x, p_y = rapf.predict(predictions)
+p_x, p_y = alg.predict(predictions)
 leny = len(y)
 
 # ax[0].plot(range(leny-predictions, leny), p_y, alpha=0.03, color='r')

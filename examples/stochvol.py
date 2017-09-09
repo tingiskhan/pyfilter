@@ -1,7 +1,7 @@
 from pyfilter.model import StateSpaceModel
 from pyfilter.timeseries import Base
 from pyfilter.timeseries import Observable
-from pyfilter.filters import NESS, APF, NESSMC2, Linearized, SMC2, SISR, RAPF
+from pyfilter.filters import NESSMC2
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
 from pyfilter.proposals import Linearized as Linz
 import numpy as np
@@ -24,7 +24,7 @@ def fh(x, reversion, level, std):
 
 
 def gh(x, reversion, level, std):
-    return std / np.sqrt(2 * reversion) * (1 - np.exp(-reversion))
+    return std / np.sqrt(2 * reversion) * np.sqrt(1 - np.exp(-2 * reversion))
 
 
 def go(vol, level, beta):
@@ -39,8 +39,8 @@ def fo(vol, level, beta):
 
 fig, ax = plt.subplots()
 
-stock = 'ES'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2012-01-01', column_index=11, transform='rdiff') + 1)
+stock = 'yhoo'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
@@ -53,7 +53,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = RAPF(ssm, 10000).initialize()
+alg = NESSMC2(ssm, (400, 400), proposal=Linz).initialize()
 
 predictions = 30
 
