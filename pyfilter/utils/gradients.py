@@ -28,7 +28,7 @@ class GradientEstimator(object):
 
         return hiddens, len(self._model.observable.theta) * [0]
 
-    def get_gradient(self, y, x, xo, w):
+    def update_gradient(self, y, x, xo, w):
         """
         Estimates the gradient at the current values of the parameters and current states.
         :param y: The current observation
