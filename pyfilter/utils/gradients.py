@@ -16,6 +16,7 @@ class GradientEstimator(object):
         self._m = self._initialize()
         self._shrink = shrinkage
         self.oldgrad = self._initialize()
+        self.diffgrad = self._initialize()
 
     def _initialize(self):
         """
@@ -59,6 +60,7 @@ class GradientEstimator(object):
                 newgrad = np.sum(normalized * newm, axis=-1)
 
                 self._m[0][i][j] = newm
+                self.diffgrad[0][i][j] = newgrad - self.oldgrad[0][i][j]
                 self.oldgrad[0][i][j] = newgrad
 
         return self
@@ -74,6 +76,7 @@ class GradientEstimator(object):
             newgrad = np.sum(normalized * newm, axis=-1)
 
             self._m[1][k] = newm
+            self.diffgrad[1][k] = newgrad - self.diffgrad[1][k]
             self.oldgrad[1][k] = newgrad
 
         return self
