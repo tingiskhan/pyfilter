@@ -1,6 +1,6 @@
 from .base import BaseFilter
 from .sisr import SISR
-from ..utils.resampling import systematic, multinomial
+from ..utils.normalization import normalize
 from ..utils.utils import get_ess
 import scipy.stats as stats
 import math
@@ -99,6 +99,3 @@ class NESS(BaseFilter):
             yout.append(flattener(yt))
 
         return xout, yout
-
-    def filtermeans(self):
-        raise NotImplementedError()
