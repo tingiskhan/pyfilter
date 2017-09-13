@@ -56,36 +56,36 @@ class Tests(unittest.TestCase):
 
         x, y = self.model.sample(500)
 
-        filt = sisr.SISR(self.model, 5000).initialize()
+        filt = sisr.SISR(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
 
     def test_APF(self):
         x, y = self.model.sample(500)
 
-        filt = apf.APF(self.model, 5000).initialize()
+        filt = apf.APF(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
 
@@ -225,18 +225,18 @@ class Tests(unittest.TestCase):
     def test_Linearized(self):
         x, y = self.model.sample(500)
 
-        filt = Linearized(self.model, 5000).initialize()
+        filt = Linearized(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
 
