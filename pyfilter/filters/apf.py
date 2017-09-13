@@ -12,7 +12,7 @@ class APF(BaseFilter):
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
-        if self._old_w is not None:
+        if not isinstance(self._old_w, int):
             resamp_w = t_weights + self._old_w
             normalized = normalize(self._old_w)
         else:
@@ -30,6 +30,10 @@ class APF(BaseFilter):
         self._old_y = y
         self._old_x = t_x
         self._old_w = weights - helps.choose(t_weights, resampled_indices)
+
+        normalized = normalize(self._old_w)
+
+        self.s_mx.append([np.sum(x * normalized, axis=-1) for x in t_x])
 
         # ===== Calculate log likelihood ===== #
 
