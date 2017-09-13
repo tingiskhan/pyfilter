@@ -33,8 +33,11 @@ class Linearized(Proposal):
     def draw(self, y, x, size=None, *args, **kwargs):
         # TODO: Only works for univariate processes currently
         # ===== Linearize observation density around mean ===== #
-        t_x = self._model.propagate_apf(x)
-        first, second = self._get_derivs(y, t_x, x)
+        # TODO: Fix this part to be dynamic
+        xm = [tx.mean(axis=-1)[:, None] for tx in x]
+
+        t_x = self._model.propagate_apf(xm)
+        first, second = self._get_derivs(y, t_x, xm)
 
         variances = [-1 / s for s in second]
         mean = [v * f for v, f in zip(variances, first)]
