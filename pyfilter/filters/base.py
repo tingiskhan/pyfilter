@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import pyfilter.utils.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
 from ..utils.utils import choose
