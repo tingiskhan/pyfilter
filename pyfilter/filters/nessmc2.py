@@ -44,3 +44,6 @@ class NESSMC2(SMC2):
         self._td = self._smc2._td = None
 
         return self
+
+    def filtermeans(self):
+        return self._filter.s_mx
