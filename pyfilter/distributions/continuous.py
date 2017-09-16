@@ -12,7 +12,7 @@ def _get(x, y):
     :return:
     """
 
-    return x if x is not None else y
+    return np.array(x if x is not None else y)
 
 
 class Distribution(object):
