@@ -101,4 +101,4 @@ class NESS(BaseFilter):
         return xout, yout
 
     def filtermeans(self):
-        return self._filter.s_mx
+        return [x.mean(axis=-1) for tx in self._filter.s_mx for x in tx]
