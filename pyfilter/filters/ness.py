@@ -99,3 +99,6 @@ class NESS(BaseFilter):
             yout.append(flattener(yt))
 
         return xout, yout
+
+    def filtermeans(self):
+        return self._filter.s_mx
