@@ -71,8 +71,8 @@ class GradientEstimator(object):
         :return:
         """
 
-        for k, (og, oog, m) in enumerate(zip(ograds, self.oldgrad[1], self._m[1])):
-            newm = self._shrink * m + (1 - self._shrink) * oog + og
+        for k, (ograd, oldograd, m) in enumerate(zip(ograds, self.oldgrad[1], self._m[1])):
+            newm = self._shrink * m + (1 - self._shrink) * oldograd + ograd
             newgrad = np.sum(normalized * newm, axis=-1)
 
             self._m[1][k] = newm
