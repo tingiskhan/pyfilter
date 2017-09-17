@@ -57,7 +57,7 @@ alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
 
 alg = alg.longfilter(y[:-predictions])
 
-# ax[1].plot(rapf.filtermeans())
+ax[1].plot(alg.filtermeans())
 
 # ===== PLOT KDE ===== #
 

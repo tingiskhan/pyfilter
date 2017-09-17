@@ -1,7 +1,7 @@
 from pyfilter.model import StateSpaceModel
-from pyfilter.timeseries.meta import Base
-from pyfilter.timeseries.observable import Observable
-from pyfilter.filters import NESSMC2, Linearized
+from pyfilter.timeseries import Base
+from pyfilter.timeseries import Observable
+from pyfilter.filters import NESSMC2, Linearized, NESS
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,9 +32,9 @@ def fo(x, beta):
     return beta
 
 # ===== SIMULATE SSM ===== #
-
+np.random.seed(123)
 sinus = Base((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
-obs = Observable((go, fo), (0.2,), Normal())
+obs = Observable((go, fo), (0.05,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
@@ -56,15 +56,15 @@ ax[1].plot(x)
 # ===== INFER VALUES ===== #
 
 sinus = Base((fh0, gh0), (fh, gh), (Gamma(1), 1), (Normal(), Normal()))
-obs = Observable((go, fo), (Gamma(1),), Normal())
+obs = Observable((go, fo), (Gamma(1/5),), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
-rapf = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
+rapf = NESS(ssm, (300, 300), filt=Linearized).initialize()
 
 rapf = rapf.longfilter(y[:-predictions])
 
-# ax[1].plot(rapf.filtermeans())
+ax[1].plot(rapf.filtermeans())
 
 # ===== PLOT KDE ===== #
 
