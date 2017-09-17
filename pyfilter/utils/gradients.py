@@ -1,5 +1,5 @@
-from ..model import StateSpaceModel
 import numpy as np
+from pyfilter.timeseries import StateSpaceModel
 from .normalization import normalize
 
 
