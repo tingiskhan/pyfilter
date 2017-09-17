@@ -76,7 +76,7 @@ class GradientEstimator(object):
             newgrad = np.sum(normalized * newm, axis=-1)
 
             self._m[1][k] = newm
-            self.diffgrad[1][k] = newgrad - self.diffgrad[1][k]
+            self.diffgrad[1][k] = newgrad - self.oldgrad[1][k]
             self.oldgrad[1][k] = newgrad
 
         return self
