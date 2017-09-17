@@ -1,5 +1,5 @@
 import unittest
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 import numpy as np
 
 

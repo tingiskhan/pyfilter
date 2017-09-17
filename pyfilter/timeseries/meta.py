@@ -1,5 +1,6 @@
 import numpy as np
 from ..distributions.continuous import Distribution
+import autograd as ag
 
 
 class Base(object):
@@ -32,6 +33,14 @@ class Base(object):
         :return:
         """
         return self.noise.ndim
+
+    @property
+    def priors(self):
+        """
+        Returns the priors of the time series.
+        :return:
+        """
+        return self._o_theta
 
     def i_mean(self):
         """
@@ -69,16 +78,17 @@ class Base(object):
 
         return self.g(x, *args, *(params or self.theta))
 
-    def weight(self, y, x, *args):
+    def weight(self, y, x, *args, params=None):
         """
         Weights the process of the current observation x_t with the previous x_{t-1}. Used whenever the proposal
         distribution is different from the underlying.
         :param y: The value at x_t
         :param x: The value at x_{t-1}
+        :param params: The value of the parameters.
         :return:
         """
 
-        return self.noise.logpdf(y, loc=self.mean(x, *args), scale=self.scale(x, *args))
+        return self.noise.logpdf(y, loc=self.mean(x, *args, params=params), scale=self.scale(x, *args, params=params))
 
     def i_sample(self, size=None, **kwargs):
         """
@@ -157,5 +167,25 @@ class Base(object):
                 out += (func((p, op)),)
             else:
                 out += (default if default is not None else p,)
+
+        return out
+
+    def p_grad(self, y, x, *args, h=1e-3):
+        """
+        Calculates the gradient of the model for the current state y with the previous state x, using h as step size.
+        :param y: The current state
+        :param x: The previous state
+        :param h: The step size.
+        :return:
+        """
+
+        out = tuple()
+        for i, (p, op) in enumerate(zip(self.theta, self._o_theta)):
+            if isinstance(op, Distribution):
+                up, low = list(self.theta).copy(), list(self.theta).copy()
+                up[i], low[i] = p + h, p - h
+                out += ((self.weight(y, x, *args, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
+            else:
+                out += (0,)
 
         return out

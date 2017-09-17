@@ -1,6 +1,6 @@
 from .base import BaseFilter
-import pyfilter.helpers.helpers as helps
-from ..helpers.normalization import normalize
+import pyfilter.utils.utils as helps
+from ..utils.normalization import normalize
 import numpy as np
 
 
@@ -12,7 +12,7 @@ class APF(BaseFilter):
         t_x = self._model.propagate_apf(self._old_x)
         t_weights = self._model.weight(y, t_x)
 
-        if self._old_w is not None:
+        if not isinstance(self._old_w, int):
             resamp_w = t_weights + self._old_w
             normalized = normalize(self._old_w)
         else:
@@ -23,12 +23,17 @@ class APF(BaseFilter):
 
         resampled_indices = self._resamp(resamp_w)
         resampled_x = helps.choose(self._old_x, resampled_indices)
-        t_x = self._model.propagate(resampled_x)
-        weights = self._model.weight(y, t_x)
+
+        t_x = self._proposal.draw(y, resampled_x)
+        weights = self._proposal.weight(y, t_x, resampled_x)
 
         self._old_y = y
         self._old_x = t_x
         self._old_w = weights - helps.choose(t_weights, resampled_indices)
+
+        normalized = normalize(self._old_w)
+
+        self.s_mx.append([np.sum(x * normalized, axis=-1) for x in t_x])
 
         # ===== Calculate log likelihood ===== #
 

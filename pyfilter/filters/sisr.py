@@ -1,12 +1,11 @@
 from .base import BaseFilter
-import pyfilter.helpers.resampling as resamp
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 
 
-class Bootstrap(BaseFilter):
+class SISR(BaseFilter):
     def filter(self, y):
-        t_x = self._model.propagate(self._old_x)
-        weights = self._model.weight(y, t_x)
+        t_x = self._proposal.draw(y, self._old_x, size=self._particles)
+        weights = self._proposal.weight(y, t_x, self._old_x)
 
         resampled_indices = self._resamp(weights)
 
@@ -15,6 +14,7 @@ class Bootstrap(BaseFilter):
         self._old_w = weights
 
         self.s_l.append(helps.loglikelihood(weights))
+        self.s_mx.append([x.mean(axis=-1) for x in self._old_x])
 
         if self.saveall:
             self.s_x.append(t_x)

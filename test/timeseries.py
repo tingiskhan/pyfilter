@@ -53,9 +53,6 @@ class Tests(unittest.TestCase):
         for i in range(1, out.shape[0]):
             out[i] = self.linear.propagate(out[i-1])
 
-        plt.plot(out)
-        plt.show()
-
         assert True
 
     def test_SampleTrajectory1D(self):

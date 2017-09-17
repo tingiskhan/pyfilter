@@ -1,21 +1,20 @@
 import pandas as pd
 import numpy as np
-import pyfilter.helpers.normalization as norm
 from ..distributions.continuous import Distribution
 import copy
-from ..helpers.helpers import choose
-from ..helpers.resampling import multinomial, systematic
+from ..utils.utils import choose
+from ..utils.resampling import multinomial, systematic
+from ..proposals.bootstrap import Bootstrap
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=True, resampling=systematic, **kwargs):
+    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: pyfilter.model.StateSpaceModel
         :param resampling: Which resampling method to use
         :type resampling: function
-        :param parameters:
         :param args:
         :param kwargs:
         """
@@ -27,18 +26,20 @@ class BaseFilter(object):
 
         self._old_y = None
         self._old_x = None
-        self._old_w = None
+        self._old_w = 0
 
         self._resamp = resampling
 
         self.saveall = saveall
         self._td = None
+        self._proposal = proposal(self._model)
 
         if saveall:
             self.s_x = list()
             self.s_w = list()
 
         self.s_l = list()
+        self.s_mx = list()
 
     def _initialize_parameters(self):
 
@@ -120,18 +121,7 @@ class BaseFilter(object):
         :return:
         """
 
-        w = np.array(self.s_w)
-        normalized = norm.normalize(w)
-        out = tuple()
-
-        for t, xt in enumerate(self.s_x):
-            weighted = tuple()
-            for s in xt:
-                weighted += (np.average(s, axis=-1, weights=normalized[t]),)
-
-            out += weighted
-
-        return out
+        return self.s_mx
 
     def predict(self, steps, **kwargs):
         """

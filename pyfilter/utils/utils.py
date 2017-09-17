@@ -60,15 +60,9 @@ def loglikelihood(w):
     :return: 
     """
 
-    with np.errstate(divide='ignore'):
-        logl = np.log(np.exp(w).mean(axis=-1))
+    maxw = np.max(w, axis=-1)
 
-        if isinstance(logl, np.ndarray):
-            logl[~np.isfinite(logl)] = -1e200
-        else:
-            logl = logl if np.isfinite(logl) else -1e200
-
-    return logl
+    return maxw + np.log(np.exp(w.T - maxw).T.mean(axis=-1))
 
 
 def dot(a, b):

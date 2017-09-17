@@ -5,14 +5,14 @@ import pandas as pd
 
 
 class NESSMC2(SMC2):
-    def __init__(self, model, particles, *args, handshake=0.2, **kwargs):
-        super().__init__(model, particles, *args, **kwargs)
+    def __init__(self, model, particles, handshake=0.2, **kwargs):
+        super().__init__(model, particles, **kwargs)
 
         self._hs = handshake
         self._switched = False
 
-        self._smc2 = SMC2(model, particles, *args, **kwargs)
-        self._ness = NESS(model, particles, *args, **kwargs)
+        self._smc2 = SMC2(model, particles, **kwargs)
+        self._ness = NESS(model, particles, **kwargs)
 
         self._filter = self._ness._filter = self._smc2._filter
 

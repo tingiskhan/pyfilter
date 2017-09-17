@@ -6,7 +6,7 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import pyfilter.distributions.continuous as cont
-import pyfilter.helpers.helpers as helps
+import pyfilter.utils.utils as helps
 
 
 def f(x, alpha, sigma):
@@ -107,30 +107,12 @@ class Tests(unittest.TestCase):
     def test_Sample(self):
         x, y = self.model.sample(50)
 
-        assert len(x) == 50 and len(y) == 50
-
-        fig, ax = plt.subplots(ncols=2)
-
-        ax[0].plot(x)
-        ax[1].plot(y)
-
-        ax[0].set_title('Should look roughly the same')
-
-        plt.show()
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 1)
 
     def test_SampleBivariate(self):
         x, y = self.bivariatemodel.sample(50)
 
-        assert len(x) == 50 and len(y) == 50
-
-        fig, ax = plt.subplots(ncols=2)
-
-        ax[0].plot(x)
-        ax[1].plot(y)
-
-        ax[0].set_title('Make sure there are two different lines on the left and only one on the right')
-
-        plt.show()
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 2)
 
     def test_SampleMultivariate(self):
         x, y = self.mvnmodel.sample(30)

@@ -7,13 +7,13 @@ import pyfilter.filters as sisr
 import pyfilter.filters as apf
 from pyfilter.filters import RAPF
 from pyfilter.filters import NESS
-from pyfilter.filters.upf import UPF
 from pyfilter.filters import SMC2
-from pyfilter.helpers.normalization import normalize
-from pyfilter.filters.linearized import Linearized
+from pyfilter.utils.normalization import normalize
+from pyfilter.filters import Linearized
 import pykalman
 import numpy as np
 from pyfilter.distributions.continuous import Normal, Gamma
+from pyfilter.proposals import Linearized as Linz
 
 
 def f(x, alpha, sigma):
@@ -46,7 +46,7 @@ class Tests(unittest.TestCase):
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeFilter(self):
-        filt = sisr.Bootstrap(self.model, 1000)
+        filt = sisr.SISR(self.model, 1000)
 
         filt.initialize()
 
@@ -56,44 +56,44 @@ class Tests(unittest.TestCase):
 
         x, y = self.model.sample(500)
 
-        filt = sisr.Bootstrap(self.model, 5000).initialize()
+        filt = sisr.SISR(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
 
     def test_APF(self):
         x, y = self.model.sample(500)
 
-        filt = apf.APF(self.model, 5000).initialize()
+        filt = apf.APF(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
 
     def test_Likelihood(self):
         x, y = self.model.sample(500)
 
-        apft = apf.APF(self.model, 1000).initialize().longfilter(y)
-        sisrt = sisr.Bootstrap(self.model, 1000).initialize().longfilter(y)
+        apft = apf.APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
+        sisrt = sisr.SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
@@ -204,15 +204,6 @@ class Tests(unittest.TestCase):
 
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
-    def test_UPF(self):
-        upf = UPF(self.model, 500).initialize()
-
-        assert upf._extendedmean.shape == (3,) and upf._extendedcov.shape == (3, 3)
-
-        upfmd = UPF(self.model, (500, 300)).initialize()
-
-        assert upfmd._extendedmean.shape == (3, 500) and upfmd._extendedcov.shape == (3, 3, 500)
-
     def test_SMC2(self):
         x, y = self.model.sample(300)
 
@@ -220,7 +211,7 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = (linear,)
         self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        smc2 = SMC2(self.model, (1000, 100), filt=apf.APF)
+        smc2 = SMC2(self.model, (300, 300))
 
         smc2 = smc2.longfilter(y)
 
@@ -234,17 +225,36 @@ class Tests(unittest.TestCase):
     def test_Linearized(self):
         x, y = self.model.sample(500)
 
-        filt = Linearized(self.model, 5000).initialize()
+        filt = Linearized(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
         assert len(filt.s_x) > 0
 
-        estimates = filt.filtermeans()
+        estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
+
+    def test_Gradient(self):
+        x, y = self.model.sample(500)
+
+        linear = ts.Base((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = (linear,)
+        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+
+        rapf = RAPF(self.model, 3000).initialize().longfilter(y)
+
+        grad = self.model.p_grad(y[-1], rapf.s_x[-1], rapf.s_x[-2])
+
+        def truderiv(obs, mu, sigma):
+            return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
+
+        truederiv = truderiv(y[-1], rapf.s_x[-1][0], self.model.observable.theta[-1])
+
+        assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
