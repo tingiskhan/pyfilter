@@ -1,19 +1,21 @@
-from pyfilter.model import StateSpaceModel
-import pyfilter.timeseries.meta as ts
-from pyfilter.timeseries.observable import Observable
 import unittest
-import scipy.stats as stats
-import pyfilter.filters as sisr
-import pyfilter.filters as apf
-from pyfilter.filters import RAPF
-from pyfilter.filters import NESS
-from pyfilter.filters import SMC2
-from pyfilter.utils.normalization import normalize
-from pyfilter.filters import Linearized
-import pykalman
+
 import numpy as np
+import pykalman
+import scipy.stats as stats
+
+import pyfilter.filters as apf
+import pyfilter.filters as sisr
+import pyfilter.timeseries.meta as ts
 from pyfilter.distributions.continuous import Normal, Gamma
+from pyfilter.filters import Linearized
+from pyfilter.filters import NESS
+from pyfilter.filters import RAPF
+from pyfilter.filters import SMC2
 from pyfilter.proposals import Linearized as Linz
+from pyfilter.timeseries.model import StateSpaceModel
+from pyfilter.timeseries.observable import Observable
+from pyfilter.utils.normalization import normalize
 
 
 def f(x, alpha, sigma):

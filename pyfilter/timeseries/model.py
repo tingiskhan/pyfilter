@@ -1,5 +1,5 @@
 import copy
-from .distributions.continuous import Distribution
+from pyfilter.distributions.continuous import Distribution
 
 
 class StateSpaceModel(object):
