@@ -54,7 +54,7 @@ class Tests(unittest.TestCase):
 
         assert filt._old_x[0].shape == (1000,)
 
-    def test_WeightFilter(self):
+    def test_SISR(self):
 
         x, y = self.model.sample(500)
 
@@ -62,7 +62,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -80,7 +80,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -231,7 +231,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -252,11 +252,11 @@ class Tests(unittest.TestCase):
 
         rapf = RAPF(self.model, 3000).initialize().longfilter(y)
 
-        grad = self.model.p_grad(y[-1], rapf.s_x[-1], rapf.s_x[-2])
+        grad = self.model.p_grad(y[-1], rapf.s_mx[-1], rapf.s_mx[-2])
 
         def truderiv(obs, mu, sigma):
             return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
 
-        truederiv = truderiv(y[-1], rapf.s_x[-1][0], self.model.observable.theta[-1])
+        truederiv = truderiv(y[-1], rapf.s_mx[-1][0], self.model.observable.theta[-1])
 
         assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
