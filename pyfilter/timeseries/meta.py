@@ -186,6 +186,6 @@ class Base(object):
                 up[i], low[i] = p + h, p - h
                 out += ((self.weight(y, x, *args, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
             else:
-                out += (0,)
+                out += (np.zeros_like(x),)
 
         return out
