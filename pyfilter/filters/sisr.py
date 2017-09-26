@@ -9,6 +9,9 @@ class SISR(BaseFilter):
 
         resampled_indices = self._resamp(weights)
 
+        self._cur_x = t_x
+        self._inds = resampled_indices
+        self._anc_x = self._old_x.copy()
         self._old_x = helps.choose(t_x, resampled_indices)
         self._old_y = y
         self._old_w = weights
