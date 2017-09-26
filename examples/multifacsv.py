@@ -10,59 +10,65 @@ from pyfilter.timeseries import Observable
 from pyfilter.timeseries import StateSpaceModel
 
 
-def fh0(reversion1, level, std1, reversion2, std2):
-    return [level, level]
+def fh0(reversion1, level, std1, reversion2, std2, gamma):
+    return [level, level, np.zeros_like(reversion1)]
 
 
-def gh0(reversion1, level, std1, reversion2, std2):
-    mat = np.zeros((2, 2, *level.shape))
+def gh0(reversion1, level, std1, reversion2, std2, gamma):
+    mat = np.zeros((3, 3, *level.shape))
 
     mat[0, 0] = std1 / np.sqrt(2 * reversion1)
     mat[1, 1] = std2 / np.sqrt(2 * reversion2)
+    mat[2, 2] = gamma
 
     return mat
 
 
-def fh(x, reversion1, level, std1, reversion2, std2):
+def fh(x, reversion1, level, std1, reversion2, std2, gamma):
     out = x.copy()
 
     out[0] = x[0] * np.exp(-reversion1) + level * (1 - np.exp(-reversion1))
     out[1] = x[1] * np.exp(-reversion2) + level * (1 - np.exp(-reversion2))
+    out[2] = x[2]
 
     return out
 
 
-def gh(x, reversion1, level, std1, reversion2, std2):
+def gh(x, reversion1, level, std1, reversion2, std2, gamma):
     out = np.zeros((x.shape[0], *x.shape))
 
     out[0, 0] = std1 / np.sqrt(2 * reversion1) * np.sqrt(1 - np.exp(-2 * reversion1))
     out[1, 1] = std2 / np.sqrt(2 * reversion2) * np.sqrt(1 - np.exp(-2 * reversion2))
+    out[2, 2] = gamma
 
     return out
 
 
-def go(vol, level):
-    return level
+def go(vol):
+    return vol[2]
 
 
-def fo(vol, level):
+def fo(vol):
     return np.sqrt(np.exp(vol[0]) + np.exp(vol[1]))
 
 
 # ===== GET DATA ===== #
 
-fig, ax = plt.subplots(2)
+fig, ax = plt.subplots(4)
 
-stock = 'ABBV'
+stock = 'msft'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
 # ===== DEFINE MODEL ===== #
 
-dists = (MultivariateNormal(), MultivariateNormal())
-logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 5), Normal(scale=0.3), Gamma(0.5), Beta(5, 1), Gamma(0.5)), dists)
-obs = Observable((go, fo), (Normal(),), Normal())
+mean = np.zeros(3)
+cov = np.eye(3)
+dists = (MultivariateNormal(mean, cov), MultivariateNormal(mean, cov))
+
+logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 5), Normal(scale=0.3), Gamma(0.5), Beta(5, 1), Gamma(0.5), Gamma(0.25)), dists)
+obs = Observable((go, fo), (), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
@@ -92,19 +98,21 @@ ax[0].plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 actual = y.iloc[-predictions:].cumsum()
 ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[1].plot(y.index[:-predictions], np.exp(alg.filtermeans()))
+ax[1].plot(y.index[:-predictions], np.exp([x[:-1] / 2 for x in alg.filtermeans()]))
+ax[2].plot(y.index[:-predictions], [x[-1] for x in alg.filtermeans()])
+y.iloc[:-predictions].plot(ax=ax[-1])
 
 plt.legend()
 
 # ===== PLOT KDEs ===== #
 
 fig2, ax2 = plt.subplots(4)
-mu = pd.DataFrame(ssm.observable.theta[0])
+# mu = pd.DataFrame(ssm.observable.theta[0])
 kappa = pd.DataFrame(ssm.hidden[0].theta[0])
 gamma = pd.DataFrame(ssm.hidden[0].theta[1])
 sigma = pd.DataFrame(ssm.hidden[0].theta[2])
 
-mu.plot(kind='kde', ax=ax2[0])
+# mu.plot(kind='kde', ax=ax2[0])
 kappa.plot(kind='kde', ax=ax2[1])
 gamma.plot(kind='kde', ax=ax2[2])
 sigma.plot(kind='kde', ax=ax2[3])
