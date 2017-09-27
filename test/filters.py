@@ -1,19 +1,21 @@
-from pyfilter.model import StateSpaceModel
-import pyfilter.timeseries.meta as ts
-from pyfilter.timeseries.observable import Observable
 import unittest
-import scipy.stats as stats
-import pyfilter.filters as sisr
-import pyfilter.filters as apf
-from pyfilter.filters import RAPF
-from pyfilter.filters import NESS
-from pyfilter.filters import SMC2
-from pyfilter.utils.normalization import normalize
-from pyfilter.filters import Linearized
-import pykalman
+
 import numpy as np
+import pykalman
+import scipy.stats as stats
+
+import pyfilter.filters as apf
+import pyfilter.filters as sisr
+import pyfilter.timeseries.meta as ts
 from pyfilter.distributions.continuous import Normal, Gamma
+from pyfilter.filters import Linearized
+from pyfilter.filters import NESS
+from pyfilter.filters import RAPF
+from pyfilter.filters import SMC2
 from pyfilter.proposals import Linearized as Linz
+from pyfilter.timeseries.model import StateSpaceModel
+from pyfilter.timeseries.observable import Observable
+from pyfilter.utils.normalization import normalize
 
 
 def f(x, alpha, sigma):
@@ -52,7 +54,7 @@ class Tests(unittest.TestCase):
 
         assert filt._old_x[0].shape == (1000,)
 
-    def test_WeightFilter(self):
+    def test_SISR(self):
 
         x, y = self.model.sample(500)
 
@@ -60,7 +62,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -78,7 +80,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -229,7 +231,7 @@ class Tests(unittest.TestCase):
 
         filt = filt.longfilter(y)
 
-        assert len(filt.s_x) > 0
+        assert len(filt.s_mx) > 0
 
         estimates = np.array(filt.filtermeans())
 
@@ -250,11 +252,11 @@ class Tests(unittest.TestCase):
 
         rapf = RAPF(self.model, 3000).initialize().longfilter(y)
 
-        grad = self.model.p_grad(y[-1], rapf.s_x[-1], rapf.s_x[-2])
+        grad = self.model.p_grad(y[-1], rapf.s_mx[-1], rapf.s_mx[-2])
 
         def truderiv(obs, mu, sigma):
             return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
 
-        truederiv = truderiv(y[-1], rapf.s_x[-1][0], self.model.observable.theta[-1])
+        truederiv = truderiv(y[-1], rapf.s_mx[-1][0], self.model.observable.theta[-1])
 
         assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)

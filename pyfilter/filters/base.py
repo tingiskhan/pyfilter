@@ -26,6 +26,9 @@ class BaseFilter(object):
 
         self._old_y = None
         self._old_x = None
+        self._anc_x = None
+        self._cur_x = None
+        self._inds = None
         self._old_w = 0
 
         self._resamp = resampling
@@ -169,7 +172,7 @@ class BaseFilter(object):
 
         self._old_y = None
         self._old_x = self._model.initialize(self._particles)
-        self._old_w = None
+        self._old_w = 0
 
         if self.saveall:
             self.s_x = list()

@@ -1,12 +1,13 @@
-from pyfilter.model import StateSpaceModel
-import pyfilter.timeseries.meta as ts
-from pyfilter.timeseries.observable import Observable
 import unittest
-import scipy.stats as stats
+
 import numpy as np
-import matplotlib.pyplot as plt
+import scipy.stats as stats
+
 import pyfilter.distributions.continuous as cont
+import pyfilter.timeseries.meta as ts
 import pyfilter.utils.utils as helps
+from pyfilter.timeseries.model import StateSpaceModel
+from pyfilter.timeseries.observable import Observable
 
 
 def f(x, alpha, sigma):

@@ -1,6 +1,18 @@
-from ..model import StateSpaceModel
 import numpy as np
+from pyfilter.timeseries import StateSpaceModel
 from .normalization import normalize
+from .utils import choose
+
+
+def _calc_grad_and_m(shrinkage, oldm, oldgrad, currgrad, weights, indices):
+    try:
+        newm = shrinkage * choose(oldm, indices) + (1 - shrinkage) * oldgrad + currgrad
+    except AttributeError:
+        newm = (1 - shrinkage) * oldgrad + currgrad
+
+    newgrad = np.sum(weights * newm, axis=-1)
+
+    return newm, newgrad
 
 
 class GradientEstimator(object):
@@ -28,7 +40,7 @@ class GradientEstimator(object):
 
         return hiddens, len(self._model.observable.theta) * [0]
 
-    def update_gradient(self, y, x, xo, w):
+    def update_gradient(self, y, x, xo, w, inds):
         """
         Estimates the gradient at the current values of the parameters and current states.
         :param y: The current observation
@@ -38,26 +50,27 @@ class GradientEstimator(object):
         :type xo: list of numpy.ndarray
         :param w: The weights
         :type w: np.ndarray
+        :param inds: The indices
+        :type inds: np.ndarray
         :return:
         """
 
         hgrads, ograds = self._model.p_grad(y, x, xo, h=self._h)
         normalized = normalize(w)
 
-        self._get_hidden_gradients(hgrads, normalized)._get_obs_gradients(ograds, normalized)
+        self._get_hidden_gradients(hgrads, normalized, inds)._get_obs_gradients(ograds, normalized, inds)
 
         return self
 
-    def _get_hidden_gradients(self, hgrads, normalized):
+    def _get_hidden_gradients(self, hgrads, normalized, inds):
         """
         Helper method.
         :return:
         """
 
-        for i, (hgrad, oldhgrad, hm) in enumerate(zip(hgrads, self.oldgrad[0], self._m[0])):
-            for j, (hg, ohg, m) in enumerate(zip(hgrad, oldhgrad, hm)):
-                newm = self._shrink * m + (1 - self._shrink) * ohg + hg
-                newgrad = np.sum(normalized * newm, axis=-1)
+        for i, (tsgrad, oldtsgrad, tsm) in enumerate(zip(hgrads, self.oldgrad[0], self._m[0])):
+            for j, (grad, oldgrad, oldm) in enumerate(zip(tsgrad, oldtsgrad, tsm)):
+                newm, newgrad = _calc_grad_and_m(self._shrink, oldm, oldgrad, grad, normalized, inds)
 
                 self._m[0][i][j] = newm
                 self.diffgrad[0][i][j] = newgrad - self.oldgrad[0][i][j]
@@ -65,18 +78,17 @@ class GradientEstimator(object):
 
         return self
 
-    def _get_obs_gradients(self, ograds, normalized):
+    def _get_obs_gradients(self, ograds, normalized, inds):
         """
         Helper method
         :return:
         """
 
-        for k, (og, oog, m) in enumerate(zip(ograds, self.oldgrad[1], self._m[1])):
-            newm = self._shrink * m + (1 - self._shrink) * oog + og
-            newgrad = np.sum(normalized * newm, axis=-1)
+        for k, (grad, oldgrad, oldm) in enumerate(zip(ograds, self.oldgrad[1], self._m[1])):
+            newm, newgrad = _calc_grad_and_m(self._shrink, oldm, oldgrad, grad, normalized, inds)
 
             self._m[1][k] = newm
-            self.diffgrad[1][k] = newgrad - self.diffgrad[1][k]
+            self.diffgrad[1][k] = newgrad - self.oldgrad[1][k]
             self.oldgrad[1][k] = newgrad
 
         return self
