@@ -165,10 +165,16 @@ class Beta(OneDimensional):
 
 
 class MultivariateNormal(MultiDimensional):
-    def __init__(self, mean=np.zeros(2), cov=np.eye(2)):
-        self.mean = mean
-        self.cov = cov
-        self.dim = cov.shape[0]
+    def __init__(self, mean=np.zeros(2), cov=np.eye(2), ndim=None):
+
+        if ndim:
+            self.mean = np.zeros(ndim)
+            self.cov = np.eye(ndim)
+            self.dim = ndim
+        else:
+            self.mean = mean
+            self.cov = cov
+            self.dim = cov.shape[0]
 
         self._hmean = np.zeros_like(mean)
 
