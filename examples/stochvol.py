@@ -52,7 +52,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (400, 400)).initialize()
+alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
 
 predictions = 30
 

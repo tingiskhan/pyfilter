@@ -4,10 +4,8 @@ import numpy as np
 import pandas as pd
 import quandl
 from pyfilter.distributions.continuous import Gamma, Normal, Beta, MultivariateNormal
-from pyfilter.filters import NESS
-from pyfilter.timeseries import Base
-from pyfilter.timeseries import Observable
-from pyfilter.timeseries import StateSpaceModel
+from pyfilter.filters import NESS, Linearized
+from pyfilter.timeseries import Base, Observable, StateSpaceModel
 
 
 def fh0(reversion1, level, std1, reversion2, std2, gamma):
@@ -56,7 +54,7 @@ def fo(x):
 
 fig, ax = plt.subplots(4)
 
-stock = 'msft'
+stock = 'COP'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
@@ -75,7 +73,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 alg = NESS(ssm, (300, 300)).initialize()
 
-predictions = 30
+predictions = 5
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])
