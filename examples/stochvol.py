@@ -1,4 +1,4 @@
-from pyfilter.model import StateSpaceModel
+from pyfilter.timeseries import StateSpaceModel
 from pyfilter.timeseries import Base
 from pyfilter.timeseries import Observable
 from pyfilter.filters import NESSMC2, Linearized, NESS
