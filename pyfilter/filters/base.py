@@ -35,7 +35,7 @@ class BaseFilter(object):
 
         self.saveall = saveall
         self._td = None
-        self._proposal = proposal(self._model)
+        self._proposal = proposal(self._model, isinstance(particles, tuple))
 
         if saveall:
             self.s_x = list()

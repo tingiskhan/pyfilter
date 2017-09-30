@@ -34,6 +34,8 @@ class Linearized(Proposal):
         # TODO: Only works for univariate processes currently
         # ===== Linearize observation density around mean ===== #
 
+        x = [self._meaner(tx) for tx in x]
+
         t_x = self._model.propagate_apf(x)
         first, second = self._get_derivs(y, t_x, x)
 
