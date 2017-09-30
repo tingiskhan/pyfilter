@@ -176,7 +176,7 @@ class MultivariateNormal(MultiDimensional):
             self.cov = cov
             self.dim = cov.shape[0]
 
-        self._hmean = np.zeros_like(mean)
+        self._hmean = np.zeros_like(self.mean)
 
     @property
     def ndim(self):
