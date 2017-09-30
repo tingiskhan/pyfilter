@@ -165,27 +165,28 @@ class Beta(OneDimensional):
 
 
 class MultivariateNormal(MultiDimensional):
-    def __init__(self, mean=np.zeros(2), cov=np.eye(2), ndim=None):
+    def __init__(self, mean=np.zeros(2), scale=np.eye(2), ndim=None):
 
         if ndim:
             self.mean = np.zeros(ndim)
             self.cov = np.eye(ndim)
-            self.dim = ndim
+            self._ndim = ndim
         else:
             self.mean = mean
-            self.cov = cov
-            self.dim = cov.shape[0]
+            self.cov = scale
+            self._ndim = scale.shape[0]
 
-        self._hmean = np.zeros_like(self.mean)
+        self._hmean = np.zeros(self._ndim)
+        self._hcov = np.eye(self._ndim)
 
     @property
     def ndim(self):
-        return self.mean.size
+        return self._ndim
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, 1)
+        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
 
-        rvs = np.random.multivariate_normal(mean=self._hmean, cov=self.cov, size=(size or loc.shape[1:]))
+        rvs = np.random.multivariate_normal(mean=self._hmean, cov=self._hcov, size=(size or loc.shape[1:]))
 
         return (loc.T + np.einsum('ij...,...i->i...', scale, rvs).T).T
 
@@ -194,7 +195,7 @@ class MultivariateNormal(MultiDimensional):
 
         cov = helps.outer(scale, self.cov)
 
-        t1 = - 0.5 * np.log((2 * np.pi) ** self.dim * np.linalg.det(cov.T)).T
+        t1 = - 0.5 * np.log((2 * np.pi) ** self._ndim * np.linalg.det(cov.T)).T
         t2 = - helps.square((x.T - loc.T).T, cov)
 
         return t1 + t2
