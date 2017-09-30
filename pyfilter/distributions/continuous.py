@@ -194,7 +194,7 @@ class MultivariateNormal(MultiDimensional):
 
         cov = helps.outer(scale, self.cov)
 
-        t1 = - 0.5 * np.log((2 * np.pi) ** self.dim * np.linalg.det(cov.T))
+        t1 = - 0.5 * np.log((2 * np.pi) ** self.dim * np.linalg.det(cov.T)).T
         t2 = - helps.square((x.T - loc.T).T, cov)
 
         return t1 + t2
