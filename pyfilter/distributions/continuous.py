@@ -180,7 +180,7 @@ class MultivariateNormal(MultiDimensional):
 
     @property
     def ndim(self):
-        return self.mean
+        return self.mean.size
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, 1)
