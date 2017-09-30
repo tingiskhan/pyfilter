@@ -20,14 +20,18 @@ class Tests(unittest.TestCase):
         mean = np.zeros(3)
         cov = np.eye(3)
 
+        cov *= np.random.gamma(1, size=(3, 1))
+
         mvn = cont.MultivariateNormal(mean, cov)
 
-        true = stats.multivariate_normal.logpdf(mean, mean, cov)
+        choleskied = np.linalg.cholesky(cov)
 
-        expanded_mean = np.zeros((3, 500, 500))
+        true = stats.multivariate_normal.logpdf(mean, mean, choleskied ** 2)
+
+        expanded_mean = np.zeros((3, 50, 50))
         expanded_mean[:, :, :] = mean[:, None, None]
-        expanded_cov = np.zeros((3, 3, 500, 500))
-        expanded_cov[:, :, :, :] = cov[:, :, None, None]
+        expanded_cov = np.zeros((3, 3, 50, 50))
+        expanded_cov[:, :, :, :] = choleskied[:, :, None, None]
 
         est = mvn.logpdf(mean, expanded_mean, expanded_cov)
 
