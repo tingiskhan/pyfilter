@@ -191,9 +191,9 @@ class MultivariateNormal(MultiDimensional):
         return (loc.T + np.einsum('ij...,...i->i...', scale, rvs).T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, np.eye(self.cov.shape[0]))
+        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
 
-        cov = helps.outer(scale, self.cov)
+        cov = helps.outer(scale, self._hcov)
 
         t1 = - 0.5 * np.log((2 * np.pi) ** self._ndim * np.linalg.det(cov.T)).T
         t2 = - helps.square((x.T - loc.T).T, cov)
