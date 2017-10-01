@@ -1,12 +1,24 @@
+from ..timeseries.model import StateSpaceModel
+
+
 class Proposal(object):
-    def __init__(self, model):
+    def __init__(self, model, nested=False):
         """
         Defines a proposal object for how to draw the particles.
-        :param model:
+        :param model: The model to ues
+        :type model: StateSpaceModel
+        :param nested: A boolean for specifying if the algorithm is running nested PFs
+        :type nested: bool
         """
 
         self._model = model
         self._kernel = None
+        self._nested = nested
+
+        if nested:
+            self._meaner = lambda x: x.mean(axis=-1)[..., None]
+        else:
+            self._meaner = lambda x: x
 
     def draw(self, y, x, size=None, *args, **kwargs):
         """

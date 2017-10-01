@@ -4,10 +4,8 @@ import numpy as np
 import pandas as pd
 import quandl
 from pyfilter.distributions.continuous import Gamma, Normal, Beta, MultivariateNormal
-from pyfilter.filters import NESS
-from pyfilter.timeseries import Base
-from pyfilter.timeseries import Observable
-from pyfilter.timeseries import StateSpaceModel
+from pyfilter.filters import NESS, Linearized
+from pyfilter.timeseries import Base, Observable, StateSpaceModel
 
 
 def fh0(reversion1, level, std1, reversion2, std2, gamma):
@@ -44,39 +42,38 @@ def gh(x, reversion1, level, std1, reversion2, std2, gamma):
     return out
 
 
-def go(vol):
-    return vol[2]
+def go(x):
+    return x[2]
 
 
-def fo(vol):
-    return np.sqrt(np.exp(vol[0]) + np.exp(vol[1]))
+def fo(x):
+    return np.sqrt(np.exp(x[0]) + np.exp(x[1]))
 
 
 # ===== GET DATA ===== #
 
 fig, ax = plt.subplots(4)
 
-stock = 'msft'
+stock = 'COP'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
 # ===== DEFINE MODEL ===== #
 
-mean = np.zeros(3)
-cov = np.eye(3)
-dists = (MultivariateNormal(mean, cov), MultivariateNormal(mean, cov))
+dists = MultivariateNormal(ndim=3), MultivariateNormal(ndim=3)
+params = Beta(1, 5), Normal(scale=0.3), Gamma(0.5), Beta(5, 1), Gamma(0.5), Gamma(0.25)
 
-logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 5), Normal(scale=0.3), Gamma(0.5), Beta(5, 1), Gamma(0.5), Gamma(0.25)), dists)
+logvol = Base((fh0, gh0), (fh, gh), params, dists)
 obs = Observable((go, fo), (), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (600, 600)).initialize()
+alg = NESS(ssm, (300, 300)).initialize()
 
-predictions = 30
+predictions = 5
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])
@@ -98,8 +95,8 @@ ax[0].plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 actual = y.iloc[-predictions:].cumsum()
 ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[1].plot(y.index[:-predictions], np.exp([x[:-1] / 2 for x in alg.filtermeans()]))
-ax[2].plot(y.index[:-predictions], [x[-1] for x in alg.filtermeans()])
+ax[1].plot(y.index[:-predictions], np.exp([x[:-1] / 2 for tx in alg.filtermeans() for x in tx]))
+ax[2].plot(y.index[:-predictions], [x[-1] for tx in alg.filtermeans() for x in tx])
 y.iloc[:-predictions].plot(ax=ax[-1])
 
 plt.legend()

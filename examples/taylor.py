@@ -1,6 +1,4 @@
-from pyfilter.model import StateSpaceModel
-from pyfilter.timeseries.meta import Base
-from pyfilter.timeseries.observable import Observable
+from pyfilter.timeseries import StateSpaceModel, Base, Observable
 from pyfilter.filters import NESSMC2, RAPF, Linearized
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
 import numpy as np
