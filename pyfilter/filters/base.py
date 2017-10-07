@@ -24,7 +24,6 @@ class BaseFilter(object):
         self._particles = particles
         self._p_particles = self._particles if not isinstance(self._particles, tuple) else (self._particles[0], 1)
 
-        self._old_y = None
         self._old_x = None
         self._anc_x = None
         self._cur_x = None
@@ -48,19 +47,16 @@ class BaseFilter(object):
 
         # ===== HIDDEN ===== #
 
-        self._h_params = list()
-        for i, ts in enumerate(self._model.hidden):
-            temp = dict()
-            parameters = tuple()
-            for j, p in enumerate(ts.theta):
-                if isinstance(p, Distribution):
-                    temp[j] = p.bounds()
-                    parameters += (p.rvs(size=self._p_particles),)
-                else:
-                    parameters += (p,)
+        self._h_params = dict()
+        parameters = tuple()
+        for j, p in enumerate(self._model.hidden.theta):
+            if isinstance(p, Distribution):
+                self._h_params[j] = p.bounds()
+                parameters += (p.rvs(size=self._p_particles),)
+            else:
+                parameters += (p,)
 
-            ts.theta = parameters
-            self._h_params.append(temp)
+        self._model.hidden.theta = parameters
 
         # ===== OBSERVABLE ===== #
 

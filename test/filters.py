@@ -1,20 +1,11 @@
 import unittest
-
 import numpy as np
 import pykalman
 import scipy.stats as stats
-
-import pyfilter.filters as apf
-import pyfilter.filters as sisr
-import pyfilter.timeseries.meta as ts
 from pyfilter.distributions.continuous import Normal, Gamma
-from pyfilter.filters import Linearized
-from pyfilter.filters import NESS
-from pyfilter.filters import RAPF
-from pyfilter.filters import SMC2
-from pyfilter.proposals import Linearized as Linz
-from pyfilter.timeseries.model import StateSpaceModel
-from pyfilter.timeseries.observable import Observable
+from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF
+from pyfilter.proposals import Linearized as Linz, Kernelized
+from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 
 
@@ -43,22 +34,22 @@ def go(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    linear = ts.Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
+    linear = Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
     linearobs = Observable((fo, go), (1, 1), Normal())
     model = StateSpaceModel(linear, linearobs)
 
     def test_InitializeFilter(self):
-        filt = sisr.SISR(self.model, 1000)
+        filt = SISR(self.model, 1000)
 
         filt.initialize()
 
-        assert filt._old_x[0].shape == (1000,)
+        assert filt._old_x.shape == (1000,)
 
     def test_SISR(self):
 
         x, y = self.model.sample(500)
 
-        filt = sisr.SISR(self.model, 5000, saveall=True).initialize()
+        filt = SISR(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
@@ -69,14 +60,14 @@ class Tests(unittest.TestCase):
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
         assert rmse < 0.05
 
     def test_APF(self):
         x, y = self.model.sample(500)
 
-        filt = apf.APF(self.model, 5000, saveall=True).initialize()
+        filt = APF(self.model, 5000, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
@@ -87,15 +78,15 @@ class Tests(unittest.TestCase):
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
         assert rmse < 0.05
 
     def test_Likelihood(self):
         x, y = self.model.sample(500)
 
-        apft = apf.APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
-        sisrt = sisr.SISR(self.model, 1000).initialize().longfilter(y)
+        apft = APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
+        sisrt = SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
@@ -117,10 +108,10 @@ class Tests(unittest.TestCase):
 
         shape = 50, 1
 
-        linear = ts.Base((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
-        self.model.hidden = (linear,)
+        linear = Base((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
+        self.model.hidden = linear
 
-        apft = apf.APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
+        apft = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
         filtermeans = np.array(apft.filtermeans())
 
@@ -131,17 +122,17 @@ class Tests(unittest.TestCase):
     def test_RAPFSimpleModel(self):
         x, y = self.model.sample(500)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
-        assert rapf._model.hidden[0].theta[1].shape == (5000,)
+        assert rapf._model.hidden.theta[1].shape == (5000,)
 
         rapf = rapf.longfilter(y)
 
-        estimates = rapf._model.hidden[0].theta[1]
+        estimates = rapf._model.hidden.theta[1]
 
         mean = np.mean(estimates)
         std = np.std(estimates)
@@ -151,10 +142,10 @@ class Tests(unittest.TestCase):
     def test_Predict(self):
         x, y = self.model.sample(550)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
         assert rapf._model.hidden[0].theta[1].shape == (5000,)
@@ -172,15 +163,15 @@ class Tests(unittest.TestCase):
     def test_NESS(self):
         x, y = self.model.sample(500)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         ness = NESS(self.model, (300, 300))
 
         ness = ness.longfilter(y[:500])
 
-        estimates = ness._filter._model.hidden[0].theta[1]
+        estimates = ness._filter._model.hidden.theta[1]
 
         mean = np.mean(estimates)
         std = np.std(estimates)
@@ -190,10 +181,10 @@ class Tests(unittest.TestCase):
     def test_NESSPredict(self):
         x, y = self.model.sample(550)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         ness = NESS(self.model, (300, 300))
 
         ness = ness.longfilter(y[:500])
@@ -209,25 +200,25 @@ class Tests(unittest.TestCase):
     def test_SMC2(self):
         x, y = self.model.sample(300)
 
-        linear = ts.Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         smc2 = SMC2(self.model, (300, 300))
 
         smc2 = smc2.longfilter(y)
 
         weights = normalize(smc2._recw)
 
-        mean = np.average(smc2._filter._model.hidden[0].theta[1], weights=weights[:, None])
-        std = np.sqrt(np.average((smc2._filter._model.hidden[0].theta[1] - mean) ** 2, weights=weights[:, None]))
+        mean = np.average(smc2._filter._model.hidden.theta[1], weights=weights[:, None])
+        std = np.sqrt(np.average((smc2._filter._model.hidden.theta[1] - mean) ** 2, weights=weights[:, None]))
 
         assert mean - std < 1 < mean + std
 
     def test_Linearized(self):
         x, y = self.model.sample(500)
 
-        filt = Linearized(self.model, 5000, saveall=True).initialize()
+        filt = Linearized(self.model, 750, saveall=True).initialize()
 
         filt = filt.longfilter(y)
 
@@ -238,17 +229,17 @@ class Tests(unittest.TestCase):
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         filterestimates = kf.filter(y)
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
         assert rmse < 0.05
 
     def test_Gradient(self):
         x, y = self.model.sample(500)
 
-        linear = ts.Base((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
+        linear = Base((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
 
-        self.model.hidden = (linear,)
-        self.model.observable = ts.Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
 
         rapf = RAPF(self.model, 3000).initialize().longfilter(y)
 
@@ -257,6 +248,6 @@ class Tests(unittest.TestCase):
         def truderiv(obs, mu, sigma):
             return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
 
-        truederiv = truderiv(y[-1], rapf.s_mx[-1][0], self.model.observable.theta[-1])
+        truederiv = truderiv(y[-1], rapf.s_mx[-1], self.model.observable.theta[-1])
 
         assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)

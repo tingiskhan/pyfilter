@@ -4,10 +4,8 @@ import numpy as np
 import scipy.stats as stats
 
 import pyfilter.distributions.continuous as cont
-import pyfilter.timeseries.meta as ts
 import pyfilter.utils.utils as helps
-from pyfilter.timeseries.model import StateSpaceModel
-from pyfilter.timeseries.observable import Observable
+from pyfilter.timeseries import StateSpaceModel, Observable, Base
 
 
 def f(x, alpha, sigma):
@@ -59,20 +57,16 @@ def gomvn(x, sigma):
 
 
 class Tests(unittest.TestCase):
-    linear = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
-    linear2 = ts.Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
+    linear = Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
 
     linearobs = Observable((fo, go), (1, 1), stats.norm)
-    linearobs2 = Observable((foo, goo), (1, 1), stats.norm)
 
     model = StateSpaceModel(linear, linearobs)
-
-    bivariatemodel = StateSpaceModel((linear, linear2), linearobs2)
 
     mat = np.eye(2)
     scale = np.eye(2)
 
-    mvnlinear = ts.Base((f0mvn, g0), (fmvn, g), (mat, scale), (cont.MultivariateNormal(), cont.MultivariateNormal()))
+    mvnlinear = Base((f0mvn, g0), (fmvn, g), (mat, scale), (cont.MultivariateNormal(), cont.MultivariateNormal()))
     mvnoblinear = Observable((fomvn, gomvn), (1,), cont.Normal())
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
@@ -80,19 +74,19 @@ class Tests(unittest.TestCase):
     def test_InitializeModel1D(self):
         sample = self.model.initialize()
 
-        assert isinstance(sample[0], float)
+        assert isinstance(sample, float)
 
     def test_InitializeModel(self):
         sample = self.model.initialize(1000)
 
-        assert sample[0].shape == (1000,)
+        assert sample.shape == (1000,)
 
     def test_Propagate(self):
         x = self.model.initialize(1000)
 
         sample = self.model.propagate(x)
 
-        assert sample[0].shape == (1000,)
+        assert sample.shape == (1000,)
 
     def test_Weight(self):
         x = self.model.initialize(1000)
@@ -101,21 +95,16 @@ class Tests(unittest.TestCase):
 
         w = self.model.weight(y, x)
 
-        truew = stats.norm.logpdf(y, loc=x[0], scale=self.model.observable.theta[1])
+        truew = stats.norm.logpdf(y, loc=x, scale=self.model.observable.theta[1])
 
         assert np.allclose(w, truew)
 
     def test_Sample(self):
         x, y = self.model.sample(50)
 
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 1)
-
-    def test_SampleBivariate(self):
-        x, y = self.bivariatemodel.sample(50)
-
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 2)
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
 
     def test_SampleMultivariate(self):
         x, y = self.mvnmodel.sample(30)
 
-        assert len(x) == 30 and x[0][0].shape == (2,)
+        assert len(x) == 30 and x[0].shape == (2,)
