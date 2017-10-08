@@ -75,7 +75,7 @@ def dot(a, b):
     :return: 
     """
 
-    return np.einsum('ij...,i...->i...', a, b)
+    return np.einsum('ij...,j...->i...', a, b)
 
 
 def outer(a, b):
