@@ -278,7 +278,7 @@ class Tests(unittest.TestCase):
         assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
 
     def test_Linearized2D(self):
-        x, y = self.mvnmodel.sample(10)
+        x, y = self.mvnmodel.sample(500)
 
         filt = SISR(self.mvnmodel, 5000, saveall=True).initialize()
 
