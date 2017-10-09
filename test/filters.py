@@ -2,11 +2,12 @@ import unittest
 import numpy as np
 import pykalman
 import scipy.stats as stats
-from pyfilter.distributions.continuous import Normal, Gamma
+from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
 from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF
 from pyfilter.proposals import Linearized as Linz, Kernelized
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
+from pyfilter.utils.utils import dot
 
 
 def f(x, alpha, sigma):
@@ -33,10 +34,34 @@ def go(x, alpha, sigma):
     return sigma
 
 
+def fmvn(x, alpha, sigma):
+    return dot(np.array([[alpha, 1 / 3], [0, 1]]), x)
+
+
+def gmvn(x, alpha, sigma):
+    return [[sigma, 0], [0, sigma]]
+
+
+def f0mvn(alpha, sigma):
+    return [0, 0]
+
+
+def g0mvn(alpha, sigma):
+    return [[sigma, 0], [0, sigma]]
+
+
+def fomvn(x, alpha, sigma):
+    return x[0] + 2 * x[1]
+
+
 class Tests(unittest.TestCase):
     linear = Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
     linearobs = Observable((fo, go), (1, 1), Normal())
     model = StateSpaceModel(linear, linearobs)
+
+    mvn = Base((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1), (MultivariateNormal(), MultivariateNormal()))
+    mvnobs = Observable((fomvn, go), (1, 1), Normal())
+    mvnmodel = StateSpaceModel(mvn, mvnobs)
 
     def test_InitializeFilter(self):
         filt = SISR(self.model, 1000)
@@ -251,3 +276,21 @@ class Tests(unittest.TestCase):
         truederiv = truderiv(y[-1], rapf.s_mx[-1], self.model.observable.theta[-1])
 
         assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
+
+    def test_Linearized2D(self):
+        x, y = self.mvnmodel.sample(10)
+
+        filt = SISR(self.mvnmodel, 5000, saveall=True).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_mx) > 0
+
+        estimates = np.array(filt.filtermeans())
+
+        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1/3], [0, 1]], observation_matrices=[1, 2])
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+
+        assert rmse < 0.05

@@ -27,6 +27,9 @@ def _get_derivs(x, func, ndim, h=1e-3):
         first = np.empty_like(x)
         second = np.zeros((x.shape[0], *x.shape))
 
+        fmid = func(x)
+        derivs = list()
+
         for i, tx in enumerate(x):
             up, low = x.copy(), x.copy()
             up[i] = tx + h
@@ -35,7 +38,19 @@ def _get_derivs(x, func, ndim, h=1e-3):
             fupx, flowx = func(up), func(low)
 
             first[i] = (fupx - flowx) / 2 / h
-            second[i, i] = (fupx - 2 * func(x) + flowx) / h ** 2
+            derivs.append((fupx, flowx))
+
+        for i in range(x.shape[0]):
+            for j in range(i, x.shape[0]):
+                if i == j:
+                    second[i, i] = (derivs[i][0] - 2 * fmid + derivs[i][1]) / h ** 2
+                else:
+                    fupx = func(x + h)
+                    flowx = func(x - h)
+
+                    tmp = fupx - derivs[i][0] - derivs[j][0] + 2 * fmid - derivs[i][1] - derivs[j][1] + flowx
+
+                    second[i, j] = second[j, i] = tmp / 2 / h ** 2
 
     return first, second
 
