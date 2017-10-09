@@ -100,4 +100,4 @@ def square(a, b):
     :return: 
     """
 
-    return np.einsum('i...,j...->...', a, dot(b, a))
+    return np.einsum('i...,i...->...', a, dot(b, a))
