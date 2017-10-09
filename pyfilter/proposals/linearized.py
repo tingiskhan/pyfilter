@@ -45,8 +45,16 @@ def _get_derivs(x, func, ndim, h=1e-3):
                 if i == j:
                     second[i, i] = (derivs[i][0] - 2 * fmid + derivs[i][1]) / h ** 2
                 else:
-                    fupx = func(x + h)
-                    flowx = func(x - h)
+                    upx, lowx = x.copy(), x.copy()
+
+                    upx[i] += h
+                    upx[j] += h
+
+                    lowx[i] -= h
+                    lowx[j] -= h
+
+                    fupx = func(upx)
+                    flowx = func(lowx)
 
                     tmp = fupx - derivs[i][0] - derivs[j][0] + 2 * fmid - derivs[i][1] - derivs[j][1] + flowx
 
