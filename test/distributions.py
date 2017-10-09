@@ -18,15 +18,13 @@ class Tests(unittest.TestCase):
 
     def test_MVNMultidimensional(self):
         mean = np.zeros(3)
-        cov = np.eye(3)
-
-        cov *= np.random.gamma(1, size=(3, 1))
-
-        mvn = cont.MultivariateNormal(mean, cov)
+        cov = stats.wishart(3, scale=np.eye(3)).rvs()
 
         choleskied = np.linalg.cholesky(cov)
 
-        true = stats.multivariate_normal.logpdf(mean, mean, choleskied ** 2)
+        mvn = cont.MultivariateNormal(mean, cov)
+
+        true = stats.multivariate_normal.logpdf(mean, mean, choleskied.T.dot(choleskied))
 
         expanded_mean = np.zeros((3, 50, 50))
         expanded_mean[:, :, :] = mean[:, None, None]
