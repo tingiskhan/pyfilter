@@ -17,7 +17,7 @@ class Tests(unittest.TestCase):
         assert np.allclose(true, est)
 
     def test_MVNMultidimensional(self):
-        mean = np.zeros(3)
+        mean = np.random.normal(size=3)
         cov = stats.wishart(3, scale=np.eye(3)).rvs()
 
         choleskied = np.linalg.cholesky(cov)
