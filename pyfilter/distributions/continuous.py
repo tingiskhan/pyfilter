@@ -188,7 +188,7 @@ class MultivariateNormal(MultiDimensional):
 
         rvs = np.random.multivariate_normal(mean=self._hmean, cov=self._hcov, size=(size or loc.shape[1:]))
 
-        return (loc.T + np.einsum('ij...,...i->i...', scale, rvs).T).T
+        return (loc.T + helps.dot(scale, rvs.T).T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, self.cov)
