@@ -24,13 +24,13 @@ class Tests(unittest.TestCase):
 
         mvn = cont.MultivariateNormal(mean, cov)
 
-        true = stats.multivariate_normal.logpdf(mean, mean, choleskied.T.dot(choleskied))
+        true = stats.multivariate_normal.logpdf(mean, mean + 1, choleskied.T.dot(choleskied))
 
         expanded_mean = np.zeros((3, 50, 50))
         expanded_mean[:, :, :] = mean[:, None, None]
         expanded_cov = np.zeros((3, 3, 50, 50))
         expanded_cov[:, :, :, :] = choleskied[:, :, None, None]
 
-        est = mvn.logpdf(mean, expanded_mean, expanded_cov)
+        est = mvn.logpdf(mean, expanded_mean + 1, expanded_cov)
 
         assert np.allclose(true, est)
