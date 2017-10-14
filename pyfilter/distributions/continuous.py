@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
