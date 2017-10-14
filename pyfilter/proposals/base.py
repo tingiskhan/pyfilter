@@ -16,7 +16,11 @@ class Proposal(object):
         self._kernel = None
         self._nested = nested
 
-        self._meaner = lambda x: x
+        if self._nested:
+            self._meaner = lambda x: x.mean(axis=-1)[..., None]
+        else:
+            self._meaner = lambda x: x
+
         self._sg = StateGradient(self._model)
 
     def draw(self, y, x, size=None, *args, **kwargs):
