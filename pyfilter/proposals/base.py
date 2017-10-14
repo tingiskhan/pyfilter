@@ -1,4 +1,5 @@
 from ..timeseries.model import StateSpaceModel
+from ..utils.stategradient import StateGradient
 
 
 class Proposal(object):
@@ -16,6 +17,7 @@ class Proposal(object):
         self._nested = nested
 
         self._meaner = lambda x: x
+        self._sg = StateGradient(self._model)
 
     def draw(self, y, x, size=None, *args, **kwargs):
         """

@@ -88,7 +88,7 @@ class Linearized(Proposal):
         :return:
         """
 
-        return _get_derivs(tx, lambda u: self._model.weight(y, u) + self._model.h_weight(u, x), self._model.hidden.ndim)
+        return self._sg.gradient(y, tx, x), self._sg.hess(y, tx, x)
 
     def weight(self, y, xn, xo, *args, **kwargs):
         correction = self._kernel.logpdf(xn)

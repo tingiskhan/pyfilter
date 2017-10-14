@@ -2,6 +2,7 @@ import numpy as np
 import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
+from autograd.core import Node
 
 
 def _get(x, y):
@@ -12,7 +13,9 @@ def _get(x, y):
     :return:
     """
 
-    return np.array(x if x is not None else y)
+    out = x if x is not None else y
+
+    return np.array(out) if not (isinstance(out, np.ndarray) or isinstance(out, Node)) else out
 
 
 class Distribution(object):
