@@ -63,7 +63,7 @@ class RAPF(BaseFilter):
 
         resampled_x = choose(self._old_x, resampled_indices)
         x = self._proposal.draw(y, resampled_x)
-        self._old_w = self._proposal.weight(y, x, resampled_x)
+        self._old_w = self._proposal.weight(y, x, resampled_x) - choose(t_weights, resampled_indices)
 
         self._old_x = x
 
