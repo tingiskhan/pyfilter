@@ -15,10 +15,7 @@ class Proposal(object):
         self._kernel = None
         self._nested = nested
 
-        if nested:
-            self._meaner = lambda x: x.mean(axis=-1)[..., None]
-        else:
-            self._meaner = lambda x: x
+        self._meaner = lambda x: x
 
     def draw(self, y, x, size=None, *args, **kwargs):
         """
