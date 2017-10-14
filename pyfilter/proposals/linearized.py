@@ -68,12 +68,10 @@ class Linearized(Proposal):
         x = self._meaner(x)
         t_x = self._model.propagate_apf(x)
 
-        first, second = self._get_derivs(y, t_x, x)
+        mode, variance = self._get_derivs(y, t_x, x)
 
         if self._model.hidden.ndim < 2:
-            variances = -1 / second
-            mean = variances * first
-            self._kernel = Normal(x + mean, np.sqrt(variances))
+            self._kernel = Normal(mode, np.sqrt(variance))
         else:
             variances = -np.linalg.inv(second.T).T
             mean = dot(variances, first)
@@ -88,7 +86,21 @@ class Linearized(Proposal):
         :return:
         """
 
-        return self._sg.gradient(y, tx, x), self._sg.hess(y, tx, x)
+        oldmode = tx
+        mode = tx
+        converged = False
+        iters = 0
+        while not converged:
+            first, second = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
+
+            mode = mode - first / second
+            if np.all(np.abs(oldmode - mode) < 1e-2) or iters > 3:
+                break
+
+            oldmode = mode.copy()
+            iters += 1
+
+        return mode, -1 / second
 
     def weight(self, y, xn, xo, *args, **kwargs):
         correction = self._kernel.logpdf(xn)
