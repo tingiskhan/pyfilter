@@ -203,21 +203,19 @@ class BaseFilter(object):
 
         # ===== Exchange old states ===== #
 
-        for i, x in enumerate(newfilter._old_x):
-            if x.ndim > self._old_w.ndim:
-                self._old_x[i][:, indices] = newfilter._old_x[i][:, indices]
-            else:
-                self._old_x[i][indices] = newfilter._old_x[i][indices]
+        if newfilter._old_x.ndim > self._old_w.ndim:
+            self._old_x[:, indices] = newfilter._old_x[:, indices]
+        else:
+            self._old_x[indices] = newfilter._old_x[indices]
 
         # ===== Exchange particle history ===== #
 
         if self.saveall:
             for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
-                for i, xi in enumerate(x):
-                    if xi.ndim > w.ndim:
-                        self.s_x[t][i][:, indices] = xi[:, indices]
-                    else:
-                        self.s_x[t][i][indices] = xi[indices]
+                if x.ndim > w.ndim:
+                    self.s_x[t][:, indices] = x[:, indices]
+                else:
+                    self.s_x[t][indices] = x[indices]
 
                 self.s_w[t][indices] = w[indices]
 
