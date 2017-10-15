@@ -32,7 +32,7 @@ class Linearized(Proposal):
         while not converged:
             first, second = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
 
-            if self._model.hidden_ndim < 1:
+            if self._model.hidden_ndim < 2:
                 mode = mode - first / second
             else:
                 inversed = np.linalg.inv(second.T).T
