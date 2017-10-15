@@ -190,8 +190,12 @@ class MultivariateNormal(MultiDimensional):
         loc, scale = _get(loc, self.mean), _get(scale, self.cov)
 
         rvs = np.random.multivariate_normal(mean=self._hmean, cov=self._hcov, size=(size or loc.shape[1:]))
+        scaledrvs = np.einsum('ij...,...j->i...', scale, rvs)
 
-        return (loc.T + helps.dot(scale, rvs.T).T).T
+        try:
+            return loc + scaledrvs
+        except ValueError:
+            return (loc + scaledrvs.T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, self.cov)
