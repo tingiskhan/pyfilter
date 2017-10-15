@@ -49,7 +49,15 @@ class StateGradient(object):
         :return:
         """
 
-        return self._ohess(y, x) + self._hhess(x, oldx)
+        if self._model.hidden_ndim < 2:
+            return self._ohess(y, x) + self._hhess(x, oldx)
+
+        hess = np.zeros((x.shape[0], *x.shape))
+        inds = np.diag_indices(x.shape[0])
+
+        hess[inds] = self._ohess(y, x) + self._hhess(x, oldx)
+
+        return hess
 
     def o_gradient(self, y, x, oldx):
         """
