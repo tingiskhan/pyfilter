@@ -29,14 +29,14 @@ class Linearized(Proposal):
         mode = tx
         converged = False
         iters = 0
+        hess = None
         while not converged:
-            first, second = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
+            first, hess = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
 
             if self._model.hidden_ndim < 2:
-                mode = mode - first / second
+                mode = mode - hess * first
             else:
-                inversed = np.linalg.inv(second.T).T
-                mode = mode - dot(inversed, first)
+                mode = mode - dot(hess, first)
 
             if np.all(np.abs(oldmode - mode) < 1e-2) or iters > 3:
                 break
@@ -44,12 +44,7 @@ class Linearized(Proposal):
             oldmode = mode.copy()
             iters += 1
 
-        if self._model.hidden_ndim < 2:
-            hess = -1 / second
-        else:
-            hess = -inversed
-
-        return mode, hess
+        return mode, -hess
 
     def weight(self, y, xn, xo, *args, **kwargs):
         correction = self._kernel.logpdf(xn)
