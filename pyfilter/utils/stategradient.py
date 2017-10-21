@@ -134,7 +134,7 @@ class NumericalStateGradient(StateGradient):
         fx = self._model.weight(y, x) + self._model.h_weight(x, oldx)
 
         if self._model.hidden_ndim < 2:
-            return (self.grad[1] - 2 * fx + self.grad[0]) / self.h ** 2
+            return 1 / ((self.grad[1] - 2 * fx + self.grad[0]) / self.h ** 2)
 
         hess = np.empty((x.shape[0], *x.shape))
         fmid = self._model.weight(y, x) + self._model.h_weight(x, oldx)
@@ -158,4 +158,4 @@ class NumericalStateGradient(StateGradient):
 
                     hess[i, j] = hess[j, i] = tmp / 2 / self.h ** 2
 
-        return hess
+        return np.linalg.inv(hess.T).T
