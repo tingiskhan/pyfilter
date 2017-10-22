@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     ssm = StateSpaceModel(hidden, obs)
 
-    x, y = ssm.sample(500)
+    x, y = ssm.sample(2000)
 
     fig, ax = plt.subplots(2)
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     hidden = EulerMaruyma((finit, ginit), (f, g), (Normal(15, 6), Normal(20, 10), Normal(4, 2)), (mvn3, mvn3), dt=dt)
     ssm = StateSpaceModel(hidden, obs)
 
-    ness = NESS(ssm, (300, 300), filt=APF).longfilter(y)
+    ness = NESS(ssm, (600, 10), filt=Linearized).longfilter(y)
 
     ax[0].plot(ness.filtermeans())
 
