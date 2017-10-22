@@ -34,11 +34,8 @@ class GradientEstimator(object):
         """
         :rtype: tuple of list
         """
-        hiddens = list()
-        for h in self._model.hidden:
-            hiddens.append(len(h.theta) * [0])
 
-        return hiddens, len(self._model.observable.theta) * [0]
+        return len(self._model.hidden.theta) * [0], len(self._model.observable.theta) * [0]
 
     def update_gradient(self, y, x, xo, w, inds):
         """
@@ -68,13 +65,12 @@ class GradientEstimator(object):
         :return:
         """
 
-        for i, (tsgrad, oldtsgrad, tsm) in enumerate(zip(hgrads, self.oldgrad[0], self._m[0])):
-            for j, (grad, oldgrad, oldm) in enumerate(zip(tsgrad, oldtsgrad, tsm)):
-                newm, newgrad = _calc_grad_and_m(self._shrink, oldm, oldgrad, grad, normalized, inds)
+        for i, (grad, oldgrad, oldm) in enumerate(zip(hgrads, self.oldgrad[0], self._m[0])):
+            newm, newgrad = _calc_grad_and_m(self._shrink, oldm, oldgrad, grad, normalized, inds)
 
-                self._m[0][i][j] = newm
-                self.diffgrad[0][i][j] = newgrad - self.oldgrad[0][i][j]
-                self.oldgrad[0][i][j] = newgrad
+            self._m[0][i] = newm
+            self.diffgrad[0][i] = newgrad - self.oldgrad[0][i]
+            self.oldgrad[0][i] = newgrad
 
         return self
 

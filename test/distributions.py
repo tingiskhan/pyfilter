@@ -17,22 +17,21 @@ class Tests(unittest.TestCase):
         assert np.allclose(true, est)
 
     def test_MVNMultidimensional(self):
-        mean = np.zeros(3)
-        cov = np.eye(3)
-
-        cov *= np.random.gamma(1, size=(3, 1))
-
-        mvn = cont.MultivariateNormal(mean, cov)
+        mean = np.random.normal(size=3)
+        cov = stats.wishart(3, scale=np.eye(3)).rvs()
 
         choleskied = np.linalg.cholesky(cov)
 
-        true = stats.multivariate_normal.logpdf(mean, mean, choleskied ** 2)
+        mvn = cont.MultivariateNormal(mean, cov)
+
+        eps = np.random.uniform(high=0.25)
+        true = stats.multivariate_normal.logpdf(mean, mean + eps, cov)
 
         expanded_mean = np.zeros((3, 50, 50))
         expanded_mean[:, :, :] = mean[:, None, None]
         expanded_cov = np.zeros((3, 3, 50, 50))
         expanded_cov[:, :, :, :] = choleskied[:, :, None, None]
 
-        est = mvn.logpdf(mean, expanded_mean, expanded_cov)
+        est = mvn.logpdf(mean, expanded_mean + eps, expanded_cov)
 
         assert np.allclose(true, est)

@@ -55,7 +55,7 @@ def fo(x):
 fig, ax = plt.subplots(4)
 
 stock = 'COP'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2014-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
@@ -95,25 +95,31 @@ ax[0].plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 actual = y.iloc[-predictions:].cumsum()
 ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[1].plot(y.index[:-predictions], np.exp([x[:-1] / 2 for tx in alg.filtermeans() for x in tx]))
-ax[2].plot(y.index[:-predictions], [x[-1] for tx in alg.filtermeans() for x in tx])
+ax[1].plot(y.index[:-predictions], np.exp([tx[:-1] / 2 for tx in alg.filtermeans()]))
+ax[2].plot(y.index[:-predictions], [tx[-1] for tx in alg.filtermeans()])
 y.iloc[:-predictions].plot(ax=ax[-1])
 
 plt.legend()
 
 # ===== PLOT KDEs ===== #
 
-fig2, ax2 = plt.subplots(4)
+fig2, ax2 = plt.subplots(3, 2)
 # mu = pd.DataFrame(ssm.observable.theta[0])
-kappa = pd.DataFrame(ssm.hidden[0].theta[0])
-gamma = pd.DataFrame(ssm.hidden[0].theta[1])
-sigma = pd.DataFrame(ssm.hidden[0].theta[2])
+kappa = pd.DataFrame(ssm.hidden.theta[0])
+gamma = pd.DataFrame(ssm.hidden.theta[1])
+sigma = pd.DataFrame(ssm.hidden.theta[2])
+
+kappa2 = pd.DataFrame(ssm.hidden.theta[3])
+sigma2 = pd.DataFrame(ssm.hidden.theta[4])
+delta = pd.DataFrame(ssm.hidden.theta[5])
 
 # mu.plot(kind='kde', ax=ax2[0])
-kappa.plot(kind='kde', ax=ax2[1])
-gamma.plot(kind='kde', ax=ax2[2])
-sigma.plot(kind='kde', ax=ax2[3])
-
+kappa.plot(kind='kde', ax=ax2[0, 0])
+gamma.plot(kind='kde', ax=ax2[1, 0])
+sigma.plot(kind='kde', ax=ax2[2, 0])
+kappa2.plot(kind='kde', ax=ax2[0, 1])
+sigma2.plot(kind='kde', ax=ax2[1, 1])
+delta.plot(kind='kde', ax=ax2[2, 1])
 
 fig3, ax3 = plt.subplots()
 

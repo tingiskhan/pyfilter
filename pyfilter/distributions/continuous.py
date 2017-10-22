@@ -1,7 +1,8 @@
-import numpy as np
+import autograd.numpy as np
 import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
+from autograd.core import Node
 
 
 def _get(x, y):
@@ -12,7 +13,9 @@ def _get(x, y):
     :return:
     """
 
-    return np.array(x if x is not None else y)
+    out = x if x is not None else y
+
+    return np.array(out) if not (isinstance(out, np.ndarray) or isinstance(out, Node)) else out
 
 
 class Distribution(object):
@@ -187,8 +190,12 @@ class MultivariateNormal(MultiDimensional):
         loc, scale = _get(loc, self.mean), _get(scale, self.cov)
 
         rvs = np.random.multivariate_normal(mean=self._hmean, cov=self._hcov, size=(size or loc.shape[1:]))
+        scaledrvs = np.einsum('ij...,...j->i...', scale, rvs)
 
-        return (loc.T + np.einsum('ij...,...i->i...', scale, rvs).T).T
+        try:
+            return loc + scaledrvs
+        except ValueError:
+            return (loc + scaledrvs.T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
         loc, scale = _get(loc, self.mean), _get(scale, self.cov)

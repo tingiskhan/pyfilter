@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 from .normalization import normalize
 
 
@@ -75,7 +75,7 @@ def dot(a, b):
     :return: 
     """
 
-    return np.einsum('ij...,i...->i...', a, b)
+    return np.einsum('ij...,j...->i...', a, b)
 
 
 def outer(a, b):
@@ -100,4 +100,4 @@ def square(a, b):
     :return: 
     """
 
-    return np.einsum('i...,j...->...', a, dot(b, a))
+    return np.einsum('i...,i...->...', a, dot(b, a))

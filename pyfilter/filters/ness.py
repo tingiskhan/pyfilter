@@ -104,6 +104,6 @@ class NESS(BaseFilter):
         out = list()
         for tw, tx in zip(self._filter.s_l, self._filter.s_mx):
             normalized = normalize(tw)
-            out.append([np.sum(x * normalized, axis=-1) for x in tx])
+            out.append(np.sum(tx * normalized, axis=-1))
 
         return out

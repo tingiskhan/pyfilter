@@ -12,3 +12,13 @@ class Tests(unittest.TestCase):
         est = helps.outer(a, b)
 
         assert np.allclose(true, est)
+
+    def test_Dot(self):
+        a = np.random.normal(size=(2, 2))
+        b = np.random.normal(size=2)
+        
+        trueval = a.dot(b)
+
+        est = helps.dot(a, b)
+
+        assert np.allclose(trueval, est)

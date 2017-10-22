@@ -1,50 +1,22 @@
 from .base import Proposal
-from ..distributions.continuous import Normal
-from numpy import sqrt
-
-
-def _get_derivs(x, func, h=1e-3):
-    """
-    EStimates the derivative at x of func.
-    :param x:
-    :param func:
-    :param h:
-    :return:
-    """
-
-    first = tuple()
-    second = tuple()
-    for i, tx in enumerate(x):
-        up = tx + h
-        low = tx - h
-
-        upx, lowx = x.copy(), x.copy()
-        upx[i], lowx[i] = up, low
-
-        fupx, flowx = func(upx), func(lowx)
-
-        first += ((fupx - flowx) / 2 / h,)
-        second += ((fupx - 2 * func(x) + flowx) / h ** 2,)
-
-    return first, second
+from ..distributions.continuous import Normal, MultivariateNormal
+import numpy as np
+from ..utils.utils import dot
 
 
 class Linearized(Proposal):
     def draw(self, y, x, size=None, *args, **kwargs):
-        # TODO: Only works for univariate processes currently
-        # ===== Linearize observation density around mean ===== #
-
-        x = [self._meaner(tx) for tx in x]
-
+        x = self._meaner(x)
         t_x = self._model.propagate_apf(x)
-        first, second = self._get_derivs(y, t_x, x)
 
-        variances = [-1 / s for s in second]
-        mean = [v * f for v, f in zip(variances, first)]
+        mode, variance = self._get_derivs(y, t_x, x)
 
-        self._kernel = [Normal(x + m, sqrt(v)) for x, m, v in zip(t_x, mean, variances)]
+        if self._model.hidden.ndim < 2:
+            self._kernel = Normal(mode, np.sqrt(variance))
+        else:
+            self._kernel = MultivariateNormal(mode, np.linalg.cholesky(variance.T).T)
 
-        return [k.rvs(size=size) for k in self._kernel]
+        return self._kernel.rvs(size=size)
 
     def _get_derivs(self, y, tx, x):
         """
@@ -53,8 +25,27 @@ class Linearized(Proposal):
         :return:
         """
 
-        return _get_derivs(tx, lambda u: self._model.weight(y, u) + self._model.h_weight(u, x))
+        oldmode = tx
+        mode = tx
+        converged = False
+        iters = 0
+        hess = None
+        while not converged:
+            first, hess = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
+
+            if self._model.hidden_ndim < 2:
+                mode = mode - hess * first
+            else:
+                mode = mode - dot(hess, first)
+
+            if np.all(np.abs(oldmode - mode) < 1e-2) or iters > 3:
+                break
+
+            oldmode = mode.copy()
+            iters += 1
+
+        return mode, -hess
 
     def weight(self, y, xn, xo, *args, **kwargs):
-        correction = sum(k.logpdf(_xn) for k, _xn, in zip(self._kernel, xn))
+        correction = self._kernel.logpdf(xn)
         return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - correction

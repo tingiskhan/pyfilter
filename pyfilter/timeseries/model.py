@@ -12,7 +12,7 @@ class StateSpaceModel(object):
         :type observable: pyfilter.timeseries.meta.Base
         """
 
-        self.hidden = hidden if isinstance(hidden, tuple) else (hidden,)
+        self.hidden = hidden
         self.observable = observable
 
     @property
@@ -22,7 +22,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        return tuple(h.ndim for h in self.hidden)
+        return self.hidden.ndim
 
     @property
     def obs_ndim(self):
@@ -40,11 +40,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        out = list()
-        for ts in self.hidden:
-            out.append(ts.i_sample(size, **kwargs))
-
-        return out
+        return self.hidden.i_sample(size, **kwargs)
 
     def propagate(self, x):
         """
@@ -53,11 +49,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        out = list()
-        for ts, xi in zip(self.hidden, x):
-            out.append(ts.propagate(xi))
-
-        return out
+        return self.hidden.propagate(x)
 
     def weight(self, y, x):
         """
@@ -67,7 +59,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        return self.observable.weight(y, *x)
+        return self.observable.weight(y, x)
 
     def h_weight(self, y, x):
         """
@@ -77,28 +69,27 @@ class StateSpaceModel(object):
         :return:
         """
 
-        return sum(h.weight(y[i], x[i]) for i, h in enumerate(self.hidden))
+        return self.hidden.weight(y, x)
 
-    def sample(self, steps, x_s=None, **kwargs):
+    def sample(self, steps, x_s=None):
         """
         Constructs a sample trajectory for both the observable and the hidden density.
         :param steps: The number of steps
         :param x_s: The starting value
-        :param kwargs: Any kwargs
         :return:
         """
 
         hidden, obs = list(), list()
 
         x = x_s if x_s is not None else self.initialize()
-        y = self.observable.propagate(*x, **kwargs)
+        y = self.observable.propagate(x)
 
         hidden.append(x)
         obs.append(y)
 
         for i in range(1, steps):
             x = self.propagate(x)
-            y = self.observable.propagate(*x)
+            y = self.observable.propagate(x)
 
             hidden.append(x)
             obs.append(y)
@@ -112,11 +103,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        out = list()
-        for ts, xi in zip(self.hidden, x):
-            out.append(ts.mean(xi))
-
-        return out
+        return self.hidden.mean(x)
 
     def copy(self):
         """
@@ -133,9 +120,7 @@ class StateSpaceModel(object):
         :return: 
         """
 
-        for ts in self.hidden:
-            ts.p_apply(func)
-
+        self.hidden.p_apply(func)
         self.observable.p_apply(func)
 
         return self
@@ -146,11 +131,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        out = 0
-        for ts in self.hidden:
-            out += ts.p_prior()
-
-        return out + self.observable.p_prior()
+        return self.hidden.p_prior() + self.observable.p_prior()
 
     def p_map(self, func, **kwargs):
         """
@@ -159,11 +140,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        h_out = tuple()
-        for ts in self.hidden:
-            h_out += ts.p_map(func, **kwargs)
-
-        return h_out, self.observable.p_map(func, **kwargs)
+        return self.hidden.p_map(func, **kwargs), self.observable.p_map(func, **kwargs)
 
     def p_grad(self, y, x, xo, h=1e-3):
         """
@@ -175,13 +152,7 @@ class StateSpaceModel(object):
         :return:
         """
 
-        # ===== Hidden part ===== #
-
-        out = list()
-        for ts, xi, xio in zip(self.hidden, x, xo):
-            out.append(ts.p_grad(xi, xio, h=h))
-
-        return out, self.observable.p_grad(y, *x, h=h)
+        return self.hidden.p_grad(x, xo, h=h), self.observable.p_grad(y, x, h=h)
 
     def exchange(self, indices, newmodel):
         """
@@ -195,10 +166,9 @@ class StateSpaceModel(object):
 
         # ===== Exchange hidden parameters ===== #
 
-        for j, (htso, htsn) in enumerate(zip(self.hidden, newmodel.hidden)):
-            for i, param in enumerate(htso.priors):
-                if isinstance(param, Distribution):
-                    self.hidden[j].theta[i][indices] = htsn.theta[i][indices]
+        for i, param in enumerate(self.hidden.priors):
+            if isinstance(param, Distribution):
+                self.hidden.theta[i][indices] = newmodel.hidden.theta[i][indices]
 
         # ===== Exchange observable parameters ====== #
 

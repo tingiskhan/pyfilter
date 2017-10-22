@@ -1,9 +1,11 @@
 from pyfilter.timeseries import StateSpaceModel, Base, Observable
-from pyfilter.filters import NESSMC2, RAPF, Linearized
+from pyfilter.filters import NESSMC2, RAPF, Linearized, NESS, APF
+from pyfilter.proposals import Linearized as Linz
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
-import numpy as np
+import autograd.numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import time
 
 
 def fh0(alpha, sigma):
@@ -49,18 +51,18 @@ obs = Observable((go, fo), (Gamma(0.5),), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
-rapf = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
 
-rapf = rapf.longfilter(y)
+alg = alg.longfilter(y)
 
-ax[1].plot([x.mean(axis=-1) for tx in rapf.filtermeans() for x in tx])
+ax[1].plot(alg.filtermeans())
 
 # ===== PLOT KDE ===== #
 
 fig2, ax2 = plt.subplots(3)
 
-alpha = pd.DataFrame(ssm.hidden[0].theta[0])
-sigma = pd.DataFrame(ssm.hidden[0].theta[1])
+alpha = pd.DataFrame(ssm.hidden.theta[0])
+sigma = pd.DataFrame(ssm.hidden.theta[1])
 beta = pd.DataFrame(ssm.observable.theta[0])
 
 alpha.plot(kind='kde', ax=ax2[0])

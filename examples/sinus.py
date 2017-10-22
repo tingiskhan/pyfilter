@@ -30,9 +30,9 @@ def fo(x, beta):
     return beta
 
 # ===== SIMULATE SSM ===== #
-np.random.seed(123)
+
 sinus = Base((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
-obs = Observable((go, fo), (1,), Normal())
+obs = Observable((go, fo), (0.1,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
@@ -61,18 +61,8 @@ ax[1].plot(alg.filtermeans())
 
 fig2, ax2 = plt.subplots(2)
 
-sigma = pd.DataFrame(ssm.hidden[0].theta[0])
+sigma = pd.DataFrame(ssm.hidden.theta[0])
 beta = pd.DataFrame(ssm.observable.theta[0])
 
 sigma.plot(kind='kde', ax=ax2[0])
 beta.plot(kind='kde', ax=ax2[1])
-
-
-# ===== Plot prediction ===== #
-
-p_x, p_y = alg.predict(predictions)
-leny = len(y)
-
-# ax[0].plot(range(leny-predictions, leny), p_y, alpha=0.03, color='r')
-
-plt.show()

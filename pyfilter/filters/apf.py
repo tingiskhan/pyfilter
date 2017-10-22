@@ -30,13 +30,10 @@ class APF(BaseFilter):
         self._cur_x = t_x
         self._inds = resampled_indices
         self._anc_x = self._old_x.copy()
-        self._old_y = y
         self._old_x = t_x
         self._old_w = weights - helps.choose(t_weights, resampled_indices)
 
-        n_normalized = normalize(self._old_w)
-
-        self.s_mx.append([np.sum(x * n_normalized, axis=-1) for x in t_x])
+        self.s_mx.append(np.sum(t_x * normalize(self._old_w), axis=-1))
 
         # ===== Calculate log likelihood ===== #
 

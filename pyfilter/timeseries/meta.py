@@ -58,7 +58,7 @@ class Base(object):
 
         return self.g0(*self.theta)
 
-    def mean(self, x, *args, params=None):
+    def mean(self, x, params=None):
         """
         Calculates the mean of the process conditional on the state and parameters.
         :param x: The state of the process.
@@ -66,9 +66,9 @@ class Base(object):
         :return:
         """
 
-        return self.f(x, *args, *(params or self.theta))
+        return self.f(x, *(params or self.theta))
 
-    def scale(self, x, *args, params=None):
+    def scale(self, x, params=None):
         """
         Calculates the scale of the process conditional on the state and parameters.
         :param x: The state of the process
@@ -76,9 +76,9 @@ class Base(object):
         :return:
         """
 
-        return self.g(x, *args, *(params or self.theta))
+        return self.g(x, *(params or self.theta))
 
-    def weight(self, y, x, *args, params=None):
+    def weight(self, y, x, params=None):
         """
         Weights the process of the current observation x_t with the previous x_{t-1}. Used whenever the proposal
         distribution is different from the underlying.
@@ -88,7 +88,7 @@ class Base(object):
         :return:
         """
 
-        return self.noise.logpdf(y, loc=self.mean(x, *args, params=params), scale=self.scale(x, *args, params=params))
+        return self.noise.logpdf(y, loc=self.mean(x, params=params), scale=self.scale(x, params=params))
 
     def i_sample(self, size=None, **kwargs):
         """
@@ -100,7 +100,7 @@ class Base(object):
 
         return self.noise0.rvs(loc=self.i_mean(), scale=self.i_scale(), size=size, **kwargs)
 
-    def propagate(self, x, *args, params=None, **kwargs):
+    def propagate(self, x, **kwargs):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous states
@@ -109,8 +109,8 @@ class Base(object):
         :return:
         """
 
-        loc = self.mean(x, *args, params=params)
-        scale = self.scale(x, *args, params=params)
+        loc = self.mean(x)
+        scale = self.scale(x)
 
         return self.noise.rvs(loc=loc, scale=scale, **kwargs)
 
@@ -184,7 +184,7 @@ class Base(object):
             if isinstance(op, Distribution):
                 up, low = list(self.theta).copy(), list(self.theta).copy()
                 up[i], low[i] = p + h, p - h
-                out += ((self.weight(y, x, *args, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
+                out += ((self.weight(y, x, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
             else:
                 out += (np.zeros_like(x),)
 

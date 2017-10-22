@@ -63,13 +63,12 @@ class RAPF(BaseFilter):
 
         resampled_x = choose(self._old_x, resampled_indices)
         x = self._proposal.draw(y, resampled_x)
-        self._old_w = self._proposal.weight(y, x, resampled_x)
+        self._old_w = self._proposal.weight(y, x, resampled_x) - choose(t_weights, resampled_indices)
 
         self._old_x = x
-        self._old_y = y
 
         self.s_l.append(loglikelihood(self._old_w))
-        self.s_mx.append([tx.mean(axis=-1) for tx in x])
+        self.s_mx.append(x.mean(axis=-1))
 
         if self.saveall:
             self.s_w.append(self._old_w - choose(t_weights, resampled_indices))
