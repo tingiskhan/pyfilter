@@ -57,7 +57,7 @@ class StateGradient(object):
 
         hess[inds] = self._ohess(y, x) + self._hhess(x, oldx)
 
-        return hess
+        return np.linalg.inv(hess.T).T
 
     def o_gradient(self, y, x, oldx):
         """
