@@ -131,13 +131,12 @@ class NumericalStateGradient(StateGradient):
         :return:
         """
 
-        fx = self._model.weight(y, x) + self._model.h_weight(x, oldx)
+        fmid = self._model.weight(y, x) + self._model.h_weight(x, oldx)
 
         if self._model.hidden_ndim < 2:
-            return 1 / ((self.grad[1] - 2 * fx + self.grad[0]) / self.h ** 2)
+            return 1 / ((self.grad[1] - 2 * fmid + self.grad[0]) / self.h ** 2)
 
         hess = np.empty((x.shape[0], *x.shape))
-        fmid = self._model.weight(y, x) + self._model.h_weight(x, oldx)
         for i in range(x.shape[0]):
             for j in range(i, x.shape[0]):
                 if i == j:
