@@ -41,8 +41,9 @@ def beta(x, ko):
 
 
 if __name__ == '__main__':
+    dt = 1e-2
     mvn3 = MultivariateNormal(ndim=3)
-    hidden = EulerMaruyma((finit, ginit), (f, g), (10, 28, 8/3), (mvn3, mvn3), dt=1e-3)
+    hidden = EulerMaruyma((finit, ginit), (f, g), (10, 28, 8/3), (mvn3, mvn3), dt=dt)
     obs = Observable((alpha, beta), (0.8,), MultivariateNormal(ndim=2))
 
     ssm = StateSpaceModel(hidden, obs)
@@ -54,10 +55,10 @@ if __name__ == '__main__':
     ax[0].plot(x)
     ax[1].plot(y)
 
-    hidden = EulerMaruyma((finit, ginit), (f, g), (Normal(15, 10), Normal(20, 10), Normal(4, 2)), (mvn3, mvn3), dt=1e-3)
+    hidden = EulerMaruyma((finit, ginit), (f, g), (Normal(15, 6), Normal(20, 10), Normal(4, 2)), (mvn3, mvn3), dt=dt)
     ssm = StateSpaceModel(hidden, obs)
 
-    ness = NESS(ssm, (300, 300), filt=Linearized).longfilter(y)
+    ness = NESS(ssm, (300, 300), filt=APF).longfilter(y)
 
     ax[0].plot(ness.filtermeans())
 
