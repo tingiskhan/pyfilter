@@ -1,9 +1,9 @@
 from pyfilter.timeseries import StateSpaceModel
 from pyfilter.timeseries import Base
 from pyfilter.timeseries import Observable
-from pyfilter.filters import NESSMC2, Linearized, NESS
+from pyfilter.filters import NESSMC2, Linearized
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
-import numpy as np
+import autograd.numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import quandl
@@ -39,7 +39,7 @@ def fo(vol, level, beta):
 fig, ax = plt.subplots(2)
 
 stock = 'aapl'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2014-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
@@ -52,7 +52,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESSMC2(ssm, (1500, 50), filt=Linearized).initialize()
 
 predictions = 30
 
@@ -84,9 +84,9 @@ plt.legend()
 
 fig2, ax2 = plt.subplots(4)
 mu = pd.DataFrame(ssm.observable.theta[0])
-kappa = pd.DataFrame(ssm.hidden[0].theta[0])
-gamma = pd.DataFrame(ssm.hidden[0].theta[1])
-sigma = pd.DataFrame(ssm.hidden[0].theta[2])
+kappa = pd.DataFrame(ssm.hidden.theta[0])
+gamma = pd.DataFrame(ssm.hidden.theta[1])
+sigma = pd.DataFrame(ssm.hidden.theta[2])
 
 mu.plot(kind='kde', ax=ax2[0])
 kappa.plot(kind='kde', ax=ax2[1])
