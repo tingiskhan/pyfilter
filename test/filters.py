@@ -8,6 +8,7 @@ from pyfilter.proposals import Linearized as Linz
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
+from pyfilter.proposals.unscented import Unscented
 
 
 def f(x, alpha, sigma):
@@ -281,6 +282,24 @@ class Tests(unittest.TestCase):
         x, y = self.mvnmodel.sample(500)
 
         filt = Linearized(self.mvnmodel, 5000, saveall=True).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_mx) > 0
+
+        estimates = np.array(filt.filtermeans())
+
+        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1/3], [0, 1]], observation_matrices=[1, 2])
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+
+        assert rmse < 0.05
+
+    def test_Unscented2D(self):
+        x, y = self.mvnmodel.sample(500)
+
+        filt = SISR(self.mvnmodel, 5000, proposal=Unscented).initialize()
 
         filt = filt.longfilter(y)
 
