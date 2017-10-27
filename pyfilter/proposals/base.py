@@ -45,3 +45,13 @@ class Proposal(object):
         """
 
         raise NotImplementedError()
+
+    def resample(self, inds):
+        """
+        For proposals where some of the data is stored locally. As this is only necessary for a few of the proposals,
+        it need not be implemented for all.
+        :param inds: The indicies to resample.
+        :return:
+        """
+
+        return self

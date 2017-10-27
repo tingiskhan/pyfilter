@@ -1,6 +1,6 @@
 from ..proposals import Linearized
 import numpy as np
-from ..utils.utils import dot, expanddims, mdot
+from ..utils.utils import dot, expanddims, mdot, choose
 from ..distributions.continuous import MultivariateNormal, Normal
 
 
@@ -34,6 +34,7 @@ def _get_meancov(spxy, wm, wc):
 
     return x, _covcalc(centered, centered, wc)
 
+
 class Unscented(Linearized):
     def __init__(self, model, *args, **kwargs):
         super().__init__(model, *args, **kwargs)
@@ -43,11 +44,13 @@ class Unscented(Linearized):
         self._cov = None
         self._totndim = 2 * self._model.hidden_ndim + self._model.obs_ndim
 
+        # ==== Define helper variables ==== #
         self._a = 1
-        self._k = 2
-        self._b = 0
+        self._k = 1
+        self._b = 2
         self._lam = self._a ** 2 * (self._totndim + self._k) - self._totndim
 
+        # ==== Define UT weights ==== #
         self._wm = np.zeros(1 + 2 * self._totndim)
         self._wc = self._wm.copy()
         self._wm[0] = self._lam / (self._totndim + self._lam)
@@ -99,6 +102,8 @@ class Unscented(Linearized):
         self._cov[self._hiddenslc, self._hiddenslc] = expanddims(self._model.hidden.noise.cov(), self._cov.ndim)
         self._cov[self._obsslc, self._obsslc] = expanddims(self._model.observable.noise.cov(), self._cov.ndim)
 
+        self._initialized = True
+
         return self
 
     def get_spx(self, sp, process, slc):
@@ -133,9 +138,9 @@ class Unscented(Linearized):
 
         pxy = _covcalc(spx - mx[:, None, ...], spy - my[:, None, ...], self._wc)
 
-        gain = np.einsum('ij...,jl...->il...', pxy, np.linalg.inv(py.T).T)
+        gain = mdot(pxy, np.linalg.inv(py.T).T)
 
-        xm = mx + dot(gain, y - my)
+        xm = mx + dot(gain, expanddims(y, my.ndim) - my)
         temp = np.einsum('ij...,lj...->il...', py, gain)
         p = px - dot(gain, temp)
 
@@ -149,3 +154,8 @@ class Unscented(Linearized):
 
         return self._kernel.rvs(size=size)
 
+    def resample(self, inds):
+        self._mean[self._stateslc] = choose(self._mean[self._stateslc], inds)
+        self._cov[self._stateslc, self._stateslc] = choose(self._cov[self._stateslc, self._stateslc], inds)
+
+        return self
