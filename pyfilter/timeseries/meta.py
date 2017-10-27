@@ -48,7 +48,7 @@ class Base(object):
         :return:
         """
 
-        return self.f0(*self.theta)
+        return np.array(self.f0(*self.theta))
 
     def i_scale(self):
         """
@@ -56,7 +56,7 @@ class Base(object):
         :return:
         """
 
-        return self.g0(*self.theta)
+        return np.array(self.g0(*self.theta))
 
     def mean(self, x, params=None):
         """
