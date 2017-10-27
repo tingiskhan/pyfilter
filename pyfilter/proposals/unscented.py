@@ -36,7 +36,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class Unscented(Linearized):
-    def __init__(self, model, *args, a=1, k=1, b=2, **kwargs):
+    def __init__(self, model, *args, a=1, k=2, b=2, **kwargs):
         super().__init__(model, *args, **kwargs)
         self._initialized = False
 
@@ -54,9 +54,8 @@ class Unscented(Linearized):
         self._wm = np.zeros(1 + 2 * self._totndim)
         self._wc = self._wm.copy()
         self._wm[0] = self._lam / (self._totndim + self._lam)
-        self._wm[1:] = self._wc[1:] = self._wm[0] / 2
-
         self._wc[0] = self._wm[0] + (1 - self._a ** 2 + self._b)
+        self._wm[1:] = self._wc[1:] = 1 / 2 / (self._totndim + self._lam)
 
         # ==== Helper slice variables ==== #
         self._stateslc = slice(self._model.hidden_ndim)
@@ -153,9 +152,3 @@ class Unscented(Linearized):
         self._cov[self._stateslc, self._stateslc] = p
 
         return self._kernel.rvs(size=size)
-
-    def resample(self, inds):
-        self._mean[self._stateslc] = choose(self._mean[self._stateslc], inds)
-        self._cov[self._stateslc, self._stateslc] = choose(self._cov[self._stateslc, self._stateslc], inds)
-
-        return self
