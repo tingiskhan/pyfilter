@@ -152,3 +152,9 @@ class Unscented(Linearized):
         self._cov[self._stateslc, self._stateslc] = p
 
         return self._kernel.rvs(size=size)
+
+    def resample(self, inds):
+        self._mean[self._stateslc] = choose(self._mean[self._stateslc], inds)
+        self._cov[self._stateslc, self._stateslc] = choose(self._cov[self._stateslc ,self._stateslc], inds)
+
+        return self

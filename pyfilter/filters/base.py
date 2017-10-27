@@ -153,6 +153,7 @@ class BaseFilter(object):
         self._model.p_apply(lambda x: choose(x[0], indices))
         self._old_w = choose(self._old_w, indices)
 
+        self._proposal = self._proposal.resample(indices)
         self.s_l = list(np.array(self.s_l)[:, indices])
 
         return self
