@@ -154,7 +154,6 @@ class BaseFilter(object):
         self._old_w = choose(self._old_w, indices)
 
         self.s_l = list(np.array(self.s_l)[:, indices])
-        self._proposal = self._proposal.resample(indices)
 
         return self
 

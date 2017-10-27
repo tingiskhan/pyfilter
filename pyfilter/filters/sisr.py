@@ -11,7 +11,6 @@ class SISR(BaseFilter):
 
         resampled_indices = self._resamp(weights)
 
-        self._proposal = self._proposal.resample(resampled_indices)
         self._cur_x = t_x
         self._inds = resampled_indices
         self._anc_x = self._old_x.copy()
