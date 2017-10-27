@@ -154,6 +154,7 @@ class BaseFilter(object):
         self._old_w = choose(self._old_w, indices)
 
         self.s_l = list(np.array(self.s_l)[:, indices])
+        self._proposal = self._proposal.resample(indices)
 
         return self
 
@@ -166,7 +167,6 @@ class BaseFilter(object):
 
         self._particles = particles if particles is not None else self._particles
 
-        self._old_y = None
         self._old_x = self._model.initialize(self._particles)
         self._old_w = 0
 
