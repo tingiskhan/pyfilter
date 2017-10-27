@@ -22,3 +22,30 @@ class Tests(unittest.TestCase):
         est = helps.dot(a, b)
 
         assert np.allclose(trueval, est)
+
+    def test_Outerv(self):
+        a = np.random.normal(size=2)
+        b = np.random.normal(size=2)
+
+        trueval = a[:, None].dot(b[None, :])
+
+        est = helps.outerv(a, b)
+
+        assert np.allclose(est, trueval)
+
+    def test_ExpandDims(self):
+        a = np.random.normal(size=(3, 3))
+        b = np.random.normal(size=(3, 3, 500, 500))
+
+        newa = helps.expanddims(a, b.ndim)
+
+        assert newa.shape == (3, 3, 1, 1)
+
+    def test_mdot(self):
+        a = np.random.normal(size=(3, 3))
+        b = np.empty((*a.shape, 300, 300))
+        b[:, :] = helps.expanddims(a, b.ndim)
+
+        est = helps.mdot(a, b)
+
+        assert np.allclose(est, helps.expanddims(a.dot(a), b.ndim))

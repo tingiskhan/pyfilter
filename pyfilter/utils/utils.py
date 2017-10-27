@@ -101,3 +101,43 @@ def square(a, b):
     """
 
     return np.einsum('i...,i...->...', a, dot(b, a))
+
+
+def outerv(a, b):
+    """
+    Performs the outer multiplication of the expression a * b^t.
+    :param a: The vector a
+    :type a: np.ndarray
+    :param b: The vector b
+    :type b: np.ndarray
+    :return:
+    """
+
+    return np.einsum('i...,j...->ij...', a, b)
+
+
+def expanddims(array, ndims):
+    """
+    Expand dimensions to the right to target the dimensions of ndims.
+    :param array: The current array
+    :param ndims: The target number of dimensions.
+    :return:
+    """
+
+    copy = np.expand_dims(array, -1)
+
+    if copy.ndim < ndims:
+        return expanddims(copy, ndims)
+
+    return copy
+
+
+def mdot(a, b):
+    """
+    Performs the matrix dot product `a * b`.
+    :param a: The a matrix
+    :param b: The b matrix
+    :return:
+    """
+
+    return np.einsum('ij...,jk...->ik...', a, b)
