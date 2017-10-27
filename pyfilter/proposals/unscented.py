@@ -36,7 +36,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class Unscented(Linearized):
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, *args, a=1, k=1, b=2, **kwargs):
         super().__init__(model, *args, **kwargs)
         self._initialized = False
 
@@ -45,9 +45,9 @@ class Unscented(Linearized):
         self._totndim = 2 * self._model.hidden_ndim + self._model.obs_ndim
 
         # ==== Define helper variables ==== #
-        self._a = 1
-        self._k = 2
-        self._b = 0
+        self._a = a
+        self._k = k
+        self._b = b
         self._lam = self._a ** 2 * (self._totndim + self._k) - self._totndim
 
         # ==== Define UT weights ==== #
