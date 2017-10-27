@@ -113,11 +113,13 @@ class Tests(unittest.TestCase):
         apft = APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
         sisrt = SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
+        upf = SISR(self.model, 1000, proposal=Unscented).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
         rmse2 = np.sqrt(np.mean((np.array(linearizedt.s_l) - np.array(sisrt.s_l)) ** 2))
+        rmse3 = np.sqrt(np.mean((np.array(upf.s_l) - np.array(sisrt.s_l)) ** 2))
 
-        assert (rmse < 0.1) and (rmse2 < 0.1)
+        assert (rmse < 0.1) and (rmse2 < 0.1) and (rmse3 < 0.1)
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         kalmanloglikelihood = kf.loglikelihood(y)
