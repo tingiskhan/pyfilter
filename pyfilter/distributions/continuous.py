@@ -67,7 +67,7 @@ class MultiDimensional(Distribution):
         return 2
 
     def cov(self):
-        return self.std()
+        return self._cov
 
 
 class Normal(OneDimensional):
@@ -171,12 +171,12 @@ class MultivariateNormal(MultiDimensional):
     def __init__(self, mean=np.zeros(2), scale=np.eye(2), ndim=None):
 
         if ndim:
-            self.mean = np.zeros(ndim)
-            self.cov = np.eye(ndim)
+            self._mean = np.zeros(ndim)
+            self._cov = np.eye(ndim)
             self._ndim = ndim
         else:
-            self.mean = mean
-            self.cov = scale
+            self._mean = mean
+            self._cov = scale
             self._ndim = scale.shape[0]
 
         self._hmean = np.zeros(self._ndim)
@@ -187,7 +187,7 @@ class MultivariateNormal(MultiDimensional):
         return self._ndim
 
     def rvs(self, loc=None, scale=None, size=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
+        loc, scale = _get(loc, self._mean), _get(scale, self._cov)
 
         rvs = np.random.multivariate_normal(mean=self._hmean, cov=self._hcov, size=(size or loc.shape[1:]))
         scaledrvs = np.einsum('ij...,...j->i...', scale, rvs)
@@ -198,7 +198,7 @@ class MultivariateNormal(MultiDimensional):
             return (loc + scaledrvs.T).T
 
     def logpdf(self, x, loc=None, scale=None, **kwargs):
-        loc, scale = _get(loc, self.mean), _get(scale, self.cov)
+        loc, scale = _get(loc, self._mean), _get(scale, self._cov)
 
         cov = helps.outer(scale, self._hcov)
 
@@ -208,8 +208,8 @@ class MultivariateNormal(MultiDimensional):
         return t1 + t2
 
     def bounds(self):
-        bound = np.infty * np.ones_like(self.mean)
+        bound = np.infty * np.ones_like(self._mean)
         return -bound, bound
 
     def std(self):
-        return self.cov
+        return self._cov
