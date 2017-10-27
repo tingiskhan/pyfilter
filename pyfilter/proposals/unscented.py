@@ -89,7 +89,7 @@ class Unscented(Linearized):
         self._mean = np.zeros((self._totndim, *parts))
         self._cov = np.zeros((self._totndim, self._totndim, *parts))
 
-        self._mean[self._stateslc] = expanddims(self._model.hidden.i_mean(), x.ndim)
+        self._mean[self._stateslc] = x
 
         if self._model.hidden_ndim < 2:
             self._cov[self._stateslc, self._stateslc] = self._model.hidden.i_scale() ** 2
@@ -135,7 +135,7 @@ class Unscented(Linearized):
         mx, px = _get_meancov(spx, self._wm, self._wc)
         my, py = _get_meancov(spy, self._wm, self._wc)
 
-        pxy = _covcalc(spx - mx[:, None, ...], spy - my[:, None, ...], self._wc)
+        pxy = _covcalc(spx - mx[:, None], spy - my[:, None], self._wc)
 
         gain = mdot(pxy, np.linalg.inv(py.T).T)
 
