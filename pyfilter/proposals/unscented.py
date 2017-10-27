@@ -46,8 +46,8 @@ class Unscented(Linearized):
 
         # ==== Define helper variables ==== #
         self._a = 1
-        self._k = 1
-        self._b = 2
+        self._k = 2
+        self._b = 0
         self._lam = self._a ** 2 * (self._totndim + self._k) - self._totndim
 
         # ==== Define UT weights ==== #
@@ -106,22 +106,22 @@ class Unscented(Linearized):
 
         return self
 
-    def get_spx(self, sp, process, slc):
+    def evalsp(self, spx, spn, process):
         """
         Calculates the sigma points for X.
-        :param sp: The sigma points
+        :param spx: The sigma points for x
+        :param spn: THe sigma points for the noise
         :param process: The hidden/observable process
-        :param slc: Which slice to use
         :return:
         """
 
-        mean = process.mean(sp[self._stateslc])
-        scale = process.scale(sp[self._stateslc])
+        mean = process.mean(spx)
+        scale = process.scale(spx)
 
         if process.noise.ndim > 1:
-            return mean + dot(scale, sp[slc])
+            return mean + dot(scale, spn)
 
-        return mean + scale * sp[slc]
+        return mean + scale * spn
 
     def draw(self, y, x, size=None, *args, **kwargs):
         x = self._meaner(x)
@@ -130,8 +130,8 @@ class Unscented(Linearized):
 
         sps = self._generate_sps()
 
-        spx = self.get_spx(sps, self._model.hidden, self._hiddenslc)
-        spy = self.get_spx(sps, self._model.observable, self._obsslc)
+        spx = self.evalsp(sps[self._stateslc], sps[self._hiddenslc], self._model.hidden)
+        spy = self.evalsp(spx, sps[self._obsslc], self._model.observable)
 
         mx, px = _get_meancov(spx, self._wm, self._wc)
         my, py = _get_meancov(spy, self._wm, self._wc)
