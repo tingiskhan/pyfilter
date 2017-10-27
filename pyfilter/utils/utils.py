@@ -124,12 +124,12 @@ def expanddims(array, ndims):
     :return:
     """
 
+    if array.ndim == ndims:
+        return array
+
     copy = np.expand_dims(array, -1)
 
-    if copy.ndim < ndims:
-        return expanddims(copy, ndims)
-
-    return copy
+    return expanddims(copy, ndims)
 
 
 def mdot(a, b):
