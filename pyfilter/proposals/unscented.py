@@ -95,7 +95,7 @@ class Unscented(Linearized):
             self._cov[self._stateslc, self._stateslc] = self._model.hidden.i_scale() ** 2
         else:
             tscale = self._model.hidden.i_scale()
-            cov = mdot(tscale.transpose((1, 0)), tscale)
+            cov = np.einsum('ij...,jk...->ik...', tscale, tscale)
             self._cov[self._stateslc, self._stateslc] = expanddims(cov, self._cov.ndim)
 
         self._cov[self._hiddenslc, self._hiddenslc] = expanddims(self._model.hidden.noise.cov(), self._cov.ndim)
