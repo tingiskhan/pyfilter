@@ -4,11 +4,10 @@ import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
 from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF
-from pyfilter.proposals import Linearized as Linz
+from pyfilter.proposals import Linearized as Linz, Unscented
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
-from pyfilter.proposals.unscented import Unscented
 
 
 def f(x, alpha, sigma):
