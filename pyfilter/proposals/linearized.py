@@ -1,7 +1,7 @@
 from .base import Proposal
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
-from ..utils.utils import dot
+from ..utils.utils import dot, customcholesky
 
 
 class Linearized(Proposal):
@@ -14,7 +14,7 @@ class Linearized(Proposal):
         if self._model.hidden.ndim < 2:
             self._kernel = Normal(mode, np.sqrt(variance))
         else:
-            self._kernel = MultivariateNormal(mode, np.linalg.cholesky(variance.T).T)
+            self._kernel = MultivariateNormal(mode, customcholesky(variance))
 
         return self._kernel.rvs(size=size)
 

@@ -1,5 +1,6 @@
 import unittest
 import pyfilter.utils.utils as helps
+from scipy.stats import wishart
 import numpy as np
 
 
@@ -49,3 +50,13 @@ class Tests(unittest.TestCase):
         est = helps.mdot(a, b)
 
         assert np.allclose(est, helps.expanddims(a.dot(a), b.ndim))
+
+    def test_CustomCholesky(self):
+        cov = wishart(3, scale=np.eye(3)).rvs()
+
+        extendedcov = np.empty((*cov.shape, 300, 300))
+        extendedcov[:, :] = helps.expanddims(cov, extendedcov.ndim)
+
+        choleskied = np.linalg.cholesky(cov)
+
+        assert np.allclose(helps.expanddims(choleskied, extendedcov.ndim), helps.customcholesky(extendedcov))

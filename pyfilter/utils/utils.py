@@ -141,3 +141,16 @@ def mdot(a, b):
     """
 
     return np.einsum('ij...,jk...->ik...', a, b)
+
+
+def customcholesky(a):
+    """
+    Performs a custom Cholesky factorization of the array a.
+    :param a: The array a
+    :return:
+    """
+
+    firstaxes = (*range(2, 2 + len(a.shape[2:])), 0, 1)
+    secondaxes = (-2, -1, *range(len(a.shape[2:])))
+
+    return np.linalg.cholesky(a.transpose(firstaxes)).transpose(secondaxes)

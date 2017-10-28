@@ -1,6 +1,6 @@
 from ..proposals import Linearized
 import numpy as np
-from ..utils.utils import dot, expanddims, mdot, choose
+from ..utils.utils import dot, expanddims, mdot, choose, customcholesky
 from ..distributions.continuous import MultivariateNormal, Normal
 
 
@@ -144,7 +144,7 @@ class Unscented(Linearized):
         p = px - dot(gain, temp)
 
         if self._model.hidden_ndim > 1:
-            self._kernel = MultivariateNormal(xm, np.linalg.cholesky(p.T).T)
+            self._kernel = MultivariateNormal(xm, customcholesky(p))
         else:
             self._kernel = Normal(xm[0], np.sqrt(p[0, 0]))
 
