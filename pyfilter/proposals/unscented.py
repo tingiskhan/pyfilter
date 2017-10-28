@@ -68,7 +68,7 @@ class Unscented(Linearized):
         :return:
         """
 
-        cholled = np.linalg.cholesky((self._totndim + self._lam) * self._cov.T).T
+        cholled = customcholesky((self._totndim + self._lam) * self._cov)
         sps = np.zeros((self._totndim, 1 + 2 * self._totndim, *cholled.shape[2:]))
 
         sps[:, 0] = self._mean
