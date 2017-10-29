@@ -36,7 +36,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class Unscented(Linearized):
-    def __init__(self, model, *args, a=1, k=0, b=2, **kwargs):
+    def __init__(self, model, *args, a=1, k=2, b=2, **kwargs):
         super().__init__(model, *args, **kwargs)
         self._initialized = False
 
