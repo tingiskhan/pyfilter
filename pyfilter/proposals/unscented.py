@@ -127,6 +127,20 @@ class Unscented(Linearized):
         if not self._initialized:
             self._initialize(x)
 
+        xm, p = self._get_mean_cov(y)
+
+        if self._model.hidden_ndim > 1:
+            self._kernel = MultivariateNormal(xm, customcholesky(p))
+        else:
+            self._kernel = Normal(xm[0], np.sqrt(p[0, 0]))
+
+        self._mean[self._stateslc] = xm
+        self._cov[self._stateslc, self._stateslc] = p
+
+        return self._kernel.rvs(size=size)
+
+    def _get_mean_cov(self, y):
+
         sps = self._generate_sps()
 
         spx = self.evalsp(sps[self._stateslc], sps[self._hiddenslc], self._model.hidden)
@@ -143,15 +157,7 @@ class Unscented(Linearized):
         temp = np.einsum('ij...,lj...->il...', py, gain)
         p = px - dot(gain, temp)
 
-        if self._model.hidden_ndim > 1:
-            self._kernel = MultivariateNormal(xm, customcholesky(p))
-        else:
-            self._kernel = Normal(xm[0], np.sqrt(p[0, 0]))
-
-        self._mean[self._stateslc] = xm
-        self._cov[self._stateslc, self._stateslc] = p
-
-        return self._kernel.rvs(size=size)
+        return xm, p
 
     def resample(self, inds):
         self._mean[self._stateslc] = choose(self._mean[self._stateslc], inds)
