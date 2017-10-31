@@ -164,3 +164,42 @@ class Unscented(Linearized):
         self._cov[self._stateslc, self._stateslc] = choose(self._cov[self._stateslc, self._stateslc], inds)
 
         return self
+
+
+def cmeancov(x, ndim):
+    """
+    Calculates the mean and covariance of the vector x.
+    :param x:
+    :param model:
+    :return:
+    """
+
+    xm = x.mean(axis=-1)
+    diff = x - expanddims(xm, x.ndim)
+
+    if ndim > 1:
+        cov = np.einsum('i...,j...->ij...', diff, diff).mean(axis=-1)
+    else:
+        cov = (diff ** 2).mean(axis=-1)
+
+    return expanddims(xm, ndim), expanddims(cov, ndim+1)
+
+
+class GlobalUnscented(Unscented):
+    def draw(self, y, x, size=None, *args, **kwargs):
+        if not self._initialized:
+            self._initialize(expanddims(x.mean(axis=-1), x.ndim))
+
+        self._mean[self._stateslc], self._cov[self._stateslc, self._stateslc] = cmeancov(x, self._model.hidden_ndim)
+
+        xm, p = self._get_mean_cov(y)
+
+        if self._model.hidden_ndim > 1:
+            self._kernel = MultivariateNormal(xm, customcholesky(p))
+        else:
+            self._kernel = Normal(xm[0], np.sqrt(p[0, 0]))
+
+        return self._kernel.rvs(size=size)
+
+    def resample(self, inds):
+        return self
