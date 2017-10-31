@@ -170,19 +170,20 @@ def cmeancov(x, ndim):
     """
     Calculates the mean and covariance of the vector x.
     :param x:
-    :param model:
+    :param ndim:
     :return:
     """
 
     xm = x.mean(axis=-1)
-    diff = x - expanddims(xm, x.ndim)
+    e_xm = expanddims(xm, x.ndim)
+    diff = x - e_xm
 
     if ndim > 1:
         cov = np.einsum('i...,j...->ij...', diff, diff).mean(axis=-1)
     else:
         cov = (diff ** 2).mean(axis=-1)
 
-    return expanddims(xm, ndim), expanddims(cov, ndim+1)
+    return e_xm, expanddims(cov, x.ndim+(ndim > 1))
 
 
 class GlobalUnscented(Unscented):
