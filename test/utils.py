@@ -60,3 +60,13 @@ class Tests(unittest.TestCase):
         choleskied = np.linalg.cholesky(cov)
 
         assert np.allclose(helps.expanddims(choleskied, extendedcov.ndim), helps.customcholesky(extendedcov))
+
+    def test_Outerm(self):
+        a = np.random.normal(size=(3, 3))
+        b = np.random.normal(size=(3, 3))
+
+        trueouter = a.dot(b.T)
+
+        calcouter = helps.outerm(a, b)
+
+        assert np.allclose(trueouter, calcouter)

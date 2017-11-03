@@ -143,6 +143,17 @@ def mdot(a, b):
     return np.einsum('ij...,jk...->ik...', a, b)
 
 
+def outerm(a, b):
+    """
+    Calculates the outer matrix product, ie A * B^t
+    :param a: The array A.
+    :param b: The array b
+    :return:
+    """
+
+    return np.einsum('ij...,kj...->ik...', a, b)
+
+
 def customcholesky(a):
     """
     Performs a custom Cholesky factorization of the array a.
