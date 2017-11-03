@@ -58,7 +58,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class UnscentedTransform(object):
-    def __init__(self, model, a=1, b=2, k=0):
+    def __init__(self, model, a=1e-3, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.
         :param model: The model
