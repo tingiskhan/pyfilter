@@ -132,7 +132,7 @@ class UnscentedTransform(object):
 
         # ==== Set mean ===== #
 
-        self._mean[self._sslc] = expanddims(self._model.hidden.i_mean(), x.ndim)
+        self._mean[self._sslc] = x # expanddims(self._model.hidden.i_mean(), x.ndim)
 
         # ==== Set state covariance ===== #
         scale = self._model.hidden.i_scale()
