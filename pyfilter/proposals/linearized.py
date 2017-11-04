@@ -9,7 +9,7 @@ class Linearized(Proposal):
         x = self._meaner(x)
         t_x = self._model.propagate_apf(x)
 
-        mode, variance = self._get_derivs(y, t_x, x)
+        mode, variance = self._get_mode_variance(y, t_x, x)
 
         if self._model.hidden.ndim < 2:
             self._kernel = Normal(mode, np.sqrt(variance))
@@ -18,7 +18,7 @@ class Linearized(Proposal):
 
         return self._kernel.rvs(size=size)
 
-    def _get_derivs(self, y, tx, x):
+    def _get_mode_variance(self, y, tx, x):
         """
         Gets the first and second order derivatives.
         :param tx:
