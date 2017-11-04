@@ -1,6 +1,6 @@
 from ..timeseries.model import StateSpaceModel
 import numpy as np
-from .utils import outerm, expanddims, customcholesky, dot, mdot
+from .utils import outerm, expanddims, customcholesky, dot, mdot, outerv
 
 
 def _propagate_sps(spx, spn, process):
@@ -201,6 +201,24 @@ class UnscentedTransform(object):
         :return:
         """
 
+        # ==== Get mean and covariance ===== #
+
+        txmean, txcov = self._get_m_and_p(y)
+
+        # ==== Overwrite mean and covariance ==== #
+
+        self._mean[self._sslc] = txmean
+        self._cov[self._sslc, self._sslc] = txcov
+
+        return txmean, txcov
+
+    def _get_m_and_p(self, y):
+        """
+        Helper method for generating the mean and covariance.
+        :param y: The latest observation
+        :return:
+        """
+
         # ==== Propagate Sigma points ==== #
 
         spx, spy = self.propagate_sps()
@@ -223,9 +241,32 @@ class UnscentedTransform(object):
         txmean = xmean + dot(gain, expanddims(y, ymean.ndim) - ymean)
         txcov = xcov - dot(gain, outerm(ycov, gain))
 
+        return txmean, txcov
+
+    def globalconstruct(self, y, x):
+        """
+        Constructs the mean and covariance given the current observation and previous state.
+        :param y: The current observation
+        :type y: np.ndarray
+        :param x: The previous state
+        :type x: np.ndarray
+        :return:
+        """
+
         # ==== Overwrite mean and covariance ==== #
 
-        self._mean[self._sslc] = txmean
-        self._cov[self._sslc, self._sslc] = txcov
+        mean = expanddims(x.mean(axis=-1), x.ndim)
+        centered = x - mean
+        if self._model.hidden_ndim > 1:
+            cov = expanddims(outerv(centered, centered).mean(axis=-1), x.ndim+1)
+        else:
+            cov = expanddims((centered ** 2).mean(axis=-1), x.ndim)
+
+        self._mean[self._sslc] = mean
+        self._cov[self._sslc, self._sslc] = cov
+
+        # ==== Get mean and covariance ==== #
+
+        txmean, txcov = self._get_m_and_p(y)
 
         return txmean, txcov
