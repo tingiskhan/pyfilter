@@ -153,10 +153,7 @@ class UnscentedTransform(object):
         Constructs the Sigma points used for propagation.
         :return:
         """
-        try:
-            cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
-        except np.linalg.LinAlgError:
-            print()
+        cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
 
         self._sps[:, 0] = self._mean
         self._sps[:, 1:self._ndim+1] = self._mean[:, None] + cholcov
