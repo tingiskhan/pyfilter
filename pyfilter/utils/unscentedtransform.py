@@ -58,7 +58,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class UnscentedTransform(object):
-    def __init__(self, model, a=1e-3, b=2, k=0):
+    def __init__(self, model, a=1, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.
         :param model: The model
@@ -153,8 +153,10 @@ class UnscentedTransform(object):
         Constructs the Sigma points used for propagation.
         :return:
         """
-
-        cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
+        try:
+            cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
+        except np.linalg.LinAlgError:
+            print()
 
         self._sps[:, 0] = self._mean
         self._sps[:, 1:self._ndim+1] = self._mean[:, None] + cholcov
