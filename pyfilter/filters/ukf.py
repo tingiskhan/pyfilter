@@ -22,7 +22,7 @@ class UKF(BaseFilter):
         if self._model.obs_ndim < 2:
             kernel = Normal(self._ut.ymean[0], np.sqrt(self._ut.ycov[0, 0]))
         else:
-            kernel = Normal(self._ut.ymean, np.linalg.cholesky(self._ut.ycov))
+            kernel = MultivariateNormal(self._ut.ymean, np.linalg.cholesky(self._ut.ycov))
 
         self.s_mx.append(self._ut.xmean.copy())
         self.s_l.append(kernel.logpdf(y))
