@@ -76,6 +76,8 @@ class UnscentedTransform(object):
         self._model = model
         self._ndim = 2 * model.hidden_ndim + model.obs_ndim
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
+        self._ymean = None
+        self._ycov = None
 
     def _set_slices(self):
         """
@@ -192,6 +194,24 @@ class UnscentedTransform(object):
 
         return self._cov[self._sslc, self._sslc]
 
+    @property
+    def ymean(self):
+        """
+        Returns the mean of the observation.
+        :return:
+        """
+
+        return self._ymean
+
+    @property
+    def ycov(self):
+        """
+        Returns the covariance of the observation.
+        :return:
+        """
+
+        return self._ycov
+
     def construct(self, y):
         """
         Constructs the mean and covariance given the current observation and previous state.
@@ -202,10 +222,12 @@ class UnscentedTransform(object):
 
         # ==== Get mean and covariance ===== #
 
-        txmean, txcov = self._get_m_and_p(y)
+        txmean, txcov, ymean, ycov = self._get_m_and_p(y)
 
         # ==== Overwrite mean and covariance ==== #
 
+        self._ymean = ymean
+        self._ycov = ycov
         self._mean[self._sslc] = txmean
         self._cov[self._sslc, self._sslc] = txcov
 
@@ -240,7 +262,7 @@ class UnscentedTransform(object):
         txmean = xmean + dot(gain, expanddims(y, ymean.ndim) - ymean)
         txcov = xcov - dot(gain, outerm(ycov, gain))
 
-        return txmean, txcov
+        return txmean, txcov, ymean, ycov
 
     def globalconstruct(self, y, x):
         """
@@ -266,6 +288,6 @@ class UnscentedTransform(object):
 
         # ==== Get mean and covariance ==== #
 
-        txmean, txcov = self._get_m_and_p(y)
+        txmean, txcov, ymean, ycov = self._get_m_and_p(y)
 
         return txmean, txcov

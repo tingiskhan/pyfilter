@@ -3,7 +3,7 @@ import numpy as np
 import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
-from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF
+from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF
 from pyfilter.proposals import Linearized as Linz, Unscented
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
@@ -113,13 +113,15 @@ class Tests(unittest.TestCase):
         apft = APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
         sisrt = SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
-        upf = SISR(self.model, 1000, proposal=Unscented).initialize().longfilter(y)
+        upf = UPF(self.model, 1000).initialize().longfilter(y)
+        ukf = UKF(self.model).initialize().longfilter(y)
 
         rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
         rmse2 = np.sqrt(np.mean((np.array(linearizedt.s_l) - np.array(sisrt.s_l)) ** 2))
         rmse3 = np.sqrt(np.mean((np.array(upf.s_l) - np.array(sisrt.s_l)) ** 2))
+        rmse4 = np.sqrt(np.mean((np.array(ukf.s_l) - np.array(sisrt.s_l)) ** 2))
 
-        assert (rmse < 0.1) and (rmse2 < 0.1) and (rmse3 < 0.1)
+        assert (rmse < 0.1) and (rmse2 < 0.1) and (rmse3 < 0.1) and (rmse4 < 0.1)
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
         kalmanloglikelihood = kf.loglikelihood(y)
@@ -127,8 +129,10 @@ class Tests(unittest.TestCase):
         apferror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
         sisrerror = np.abs((kalmanloglikelihood - np.array(sisrt.s_l).sum()) / kalmanloglikelihood)
         linerror = np.abs((kalmanloglikelihood - np.array(linearizedt.s_l).sum()) / kalmanloglikelihood)
+        upferror = np.abs((kalmanloglikelihood - np.array(upf.s_l).sum()) / kalmanloglikelihood)
+        ukferr = np.abs((kalmanloglikelihood - np.array(ukf.s_l).sum()) / kalmanloglikelihood)
 
-        assert (apferror < 0.01) and (sisrerror < 0.01) and (linerror < 0.01)
+        assert (apferror < 0.01) and (sisrerror < 0.01) and (linerror < 0.01) and (upferror < 0.01) and (ukferr < 0.01)
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
@@ -315,3 +319,21 @@ class Tests(unittest.TestCase):
             rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
             assert rmse < 0.05
+
+    def test_UKF(self):
+        x, y = self.mvnmodel.sample(500)
+
+        filt = UKF(self.mvnmodel).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_mx) > 0
+
+        estimates = np.array(filt.filtermeans())
+
+        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1]], observation_matrices=[1, 2])
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+
+        assert rmse < 0.05
