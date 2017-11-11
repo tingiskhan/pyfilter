@@ -276,6 +276,7 @@ class UnscentedTransform(object):
 
         # ==== Overwrite mean and covariance ==== #
 
+        x += np.random.normal(scale=1e-3, size=x.shape)
         mean = expanddims(x.mean(axis=-1), x.ndim)
         centered = x - mean
         if self._model.hidden_ndim > 1:
