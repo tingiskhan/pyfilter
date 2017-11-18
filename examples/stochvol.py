@@ -1,5 +1,5 @@
 from pyfilter.timeseries import StateSpaceModel, EulerMaruyma, Observable
-from pyfilter.filters import NESS, Linearized
+from pyfilter.filters import NESSMC2, Linearized
 from pyfilter.distributions.continuous import Gamma, Normal
 import autograd.numpy as np
 import matplotlib.pyplot as plt
@@ -51,7 +51,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
 
 predictions = 30
 
