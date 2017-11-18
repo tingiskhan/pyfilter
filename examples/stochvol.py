@@ -75,7 +75,7 @@ ax[0].plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 actual = y.iloc[-predictions:].cumsum()
 ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[1].plot(y.index[:-predictions], np.exp(alg.filtermeans()))
+ax[1].plot(y.index[:-predictions], np.exp(alg.filtermeans() / 2))
 
 plt.legend()
 
