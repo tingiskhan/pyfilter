@@ -1,8 +1,6 @@
-from pyfilter.timeseries import StateSpaceModel
-from pyfilter.timeseries import Base
-from pyfilter.timeseries import Observable
-from pyfilter.filters import NESSMC2, Linearized
-from pyfilter.distributions.continuous import Gamma, Normal, Beta
+from pyfilter.timeseries import StateSpaceModel, EulerMaruyma, Observable
+from pyfilter.filters import NESS, Linearized
+from pyfilter.distributions.continuous import Gamma, Normal
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -19,15 +17,15 @@ def gh0(reversion, level, std):
 
 
 def fh(x, reversion, level, std):
-    return x * np.exp(-reversion) + level * (1 - np.exp(-reversion))
+    return reversion * (level * np.exp(-x) - 1) - std ** 2 / 2
 
 
 def gh(x, reversion, level, std):
-    return std / np.sqrt(2 * reversion) * np.sqrt(1 - np.exp(-2 * reversion))
+    return std
 
 
 def go(vol, level, beta):
-    return level + (beta - 1) * np.exp(vol)
+    return level + beta * np.exp(vol)
 
 
 def fo(vol, level, beta):
@@ -45,14 +43,15 @@ y *= 100
 
 # ===== DEFINE MODEL ===== #
 
-logvol = Base((fh0, gh0), (fh, gh), (Beta(1, 3), Normal(scale=0.3), Gamma(0.5)), (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), 1), Normal())
+volparams = Gamma(4, scale=0.1), Gamma(4, scale=0.1), Gamma(4, scale=0.1)
+logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
+obs = Observable((go, fo), (Normal(), 0), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESSMC2(ssm, (1500, 50), filt=Linearized).initialize()
+alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
 
 predictions = 30
 
