@@ -25,7 +25,6 @@ class Linearized(Proposal):
         :return:
         """
 
-        oldmode = tx
         mode = tx
         converged = False
         iters = 0
@@ -38,10 +37,9 @@ class Linearized(Proposal):
             else:
                 mode = mode - dot(hess, first)
 
-            if np.all(np.abs(oldmode - mode) < 1e-2) or iters > 3:
+            if np.all(np.abs(first) < 1e-4) or iters > 3:
                 break
 
-            oldmode = mode.copy()
             iters += 1
 
         return mode, -hess
