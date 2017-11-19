@@ -24,11 +24,11 @@ def gh(x, reversion, level, std):
     return std
 
 
-def go(vol, level, beta):
-    return level + beta * np.exp(vol)
+def go(vol, level):
+    return level
 
 
-def fo(vol, level, beta):
+def fo(vol, level):
     return np.exp(vol / 2)
 
 
@@ -45,13 +45,13 @@ y *= 100
 
 volparams = Gamma(4, scale=0.1), Gamma(4, scale=0.1), Gamma(4, scale=0.1)
 logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), 0), Normal())
+obs = Observable((go, fo), (Normal(),), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESSMC2(ssm, (400, 400)).initialize()
 
 predictions = 30
 
