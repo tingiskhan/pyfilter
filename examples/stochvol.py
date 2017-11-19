@@ -29,15 +29,15 @@ def go(vol, level):
 
 
 def fo(vol, level):
-    return np.exp(vol / 2)
+    return np.exp(vol)
 
 
 # ===== GET DATA ===== #
 
 fig, ax = plt.subplots(2)
 
-stock = 'aapl'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2014-01-01', column_index=11, transform='rdiff') + 1)
+stock = 'MSFT'
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff', api_key='zJpFs_mvKKNi1-Kse1kx') + 1)
 y *= 100
 
 
@@ -75,7 +75,7 @@ ax[0].plot(y.index[-predictions:], ascum.mean(axis=1), color='b', label='Mean')
 actual = y.iloc[-predictions:].cumsum()
 ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
-ax[1].plot(y.index[:-predictions], np.exp(np.array(alg.filtermeans()) / 2))
+ax[1].plot(y.index[:-predictions], np.exp(np.array(alg.filtermeans())))
 
 plt.legend()
 
