@@ -24,8 +24,12 @@ def _matrix(weights):
     probs = (index_range + u) / n
 
     normalized = norm.normalize(weights)
-    cumsum = np.zeros((weights.shape[0], n + 1))
-    cumsum[:, 1:] = normalized.cumsum(axis=1)
+    # cumsum = np.zeros((weights.shape[0], n + 1))
+    # cumsum[:, 1:] = normalized.cumsum(axis=1)
+
+    # indices = np.empty_like(weights, dtype=int)
+    # for i in range(weights.shape[0]):
+    #     indices[i, :] = np.digitize(probs[i, :], cumsum[i, :]) - 1
 
     cumsum = normalized.cumsum(axis=1)
     indices = _searchsorted2d(probs, cumsum).astype(int) - 1
