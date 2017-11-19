@@ -2,6 +2,14 @@ import numpy as np
 import pyfilter.utils.normalization as norm
 
 
+def _searchsorted2d(a, b):
+    m, n = a.shape
+    max_num = np.maximum(a.max() - a.min(), b.max() - b.min()) + 1
+    r = max_num * np.arange(a.shape[0])[:, None]
+    p = np.searchsorted((a + r).ravel(), (b + r).ravel()).reshape(m, -1)
+    return p - n * (np.arange(m)[:, None])
+
+
 def _matrix(weights):
     """
     Performs systematic resampling of a 2D array of log weights along the second axis.
@@ -16,15 +24,11 @@ def _matrix(weights):
     probs = (index_range + u) / n
 
     normalized = norm.normalize(weights)
-    cumsum = np.zeros((weights.shape[0], n+1))
+    cumsum = np.zeros((weights.shape[0], n + 1))
     cumsum[:, 1:] = normalized.cumsum(axis=1)
 
-    indices = np.empty_like(weights, dtype=int)
-    for i in range(weights.shape[0]):
-        indices[i, :] = np.digitize(probs[i, :], cumsum[i, :]) - 1
-
-    # cumsum = normalized.cumsum(axis=1)
-    # indices2 = helps.searchsorted2d(probs, cumsum).astype(int) - 1
+    cumsum = normalized.cumsum(axis=1)
+    indices = _searchsorted2d(probs, cumsum).astype(int) - 1
 
     return indices
 
