@@ -101,3 +101,67 @@ def square(a, b):
     """
 
     return np.einsum('i...,i...->...', a, dot(b, a))
+
+
+def outerv(a, b):
+    """
+    Performs the outer multiplication of the expression a * b^t.
+    :param a: The vector a
+    :type a: np.ndarray
+    :param b: The vector b
+    :type b: np.ndarray
+    :return:
+    """
+
+    return np.einsum('i...,j...->ij...', a, b)
+
+
+def expanddims(array, ndims):
+    """
+    Expand dimensions to the right to target the dimensions of ndims.
+    :param array: The current array
+    :param ndims: The target number of dimensions.
+    :return:
+    """
+
+    if array.ndim == ndims:
+        return array
+
+    copy = np.expand_dims(array, -1)
+
+    return expanddims(copy, ndims)
+
+
+def mdot(a, b):
+    """
+    Performs the matrix dot product `a * b`.
+    :param a: The a matrix
+    :param b: The b matrix
+    :return:
+    """
+
+    return np.einsum('ij...,jk...->ik...', a, b)
+
+
+def outerm(a, b):
+    """
+    Calculates the outer matrix product, ie A * B^t
+    :param a: The array A.
+    :param b: The array b
+    :return:
+    """
+
+    return np.einsum('ij...,kj...->ik...', a, b)
+
+
+def customcholesky(a):
+    """
+    Performs a custom Cholesky factorization of the array a.
+    :param a: The array a
+    :return:
+    """
+
+    firstaxes = (*range(2, 2 + len(a.shape[2:])), 0, 1)
+    secondaxes = (-2, -1, *range(len(a.shape[2:])))
+
+    return np.linalg.cholesky(a.transpose(firstaxes)).transpose(secondaxes)
