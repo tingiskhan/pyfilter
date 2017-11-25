@@ -17,7 +17,8 @@ def gh0(reversion, level, std):
 
 
 def fh(x, reversion, level, std):
-    return reversion * (level * np.exp(-x) - 1) - std ** 2 / 2
+    # return reversion * (level * np.exp(-x) - 1) - std ** 2 / 2
+    return reversion * (level - x)
 
 
 def gh(x, reversion, level, std):
@@ -43,7 +44,7 @@ y *= 100
 
 # ===== DEFINE MODEL ===== #
 
-volparams = Gamma(4, scale=0.1), Gamma(4, scale=0.1), Gamma(4, scale=0.1)
+volparams = Gamma(4, scale=0.1), Normal(0, 1), Gamma(4, scale=0.1)
 logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
 obs = Observable((go, fo), (Normal(),), Normal())
 
