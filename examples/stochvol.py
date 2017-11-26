@@ -45,7 +45,7 @@ y *= 100
 
 volparams = Gamma(4, scale=0.1), Normal(0, 1), Gamma(4, scale=0.1)
 logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), Gamma(4, scale=0.1)), Normal())
+obs = Observable((go, fo), (Normal(), Gamma(1, scale=0.5)), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
