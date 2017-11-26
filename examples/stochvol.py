@@ -25,18 +25,18 @@ def gh(x, reversion, level, std):
 
 
 def go(vol, level, sigma):
-    return level - sigma ** 2 / 2
+    return level
 
 
 def fo(vol, level, sigma):
-    return np.sqrt(np.exp(vol) + sigma)
+    return np.exp(vol / 2) + sigma
 
 
 # ===== GET DATA ===== #
 
 fig, ax = plt.subplots(2)
 
-stock = 'SCHW'
+stock = 'MSFT'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff', api_key='zJpFs_mvKKNi1-Kse1kx') + 1)
 y *= 100
 
