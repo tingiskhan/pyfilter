@@ -1,4 +1,5 @@
 import autograd.numpy as np
+from collections import Iterable
 from .normalization import normalize
 
 
@@ -165,3 +166,50 @@ def customcholesky(a):
     secondaxes = (-2, -1, *range(len(a.shape[2:])))
 
     return np.linalg.cholesky(a.transpose(firstaxes)).transpose(secondaxes)
+
+
+def resizer(tup):
+    """
+    Recasts all the non-array elements of an array to arrays of the same size as the array elements, s.t. the array
+    :param tup: The array to recast.
+    :type tup: Iterable
+    :return:
+    """
+    # TODO: Speed up
+    if isinstance(tup, (int, float, np.ndarray)):
+        return tup
+
+    asarray = np.array(tup, dtype=object)
+    flat = flatten(tup)
+    shape = next((e.shape for e in flat if isinstance(e, np.ndarray)), False)
+
+    if not shape or asarray.shape[-len(shape):] == shape:
+        return asarray
+
+    out = np.empty((len(flat), *shape))
+    for i, e in enumerate(flat):
+        out[i] = e
+
+    try:
+        return out.reshape((*asarray.shape, *shape))
+    except ValueError as e:
+        raise ValueError('Most likely errors in the dimension!') from e
+
+
+def flatten(iterable):
+    """
+    Flattens an array comprised of an arbitrary number of lists. Solution found at:
+        https://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists
+    :param iterable: The iterable you wish to flatten.
+    :type iterable: collections.Iterable
+    :return:
+    """
+    out = list()
+    for el in iterable:
+        if isinstance(el, Iterable) and not isinstance(el, (str, bytes, np.ndarray)):
+            out.extend(flatten(el))
+        else:
+            out.append(el)
+
+    return out
+

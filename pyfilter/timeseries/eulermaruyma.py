@@ -1,5 +1,6 @@
 from .meta import Base
 from math import sqrt
+from ..utils.utils import resizer
 
 
 class EulerMaruyma(Base):
@@ -9,7 +10,7 @@ class EulerMaruyma(Base):
         self.dt = dt
 
     def mean(self, x, *args, params=None):
-        return x + self.f(x, *args, *(params or self.theta)) * self.dt
+        return x + resizer(self.f(x, *args, *(params or self.theta))) * self.dt
 
     def scale(self, x, *args, params=None):
-        return self.g(x, *args, *(params or self.theta)) * sqrt(self.dt)
+        return resizer(self.g(x, *args, *(params or self.theta))) * sqrt(self.dt)
