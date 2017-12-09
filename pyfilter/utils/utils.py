@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import numpy as np
 from collections import Iterable
 from .normalization import normalize
 
@@ -184,7 +184,7 @@ def resizer(tup):
     shape = next((e.shape for e in flat if isinstance(e, np.ndarray)), False)
 
     if not shape or asarray.shape[-len(shape):] == shape:
-        return asarray
+        return np.array(tup)
 
     out = np.empty((len(flat), *shape))
     for i, e in enumerate(flat):
