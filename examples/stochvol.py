@@ -37,7 +37,7 @@ def fo(vol, level, beta):
 fig, ax = plt.subplots(3)
 
 stock = 'K'
-y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff', api_key='zJpFs_mvKKNi1-Kse1kx') + 1)
+y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
