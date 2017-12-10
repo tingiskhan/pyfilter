@@ -107,3 +107,11 @@ class NESS(BaseFilter):
             out.append(np.sum(tx * normalized, axis=-1))
 
         return out
+
+    def noisemeans(self):
+        out = list()
+        for tw, tx in zip(self._filter.s_l, self._filter.s_n):
+            normalized = normalize(tw)
+            out.append(np.sum(tx * normalized, axis=-1))
+
+        return out

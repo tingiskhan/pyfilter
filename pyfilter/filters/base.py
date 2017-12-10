@@ -42,6 +42,7 @@ class BaseFilter(object):
 
         self.s_l = list()
         self.s_mx = list()
+        self.s_n = list()
 
     def _initialize_parameters(self):
 
@@ -121,6 +122,14 @@ class BaseFilter(object):
         """
 
         return self.s_mx
+
+    def noisemeans(self):
+        """
+        Calculates the means for the noise and returns a timeseries.
+        :return:
+        """
+
+        return self.s_n
 
     def predict(self, steps, **kwargs):
         """

@@ -24,19 +24,19 @@ def gh(x, reversion, level, std):
     return std
 
 
-def go(vol, level, sigma):
-    return level
+def go(vol, level, beta):
+    return level + beta * np.exp(vol)
 
 
-def fo(vol, level, sigma):
-    return np.exp(vol / 2) + sigma
+def fo(vol, level, beta):
+    return np.exp(vol / 2)
 
 
 # ===== GET DATA ===== #
 
-fig, ax = plt.subplots(2)
+fig, ax = plt.subplots(3)
 
-stock = 'MSFT'
+stock = 'K'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff', api_key='zJpFs_mvKKNi1-Kse1kx') + 1)
 y *= 100
 
@@ -45,13 +45,13 @@ y *= 100
 
 volparams = Gamma(4, scale=0.1), Normal(0, 1), Gamma(4, scale=0.1)
 logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), Gamma(1, scale=0.5)), Normal())
+obs = Observable((go, fo), (Normal(), Normal(scale=0.01)), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESSMC2(ssm, (400, 400)).initialize()
+alg = NESSMC2(ssm, (300, 300), handshake=0.1).initialize()
 
 predictions = 30
 
@@ -77,11 +77,13 @@ ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
 ax[1].plot(y.index[:-predictions], np.exp(np.array(alg.filtermeans()) / 2))
 
+ax[2].plot(y.index[:-predictions], np.array(alg.noisemeans()))
+
 plt.legend()
 
 # ===== PLOT KDEs ===== #
 
-figo, axo = plt.subplots(2)
+figo, axo = plt.subplots(len(ssm.observable.theta)+1)
 for i, p in enumerate(ssm.observable.theta):
     pd.DataFrame(p).plot(kind='kde', ax=axo[i])
 
