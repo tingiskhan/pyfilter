@@ -7,6 +7,16 @@ from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap
 
 
+def _numparticles(parts):
+    """
+    Returns the correct number of particles to use
+    :param parts:
+    :return:
+    """
+
+    return parts if (not isinstance(parts, tuple) or (len(parts) < 2)) else (parts[0], 1)
+
+
 class BaseFilter(object):
     def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
         """
@@ -22,7 +32,7 @@ class BaseFilter(object):
         self._copy = self._model.copy()
 
         self._particles = particles
-        self._p_particles = self._particles if not isinstance(self._particles, tuple) else (self._particles[0], 1)
+        self._p_particles = _numparticles(self._particles)
 
         self._old_x = None
         self._anc_x = None
