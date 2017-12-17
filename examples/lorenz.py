@@ -55,18 +55,18 @@ if __name__ == '__main__':
     ax[1].plot(y)
 
     hidden = EulerMaruyma((finit, ginit), (f, g), (Normal(15, 6), Normal(20, 10), Normal(4, 2)), (mvn3, mvn3), dt=dt)
-    # ssm = StateSpaceModel(hidden, obs)
+    ssm = StateSpaceModel(hidden, obs)
 
     start = time()
-    ness = UKF(ssm).initialize().longfilter(y)
+    ness = NESS(ssm, (1000,), filt=UKF).longfilter(y)
     print(time() - start)
 
     ax[0].plot(ness.filtermeans())
 
-    # fig, ax = plt.subplots(3)
+    fig, ax = plt.subplots(3)
 
-    # for i, p in enumerate(ness._model.hidden.theta):
-    #     pd.DataFrame(p).plot(kind='kde', ax=ax[i])
+    for i, p in enumerate(ness._model.hidden.theta):
+        pd.DataFrame(p).plot(kind='kde', ax=ax[i])
 
     plt.show()
 
