@@ -1,10 +1,11 @@
 from pyfilter.timeseries import EulerMaruyma, Observable, StateSpaceModel
-from pyfilter.filters import Linearized, NESS, NESSMC2, APF
+from pyfilter.filters import Linearized, NESS, NESSMC2, APF, UKF
 from pyfilter.distributions.continuous import MultivariateNormal, Normal
 import numpy as np
 from pyfilter.utils.utils import dot
 import pandas as pd
 import matplotlib.pyplot as plt
+from time import time
 
 
 def finit(s, r, b):
@@ -16,13 +17,11 @@ def ginit(s, r, b):
 
 
 def f(x, s, r, b):
-    out = x.copy()
+    x1 = -s * (x[0] - x[1])
+    x2 = r * x[0] - x[1] - x[0] * x[2]
+    x3 = x[0] * x[1] - b * x[2]
 
-    out[0] = -s * (x[0] - x[1])
-    out[1] = r * x[0] - x[1] - x[0] * x[2]
-    out[2] = x[0] * x[1] - b * x[2]
-
-    return out
+    return x1, x2, x3
 
 
 def g(x, s, r, b):
@@ -48,7 +47,7 @@ if __name__ == '__main__':
 
     ssm = StateSpaceModel(hidden, obs)
 
-    x, y = ssm.sample(2000)
+    x, y = ssm.sample(500)
 
     fig, ax = plt.subplots(2)
 
@@ -56,16 +55,18 @@ if __name__ == '__main__':
     ax[1].plot(y)
 
     hidden = EulerMaruyma((finit, ginit), (f, g), (Normal(15, 6), Normal(20, 10), Normal(4, 2)), (mvn3, mvn3), dt=dt)
-    ssm = StateSpaceModel(hidden, obs)
+    # ssm = StateSpaceModel(hidden, obs)
 
-    ness = NESS(ssm, (600, 10), filt=Linearized).longfilter(y)
+    start = time()
+    ness = UKF(ssm).initialize().longfilter(y)
+    print(time() - start)
 
     ax[0].plot(ness.filtermeans())
 
-    fig, ax = plt.subplots(3)
+    # fig, ax = plt.subplots(3)
 
-    for i, p in enumerate(ness._model.hidden.theta):
-        pd.DataFrame(p).plot(kind='kde', ax=ax[i])
+    # for i, p in enumerate(ness._model.hidden.theta):
+    #     pd.DataFrame(p).plot(kind='kde', ax=ax[i])
 
     plt.show()
 

@@ -59,10 +59,14 @@ ax[1].plot(alg.filtermeans())
 
 # ===== PLOT KDE ===== #
 
-fig2, ax2 = plt.subplots(2)
+fig2, ax2 = plt.subplots(3)
 
 sigma = pd.DataFrame(ssm.hidden.theta[0])
 beta = pd.DataFrame(ssm.observable.theta[0])
 
 sigma.plot(kind='kde', ax=ax2[0])
 beta.plot(kind='kde', ax=ax2[1])
+
+ax2[2].plot(alg._filter.s_n)
+
+plt.show()

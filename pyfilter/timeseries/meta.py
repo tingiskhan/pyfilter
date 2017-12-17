@@ -1,6 +1,6 @@
 import numpy as np
 from ..distributions.continuous import Distribution
-import autograd as ag
+from ..utils.utils import resizer
 
 
 class Base(object):
@@ -48,7 +48,7 @@ class Base(object):
         :return:
         """
 
-        return np.array(self.f0(*self.theta))
+        return resizer(self.f0(*self.theta))
 
     def i_scale(self):
         """
@@ -56,7 +56,7 @@ class Base(object):
         :return:
         """
 
-        return np.array(self.g0(*self.theta))
+        return resizer(self.g0(*self.theta))
 
     def mean(self, x, params=None):
         """
@@ -66,7 +66,7 @@ class Base(object):
         :return:
         """
 
-        return self.f(x, *(params or self.theta))
+        return resizer(self.f(x, *(params or self.theta)))
 
     def scale(self, x, params=None):
         """
@@ -76,7 +76,7 @@ class Base(object):
         :return:
         """
 
-        return self.g(x, *(params or self.theta))
+        return resizer(self.g(x, *(params or self.theta)))
 
     def weight(self, y, x, params=None):
         """

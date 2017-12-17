@@ -51,7 +51,7 @@ class NESS(BaseFilter):
 
         super().__init__(model, particles)
 
-        self._filter = filt(self._model, particles, **filtkwargs).initialize()
+        self._filter = filt(self._model, particles=particles, **filtkwargs).initialize()
         self._recw = 0  # type: np.ndarray
         self._th = threshold
         self._p = p
@@ -103,6 +103,14 @@ class NESS(BaseFilter):
     def filtermeans(self):
         out = list()
         for tw, tx in zip(self._filter.s_l, self._filter.s_mx):
+            normalized = normalize(tw)
+            out.append(np.sum(tx * normalized, axis=-1))
+
+        return out
+
+    def noisemeans(self):
+        out = list()
+        for tw, tx in zip(self._filter.s_l, self._filter.s_n):
             normalized = normalize(tw)
             out.append(np.sum(tx * normalized, axis=-1))
 
