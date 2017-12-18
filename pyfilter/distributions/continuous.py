@@ -3,6 +3,7 @@ import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
 from autograd.core import Node
+from scipy.special import gamma
 
 
 def _get(x, y):
@@ -90,6 +91,31 @@ class Normal(OneDimensional):
 
     def std(self):
         return stats.norm(loc=self.loc, scale=self.scale).std()
+
+
+class Student(Normal):
+    def __init__(self, nu, loc=0, scale=1):
+        super().__init__(loc, scale)
+        self.nu = nu
+
+    def logpdf(self, x, loc=None, scale=None, size=None, **kwargs):
+        m, s = _get(loc, self.loc), _get(scale, self.scale)
+
+        temp = (self.nu + 1) / 2
+        diff = (x - m) / s
+        t1 = np.log(gamma(temp))
+        t2 = np.log(np.pi * self.nu) / 2 + np.log(gamma(self.nu / 2))
+        t3 = temp * np.log(1 + diff ** 2 / self.nu)
+
+        return t1 - (t2 + t3) - np.log(s)
+
+    def rvs(self, loc=None, scale=None, size=None, **kwargs):
+        m, s = _get(loc, self.loc), _get(scale, self.scale)
+
+        return m + s * np.random.standard_t(self.nu, size=size)
+
+    def std(self):
+        return stats.t.std(self.nu, loc=self.loc, scale=self.scale).std()
 
 
 class Gamma(OneDimensional):

@@ -35,3 +35,10 @@ class Tests(unittest.TestCase):
         est = mvn.logpdf(mean, expanded_mean + eps, expanded_cov)
 
         assert np.allclose(true, est)
+
+    def test_Student(self):
+        student = cont.Student(3, 1, 2)
+
+        actstuden = stats.t(3, loc=1, scale=2)
+
+        assert student.logpdf(2) == actstuden.logpdf(2)
