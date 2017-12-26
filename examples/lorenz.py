@@ -29,7 +29,7 @@ def g(x, s, r, b):
 
 
 def alpha(x, ko):
-    mat = np.zeros((2, *x.shape))
+    mat = np.zeros((2, x.shape[0]))
     mat[0, 0] = mat[1, 2] = ko
 
     return dot(mat, x)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     ssm = StateSpaceModel(hidden, obs)
 
-    x, y = ssm.sample(500)
+    x, y = ssm.sample(1500)
 
     fig, ax = plt.subplots(2)
 
