@@ -1,5 +1,5 @@
-from pyfilter.timeseries import StateSpaceModel, Base, Observable
-from pyfilter.filters import Linearized, NESS
+from pyfilter.timeseries import StateSpaceModel, EulerMaruyma, Observable
+from pyfilter.filters import NESS, UKF
 from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ def gh0(alpha, sigma):
 
 
 def fh(x, alpha, sigma):
-    return x + np.sin(x - alpha)
+    return np.sin(x - alpha)
 
 
 def gh(x, alpha, sigma):
@@ -31,8 +31,8 @@ def fo(x, beta):
 
 # ===== SIMULATE SSM ===== #
 
-sinus = Base((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
-obs = Observable((go, fo), (0.1,), Normal())
+sinus = EulerMaruyma((fh0, gh0), (fh, gh), (np.pi, 1), (Normal(), Normal()))
+obs = Observable((go, fo), (0.6,), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
@@ -46,12 +46,12 @@ ax[1].plot(x)
 
 # ===== INFER VALUES ===== #
 
-sinus = Base((fh0, gh0), (fh, gh), (Gamma(1), 1), (Normal(), Normal()))
+sinus = EulerMaruyma((fh0, gh0), (fh, gh), (Gamma(1), 1), (Normal(), Normal()))
 obs = Observable((go, fo), (Gamma(1),), Normal())
 
 ssm = StateSpaceModel(sinus, obs)
 
-alg = NESS(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESS(ssm, (1000,), filt=UKF).initialize()
 
 alg = alg.longfilter(y[:-predictions])
 
