@@ -33,6 +33,7 @@ class UKF(BaseFilter):
 
         self.s_mx.append(self._ut.xmean.copy())
         self.s_l.append(kernel.logpdf(y))
+        self._old_x = self._ut.xmean.copy()
 
         return self
 
