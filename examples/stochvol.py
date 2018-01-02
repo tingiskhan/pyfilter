@@ -1,7 +1,7 @@
 from pyfilter.timeseries import StateSpaceModel, EulerMaruyma, Observable
-from pyfilter.filters import NESSMC2, RAPF
-from pyfilter.distributions.continuous import Gamma, Normal
-import autograd.numpy as np
+from pyfilter.filters import NESSMC2, APF
+from pyfilter.distributions.continuous import Gamma, Normal, Beta
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import quandl
@@ -25,7 +25,7 @@ def gh(x, reversion, level, std):
 
 
 def go(vol, level, beta):
-    return level + beta * np.exp(vol)
+    return level - beta * np.exp(vol)
 
 
 def fo(vol, level, beta):
@@ -36,24 +36,24 @@ def fo(vol, level, beta):
 
 fig, ax = plt.subplots(3)
 
-stock = 'K'
+stock = 'SLM'
 y = np.log(quandl.get('WIKI/{:s}'.format(stock), start_date='2010-01-01', column_index=11, transform='rdiff') + 1)
 y *= 100
 
 
 # ===== DEFINE MODEL ===== #
 
-volparams = Gamma(4, scale=0.1), Normal(0, 1), Gamma(4, scale=0.1)
+volparams = Gamma(4, scale=0.1), Normal(), Gamma(4, scale=0.1)
 logvol = EulerMaruyma((fh0, gh0), (fh, gh), volparams, (Normal(), Normal()))
-obs = Observable((go, fo), (Normal(), Normal(scale=0.01)), Normal())
+obs = Observable((go, fo), (Normal(), Normal(scale=0.05)), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESSMC2(ssm, (300, 300), handshake=0.1).initialize()
+alg = NESSMC2(ssm, (500, 500)).initialize()
 
-predictions = 30
+predictions = 10
 
 start = time.time()
 alg = alg.longfilter(y[:-predictions])
@@ -77,13 +77,13 @@ ax[0].plot(y.index[-predictions:], actual, color='g', label='Actual')
 
 ax[1].plot(y.index[:-predictions], np.exp(np.array(alg.filtermeans()) / 2))
 
-ax[2].plot(y.index[:-predictions], np.array(alg.noisemeans()))
+ax[2].hist(np.array(alg.noisemeans()), bins=25)
 
 plt.legend()
 
 # ===== PLOT KDEs ===== #
 
-figo, axo = plt.subplots(len(ssm.observable.theta)+1)
+figo, axo = plt.subplots(len(ssm.observable.theta))
 for i, p in enumerate(ssm.observable.theta):
     pd.DataFrame(p).plot(kind='kde', ax=axo[i])
 
