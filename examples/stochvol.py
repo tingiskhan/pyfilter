@@ -1,6 +1,6 @@
 from pyfilter.timeseries import StateSpaceModel, EulerMaruyma, Observable
-from pyfilter.filters import NESSMC2, APF
-from pyfilter.distributions.continuous import Gamma, Normal, Beta
+from pyfilter.filters import NESSMC2, Linearized
+from pyfilter.distributions.continuous import Gamma, Normal
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -51,7 +51,7 @@ ssm = StateSpaceModel(logvol, obs)
 
 # ===== INFER VALUES ===== #
 
-alg = NESSMC2(ssm, (500, 500)).initialize()
+alg = NESSMC2(ssm, (500, 100), filt=Linearized).initialize()
 
 predictions = 10
 
