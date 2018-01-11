@@ -29,18 +29,21 @@ class Linearized(Proposal):
         converged = False
         iters = 0
         hess = None
+        oldmode = tx.copy()
         while not converged:
             first, hess = self._sg.gradient(y, mode, x), self._sg.hess(y, mode, x)
 
             if self._model.hidden_ndim < 2:
-                mode = mode - hess * first
+                mode -= hess * first
             else:
-                mode = mode - dot(hess, first)
+                mode -= dot(hess, first)
 
-            if np.all(np.abs(first) < 1e-4) or iters > 3:
+            diff = np.abs(mode - oldmode)
+            if np.all(diff < 1e-3) or iters > 3:
                 break
 
             iters += 1
+            oldmode = mode.copy()
 
         return mode, -hess
 
