@@ -5,6 +5,7 @@ import copy
 from ..utils.utils import choose
 from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap
+from ..timeseries import Base, StateSpaceModel
 
 
 def _numparticles(parts):
@@ -17,12 +18,36 @@ def _numparticles(parts):
     return parts if (not isinstance(parts, tuple) or (len(parts) < 2)) else (parts[0], 1)
 
 
+def _overwriteparams(ts, particles):
+    """
+    Helper function for overwriting the parameters of the model.
+    :param ts: The timeseries
+    :type ts: pyfilter.timeseries.Base
+    :param particles: The number of particles
+    :type particles: tuple of int|int
+    :return:
+    """
+
+    parambounds = dict()
+    parameters = tuple()
+    for j, p in enumerate(ts.theta):
+        if isinstance(p, Distribution):
+            parambounds[j] = p.bounds()
+            parameters += (p.rvs(size=particles),)
+        else:
+            parameters += (p,)
+
+    ts.theta = parameters
+
+    return parambounds
+
+
 class BaseFilter(object):
     def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
-        :type model: pyfilter.model.StateSpaceModel
+        :type model: StateSpaceModel
         :param resampling: Which resampling method to use
         :type resampling: function
         :param args:
@@ -54,33 +79,24 @@ class BaseFilter(object):
         self.s_mx = list()
         self.s_n = list()
 
+    @property
+    def ssm(self):
+        """
+        Returns the SSM as an object.
+        :rtype: StateSpaceModel
+        """
+        return self._model
+
     def _initialize_parameters(self):
+        """
+        Initializes the parameters by drawing from the prior distributions.
+        :return:
+        """
 
         # ===== HIDDEN ===== #
 
-        self._h_params = dict()
-        parameters = tuple()
-        for j, p in enumerate(self._model.hidden.theta):
-            if isinstance(p, Distribution):
-                self._h_params[j] = p.bounds()
-                parameters += (p.rvs(size=self._p_particles),)
-            else:
-                parameters += (p,)
-
-        self._model.hidden.theta = parameters
-
-        # ===== OBSERVABLE ===== #
-
-        self._o_params = dict()
-        parameters = tuple()
-        for j, p in enumerate(self._model.observable.theta):
-            if isinstance(p, Distribution):
-                self._o_params[j] = p.bounds()
-                parameters += (p.rvs(size=self._p_particles),)
-            else:
-                parameters += (p,)
-
-        self._model.observable.theta = parameters
+        self._h_params = _overwriteparams(self._model.hidden, self._p_particles)
+        self._o_params = _overwriteparams(self._model.observable, self._p_particles)
 
         return self
 
