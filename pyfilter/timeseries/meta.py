@@ -109,10 +109,10 @@ class Base(object):
         :return:
         """
 
-        loc = self.mean(x)
-        scale = self.scale(x)
+        loc = self.mean(x, **kwargs)
+        scale = self.scale(x, **kwargs)
 
-        return self.noise.rvs(loc=loc, scale=scale, **kwargs)
+        return self.noise.rvs(loc=loc, scale=scale)
 
     def sample(self, steps, samples=None, **kwargs):
         """
