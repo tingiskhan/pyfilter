@@ -27,10 +27,9 @@ def searchsorted2d(a, b):
     :return:
     """
     m, n = a.shape
-    max_num = np.maximum(a.max(), b.max()) + 1
+    max_num = np.maximum(a.max() - a.min(), b.max() - b.min()) + 1
     r = max_num * np.arange(a.shape[0])[:, None]
-    p = np.searchsorted((a + r).ravel(), (b + r).ravel()).reshape(m, -1)
-
+    p = np.searchsorted((a + r).ravel(), (b + r).ravel(), side='right').reshape(m, -1)
     return p - n * np.arange(m)[:, None]
 
 
