@@ -1,13 +1,5 @@
 import numpy as np
-import pyfilter.utils.normalization as norm
-
-
-def _searchsorted2d(a, b):
-    m, n = a.shape
-    max_num = np.maximum(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * np.arange(a.shape[0])[:, None]
-    p = np.searchsorted((a + r).ravel(), (b + r).ravel()).reshape(m, -1)
-    return p - n * (np.arange(m)[:, None])
+from .normalization import normalize
 
 
 def _matrix(weights):
@@ -23,7 +15,7 @@ def _matrix(weights):
 
     probs = (index_range + u) / n
 
-    normalized = norm.normalize(weights)
+    normalized = normalize(weights)
     cumsum = np.zeros((weights.shape[0], n + 1))
     cumsum[:, 1:] = normalized.cumsum(axis=1)
 
@@ -49,7 +41,7 @@ def _vector(weights):
     probs = (np.arange(n) + u) / n
 
     cumsum = np.zeros(n + 1)
-    normalized = norm.normalize(weights)
+    normalized = normalize(weights)
     cumsum[1:] = normalized.cumsum()
 
     return np.digitize(probs, cumsum).astype(int) - 1
@@ -74,7 +66,7 @@ def _mn_vector(weights):
     :param weights:
     :return:
     """
-    normalized = norm.normalize(weights)
+    normalized = normalize(weights)
 
     return np.random.choice(weights.size, weights.size, p=normalized)
 
