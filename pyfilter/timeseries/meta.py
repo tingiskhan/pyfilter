@@ -170,7 +170,7 @@ class Base(object):
 
         return out
 
-    def p_grad(self, y, x, *args, h=1e-3):
+    def p_grad(self, y, x, h=1e-3):
         """
         Calculates the gradient of the model for the current state y with the previous state x, using h as step size.
         :param y: The current state
@@ -184,7 +184,7 @@ class Base(object):
             if isinstance(op, Distribution):
                 up, low = list(self.theta).copy(), list(self.theta).copy()
                 up[i], low[i] = p + h, p - h
-                out += ((self.weight(y, x, params=up) - self.weight(y, x, *args, params=low)) / 2 / h,)
+                out += ((self.weight(y, x, params=up) - self.weight(y, x, params=low)) / 2 / h,)
             else:
                 out += (np.zeros_like(x),)
 
