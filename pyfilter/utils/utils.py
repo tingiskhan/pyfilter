@@ -18,9 +18,12 @@ def get_ess(w):
 
 def searchsorted2d(a, b):
     """
-    Searches a sorted 2D array along the second axis. Basically performs a vectorized digitize.
-    :param a:
-    :param b:
+    Searches a sorted 2D array along the second axis. Basically performs a vectorized digitize. Solution provided here:
+    https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy.
+    :param a: The array to take the elements from
+    :type a: np.ndarray
+    :param b: The indices of the elements in `a`.
+    :type b: np.ndarray
     :return:
     """
     m, n = a.shape
@@ -34,8 +37,10 @@ def searchsorted2d(a, b):
 def choose(array, indices):
     """
     Function for choosing on either columns or index.
-    :param array:
-    :param indices:
+    :param array: The array to choose on
+    :type array: np.ndarray
+    :param indices: The indices to choose from `array`
+    :type indices: np.ndarray
     :return:
     """
 
@@ -83,7 +88,9 @@ def outer(a, b):
     """
     Calculates the outer product B * X * B^t.
     :param a: The B-matrix
+    :type a: np.ndarray
     :param b: The X-matrix
+    :type b: np.ndarray
     :return: 
     """
 
@@ -121,7 +128,9 @@ def expanddims(array, ndims):
     """
     Expand dimensions to the right to target the dimensions of ndims.
     :param array: The current array
+    :type array: np.ndarray
     :param ndims: The target number of dimensions.
+    :type ndims: int
     :return:
     """
 
@@ -137,7 +146,9 @@ def mdot(a, b):
     """
     Performs the matrix dot product `a * b`.
     :param a: The a matrix
+    :type a: np.ndarray
     :param b: The b matrix
+    :type b: np.ndarray
     :return:
     """
 
@@ -147,8 +158,10 @@ def mdot(a, b):
 def outerm(a, b):
     """
     Calculates the outer matrix product, ie A * B^t
-    :param a: The array A.
+    :param a: The array a
+    :type a: np.ndarray
     :param b: The array b
+    :type b: np.ndarray
     :return:
     """
 
@@ -159,6 +172,7 @@ def customcholesky(a):
     """
     Performs a custom Cholesky factorization of the array a.
     :param a: The array a
+    :type a: np.ndarray
     :return:
     """
 
@@ -170,7 +184,10 @@ def customcholesky(a):
 
 def resizer(tup):
     """
-    Recasts all the non-array elements of an array to arrays of the same size as the array elements, s.t. the array
+    Recasts all the non-array elements of an array to arrays of the same size as the array elements. If you for example
+    pass an array `[[0, a], [a, 0]]`, where `a` is a numpy.ndarray, then the elements `0` will be recast into arrays
+    of the same size as `a`. Implementation of
+    https://stackoverflow.com/questions/47640385/create-array-from-mixed-floats-and-arrays-python
     :param tup: The array to recast.
     :type tup: Iterable
     :return:
