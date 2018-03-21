@@ -1,4 +1,4 @@
-from ..timeseries.model import StateSpaceModel
+from ..timeseries import StateSpaceModel, Base
 import numpy as np
 from .utils import outerm, expanddims, customcholesky, dot, mdot, outerv
 
@@ -7,8 +7,11 @@ def _propagate_sps(spx, spn, process):
     """
     Propagate the Sigma points through the given process.
     :param spx: The state Sigma points
+    :type spx: np.ndarray
     :param spn: The noise Sigma points
+    :type spn: np.ndarray
     :param process: The process
+    :type process: Base
     :return: Translated and scaled sigma points
     :rtype: np.ndarray
     """
