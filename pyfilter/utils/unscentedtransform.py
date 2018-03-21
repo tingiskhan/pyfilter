@@ -9,7 +9,8 @@ def _propagate_sps(spx, spn, process):
     :param spx: The state Sigma points
     :param spn: The noise Sigma points
     :param process: The process
-    :return:
+    :return: Translated and scaled sigma points
+    :rtype: np.ndarray
     """
     mean = process.mean(spx)
     scale = process.scale(spx)
@@ -24,8 +25,11 @@ def _helpweighter(a, b):
     """
     Performs a weighting along the second axis of `b` using `a` and sums.
     :param a: The weight array
+    :type a: np.ndarray
     :param b: The array to weight.
-    :return:
+    :type b: np.ndarray
+    :return: Weighted array
+    :rtype: np.ndarray
     """
     return np.einsum('i,ki...->k...', a, b)
 
@@ -33,9 +37,12 @@ def _helpweighter(a, b):
 def _covcalc(a, b, wc):
     """
     Calculates the covariance from a * b^t
-    :param a:
-    :param b:
-    :return:
+    :param a: The `a` matrix
+    :type a: np.ndarray
+    :param b: The `b` matrix
+    :type b: np.ndarray
+    :return: The covariance
+    :rtype: np.ndarray
     """
     cov = np.einsum('ij...,kj...->jik...', a, b)
 
@@ -46,9 +53,13 @@ def _get_meancov(spxy, wm, wc):
     """
     Calculates the mean and covariance given sigma points for 2D processes.
     :param spxy: The state/observation sigma points
+    :type spxy: np.ndarray
     :param wm: The W^m
+    :type wm: np.ndarray
     :param wc: The W^c
-    :return:
+    :type wc: np.ndarray
+    :return: Mean and covariance
+    :rtype: tuple of np.ndarray
     """
 
     x = _helpweighter(wm, spxy)
@@ -82,7 +93,8 @@ class UnscentedTransform(object):
     def _set_slices(self):
         """
         Sets the different slices for selecting states and noise.
-        :return:
+        :return: Instance of self
+        :rtype: UnscentedTransform
         """
 
         self._sslc = slice(self._model.hidden_ndim)
@@ -94,7 +106,8 @@ class UnscentedTransform(object):
     def _set_weights(self):
         """
         Generates the weights used for sigma point construction.
-        :return:
+        :return: Instance of self
+        :rtype: UnscentedTransform
         """
 
         self._wm = np.zeros(1 + 2 * self._ndim)
@@ -109,7 +122,9 @@ class UnscentedTransform(object):
         """
         Sets the mean and covariance arrays.
         :param x: The initial state.
-        :return:
+        :type x: np.ndarray
+        :return: Instance of self
+        :rtype: UnscentedTransform
         """
 
         # ==== Define empty arrays ===== #
@@ -127,7 +142,8 @@ class UnscentedTransform(object):
         Initializes UnscentedTransform class.
         :param x: The initial values of the mean of the distribution.
         :type x: np.ndarray
-        :return:
+        :return: Instance of self
+        :rtype: UnscentedTransform
         """
 
         self._set_weights()._set_slices()._set_arrays(x)
@@ -153,7 +169,8 @@ class UnscentedTransform(object):
     def get_sps(self):
         """
         Constructs the Sigma points used for propagation.
-        :return:
+        :return: Sigma points
+        :rtype: np.ndarray
         """
         cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
 
@@ -166,7 +183,8 @@ class UnscentedTransform(object):
     def propagate_sps(self):
         """
         Propagate the Sigma points through the given process.
-        :return:
+        :return: Sigma points of x and y
+        :rtype: tuple of np.ndarray
         """
 
         sps = self.get_sps()
@@ -180,7 +198,8 @@ class UnscentedTransform(object):
     def xmean(self):
         """
         Returns the mean of the latest state.
-        :return:
+        :return: The mean of state
+        :rtype: np.ndarray
         """
 
         return self._mean[self._sslc]
@@ -189,7 +208,8 @@ class UnscentedTransform(object):
     def xcov(self):
         """
         Returns the covariance of the latest state.
-        :return:
+        :return: The state covariance
+        :rtype: np.ndarray
         """
 
         return self._cov[self._sslc, self._sslc]
@@ -198,7 +218,8 @@ class UnscentedTransform(object):
     def ymean(self):
         """
         Returns the mean of the observation.
-        :return:
+        :return: The mean of the observational process
+        :rtype: np.ndarray
         """
 
         return self._ymean
@@ -207,7 +228,8 @@ class UnscentedTransform(object):
     def ycov(self):
         """
         Returns the covariance of the observation.
-        :return:
+        :return: The covariance of the observational process
+        :rtype: np.ndarray
         """
 
         return self._ycov
@@ -217,7 +239,8 @@ class UnscentedTransform(object):
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
         :type y: np.ndarray
-        :return:
+        :return: Estimated tate mean and covariance
+        :rtype: tuple of np.ndarray
         """
 
         # ==== Get mean and covariance ===== #
@@ -237,7 +260,9 @@ class UnscentedTransform(object):
         """
         Helper method for generating the mean and covariance.
         :param y: The latest observation
-        :return:
+        :type y: float|np.ndarray
+        :return: The estimated mean and covariances of state and observation
+        :rtype: tuple of np.ndarray
         """
 
         # ==== Propagate Sigma points ==== #
@@ -271,7 +296,8 @@ class UnscentedTransform(object):
         :type y: np.ndarray
         :param x: The previous state
         :type x: np.ndarray
-        :return:
+        :return: The mean and covariance of the state
+        :rtype: tuple of np.ndarray
         """
 
         # ==== Overwrite mean and covariance ==== #
