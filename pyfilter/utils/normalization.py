@@ -1,17 +1,18 @@
 import numpy as np
 
 
-def _vector(weights):
+def _vector(w):
     """
     Normalizes a 1D array of log weights.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
-    n = weights.shape[0]
+    n = w.shape[0]
 
-    max_log_weight = np.nanmax(weights)
-    re_weighted = np.exp(weights - max_log_weight)
+    max_log_weight = np.nanmax(w)
+    re_weighted = np.exp(w - max_log_weight)
     sum_of_weights = np.nansum(re_weighted)
 
     normalized = re_weighted / sum_of_weights
@@ -25,18 +26,19 @@ def _vector(weights):
     return normalized
 
 
-def _matrix(weights):
+def _matrix(w):
     """
     Normalizes a 2D array of log weights along the second axis.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
-    n = weights.shape[-1]
+    n = w.shape[-1]
 
-    max_weight = np.nanmax(weights, axis=-1)
+    max_weight = np.nanmax(w, axis=-1)
 
-    altered_weights = np.exp(weights - max_weight[..., None])
+    altered_weights = np.exp(w - max_weight[..., None])
     sum_of_weights = np.nansum(altered_weights, axis=-1)[..., None]
     normalized = altered_weights / sum_of_weights
     normalized[np.isnan(normalized)] = 0
@@ -50,15 +52,16 @@ def _matrix(weights):
     return normalized
 
 
-def normalize(weights):
+def normalize(w):
     """
     Normalizes a 1D or 2D array of log weights.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
 
-    if weights.ndim > 1:
-        return _matrix(weights)
+    if w.ndim > 1:
+        return _matrix(w)
 
-    return _vector(weights)
+    return _vector(w)
