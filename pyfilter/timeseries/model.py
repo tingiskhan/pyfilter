@@ -1,5 +1,5 @@
 import copy
-from pyfilter.distributions.continuous import Distribution
+from ..distributions.continuous import Distribution
 
 
 class StateSpaceModel(object):
@@ -7,7 +7,7 @@ class StateSpaceModel(object):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: tuple of pyfilter.timeseries.meta.Base|pyfilter.timeseries.meta.Base
+        :type hidden: pyfilter.timeseries.meta.Base
         :param observable: The observable process(es) constituting the SSM
         :type observable: pyfilter.timeseries.meta.Base
         """
@@ -19,7 +19,8 @@ class StateSpaceModel(object):
     def hidden_ndim(self):
         """
         Returns the dimension of the hidden process.
-        :return:
+        :return: The dimension of the hidden process
+        :rtype: int
         """
 
         return self.hidden.ndim
@@ -28,7 +29,8 @@ class StateSpaceModel(object):
     def obs_ndim(self):
         """
         Returns the dimension of the observable process
-        :return:
+        :return: The dimension of the observable process
+        :rtype: int
         """
 
         return self.observable.ndim
@@ -36,47 +38,60 @@ class StateSpaceModel(object):
     def initialize(self, size=None, **kwargs):
         """
         Initializes the algorithm and samples from the hidden densities.
-        :param size: The number of samples to use
-        :return:
+        :param size: The number of samples to for estimation of the hidden state
+        :type size: int|tuple of int
+        :return: An array of sampled values according to the hidden process' distribution
+        :rtype: np.ndarray|float|int
         """
 
         return self.hidden.i_sample(size, **kwargs)
 
     def propagate(self, x):
         """
-        Propagates the state conditional on the previous one and the parameters.
-        :param x: Previous states
-        :return:
+        Propagates the state conditional on the previous state, and parameters.
+        :param x: Previous state
+        :type x: np.ndarray|float|int
+        :return: Next sampled state
+        :rtype: np.ndarray|float|int
         """
 
         return self.hidden.propagate(x)
 
     def weight(self, y, x):
         """
-        Weights the model using the current observation y and the current observation x.
+        Weights the model using the current observation `y` and the current state `x`.
         :param y: The current observation
+        :type y: np.ndarray|float|int
         :param x: The current state
-        :return:
+        :type x: np.ndarray|float|int
+        :return: The corresponding log-weights
+        :rtype: np.ndarray|float|int
         """
 
         return self.observable.weight(y, x)
 
     def h_weight(self, y, x):
         """
-        Weights the process of the current hidden state x_t, with the previous x_{t-1}.
-        :param y: The current hidden state.
-        :param x: The previous hidden state.
-        :return:
+        Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
+        :param y: The current hidden state
+        :type y: np.ndarray|float|int
+        :param x: The previous hidden state
+        :type x: np.ndarray|float|int
+        :return: The corresponding log-weights
+        :rtype: np.ndarray|float|int
         """
 
         return self.hidden.weight(y, x)
 
     def sample(self, steps, x_s=None):
         """
-        Constructs a sample trajectory for both the observable and the hidden density.
+        Constructs a sample trajectory for both the observable and the hidden process.
         :param steps: The number of steps
+        :type steps: int
         :param x_s: The starting value
-        :return:
+        :type x_s: np.ndarray|float|int
+        :return: Sampled trajectories
+        :rtype: tuple of list
         """
 
         hidden, obs = list(), list()
@@ -100,7 +115,9 @@ class StateSpaceModel(object):
         """
         Propagates one step ahead using the mean of the hidden timeseries distribution - used in the APF.
         :param x: Previous states
-        :return:
+        :type x: np.ndarray|float|int
+        :return: The mean of the next sample
+        :rtype: np.ndarray|float|int
         """
 
         return self.hidden.mean(x)
@@ -108,16 +125,19 @@ class StateSpaceModel(object):
     def copy(self):
         """
         Returns a copy of the model.
-        :return: 
+        :return: Copy of current instance
+        :rtype: StateSpaceModel
         """
 
         return copy.deepcopy(self)
 
     def p_apply(self, func):
         """
-        Applies func to each of the parameters of the model.
+        Applies `func` to each of the parameters of the model.
         :param func: Function to apply, must be of the structure func(param).
-        :return: 
+        :type func: callable
+        :return: Self
+        :rtype: StateSpaceModel
         """
 
         self.hidden.p_apply(func)
@@ -128,7 +148,8 @@ class StateSpaceModel(object):
     def p_prior(self):
         """
         Calculates the prior likelihood of current values of parameters.
-        :return:
+        :return: The prior evaluated at current parameter values
+        :rtype: np.ndarray|float
         """
 
         return self.hidden.p_prior() + self.observable.p_prior()
@@ -137,7 +158,9 @@ class StateSpaceModel(object):
         """
         Applies func to each of the parameters of the model and returns result as tuple.
         :param func: Function to apply, must of structure func(params).
-        :return:
+        :type func: callable
+        :param kwargs: Additional key-worded arguments passed to `p_map` of hidden/observable
+        :rtype: tuple of tuple of np.ndarray|float
         """
 
         return self.hidden.p_map(func, **kwargs), self.observable.p_map(func, **kwargs)
@@ -146,10 +169,15 @@ class StateSpaceModel(object):
         """
         Calculates the gradient of the parameters at the current values.
         :param y: The current observation
+        :type y: np.ndarray|float|int
         :param x: The current state
-        :param xo: The previous state.
+        :type x: np.ndarray|float|int
+        :param xo: The previous state
+        :type xo: np.ndarray|float|int
         :param h: The finite difference approximation to use.
-        :return:
+        :type h: float
+        :return: Tuple of gradient estimates for each parameter of the hidden/observable
+        :rtype: tuple of tuple of np.ndarray|float
         """
 
         return self.hidden.p_grad(x, xo, h=h), self.observable.p_grad(y, x, h=h)
@@ -161,7 +189,8 @@ class StateSpaceModel(object):
         :type indices: np.ndarray
         :param newmodel: The model which to exchange with
         :type newmodel: StateSpaceModel
-        :return:
+        :return: Self
+        :rtype: StateSpaceModel
         """
 
         # ===== Exchange hidden parameters ===== #
