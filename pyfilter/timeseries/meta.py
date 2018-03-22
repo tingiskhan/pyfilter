@@ -10,7 +10,7 @@ class Base(object):
         :param initial: The functions governing the initial dynamics of the process
         :type initial: tuple of callable
         :param funcs: The functions governing the dynamics of the process
-        :type funcs: tuple of cabllable
+        :type funcs: tuple of callable
         :param theta: The parameters governing the dynamics
         :type theta: tuple of Distribution|tuple of np.ndarray|tuple of float|tuple of int
         :param noise: The noise governing the noise process
