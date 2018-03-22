@@ -133,7 +133,8 @@ class StateSpaceModel(object):
 
     def p_apply(self, func):
         """
-        Applies `func` to each of the parameters of the model.
+        Applies `func` to each of the parameters of the model "inplace", i.e. manipulates `self.theta` of hidden and
+        observable process.
         :param func: Function to apply, must be of the structure func(param).
         :type func: callable
         :return: Self
