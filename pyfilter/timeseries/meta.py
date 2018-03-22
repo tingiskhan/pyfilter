@@ -12,7 +12,7 @@ class Base(object):
         :param funcs: The functions governing the dynamics of the process
         :type funcs: tuple of cabllable
         :param theta: The parameters governing the dynamics
-        :type theta: tuple of Distribution|tuple of np.ndarray|float|int
+        :type theta: tuple of Distribution|tuple of np.ndarray|tuple of float|tuple of int
         :param noise: The noise governing the noise process
         :type noise: tuple of Distribution
         :param q: The correlation of the noise processes
