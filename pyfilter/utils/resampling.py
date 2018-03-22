@@ -6,7 +6,9 @@ def _matrix(weights):
     """
     Performs systematic resampling of a 2D array of log weights along the second axis.
     independent of the others.
-    :param weights:
+    :param weights: The weights to use for resampling
+    :type weights: np.ndarray
+    :return: Resampled indices
     :rtype: np.ndarray
     """
     n = weights.shape[1]
@@ -32,8 +34,9 @@ def _matrix(weights):
 def _vector(weights):
     """
     Performs systematic resampling of a 1D array log weights.
-    :param weights: The weights
+    :param weights: The weights to use for resampling
     :type weights: np.ndarray
+    :return: Resampled indices
     :rtype: np.ndarray
     """
     n = weights.size
@@ -50,9 +53,10 @@ def _vector(weights):
 def systematic(w):
     """
     Performs systematic resampling on either a 1D or 2D array.
-    :param w: The weights
+    :param w: The weights to use for resampling
     :type w: np.ndarray
-    :return:
+    :return: Resampled indices
+    :rtype: np.ndarray
     """
     if w.ndim > 1:
         return _matrix(w)
@@ -60,29 +64,32 @@ def systematic(w):
     return _vector(w)
 
 
-def _mn_vector(weights):
+def _mn_vector(w):
     """
     Resamples a vector array of weights using multinomial resampling.
-    :param weights:
-    :return:
+    :param w: The weights to use for resampling
+    :type w: np.ndarray
+    :return: Resampled indices
+    :rtype: np.ndarray
     """
-    normalized = normalize(weights)
+    normalized = normalize(w)
 
-    return np.random.choice(weights.size, weights.size, p=normalized)
+    return np.random.choice(w.size, w.size, p=normalized)
 
 
-def _mn_matrix(weights):
+def _mn_matrix(w):
     """
     Resamples a matrix array of weights using multinomial resampling.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights to use for resampling
+    :type w: np.ndarray
+    :return: Resampled indices
+    :rtype: np.ndarray
     """
 
-    out = np.empty_like(weights, dtype=int)
+    out = np.empty_like(w, dtype=int)
 
-    for i in range(weights.shape[0]):
-        out[i] = _mn_vector(weights[i])
+    for i in range(w.shape[0]):
+        out[i] = _mn_vector(w[i])
 
     return out
 
@@ -90,8 +97,10 @@ def _mn_matrix(weights):
 def multinomial(w):
     """
     Performs multinomial resampling on either a 1D or 2D array.
-    :param w:
-    :return:
+    :param w: The weights to use for resampling
+    :type w: np.ndarray
+    :return: Resampled indices
+    :rtype: np.ndarray
     """
 
     if w.ndim > 1:
