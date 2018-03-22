@@ -1,5 +1,5 @@
 from .meta import Base
-from pyfilter.distributions.continuous import Distribution
+from ..distributions.continuous import Distribution
 
 
 class Observable(Base):
