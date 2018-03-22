@@ -18,8 +18,8 @@ class EulerMaruyma(Base):
 
         self.dt = dt
 
-    def mean(self, x, *args, params=None):
-        return x + resizer(self.f(x, *args, *(params or self.theta))) * self.dt
+    def mean(self, x, params=None):
+        return x + resizer(self.f(x, *(params or self.theta))) * self.dt
 
-    def scale(self, x, *args, params=None):
-        return resizer(self.g(x, *args, *(params or self.theta))) * sqrt(self.dt)
+    def scale(self, x, params=None):
+        return resizer(self.g(x, *(params or self.theta))) * sqrt(self.dt)
