@@ -8,7 +8,8 @@ def get_ess(w):
     Calculates the ESS from an array of log weights.
     :param w: The log weights
     :type w: np.ndarray
-    :return:
+    :return: The effective sample size
+    :rtype: float
     """
 
     normalized = normalize(w)
@@ -24,7 +25,8 @@ def searchsorted2d(a, b):
     :type a: np.ndarray
     :param b: The indices of the elements in `a`.
     :type b: np.ndarray
-    :return:
+    :return: An array of indices
+    :rtype: np.ndarray
     """
     m, n = a.shape
     max_num = np.maximum(a.max() - a.min(), b.max() - b.min()) + 1
@@ -40,7 +42,8 @@ def choose(array, indices):
     :type array: np.ndarray
     :param indices: The indices to choose from `array`
     :type indices: np.ndarray
-    :return:
+    :return: Returns the chosen elements from `array`
+    :rtype: np.ndarray
     """
 
     if isinstance(array, list):
@@ -62,7 +65,8 @@ def loglikelihood(w):
     Calculates the estimated loglikehood given weights.
     :param w: The log weights, corresponding to likelihood
     :type w: np.ndarray
-    :return: 
+    :return: The log-likelihood
+    :rtype: np.ndarray
     """
 
     maxw = np.max(w, axis=-1)
@@ -72,12 +76,13 @@ def loglikelihood(w):
 
 def dot(a, b):
     """
-    Helper function for calculating the dot product between two matrices.
+    Helper function for calculating the dot product between a matrix and a vector.
     :param a: The A array
     :type a: np.ndarray
-    :param b: The B array
+    :param b: The B vector
     :type b: np.ndarray
-    :return: 
+    :return: Returns the matrix product
+    :rtype: np.ndarray
     """
 
     return np.einsum('ij...,j...->i...', a, b)
@@ -90,7 +95,8 @@ def outer(a, b):
     :type a: np.ndarray
     :param b: The X-matrix
     :type b: np.ndarray
-    :return: 
+    :return: The outer product
+    :rtype: np.ndarray
     """
 
     xbt = np.einsum('ij...,kj...->ik...', b, a)
@@ -103,8 +109,11 @@ def square(a, b):
     """
     Calculates the square product x^t * A * x.
     :param a: The vector x
-    :param b: The matrix A 
-    :return: 
+    :type a: np.ndarray
+    :param b: The matrix A
+    :type b: np.ndarray
+    :return: The squared matrix
+    :rtype: np.ndarray
     """
 
     return np.einsum('i...,i...->...', a, dot(b, a))
@@ -117,7 +126,8 @@ def outerv(a, b):
     :type a: np.ndarray
     :param b: The vector b
     :type b: np.ndarray
-    :return:
+    :return: The outer product
+    :rtype: np.ndarray
     """
 
     return np.einsum('i...,j...->ij...', a, b)
@@ -130,7 +140,8 @@ def expanddims(array, ndims):
     :type array: np.ndarray
     :param ndims: The target number of dimensions.
     :type ndims: int
-    :return:
+    :return: Expanded array
+    :rtype: np.ndarray
     """
 
     if array.ndim == ndims:
@@ -148,7 +159,8 @@ def mdot(a, b):
     :type a: np.ndarray
     :param b: The b matrix
     :type b: np.ndarray
-    :return:
+    :return: The matrix dot product
+    :rtype: np.ndarray
     """
 
     return np.einsum('ij...,jk...->ik...', a, b)
@@ -161,7 +173,8 @@ def outerm(a, b):
     :type a: np.ndarray
     :param b: The array b
     :type b: np.ndarray
-    :return:
+    :return: The outer matrix product
+    :rtype: np.ndarray
     """
 
     return np.einsum('ij...,kj...->ik...', a, b)
@@ -172,7 +185,8 @@ def customcholesky(a):
     Performs a custom Cholesky factorization of the array a.
     :param a: The array a
     :type a: np.ndarray
-    :return:
+    :return: Cholesky decomposition of `a`
+    :rtype: np.ndarray
     """
 
     firstaxes = (*range(2, 2 + len(a.shape[2:])), 0, 1)
@@ -189,7 +203,8 @@ def resizer(tup):
     https://stackoverflow.com/questions/47640385/create-array-from-mixed-floats-and-arrays-python
     :param tup: The array to recast.
     :type tup: Iterable
-    :return:
+    :return: Resized array
+    :rtype: np.ndarray
     """
     # TODO: Speed up
     if isinstance(tup, (int, float, np.ndarray)):
