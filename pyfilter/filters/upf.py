@@ -5,7 +5,7 @@ from ..utils.utils import expanddims
 
 class UPF(SISR):
     def __init__(self, model, particles, *args, **kwargs):
-        super().__init__(model, particles, *args, proposal=Unscented, **kwargs)
+        super().__init__(model, particles, *args, proposal=Unscented(), **kwargs)
 
     def initialize(self):
         self._initialize_parameters()
@@ -17,7 +17,7 @@ class UPF(SISR):
 
 class GlobalUPF(SISR):
     def __init__(self, model, particles, *args, **kwargs):
-        super().__init__(model, particles, *args, proposal=GlobalUnscented, **kwargs)
+        super().__init__(model, particles, *args, proposal=GlobalUnscented(), **kwargs)
 
     def initialize(self):
         self._initialize_parameters()

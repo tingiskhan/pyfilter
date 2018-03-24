@@ -4,7 +4,7 @@ from ..distributions.continuous import Distribution
 import copy
 from ..utils.utils import choose
 from ..utils.resampling import multinomial, systematic
-from ..proposals.bootstrap import Bootstrap
+from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import Base, StateSpaceModel
 
 
@@ -43,13 +43,15 @@ def _overwriteparams(ts, particles):
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
+    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap(), **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: StateSpaceModel
         :param resampling: Which resampling method to use
-        :type resampling: function
+        :type resampling: callable
+        :param proposal: Which proposal to use
+        :type proposal: Proposal
         :param args:
         :param kwargs:
         """
@@ -69,7 +71,7 @@ class BaseFilter(object):
 
         self.saveall = saveall
         self._td = None
-        self._proposal = proposal(self._model, isinstance(particles, tuple))
+        self._proposal = proposal.set_model(self._model, isinstance(particles, tuple))
 
         if saveall:
             self.s_x = list()
