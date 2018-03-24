@@ -23,8 +23,8 @@ class NESSMC2(SMC2):
         self._hs = handshake
         self._switched = False
 
-        self._smc2 = SMC2(model, particles, **(smc2kwargs or {}))
-        self._ness = NESS(model, particles, **(nesskwargs or {}))
+        self._smc2 = SMC2(model, particles, **(smc2kwargs or {}), **kwargs)
+        self._ness = NESS(model, particles, **(nesskwargs or {}), **kwargs)
 
         self._filter = self._ness._filter = self._smc2._filter
 
