@@ -8,8 +8,10 @@ from ..distributions.continuous import Distribution
 def _define_pdf(params):
     """
     Helper function for creating the PDF.
-    :param params:
-    :return:
+    :param params: The parameters to use for defining the distribution
+    :type params: (np.ndarray, Distribution)
+    :return: A truncated normal distribution
+    :rtype: stats.truncnorm
     """
 
     mean = params[0].mean()
@@ -24,19 +26,24 @@ def _define_pdf(params):
 def _mcmc_move(params):
     """
     Performs an MCMC move to rejuvenate parameters.
-    :param params:
-    :return:
+    :param params: The parameters to use for defining the distribution
+    :type params: (np.ndarray, Distribution)
+    :return: Samples from a truncated normal distribution
+    :rtype: np.ndarray
     """
 
     return _define_pdf(params).rvs(size=params[0].shape)
 
 
-def _kernel(params, new_params):
+def _eval_kernel(params, new_params):
     """
-    Creates the kernel used for performing the MCMC move.
-    :param params:
-    :param new_params:
-    :return:
+    Evaluates the kernel used for performing the MCMC move.
+    :param params: The current parameters
+    :type params: (np.ndarray, Distribution)
+    :param new_params: The new parameters to evaluate against
+    :type new_params: (np.ndarray, Distribution)
+    :return: The log density of the proposal kernel evaluated at `new_params`
+    :rtype: np.ndarray
     """
 
     return _define_pdf(params).logpdf(new_params)
@@ -44,7 +51,16 @@ def _kernel(params, new_params):
 
 class SMC2(NESS):
     def __init__(self, model, particles, threshold=0.2, disp=True, **filtkwargs):
-
+        """
+        Implements the SMC2 algorithm by Chopin et al.
+        :param model: See BaseFilter
+        :param particles: See BaseFilter
+        :param threshold: The threshold at which to perform MCMC rejuvenation
+        :type threshold: float
+        :param disp: Whether or not to display when the algorithm performs a rejuvenation step
+        :type disp: bool
+        :param filtkwargs: kwargs passed to the filter targeting the states
+        """
         super().__init__(model, particles, **filtkwargs)
 
         self._th = threshold
@@ -86,8 +102,12 @@ class SMC2(NESS):
         out = 0
         for i in range(len(copy._model.hidden.theta)):
             if isinstance(copy._model.hidden.priors[i], Distribution):
-                newkernel = _kernel((copy._model.hidden.theta[i], copy._model.hidden.priors[i]), self._model.hidden.theta[i])
-                oldkernel = _kernel((self._model.hidden.theta[i], self._model.hidden.priors[i]), copy._model.hidden.theta[i])
+
+                newparam = copy._model.hidden.theta[i]
+                oldparam = self._model.hidden.theta[i]
+
+                newkernel = _eval_kernel((newparam, copy._model.hidden.priors[i]), oldparam)
+                oldkernel = _eval_kernel((oldparam, self._model.hidden.priors[i]), newparam)
 
                 out += newkernel - oldkernel
 
@@ -96,8 +116,8 @@ class SMC2(NESS):
 
         for i in range(len(otso.theta)):
             if isinstance(otso.theta[i], Distribution):
-                newkernel = _kernel((ntso.theta[i], ntso.priors[i]), otso.theta[i])
-                oldkernel = _kernel((otso.theta[i], otso.priors[i]), ntso.theta[i])
+                newkernel = _eval_kernel((ntso.theta[i], ntso.priors[i]), otso.theta[i])
+                oldkernel = _eval_kernel((otso.theta[i], otso.priors[i]), ntso.theta[i])
 
                 out += newkernel - oldkernel
 
