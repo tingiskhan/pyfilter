@@ -5,6 +5,10 @@ from ..utils.utils import dot, customcholesky
 
 
 class Linearized(Proposal):
+    """
+    Implements the Linearized proposal from "On sequential Monte Carlo sampling methods for Bayesian filtering" by
+    Doucet et al.
+    """
     def draw(self, y, x, size=None, *args, **kwargs):
         x = self._meaner(x)
         t_x = self._model.propagate_apf(x)

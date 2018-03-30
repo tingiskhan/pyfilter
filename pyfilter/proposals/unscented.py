@@ -6,6 +6,9 @@ from ..distributions.continuous import MultivariateNormal, Normal
 
 
 class Unscented(Linearized):
+    """
+    Implements the Unscented proposal developed in "The Unscented Particle Filter" by van der Merwe et al.
+    """
     def __init__(self, **utkwargs):
         super().__init__()
         self.ut = None     # type: UnscentedTransform
