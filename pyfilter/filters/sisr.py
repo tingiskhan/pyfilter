@@ -1,5 +1,5 @@
 from .base import BaseFilter
-import pyfilter.utils.utils as helps
+from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
 import numpy as np
 
@@ -18,10 +18,10 @@ class SISR(BaseFilter):
         self._cur_x = t_x
         self._inds = resampled_indices
         self._anc_x = self._old_x.copy()
-        self._old_x = helps.choose(t_x, resampled_indices)
+        self._old_x = choose(t_x, resampled_indices)
         self._old_w = weights
 
-        self.s_l.append(helps.loglikelihood(weights))
+        self.s_l.append(loglikelihood(weights))
         normalized = normalize(weights)
         self.s_mx.append(np.sum(t_x * normalized, axis=-1))
 

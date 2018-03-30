@@ -1,5 +1,5 @@
 from .base import BaseFilter
-import pyfilter.utils.utils as helps
+from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
 import numpy as np
 
@@ -24,7 +24,7 @@ class APF(BaseFilter):
         # ===== Resample and propagate ===== #
 
         resampled_indices = self._resamp(resamp_w)
-        resampled_x = helps.choose(self._old_x, resampled_indices)
+        resampled_x = choose(self._old_x, resampled_indices)
 
         t_x = self._proposal.draw(y, resampled_x)
         weights = self._proposal.weight(y, t_x, resampled_x)
@@ -33,14 +33,14 @@ class APF(BaseFilter):
         self._inds = resampled_indices
         self._anc_x = self._old_x.copy()
         self._old_x = t_x
-        self._old_w = weights - helps.choose(t_weights, resampled_indices)
+        self._old_w = weights - choose(t_weights, resampled_indices)
 
         self.s_mx.append(np.sum(t_x * normalize(self._old_w), axis=-1))
 
         # ===== Calculate log likelihood ===== #
 
         with np.errstate(divide='ignore'):
-            self.s_l.append(helps.loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
+            self.s_l.append(loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
 
         if self.saveall:
             self.s_x.append(t_x)
