@@ -5,6 +5,9 @@ import numpy as np
 
 
 class SISR(BaseFilter):
+    """
+    Implements the SISR filter by Gordon et al.
+    """
     def filter(self, y):
         t_x = self._proposal.draw(y, self._old_x, size=self._particles)
         weights = self._proposal.weight(y, t_x, self._old_x)

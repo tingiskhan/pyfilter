@@ -5,8 +5,10 @@ import numpy as np
 
 
 class APF(BaseFilter):
+    """
+    Implements the Auxiliary Particle Filter of Pitt and Shephard.
+    """
     def filter(self, y):
-
         # ===== Perform "auxiliary sampling ===== #
 
         t_x = self._model.propagate_apf(self._old_x)

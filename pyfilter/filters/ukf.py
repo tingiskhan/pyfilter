@@ -8,7 +8,7 @@ from ..utils.utils import customcholesky, choose
 class UKF(BaseFilter):
     def __init__(self, model, *args, utkwargs=None, **kwargs):
         """
-        Implements the Unscented Kalman Filter.
+        Implements the Unscented Kalman Filter by van der Merwe.
         :param model: The model to use
         :type model: See BaseFilter
         :param args: Any additional arguments

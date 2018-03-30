@@ -44,8 +44,17 @@ def _propose(parameters, indices, h, particles, weights):
 
 
 class RAPF(BaseFilter):
-
     def __init__(self, model, particles, *args, shrinkage=0.95, **kwargs):
+        """
+        Implements the Regularized Auxiliary Particle Filter for parameter inference by Liu and West.
+        :param model: See BaseFilter
+        :param particles: See BaseFilter
+        :type particles: int
+        :param args: See BaseFilter
+        :param shrinkage: The shrinkage to use
+        :type shrinkage: float
+        :param kwargs:
+        """
 
         super().__init__(model, particles, *args, **kwargs)
 

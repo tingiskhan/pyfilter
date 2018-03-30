@@ -4,6 +4,9 @@ from ..utils.utils import expanddims
 
 
 class UPF(SISR):
+    """
+    Implements the Unscented Particle Filter of van der Merwe et al.
+    """
     def __init__(self, model, particles, *args, **kwargs):
         super().__init__(model, particles, *args, proposal=Unscented(), **kwargs)
 
@@ -16,6 +19,9 @@ class UPF(SISR):
 
 
 class GlobalUPF(SISR):
+    """
+    Implements the Global UPF of Y Zhao.
+    """
     def __init__(self, model, particles, *args, **kwargs):
         super().__init__(model, particles, *args, proposal=GlobalUnscented(), **kwargs)
 
