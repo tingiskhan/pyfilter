@@ -139,7 +139,7 @@ class BaseFilter(object):
         if self._model.obs_ndim < 2:
             return (y - mean) / scale
 
-        return dot(np.linalg.inv(scale.T).T, (expanddims(y, mean.shape) - mean))
+        return dot(np.linalg.inv(scale.T).T, (expanddims(y, mean.ndim) - mean))
 
     def _save_mean_and_noise(self, y, x, normalized):
         """
