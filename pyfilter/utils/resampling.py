@@ -1,5 +1,6 @@
 import numpy as np
 from .normalization import normalize
+from ..utils.utils import searchsorted2d
 
 
 def _matrix(weights):
@@ -13,7 +14,7 @@ def _matrix(weights):
     """
     n = weights.shape[1]
     u = np.random.uniform(size=weights.shape[0])[:, None]
-    index_range = np.tile(np.arange(n), weights.shape[0]).reshape(weights.shape)
+    index_range = np.arange(n)[None, :] * np.ones(weights.shape)
 
     probs = (index_range + u) / n
 
@@ -21,14 +22,7 @@ def _matrix(weights):
     cumsum = np.zeros((weights.shape[0], n + 1))
     cumsum[:, 1:] = normalized.cumsum(axis=1)
 
-    indices = np.empty_like(weights, dtype=int)
-    for i in range(weights.shape[0]):
-        indices[i, :] = np.digitize(probs[i, :], cumsum[i, :]) - 1
-
-    # cumsum = normalized.cumsum(axis=1)
-    # indices = _searchsorted2d(probs, cumsum).astype(int) - 1
-
-    return indices
+    return searchsorted2d(cumsum, probs).astype(int) - 1
 
 
 def _vector(weights):
@@ -47,7 +41,7 @@ def _vector(weights):
     normalized = normalize(weights)
     cumsum[1:] = normalized.cumsum()
 
-    return np.digitize(probs, cumsum).astype(int) - 1
+    return np.searchsorted(cumsum, probs).astype(int) - 1
 
 
 def systematic(w):
