@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from ..distributions.continuous import Distribution
 import copy
-from ..utils.utils import choose, dot
+from ..utils.utils import choose, dot, expanddims
 from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import Base, StateSpaceModel
@@ -139,7 +139,7 @@ class BaseFilter(object):
         if self._model.obs_ndim < 2:
             return (y - mean) / scale
 
-        return dot(np.linalg.inv(scale.T).T, (y - mean))
+        return dot(np.linalg.inv(scale.T).T, (expanddims(y, mean.shape) - mean))
 
     def _save_mean_and_noise(self, y, x, normalized):
         """
