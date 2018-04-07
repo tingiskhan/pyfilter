@@ -35,8 +35,6 @@ class APF(BaseFilter):
         self._old_x = t_x
         self._old_w = weights - choose(t_weights, resampled_indices)
 
-        self.s_mx.append(np.sum(t_x * normalize(self._old_w), axis=-1))
-
         # ===== Calculate log likelihood ===== #
 
         with np.errstate(divide='ignore'):
@@ -46,4 +44,4 @@ class APF(BaseFilter):
             self.s_x.append(t_x)
             self.s_w.append(self._old_w)
 
-        return self
+        return self._save_mean_and_noise(y, t_x, normalize(self._old_w))

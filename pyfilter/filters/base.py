@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from ..distributions.continuous import Distribution
 import copy
-from ..utils.utils import choose
+from ..utils.utils import choose, dot
 from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import Base, StateSpaceModel
@@ -116,16 +116,57 @@ class BaseFilter(object):
         """
         Filters the model for the observation `y`.
         :param y: The observation to filter on.
+        :type y: float|np.ndarray
         :return:
         """
 
         raise NotImplementedError()
 
+    def _calc_noise(self, y, x):
+        """
+        Calculates the residual given the observation `y` and state `x`.
+        :param y: The observation
+        :type y: np.ndarray
+        :param x: The state
+        :type y: np.ndarray
+        :return: The residual
+        :rtype: np.ndarray
+        """
+
+        mean = self._model.observable.mean(x)
+        scale = self._model.observable.scale(x)
+
+        if self._model.obs_ndim < 2:
+            return (y - mean) / scale
+
+        return dot(np.linalg.inv(scale.T).T, (y - mean))
+
+    def _save_mean_and_noise(self, y, x, normalized):
+        """
+        Saves the residual given the observation `y` and state `x`.
+        :param y: The observation
+        :type y: np.ndarray
+        :param x: The state
+        :type y: np.ndarray
+        :param normalized: The normalized weights for weighting
+        :type normalized: np.ndarray
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        rescaled = self._calc_noise(y, x)
+
+        self.s_n.append(np.sum(rescaled * normalized, axis=-1))
+        self.s_mx.append(np.sum(x * normalized, axis=-1))
+
+        return self
+
     def longfilter(self, data):
         """
         Filters the data for the entire data set.
         :param data: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         if isinstance(data, pd.DataFrame):

@@ -22,14 +22,9 @@ class SISR(BaseFilter):
         self._old_w = weights
 
         self.s_l.append(loglikelihood(weights))
-        normalized = normalize(weights)
-        self.s_mx.append(np.sum(t_x * normalized, axis=-1))
-
-        rescaled = (y - self._model.observable.mean(t_x)) / self._model.observable.scale(t_x)
-        self.s_n.append(np.sum(rescaled * normalized, axis=-1))
 
         if self.saveall:
             self.s_x.append(t_x)
             self.s_w.append(weights)
 
-        return self
+        return self._save_mean_and_noise(y, t_x, normalize(weights))

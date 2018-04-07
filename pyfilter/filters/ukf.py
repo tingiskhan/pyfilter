@@ -46,6 +46,8 @@ class UKF(BaseFilter):
         self.s_l.append(kernel.logpdf(y))
         self._old_x = self._ut.xmean.copy()
 
+        self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
+
         return self
 
     def resample(self, indices):
