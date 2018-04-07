@@ -200,22 +200,22 @@ class BaseFilter(object):
 
         return self.s_n
 
-    def predict(self, steps, **kwargs):
+    def predict(self, steps):
         """
         Predicts `steps` ahead using the latest available information.
         :param steps: The number of steps forward to predict
         :type steps: int
-        :param kwargs: kwargs to pass to self._model
         :return: 
         """
-        x, y = self._model.sample(steps+1, x_s=self._old_x, **kwargs)
+        x, y = self._model.sample(steps+1, x_s=self._old_x)
 
         return x[1:], y[1:]
 
     def copy(self):
         """
         Returns a copy of itself.
-        :return: self
+        :return: Copy of self
+        :rtype: BaseFilter
         """
 
         return copy.deepcopy(self)
@@ -224,7 +224,8 @@ class BaseFilter(object):
         """
         Resamples the particles along the first axis.
         :param indices: The indices to choose
-        :return: 
+        :return: Self
+        :rtype: BaseFilter
         """
 
         self._old_x = choose(self._old_x, indices)
@@ -240,7 +241,8 @@ class BaseFilter(object):
         """
         Resets the filter.
         :param particles: Size of filter to reset.
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         self._particles = particles if particles is not None else self._particles
@@ -263,7 +265,8 @@ class BaseFilter(object):
         :type indices: np.ndarray
         :param newfilter: The new filter to exchange with.
         :type newfilter: BaseFilter
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         # ===== Exchange parameters ===== #
