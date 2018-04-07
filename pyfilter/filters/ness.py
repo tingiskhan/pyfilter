@@ -2,6 +2,7 @@ from .base import BaseFilter
 from .sisr import SISR
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
+from ..distributions.continuous import Distribution
 import scipy.stats as stats
 import math
 import numpy as np
@@ -10,10 +11,14 @@ import numpy as np
 def jitter(params, p):
     """
     Jitters the parameters.
-    :param params:
-    :param p:
-    :return: 
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: (np.ndarray, Distribution)
+    :param p: The scaling to use for the variance of the proposal
+    :type p: int|float
+    :return: Proposed values
+    :rtype: np.ndarray
     """
+
     std = params[1].std() / math.sqrt(params[0].size ** ((p + 2) / p))
 
     a = (params[1].bounds()[0] - params[0]) / std
@@ -25,8 +30,10 @@ def jitter(params, p):
 def flattener(a):
     """
     Flattens array a.
-    :param a: 
-    :return: 
+    :param a: An array
+    :type a: np.ndarray
+    :return: Flattened array
+    :rtype: np.ndarray
     """
 
     if a.ndim < 3:

@@ -6,9 +6,20 @@ from ..distributions.continuous import MultivariateNormal, Normal
 
 
 class Unscented(Linearized):
-    def __init__(self, model, *args):
-        super().__init__(model, *args)
-        self.ut = UnscentedTransform(model)     # type: UnscentedTransform
+    """
+    Implements the Unscented proposal developed in "The Unscented Particle Filter" by van der Merwe et al.
+    """
+    def __init__(self, **utkwargs):
+        super().__init__()
+        self.ut = None     # type: UnscentedTransform
+        self._ut_settings = utkwargs
+
+    def set_model(self, model, nested=False):
+        self._model = model
+        self._nested = nested
+        self.ut = UnscentedTransform(model, **self._ut_settings)
+
+        return self
 
     def draw(self, y, x, size=None, *args, **kwargs):
         mean, cov = self.ut.construct(y)

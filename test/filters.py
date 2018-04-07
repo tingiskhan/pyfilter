@@ -110,7 +110,7 @@ class Tests(unittest.TestCase):
     def test_Likelihood(self):
         x, y = self.model.sample(500)
 
-        apft = APF(self.model, 1000, proposal=Linz).initialize().longfilter(y)
+        apft = APF(self.model, 1000).initialize().longfilter(y)
         sisrt = SISR(self.model, 1000).initialize().longfilter(y)
         linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
         upf = UPF(self.model, 1000).initialize().longfilter(y)

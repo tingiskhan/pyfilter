@@ -6,13 +6,24 @@ from ..utils.utils import customcholesky, choose
 
 
 class UKF(BaseFilter):
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, *args, utkwargs=None, **kwargs):
+        """
+        Implements the Unscented Kalman Filter by van der Merwe.
+        :param model: The model to use
+        :type model: See BaseFilter
+        :param args: Any additional arguments
+        :type args: See BaseFilter
+        :param utkwargs: Any kwargs passed to UnscentedTransform
+        :type utkwargs: dict
+        :param kwargs: Any additional kwargs passed to `BaseFilter`
+        :type kwargs: See BaseFilter
+        """
         if 'particles' in kwargs:
             super().__init__(model, *args, **kwargs)
         else:
             super().__init__(model, None, *args, **kwargs)
 
-        self._ut = UnscentedTransform(model)
+        self._ut = UnscentedTransform(model, **(utkwargs or {}))
 
     def initialize(self):
         self._initialize_parameters()
@@ -34,6 +45,8 @@ class UKF(BaseFilter):
         self.s_mx.append(self._ut.xmean.copy())
         self.s_l.append(kernel.logpdf(y))
         self._old_x = self._ut.xmean.copy()
+
+        self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
 
         return self
 

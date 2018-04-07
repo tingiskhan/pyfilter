@@ -1,64 +1,61 @@
 import numpy as np
 
 
-def _vector(weights):
+def _vector(w):
     """
     Normalizes a 1D array of log weights.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
-    n = weights.shape[0]
 
-    max_log_weight = np.nanmax(weights)
-    re_weighted = np.exp(weights - max_log_weight)
-    sum_of_weights = np.nansum(re_weighted)
+    reweighed = np.exp(w - w.max())
 
-    normalized = re_weighted / sum_of_weights
+    normalized = reweighed / reweighed.sum()
     normalized[np.isnan(normalized)] = 0
 
     # ===== Remove Nans from normalized ===== #
 
     if sum(normalized) == 0:
-        normalized = 1 / n * np.ones(n)
+        n = w.shape[0]
+        normalized = np.ones(n) / n
 
     return normalized
 
 
-def _matrix(weights):
+def _matrix(w):
     """
     Normalizes a 2D array of log weights along the second axis.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
-    n = weights.shape[-1]
 
-    max_weight = np.nanmax(weights, axis=-1)
-
-    altered_weights = np.exp(weights - max_weight[..., None])
-    sum_of_weights = np.nansum(altered_weights, axis=-1)[..., None]
-    normalized = altered_weights / sum_of_weights
+    reweighed = np.exp(w - w.max(axis=-1)[..., None])
+    normalized = reweighed / reweighed.sum(axis=-1)[..., None]
     normalized[np.isnan(normalized)] = 0
 
     # ===== Remove Nans from normalized ===== #
 
-    uniform_probability = 1 / n * np.ones(n)
-    zero_rows = np.where(np.sum(normalized, axis=-1) == 0)
-    normalized[zero_rows, :] = uniform_probability
+    mask = normalized.sum(axis=-1) == 0
+    n = w.shape[-1]
+    normalized[mask] = np.ones(n) / n
 
     return normalized
 
 
-def normalize(weights):
+def normalize(w):
     """
     Normalizes a 1D or 2D array of log weights.
-    :param weights: The weights
-    :type weights: np.ndarray
-    :return:
+    :param w: The weights
+    :type w: np.ndarray
+    :return: Normalized weights
+    :rtype: np.ndarray
     """
 
-    if weights.ndim > 1:
-        return _matrix(weights)
+    if w.ndim > 1:
+        return _matrix(w)
 
-    return _vector(weights)
+    return _vector(w)

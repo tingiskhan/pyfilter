@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 from ..distributions.continuous import Distribution
 import copy
-from ..utils.utils import choose
+from ..utils.utils import choose, dot, expanddims
 from ..utils.resampling import multinomial, systematic
-from ..proposals.bootstrap import Bootstrap
+from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import Base, StateSpaceModel
 
 
@@ -43,13 +43,15 @@ def _overwriteparams(ts, particles):
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap, **kwargs):
+    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap(), **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param model: The state-space model to filter
         :type model: StateSpaceModel
         :param resampling: Which resampling method to use
-        :type resampling: function
+        :type resampling: callable
+        :param proposal: Which proposal to use
+        :type proposal: Proposal
         :param args:
         :param kwargs:
         """
@@ -69,7 +71,7 @@ class BaseFilter(object):
 
         self.saveall = saveall
         self._td = None
-        self._proposal = proposal(self._model, isinstance(particles, tuple))
+        self._proposal = proposal.set_model(self._model, isinstance(particles, tuple))
 
         if saveall:
             self.s_x = list()
@@ -114,16 +116,57 @@ class BaseFilter(object):
         """
         Filters the model for the observation `y`.
         :param y: The observation to filter on.
+        :type y: float|np.ndarray
         :return:
         """
 
         raise NotImplementedError()
 
+    def _calc_noise(self, y, x):
+        """
+        Calculates the residual given the observation `y` and state `x`.
+        :param y: The observation
+        :type y: np.ndarray
+        :param x: The state
+        :type y: np.ndarray
+        :return: The residual
+        :rtype: np.ndarray
+        """
+
+        mean = self._model.observable.mean(x)
+        scale = self._model.observable.scale(x)
+
+        if self._model.obs_ndim < 2:
+            return (y - mean) / scale
+
+        return dot(np.linalg.inv(scale.T).T, (expanddims(y, mean.ndim) - mean))
+
+    def _save_mean_and_noise(self, y, x, normalized):
+        """
+        Saves the residual given the observation `y` and state `x`.
+        :param y: The observation
+        :type y: np.ndarray
+        :param x: The state
+        :type y: np.ndarray
+        :param normalized: The normalized weights for weighting
+        :type normalized: np.ndarray
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        rescaled = self._calc_noise(y, x)
+
+        self.s_n.append(np.sum(rescaled * normalized, axis=-1))
+        self.s_mx.append(np.sum(x * normalized, axis=-1))
+
+        return self
+
     def longfilter(self, data):
         """
         Filters the data for the entire data set.
         :param data: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         if isinstance(data, pd.DataFrame):
@@ -157,22 +200,22 @@ class BaseFilter(object):
 
         return self.s_n
 
-    def predict(self, steps, **kwargs):
+    def predict(self, steps):
         """
         Predicts `steps` ahead using the latest available information.
         :param steps: The number of steps forward to predict
         :type steps: int
-        :param kwargs: kwargs to pass to self._model
         :return: 
         """
-        x, y = self._model.sample(steps+1, x_s=self._old_x, **kwargs)
+        x, y = self._model.sample(steps+1, x_s=self._old_x)
 
         return x[1:], y[1:]
 
     def copy(self):
         """
         Returns a copy of itself.
-        :return: self
+        :return: Copy of self
+        :rtype: BaseFilter
         """
 
         return copy.deepcopy(self)
@@ -181,7 +224,8 @@ class BaseFilter(object):
         """
         Resamples the particles along the first axis.
         :param indices: The indices to choose
-        :return: 
+        :return: Self
+        :rtype: BaseFilter
         """
 
         self._old_x = choose(self._old_x, indices)
@@ -197,7 +241,8 @@ class BaseFilter(object):
         """
         Resets the filter.
         :param particles: Size of filter to reset.
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         self._particles = particles if particles is not None else self._particles
@@ -220,7 +265,8 @@ class BaseFilter(object):
         :type indices: np.ndarray
         :param newfilter: The new filter to exchange with.
         :type newfilter: BaseFilter
-        :return:
+        :return: Self
+        :rtype: BaseFilter
         """
 
         # ===== Exchange parameters ===== #

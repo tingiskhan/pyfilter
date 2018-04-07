@@ -3,22 +3,36 @@ from ..utils.stategradient import StateGradient, NumericalStateGradient
 
 
 class Proposal(object):
-    def __init__(self, model, nested=False):
+    def __init__(self, *args, **kwargs):
         """
         Defines a proposal object for how to draw the particles.
+        :param args: Any arguments passed to the proposal
+        :param kwargs: Any kwargs passed to the proposal
+        """
+
+        self._model = None
+        self._kernel = None
+        self._nested = None
+
+        self._meaner = lambda x: x
+        self._sg = None
+
+    def set_model(self, model, nested=False):
+        """
+        Sets the model and all required attributes.
         :param model: The model to ues
         :type model: StateSpaceModel
         :param nested: A boolean for specifying if the algorithm is running nested PFs
         :type nested: bool
+        :return: Self
+        :rtype: Proposal
         """
 
         self._model = model
-        self._kernel = None
         self._nested = nested
-
-        self._meaner = lambda x: x
-
         self._sg = NumericalStateGradient(self._model)
+
+        return self
 
     def draw(self, y, x, size=None, *args, **kwargs):
         """

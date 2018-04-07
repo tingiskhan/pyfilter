@@ -5,6 +5,10 @@ from ..utils.utils import dot, customcholesky
 
 
 class Linearized(Proposal):
+    """
+    Implements the Linearized proposal from "On sequential Monte Carlo sampling methods for Bayesian filtering" by
+    Doucet et al.
+    """
     def draw(self, y, x, size=None, *args, **kwargs):
         x = self._meaner(x)
         t_x = self._model.propagate_apf(x)
@@ -21,8 +25,14 @@ class Linearized(Proposal):
     def _get_mode_variance(self, y, tx, x):
         """
         Gets the first and second order derivatives.
-        :param tx:
-        :return:
+        :param y: The current observation to linearize around
+        :type y: np.ndarray|float|int
+        :param tx: The mean of the next state observation
+        :type tx: np.ndarray|float|int
+        :param x: The previous observation
+        :type x: np.ndarray|float|int
+        :return: The mode and negative hessian
+        :rtype: tuple of np.ndarray|tuple of float
         """
 
         mode = tx
@@ -40,7 +50,7 @@ class Linearized(Proposal):
 
             diff = np.abs(mode - oldmode)
             if np.all(diff < 1e-3) or iters > 3:
-                break
+                converged = True
 
             iters += 1
             oldmode = mode.copy()
