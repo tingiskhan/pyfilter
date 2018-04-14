@@ -20,6 +20,8 @@ def _get(x, y):
 
 
 class Distribution(object):
+    ndim = None
+
     def logpdf(self, *args, **kwargs):
         """
         Implements the logarithm of the PDF.
