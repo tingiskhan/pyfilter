@@ -14,7 +14,7 @@ class Base(object):
         :param theta: The parameters governing the dynamics
         :type theta: tuple of Distribution|tuple of np.ndarray|tuple of float|tuple of int
         :param noise: The noise governing the noise process
-        :type noise: tuple of Distribution
+        :type noise: (Distribution, Distribution)
         :param q: The correlation of the noise processes
         :type q: numpy.ndarray
         """
@@ -62,6 +62,17 @@ class Base(object):
 
         return resizer(self.g0(*self.theta))
 
+    def i_weight(self, x):
+        """
+        Weights the process of the initial state.
+        :param x: The state at `x_0`.
+        :type x: np.ndarray|float|int
+        :return: The log-weights
+        :rtype: np.ndarray
+        """
+
+        return self.noise0.logpdf(x)
+
     def mean(self, x, params=None):
         """
         Calculates the mean of the process conditional on the previous state and current parameters.
@@ -70,7 +81,7 @@ class Base(object):
         :param params: Used for overriding the parameters
         :type params: tuple of np.ndarray|float|int
         :return: The mean
-        :rtype: np.ndarray
+        :rtype: np.ndarray|float
         """
 
         return resizer(self.f(x, *(params or self.theta)))
@@ -83,7 +94,7 @@ class Base(object):
         :param params: Used for overriding the parameters
         :type params: tuple of np.ndarray|float|int
         :return: The scale
-        :rtype: np.ndarray|float|int
+        :rtype: np.ndarray|float
         """
 
         return resizer(self.g(x, *(params or self.theta)))
@@ -98,7 +109,8 @@ class Base(object):
         :type x: np.ndarray|float|int
         :param params: Used of overriding the parameters
         :type params: tuple of np.ndarray|float|int
-        :return:
+        :return: The log-weights
+        :rtype: np.ndarray|float
         """
 
         return self.noise.logpdf(y, loc=self.mean(x, params=params), scale=self.scale(x, params=params))
