@@ -95,7 +95,7 @@ class Base(object):
         :param y: The value at x_t
         :type y: np.ndarray|float|int
         :param x: The value at x_{t-1}
-        :type y: np.ndarray|float|int
+        :type x: np.ndarray|float|int
         :param params: Used of overriding the parameters
         :type params: tuple of np.ndarray|float|int
         :return:
