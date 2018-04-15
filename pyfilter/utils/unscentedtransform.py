@@ -210,6 +210,16 @@ class UnscentedTransform(object):
 
         return self._mean[self._sslc]
 
+    @xmean.setter
+    def xmean(self, x):
+        """
+        Sets the mean of the latest state.
+        :param x: The mean state to use for overriding
+        :type x: np.ndarray
+        """
+
+        self._mean[self._sslc] = x
+
     @property
     def xcov(self):
         """
@@ -219,6 +229,16 @@ class UnscentedTransform(object):
         """
 
         return self._cov[self._sslc, self._sslc]
+
+    @xcov.setter
+    def xcov(self, x):
+        """
+        Sets the covariance of the latest state
+        :param x: The state covariance to use for overriding
+        :type x: np.ndarray
+        """
+
+        self._cov[self._sslc, self._sslc] = x
 
     @property
     def ymean(self):
