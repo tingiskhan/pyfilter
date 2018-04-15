@@ -132,6 +132,9 @@ class UnscentedTransform(object):
 
         # ==== Define empty arrays ===== #
 
+        if not isinstance(x, np.ndarray):
+            x = np.array(x)
+
         parts = x.shape[1:] if self._model.hidden_ndim > 1 else x.shape
 
         self._mean = np.zeros((self._ndim, *parts))
