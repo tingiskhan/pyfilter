@@ -186,7 +186,7 @@ class UnscentedTransform(object):
 
         return self._sps
 
-    def propagate_sps(self):
+    def propagate_sps(self, only_x=False):
         """
         Propagate the Sigma points through the given process.
         :return: Sigma points of x and y
@@ -196,6 +196,9 @@ class UnscentedTransform(object):
         sps = self.get_sps()
 
         spx = _propagate_sps(sps[self._sslc], sps[self._hslc], self._model.hidden)
+        if only_x:
+            return spx
+
         spy = _propagate_sps(spx, sps[self._oslc], self._model.observable)
 
         return spx, spy
