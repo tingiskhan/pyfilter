@@ -27,7 +27,7 @@ class KalmanLaplace(UKF):
         m, c = _get_meancov(spx, self._ut._wm, self._ut._wc)
 
         if self.ssm.hidden_ndim < 2:
-            dist = Normal(m, np.sqrt(c))
+            dist = Normal(m[0], np.sqrt(c[0, 0]))
         else:
             dist = MultivariateNormal(m, customcholesky(c))
 
