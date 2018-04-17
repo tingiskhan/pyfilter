@@ -12,22 +12,29 @@ class KalmanLaplace(UKF):
         return self
 
     # TODO: Tidy up and fix stuff
-    def filter(self, y):
+
+    def _get_problem(self, y):
+        """
+        Constructs the optimization problem.
+        :return: Start position and function(s) to minimize.
+        :rtype: (np.ndarray, callable)
+        """
+
         if self._old_x is None:
-            func = lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x))
-            start = self.ssm.hidden.i_mean()
+            return self.ssm.hidden.i_mean(), lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x))
+
+        spx = self._ut.propagate_sps(only_x=True)
+        m, c = _get_meancov(spx, self._ut._wm, self._ut._wc)
+
+        if self.ssm.hidden_ndim < 2:
+            dist = Normal(m, np.sqrt(c))
         else:
-            spx = self._ut.propagate_sps(only_x=True)
+            dist = MultivariateNormal(m, customcholesky(c))
 
-            m, c = _get_meancov(spx, self._ut._wm, self._ut._wc)
+        return m, lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x))
 
-            if self.ssm.hidden_ndim < 2:
-                dist = Normal(m, np.sqrt(c))
-            else:
-                dist = MultivariateNormal(m, customcholesky(c))
-
-            func = lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x))
-            start = m
+    def filter(self, y):
+        start, func = self._get_problem(y)
 
         minimzed = minimize(func, start)
 
@@ -39,8 +46,7 @@ class KalmanLaplace(UKF):
 
         self.s_mx.append(minimzed.x)
         # TODO: Fix this
-        # self.s_l.append(kernel.logpdf(y))
-
+        self.s_l.append(self.ssm.weight(y, self._old_x))
         self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
 
         return self
