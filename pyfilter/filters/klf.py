@@ -1,7 +1,7 @@
 from .ukf import UKF
 from ..utils.unscentedtransform import _get_meancov
 from ..utils.utils import customcholesky
-from scipy.optimize import minimize
+from scipy.optimize import minimize, OptimizeResult
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
 
@@ -13,15 +13,15 @@ class KalmanLaplace(UKF):
 
     # TODO: Tidy up and fix stuff
 
-    def _get_problem(self, y):
+    def _get_x_map(self, y):
         """
-        Constructs the optimization problem.
+        Constructs and performs the MAP optimization of the state variable.
         :return: Start position and function(s) to minimize.
-        :rtype: (np.ndarray, callable)
+        :rtype: OptimizeResult
         """
 
         if self._old_x is None:
-            return self.ssm.hidden.i_mean(), lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x))
+            return minimize(lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x)), self.ssm.hidden.i_mean())
 
         spx = self._ut.propagate_sps(only_x=True)
         m, c = _get_meancov(spx, self._ut._wm, self._ut._wc)
@@ -31,20 +31,18 @@ class KalmanLaplace(UKF):
         else:
             dist = MultivariateNormal(m, customcholesky(c))
 
-        return m, lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x))
+        return minimize(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m)
 
     def filter(self, y):
-        start, func = self._get_problem(y)
-
-        minimzed = minimize(func, start)
+        minimized = self._get_x_map(y)
 
         if self._old_x is None:
-            self._ut.initialize(minimzed.x)
+            self._ut.initialize(minimized.x)
 
-        self._ut.xmean = self._old_x = minimzed.x.copy()
-        self._ut.xcov = minimzed.hess_inv.copy()
+        self._ut.xmean = self._old_x = minimized.x.copy()
+        self._ut.xcov = minimized.hess_inv.copy()
 
-        self.s_mx.append(minimzed.x)
+        self.s_mx.append(minimized.x)
         # TODO: Fix this
         self.s_l.append(self.ssm.weight(y, self._old_x))
         self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
