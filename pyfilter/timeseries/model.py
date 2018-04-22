@@ -11,7 +11,7 @@ def _get_params(parameters):
     :rtype: tuple of int
     """
 
-    return tuple(i for i, p in enumerate(parameters) if isinstance(p, Distribution))
+    return list(i for i, p in enumerate(parameters) if isinstance(p, Distribution))
 
 
 class StateSpaceModel(object):
