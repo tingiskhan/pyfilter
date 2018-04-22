@@ -59,7 +59,8 @@ class Distribution(object):
     def opt_bounds(self, offset=1e-8):
         """
         Returns optimization bounds, i.e. actual bounds offset with `offset`.
-        :param offset:
+        :param offset: The offset to use
+        :type offset: float
         :return:
         """
 
