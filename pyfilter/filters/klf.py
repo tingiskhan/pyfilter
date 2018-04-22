@@ -4,6 +4,7 @@ from ..utils.utils import customcholesky
 from scipy.optimize import minimize, OptimizeResult
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
+from scipy import stats
 
 
 class KalmanLaplace(UKF):
@@ -60,7 +61,29 @@ class KalmanLaplace(UKF):
         return self._save(y, optstate)
 
 
+def _define_pdf(params, scale=1e-3):
+    """
+    Helper function for creating the PDF.
+    :param params: The parameters to use for defining the distribution
+    :type params: (np.ndarray, Distribution)
+    :return: A truncated normal distribution
+    :rtype: stats.truncnorm
+    """
+
+    mean = params[0]
+    std = params[1].std() * scale
+
+    a = (params[1].bounds()[0] - mean) / std
+    b = (params[1].bounds()[1] - mean) / std
+
+    return stats.truncnorm(a, b, mean, std)
+
+
 class KalmanLaplaceParameters(KalmanLaplace):
+    """
+    Implements a Kalman-Laplace filter targeting the parameters as well as the state, using artificial dynamics for the
+    parameters.
+    """
     def _params(self, x):
         """
         Constructs the parameter space
@@ -112,15 +135,23 @@ class KalmanLaplaceParameters(KalmanLaplace):
 
             return minimize(i_func, ostart + hstart, bounds=obsbounds + hidbounds)
 
-        # TODO: Fix such that we can perform online optimization. Requires defining artificial dynamics for parameters
+        hdynamics, odynamics = self.ssm.p_map(_define_pdf)
 
-        return
+        def s_func(p):
+            copied = self._get_copy(p)
+
+            dynprob = sum(d.logpdf(px) for d, px in zip(odynamics + hdynamics, p.tolist()))
+
+            return -(copied.weight(y, x) + copied.h_weight(x, self._old_x) + dynprob)
+
+        return minimize(s_func, ostart + hstart, bounds=obsbounds + hidbounds)
 
     def filter(self, y):
         optstate = self._get_x_map(y)
         params = self._get_p_map(y, optstate.x)
 
-        # TODO: Fix overwriting of parameters
+        self.ssm.observable.theta = tuple(params.x[:len(self.ssm.ind_obsparams)])
+        self.ssm.hidden.theta = tuple(params.x[len(self.ssm.ind_obsparams):])
 
         return self._save(y, optstate)
 
