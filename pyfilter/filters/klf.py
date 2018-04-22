@@ -16,7 +16,7 @@ class KalmanLaplace(UKF):
     def _get_x_map(self, y):
         """
         Constructs and performs the MAP optimization of the state variable.
-        :return: Start position and function(s) to minimize.
+        :return: The optimization results.
         :rtype: OptimizeResult
         """
 
@@ -48,3 +48,17 @@ class KalmanLaplace(UKF):
         self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
 
         return self
+
+
+class KalmanLaplaceParameters(KalmanLaplace):
+
+    def _opt_params(self, y, x):
+        """
+        Constructs and performs MAP optimization of the parameters given optimal state.
+        :return: The optimization results.
+        :rtype: OptimizeResult
+        """
+
+    def filter(self, y):
+        optstate = self._get_x_map(y)
+
