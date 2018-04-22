@@ -2,6 +2,18 @@ import copy
 from ..distributions.continuous import Distribution
 
 
+def _get_params(parameters):
+    """
+    Returns the indices of the tunable parameters of `process`.
+    :param parameters: The parameters
+    :type parameters: tuple of Distribution
+    :return: The indices
+    :rtype: tuple of int
+    """
+
+    return tuple(i for i, p in enumerate(parameters) if isinstance(p, Distribution))
+
+
 class StateSpaceModel(object):
     def __init__(self, hidden, observable):
         """
@@ -14,6 +26,24 @@ class StateSpaceModel(object):
 
         self.hidden = hidden
         self.observable = observable
+
+    @property
+    def ind_hiddenparams(self):
+        """
+        Returns the indices of the hidden parameters able to tune.
+        :rtype: tuple of int
+        """
+
+        return _get_params(self.hidden.priors)
+
+    @property
+    def ind_obsparams(self):
+        """
+        Returns the indices of the hidden parameters able to tune.
+        :rtype: tuple of int
+        """
+
+        return _get_params(self.observable.priors)
 
     @property
     def hidden_ndim(self):
@@ -57,31 +87,35 @@ class StateSpaceModel(object):
 
         return self.hidden.propagate(x)
 
-    def weight(self, y, x):
+    def weight(self, y, x, params=None):
         """
         Weights the model using the current observation `y` and the current state `x`.
         :param y: The current observation
         :type y: np.ndarray|float|int
         :param x: The current state
         :type x: np.ndarray|float|int
+        :param params: Whether to override the current set of parameters
+        :type params: tuple of np.ndarray|tuple of float|tuple of int
         :return: The corresponding log-weights
         :rtype: np.ndarray|float|int
         """
 
-        return self.observable.weight(y, x)
+        return self.observable.weight(y, x, params)
 
-    def h_weight(self, y, x):
+    def h_weight(self, y, x, params=None):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
         :param y: The current hidden state
         :type y: np.ndarray|float|int
         :param x: The previous hidden state
         :type x: np.ndarray|float|int
+        :param params: Whether to override the current set of parameters
+        :type params: tuple of np.ndarray|tuple of float|tuple of int
         :return: The corresponding log-weights
         :rtype: np.ndarray|float|int
         """
 
-        return self.hidden.weight(y, x)
+        return self.hidden.weight(y, x, params)
 
     def sample(self, steps, x_s=None):
         """
