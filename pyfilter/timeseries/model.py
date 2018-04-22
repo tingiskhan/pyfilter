@@ -26,6 +26,16 @@ class StateSpaceModel(object):
 
         self.hidden = hidden
         self.observable = observable
+        self._optbounds = tuple(p.opt_bounds() for p in observable.priors), tuple(p.opt_bounds() for p in hidden.priors)
+
+    @property
+    def optbounds(self):
+        """
+        Returns the parameter bounds
+        :rtype: tuple of tuple
+        """
+
+        return self._optbounds
 
     @property
     def ind_hiddenparams(self):
