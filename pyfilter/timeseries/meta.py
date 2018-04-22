@@ -44,34 +44,40 @@ class Base(object):
         """
         return self._o_theta
 
-    def i_mean(self):
+    def i_mean(self, params=None):
         """
         Calculates the mean of the initial distribution.
+        :param params: Used for overriding the parameters
+        :type params: tuple of np.ndarray|float|int
         :return: The mean of the initial distribution
         :rtype: np.ndarray|float|int
         """
 
-        return resizer(self.f0(*self.theta))
+        return resizer(self.f0(*(params or self.theta)))
 
-    def i_scale(self):
+    def i_scale(self, params=None):
         """
         Calculates the scale of the initial distribution.
+        :param params: Used for overriding the parameters
+        :type params: tuple of np.ndarray|float|int
         :return: The scale of the initial distribution
         :rtype: np.ndarray|float|int
         """
 
-        return resizer(self.g0(*self.theta))
+        return resizer(self.g0(*(params or self.theta)))
 
-    def i_weight(self, x):
+    def i_weight(self, x, params=None):
         """
         Weights the process of the initial state.
         :param x: The state at `x_0`.
         :type x: np.ndarray|float|int
+        :param params: Used for overriding the parameters
+        :type params: tuple of np.ndarray|float|int
         :return: The log-weights
         :rtype: np.ndarray
         """
 
-        return self.noise0.logpdf(x)
+        return self.noise0.logpdf(x, loc=self.i_mean(params), scale=self.i_scale(params))
 
     def mean(self, x, params=None):
         """
