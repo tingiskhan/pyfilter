@@ -56,6 +56,17 @@ class Distribution(object):
 
         raise NotImplementedError()
 
+    def opt_bounds(self, offset=1e-8):
+        """
+        Returns optimization bounds, i.e. actual bounds offset with `offset`.
+        :param offset:
+        :return:
+        """
+
+        low, up = self.bounds()
+
+        return low + offset, up - offset
+
 
 class OneDimensional(Distribution):
     ndim = 1
