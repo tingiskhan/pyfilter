@@ -244,3 +244,125 @@ def flatten(iterable):
 
     return out
 
+
+def approx_fprime(x, f, epsilon):
+    """
+    Wrapper for scipy's `approx_fprime`. Handles vectorized functions.
+    :param x: The point at which to approximate the gradient
+    :type x: np.ndarray
+    :param f: The function to approximate
+    :type f: callable
+    :param epsilon: The discretization to use
+    :type epsilon: float
+    :return: The gradient
+    :rtype: np.ndarray
+    """
+
+    f0 = f(x)
+
+    grad = np.zeros_like(x)
+    ei = np.zeros_like(x)
+
+    for k in range(x.shape[0]):
+        ei[k] = 1.
+        d = epsilon * ei
+        grad[k] = (f(x + d) - f0) / d[k]
+        ei[k] = 0.
+
+    return grad
+
+
+def line_search(f, x, p, grad, a=10):
+    """
+    Implements a line-search to find the scalar such that a = argmin f(x + u * p)
+    :param f: The function to minimize
+    :type f: callable
+    :param x: Point at which to evaluate function
+    :type x: np.ndarray
+    :param p: The direction, basically the gradient
+    :type p: np.ndarray
+    :param grad: The gradient
+    :type grad: np.ndarray
+    :param a: The starting value for a
+    :type a: float
+    :return: The constant(s) that minimize the the function in doc
+    :rtype: np.ndarray
+    """
+    c = tau = 0.5
+
+    m = np.einsum('i...,j...->...', p, grad)
+    t = -c * m
+
+    fx = f(x)
+
+    a = a * np.ones_like(x)
+
+    inds = fx - f(x + a * p) >= a * t
+    while not inds.all():
+        a[~inds] *= tau
+
+        inds = fx - f(x + a * p) >= a * t
+
+    return a
+
+
+def bfgs(f, x, epsilon=1e-6, tol=1e-2, m=0):
+    """
+    Implements a vectorized version of the BFGS algorithm.
+    :param f: The function minimize
+    :type f: callable
+    :param x: Starting point
+    :type x: np.ndarray
+    :param epsilon: The discretization to use for numerically estimated derivatives
+    :type epsilon: float
+    :param tol: The tolerance
+    :type tol: float
+    :return:
+    """
+
+    if not isinstance(x, np.ndarray):
+        x = np.array([x])
+
+    hessinv = np.zeros((x.shape[0], *x.shape))
+    hessinv[np.diag_indices(x.shape[0])] = 1
+
+    eye = hessinv.copy()
+
+    converged = False
+
+    xold = x.copy()
+    gradold = approx_fprime(xold, f, epsilon)
+    while not converged:
+        # TODO: figure out a way to only optimize those that haven't converged. Causing errors
+        p = dot(hessinv, -gradold)
+        p /= np.sqrt((p ** 2).sum(axis=0))
+
+        # TODO: Fix this
+        a = line_search(f, xold, p, gradold)
+
+        s = a * p
+        xnew = xold + s
+
+        gradnew = approx_fprime(xnew, f, epsilon)
+        y = gradnew - gradold
+
+        temp = np.einsum('i...,j...->...', y, s)
+        t1 = eye - outerv(s, y) / temp
+        t2 = eye - outerv(y, s) / temp
+        t3 = outerv(s, s) / temp
+
+        hessinv = mdot(mdot(t1, hessinv), t2) + t3
+
+        if (np.sqrt((gradnew ** 2).sum(axis=0)) < tol).all().mean() > 0.95:
+            converged = True
+
+        xold = xnew.copy()
+        gradold = gradnew.copy()
+
+    return OptimizeResult(x, hessinv)
+
+
+class OptimizeResult(object):
+    def __init__(self, x, hessinv):
+        self.x = x
+        self.hess_inv = hessinv
