@@ -272,7 +272,7 @@ def approx_fprime(x, f, epsilon):
     return grad
 
 
-def line_search(f, x, p, grad, a=10):
+def line_search(f, x, p, grad, a=1):
     """
     Implements a line-search to find the scalar such that a = argmin f(x + u * p)
     :param f: The function to minimize
@@ -306,7 +306,7 @@ def line_search(f, x, p, grad, a=10):
     return a
 
 
-def bfgs(f, x, epsilon=1e-6, tol=1e-2, m=0):
+def bfgs(f, x, epsilon=1e-8, tol=1e-2):
     """
     Implements a vectorized version of the BFGS algorithm.
     :param f: The function minimize
@@ -359,7 +359,7 @@ def bfgs(f, x, epsilon=1e-6, tol=1e-2, m=0):
         xold = xnew.copy()
         gradold = gradnew.copy()
 
-    return OptimizeResult(x, hessinv)
+    return OptimizeResult(xnew, hessinv)
 
 
 class OptimizeResult(object):
