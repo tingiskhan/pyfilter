@@ -329,7 +329,7 @@ def bfgs(f, x, epsilon=1e-8, tol=1e-2):
     eye = hessinv.copy()
 
     converged = False
-
+    # TODO: Write tests for function
     xold = x.copy()
     gradold = approx_fprime(xold, f, epsilon)
     while not converged:
