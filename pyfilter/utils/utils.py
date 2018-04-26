@@ -272,7 +272,7 @@ def approx_fprime(x, f, epsilon):
     return grad
 
 
-def line_search(f, x, p, grad, a=1):
+def line_search(f, x, p, grad, a=1e2, amin=1e-8):
     """
     Implements a line-search to find the scalar such that a = argmin f(x + u * p)
     :param f: The function to minimize
@@ -285,28 +285,35 @@ def line_search(f, x, p, grad, a=1):
     :type grad: np.ndarray
     :param a: The starting value for a
     :type a: float
+    :param amin: The minimum value a is allowed to assume
+    :type amin: float
     :return: The constant(s) that minimize the the function in doc
     :rtype: np.ndarray
     """
     c = tau = 0.5
 
-    m = np.einsum('i...,j...->...', p, grad)
+    m = (p * grad).sum(axis=0)
     t = -c * m
 
     fx = f(x)
 
-    a = a * np.ones_like(x)
+    a = a * np.ones(x.shape[1:])
+    if isinstance(a, np.ndarray):
+        a = a[None, :]
 
     inds = fx - f(x + a * p) >= a * t
     while not inds.all():
-        a[~inds] *= tau
+        if a.ndim > 0:
+            a[~inds] *= tau
+        else:
+            a *= tau
 
-        inds = fx - f(x + a * p) >= a * t
+        inds = (fx - f(x + a * p) >= a * t) | (a <= amin)
 
     return a
 
 
-def bfgs(f, x, epsilon=1e-8, tol=1e-2):
+def bfgs(f, x, epsilon=1e-7, tol=1e-2):
     """
     Implements a vectorized version of the BFGS algorithm.
     :param f: The function minimize
@@ -319,25 +326,27 @@ def bfgs(f, x, epsilon=1e-8, tol=1e-2):
     :type tol: float
     :return:
     """
-
     if not isinstance(x, np.ndarray):
-        x = np.array([x])
+        x = np.array([x], dtype=float)
 
     hessinv = np.zeros((x.shape[0], *x.shape))
     hessinv[np.diag_indices(x.shape[0])] = 1
 
     eye = hessinv.copy()
 
-    converged = False
-    # TODO: Write tests for function
+    converged = np.zeros_like(x, dtype=bool)
+
     xold = x.copy()
     gradold = approx_fprime(xold, f, epsilon)
-    while not converged:
+    while converged.mean() < 0.95:
         # TODO: figure out a way to only optimize those that haven't converged. Causing errors
         p = dot(hessinv, -gradold)
-        p /= np.sqrt((p ** 2).sum(axis=0))
 
-        # TODO: Fix this
+        with np.errstate(divide='ignore'):
+            p = p / np.sqrt((p ** 2).sum(axis=0))
+
+        p[np.isnan(p)] = 0.
+        # TODO: Set a as input to use it recursively
         a = line_search(f, xold, p, gradold)
 
         s = a * p
@@ -346,15 +355,24 @@ def bfgs(f, x, epsilon=1e-8, tol=1e-2):
         gradnew = approx_fprime(xnew, f, epsilon)
         y = gradnew - gradold
 
-        temp = np.einsum('i...,j...->...', y, s)
-        t1 = eye - outerv(s, y) / temp
-        t2 = eye - outerv(y, s) / temp
-        t3 = outerv(s, s) / temp
+        with np.errstate(divide='raise'):
+            try:
+                tmp = (y * s).sum(axis=0)
+                rhok = 1 / tmp
+            except FloatingPointError:
+                if isinstance(tmp, np.ndarray):
+                    tmp[tmp == 0.] = 1e-3
+                else:
+                    tmp = 1e-3
+                rhok = 1. / tmp
+
+        t1 = eye - s[:, None] * y[None, :] * rhok
+        t2 = eye - y[:, None] * s[None, :] * rhok
+        t3 = s[:, None] * s[None, :] * rhok
 
         hessinv = mdot(mdot(t1, hessinv), t2) + t3
 
-        if (np.sqrt((gradnew ** 2).sum(axis=0)) < tol).all().mean() > 0.95:
-            converged = True
+        converged = np.sqrt((gradnew ** 2).sum(axis=0)) < tol
 
         xold = xnew.copy()
         gradold = gradnew.copy()
