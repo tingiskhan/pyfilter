@@ -3,9 +3,23 @@ from ..utils.unscentedtransform import _get_meancov
 from ..utils.utils import customcholesky, bfgs
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
+from scipy.optimize import minimize
 
 
 class KalmanLaplace(UKF):
+    def __init__(self, model, *args, **kwargs):
+        """
+        Implements the Kalman-Laplace filter engineered by Paul Bui Qang and Christian Musso. Found here:
+            https://ieeexplore.ieee.org/abstract/document/7266743/
+        :param model: See Base
+        :param args: See UKF
+        :param kwargs: See UKF
+        """
+
+        super().__init__(model, *args, **kwargs)
+
+        self._opt = None
+
     def initialize(self):
         self._initialize_parameters()
         return self
@@ -22,10 +36,12 @@ class KalmanLaplace(UKF):
         if self._old_x is None:
             start = self.ssm.hidden.i_mean() if self._particles is None else self.ssm.initialize(size=self._p_particles)
 
+            self._opt = minimize if self._particles is None else bfgs
+
             if self.ssm.hidden.ndim < 2 and isinstance(start, np.ndarray):
                 start = start[None]
 
-            return bfgs(lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x)), start)
+            return self._opt(lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x)), start)
 
         spx = self._ut.propagate_sps(only_x=True)
         m, c = _get_meancov(spx, self._ut._wm, self._ut._wc)
@@ -35,7 +51,7 @@ class KalmanLaplace(UKF):
         else:
             dist = MultivariateNormal(m, customcholesky(c))
 
-        return bfgs(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m)
+        return self._opt(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m)
 
     def _save(self, y, optstate):
         """
