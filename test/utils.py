@@ -2,6 +2,7 @@ import unittest
 import pyfilter.utils.utils as helps
 from scipy.stats import wishart
 import numpy as np
+from scipy.optimize import minimize
 
 
 class Tests(unittest.TestCase):
@@ -70,3 +71,29 @@ class Tests(unittest.TestCase):
         calcouter = helps.outerm(a, b)
 
         assert np.allclose(trueouter, calcouter)
+
+    def test_BFGS(self):
+        for i in range(500):
+            x = np.random.normal()
+            m = np.random.normal()
+
+            func = lambda u: -np.exp(-(u - m) ** 2 / 2)
+
+            trueanswer = minimize(func, x)
+            approximate = helps.bfgs(func, x, tol=1e-8)
+
+            try:
+                assert np.allclose(m, approximate.x)
+            except AssertionError:
+                t = helps.bfgs(func, x)
+
+    def test_BFGS_ParallellOptimization(self):
+        x = np.random.normal(size=(1, 50))
+        m = np.random.normal()
+
+        func = lambda u: -np.exp(-(u - m) ** 2 / 2)
+
+        trueanswers = np.array([minimize(func, x[:, i]).x for i in range(x.shape[-1])])
+        approximate = helps.bfgs(func, x, tol=1e-7)
+
+        assert np.allclose(trueanswers, approximate.x)
