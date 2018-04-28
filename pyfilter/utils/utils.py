@@ -352,7 +352,7 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2, maxiter=50):
             p = p / np.sqrt((p ** 2).sum(axis=0))
 
         p[np.isnan(p)] = 0.
-        # TODO: Set a as input to use it recursively
+        # TODO: Seems as like it can take a too big of a step - fix this
         a = line_search(f, xold, p, gradold, a=amax)
 
         s = a * p
