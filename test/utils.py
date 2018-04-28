@@ -82,10 +82,7 @@ class Tests(unittest.TestCase):
             trueanswer = minimize(func, x)
             approximate = helps.bfgs(func, x, tol=1e-8)
 
-            try:
-                assert np.allclose(m, approximate.x)
-            except AssertionError:
-                t = helps.bfgs(func, x)
+            assert (np.abs(m - approximate.x) < 1e-7)
 
     def test_BFGS_ParallellOptimization(self):
         x = np.random.normal(size=(1, 50))
