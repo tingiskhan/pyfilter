@@ -313,7 +313,7 @@ def line_search(f, x, p, grad, a=1e2, amin=1e-8):
     return a
 
 
-def bfgs(f, x, epsilon=1e-7, tol=1e-2):
+def bfgs(f, x, epsilon=1e-7, tol=1e-2, maxiter=50):
     """
     Implements a vectorized version of the BFGS algorithm.
     :param f: The function minimize
@@ -324,7 +324,10 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2):
     :type epsilon: float
     :param tol: The tolerance
     :type tol: float
-    :return:
+    :param maxiter: The maximum number of iterations
+    :type maxiter: int
+    :return: The optimization results
+    :rtype: OptimizeResult
     """
     if not isinstance(x, np.ndarray):
         x = np.array([x], dtype=float)
@@ -338,7 +341,10 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2):
 
     xold = x.copy()
     gradold = approx_fprime(xold, f, epsilon)
-    while converged.mean() < 0.95:
+
+    amax = 1e2
+    iters = 0
+    while converged.mean() < 0.8 and iters < maxiter:
         # TODO: figure out a way to only optimize those that haven't converged. Causing errors
         p = dot(hessinv, -gradold)
 
@@ -347,7 +353,7 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2):
 
         p[np.isnan(p)] = 0.
         # TODO: Set a as input to use it recursively
-        a = line_search(f, xold, p, gradold)
+        a = line_search(f, xold, p, gradold, a=amax)
 
         s = a * p
         xnew = xold + s
@@ -376,6 +382,9 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2):
 
         xold = xnew.copy()
         gradold = gradnew.copy()
+
+        amax = a.max()
+        iters += 1
 
     return OptimizeResult(xnew, hessinv)
 
