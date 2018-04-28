@@ -344,7 +344,7 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2, maxiter=50):
 
     amax = 1e2
     iters = 0
-    while converged.mean() < 0.8 and iters < maxiter:
+    while converged.mean() < 0.95 and iters < maxiter:
         # TODO: figure out a way to only optimize those that haven't converged. Causing errors
         p = dot(hessinv, -gradold)
 
