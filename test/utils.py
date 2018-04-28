@@ -3,6 +3,7 @@ import pyfilter.utils.utils as helps
 from scipy.stats import wishart
 import numpy as np
 from scipy.optimize import minimize
+from time import time
 
 
 class Tests(unittest.TestCase):
@@ -85,12 +86,19 @@ class Tests(unittest.TestCase):
             assert (np.abs(m - approximate.x) < 1e-7)
 
     def test_BFGS_ParallellOptimization(self):
-        x = np.random.normal(size=(1, 50))
+        x = np.random.normal(size=(1, 50000))
         m = np.random.normal()
 
         func = lambda u: -np.exp(-(u - m) ** 2 / 2)
 
+        truestart = time()
         trueanswers = np.array([minimize(func, x[:, i]).x for i in range(x.shape[-1])])
-        approximate = helps.bfgs(func, x, tol=1e-7)
+        truetime = time() - truestart
 
-        assert np.allclose(trueanswers, approximate.x)
+        approxstart = time()
+        approximate = helps.bfgs(func, x, tol=1e-7)
+        approxtime = time() - approxstart
+
+        print('speedup: {:.2f}x'.format(truetime / approxtime))
+
+        assert (np.abs(approximate.x - m) < 1e-7).mean() > 0.95 and truetime / approxtime > 2
