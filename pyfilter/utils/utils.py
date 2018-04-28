@@ -290,7 +290,7 @@ def line_search(f, x, p, grad, a=1e2, amin=1e-8):
     :return: The constant(s) that minimize the the function in doc
     :rtype: np.ndarray
     """
-    c = tau = 0.5
+    c = tau = 0.75
 
     m = (p * grad).sum(axis=0)
     t = -c * m
@@ -383,7 +383,7 @@ def bfgs(f, x, epsilon=1e-7, tol=1e-2, maxiter=50):
         xold = xnew.copy()
         gradold = gradnew.copy()
 
-        amax = a.max()
+        amax = 2 * a.max()
         iters += 1
 
     return OptimizeResult(xnew, hessinv)
