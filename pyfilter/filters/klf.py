@@ -37,7 +37,7 @@ class KalmanLaplace(UKF):
         else:
             dist = MultivariateNormal(m, customcholesky(c))
 
-        return bfgs(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m[:, 0])
+        return bfgs(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m)
 
     def _save(self, y, optstate):
         """
