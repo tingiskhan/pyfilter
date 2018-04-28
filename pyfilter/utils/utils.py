@@ -207,7 +207,7 @@ def resizer(tup):
     :rtype: np.ndarray
     """
     # TODO: Speed up
-    if isinstance(tup, (int, float, np.ndarray)):
+    if isinstance(tup, (int, float, np.ndarray, np.integer, np.float)):
         return tup
 
     asarray = np.array(tup, dtype=object)
