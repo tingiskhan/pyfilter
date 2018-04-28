@@ -1,10 +1,8 @@
 from .ukf import UKF
 from ..utils.unscentedtransform import _get_meancov
 from ..utils.utils import customcholesky, bfgs
-from scipy.optimize import minimize, OptimizeResult
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
-from scipy import stats
 
 
 class KalmanLaplace(UKF):
@@ -18,7 +16,7 @@ class KalmanLaplace(UKF):
         """
         Constructs and performs the MAP optimization of the state variable.
         :return: The optimization results.
-        :rtype: OptimizeResult
+        :rtype: pyfilter.utils.utils.OptimizeResult
         """
 
         if self._old_x is None:
