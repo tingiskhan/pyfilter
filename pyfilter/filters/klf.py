@@ -64,8 +64,8 @@ class KalmanLaplace(UKF):
         if self._old_x is None:
             self._ut.initialize(optstate.x if self.ssm.hidden_ndim > 1 else optstate.x[0])
 
-        self._ut.xmean = self._old_x = optstate.x.copy()
-        self._ut.xcov = optstate.hess_inv.copy()
+        self._ut.xmean = self._old_x = optstate.x
+        self._ut.xcov = optstate.hess_inv
 
         self.s_mx.append(optstate.x)
         # TODO: Fix this
