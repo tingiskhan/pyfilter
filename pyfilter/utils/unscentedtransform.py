@@ -132,6 +132,9 @@ class UnscentedTransform(object):
 
         # ==== Define empty arrays ===== #
 
+        if not isinstance(x, np.ndarray):
+            x = np.array(x)
+
         parts = x.shape[1:] if self._model.hidden_ndim > 1 else x.shape
 
         self._mean = np.zeros((self._ndim, *parts))
@@ -183,7 +186,7 @@ class UnscentedTransform(object):
 
         return self._sps
 
-    def propagate_sps(self):
+    def propagate_sps(self, only_x=False):
         """
         Propagate the Sigma points through the given process.
         :return: Sigma points of x and y
@@ -193,6 +196,9 @@ class UnscentedTransform(object):
         sps = self.get_sps()
 
         spx = _propagate_sps(sps[self._sslc], sps[self._hslc], self._model.hidden)
+        if only_x:
+            return spx
+
         spy = _propagate_sps(spx, sps[self._oslc], self._model.observable)
 
         return spx, spy
@@ -207,6 +213,16 @@ class UnscentedTransform(object):
 
         return self._mean[self._sslc]
 
+    @xmean.setter
+    def xmean(self, x):
+        """
+        Sets the mean of the latest state.
+        :param x: The mean state to use for overriding
+        :type x: np.ndarray
+        """
+
+        self._mean[self._sslc] = x
+
     @property
     def xcov(self):
         """
@@ -216,6 +232,16 @@ class UnscentedTransform(object):
         """
 
         return self._cov[self._sslc, self._sslc]
+
+    @xcov.setter
+    def xcov(self, x):
+        """
+        Sets the covariance of the latest state
+        :param x: The state covariance to use for overriding
+        :type x: np.ndarray
+        """
+
+        self._cov[self._sslc, self._sslc] = x
 
     @property
     def ymean(self):
@@ -259,13 +285,11 @@ class UnscentedTransform(object):
 
         return txmean, txcov
 
-    def _get_m_and_p(self, y):
+    def get_meancov(self):
         """
-        Helper method for generating the mean and covariance.
-        :param y: The latest observation
-        :type y: float|np.ndarray
-        :return: The estimated mean and covariances of state and observation
-        :rtype: tuple of np.ndarray
+        Constructs the mean and covariance for the hidden and observable process respectively.
+        :return: The mean and covariance
+        :rtype: tuple
         """
 
         # ==== Propagate Sigma points ==== #
@@ -276,6 +300,19 @@ class UnscentedTransform(object):
 
         xmean, xcov = _get_meancov(spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(spy, self._wm, self._wc)
+
+        return (xmean, xcov, spx), (ymean, ycov, spy)
+
+    def _get_m_and_p(self, y):
+        """
+        Helper method for generating the mean and covariance.
+        :param y: The latest observation
+        :type y: float|np.ndarray
+        :return: The estimated mean and covariances of state and observation
+        :rtype: tuple of np.ndarray
+        """
+
+        (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
 

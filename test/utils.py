@@ -2,6 +2,8 @@ import unittest
 import pyfilter.utils.utils as helps
 from scipy.stats import wishart
 import numpy as np
+from scipy.optimize import minimize
+from time import time
 
 
 class Tests(unittest.TestCase):
@@ -70,3 +72,33 @@ class Tests(unittest.TestCase):
         calcouter = helps.outerm(a, b)
 
         assert np.allclose(trueouter, calcouter)
+
+    def test_BFGS(self):
+        for i in range(500):
+            x = np.random.normal()
+            m = np.random.normal()
+
+            func = lambda u: -np.exp(-(u - m) ** 2 / 2)
+
+            trueanswer = minimize(func, x)
+            approximate = helps.bfgs(func, x, tol=1e-8)
+
+            assert (np.abs(m - approximate.x) < 1e-7)
+
+    def test_BFGS_ParallellOptimization(self):
+        x = np.random.normal(size=(1, 50000))
+        m = np.random.normal()
+
+        func = lambda u: -np.exp(-(u - m) ** 2 / 2)
+
+        truestart = time()
+        trueanswers = np.array([minimize(func, x[:, i]).x for i in range(x.shape[-1])])
+        truetime = time() - truestart
+
+        approxstart = time()
+        approximate = helps.bfgs(func, x, tol=1e-7)
+        approxtime = time() - approxstart
+
+        print('speedup: {:.2f}x'.format(truetime / approxtime))
+
+        assert (np.abs(approximate.x - m) < 1e-7).mean() > 0.95 and truetime / approxtime > 2

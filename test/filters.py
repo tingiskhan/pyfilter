@@ -3,7 +3,7 @@ import numpy as np
 import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
-from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF
+from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
 from pyfilter.proposals import Linearized as Linz, Unscented
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
@@ -337,3 +337,23 @@ class Tests(unittest.TestCase):
         rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
         assert rmse < 0.05
+
+    def test_KLF(self):
+        x, y = self.mvnmodel.sample(500)
+
+        filt = KalmanLaplace(self.mvnmodel).initialize()
+
+        filt = filt.longfilter(y)
+
+        assert len(filt.s_mx) > 0
+
+        estimates = np.array(filt.filtermeans())
+
+        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1]], observation_matrices=[1, 2])
+        filterestimates = kf.filter(y)
+
+        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
+
+        logldiff = np.abs((kf.loglikelihood(y) - np.array(filt.s_l).sum()) / kf.loglikelihood(y))
+
+        assert rmse < 0.05 and logldiff < 0.01

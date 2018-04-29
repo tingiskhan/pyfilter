@@ -7,6 +7,7 @@ from .nessmc2 import NESSMC2
 from ..proposals.linearized import Linearized as Linz
 from .upf import UPF, GlobalUPF
 from .ukf import UKF
+from .klf import KalmanLaplace
 
 
 class Linearized(SISR):
