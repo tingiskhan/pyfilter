@@ -354,4 +354,6 @@ class Tests(unittest.TestCase):
 
         rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
 
-        assert rmse < 0.05
+        logldiff = np.abs((kf.loglikelihood(y) - np.array(filt.s_l).sum()) / kf.loglikelihood(y))
+
+        assert rmse < 0.05 and logldiff < 0.01
