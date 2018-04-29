@@ -285,13 +285,11 @@ class UnscentedTransform(object):
 
         return txmean, txcov
 
-    def _get_m_and_p(self, y):
+    def get_meancov(self):
         """
-        Helper method for generating the mean and covariance.
-        :param y: The latest observation
-        :type y: float|np.ndarray
-        :return: The estimated mean and covariances of state and observation
-        :rtype: tuple of np.ndarray
+        Constructs the mean and covariance for the hidden and observable process respectively.
+        :return: The mean and covariance
+        :rtype: tuple
         """
 
         # ==== Propagate Sigma points ==== #
@@ -302,6 +300,19 @@ class UnscentedTransform(object):
 
         xmean, xcov = _get_meancov(spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(spy, self._wm, self._wc)
+
+        return (xmean, xcov, spx), (ymean, ycov, spy)
+
+    def _get_m_and_p(self, y):
+        """
+        Helper method for generating the mean and covariance.
+        :param y: The latest observation
+        :type y: float|np.ndarray
+        :return: The estimated mean and covariances of state and observation
+        :rtype: tuple of np.ndarray
+        """
+
+        (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
 
