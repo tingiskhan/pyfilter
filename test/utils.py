@@ -86,7 +86,7 @@ class Tests(unittest.TestCase):
             assert (np.abs(m - approximate.x) < 1e-7)
 
     def test_BFGS_ParallellOptimization(self):
-        x = np.random.normal(size=(1, 50000))
+        x = np.random.normal(size=(1, 5000))
         m = np.random.normal()
 
         func = lambda u: -np.exp(-(u - m) ** 2 / 2)
@@ -99,6 +99,6 @@ class Tests(unittest.TestCase):
         approximate = helps.bfgs(func, x, tol=1e-7)
         approxtime = time() - approxstart
 
-        print('speedup: {:.2f}x'.format(truetime / approxtime))
+        print('naive: {:.3f}, parallel: {:.3f}, speedup: {:.2f}x'.format(truetime, approxtime, truetime / approxtime))
 
         assert (np.abs(approximate.x - m) < 1e-7).mean() > 0.95 and truetime / approxtime > 2
