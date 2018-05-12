@@ -66,9 +66,10 @@ def _mn_vector(w):
     :return: Resampled indices
     :rtype: np.ndarray
     """
-    normalized = normalize(w)
+    normalized = normalize(w).cumsum()
+    normalized[-1] = 1
 
-    return np.random.choice(w.size, w.size, p=normalized)
+    return np.searchsorted(normalized, np.random.uniform(0, 1, w.shape))
 
 
 def _mn_matrix(w):
@@ -80,12 +81,10 @@ def _mn_matrix(w):
     :rtype: np.ndarray
     """
 
-    out = np.empty_like(w, dtype=int)
+    normalized = normalize(w).cumsum(axis=-1)
+    normalized[:, -1] = 1
 
-    for i in range(w.shape[0]):
-        out[i] = _mn_vector(w[i])
-
-    return out
+    return searchsorted2d(normalized, np.random.uniform(0, 1, w.shape))
 
 
 def multinomial(w):
