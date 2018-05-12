@@ -18,11 +18,9 @@ def _matrix(weights):
 
     probs = (index_range + u) / n
 
-    normalized = normalize(weights)
-    cumsum = np.zeros((weights.shape[0], n + 1))
-    cumsum[:, 1:] = normalized.cumsum(axis=1)
+    cumsum = normalize(weights).cumsum(axis=-1)
 
-    return searchsorted2d(cumsum, probs).astype(int) - 1
+    return searchsorted2d(cumsum, probs).astype(int)
 
 
 def _vector(weights):
@@ -37,11 +35,9 @@ def _vector(weights):
     u = np.random.uniform()
     probs = (np.arange(n) + u) / n
 
-    cumsum = np.zeros(n + 1)
-    normalized = normalize(weights)
-    cumsum[1:] = normalized.cumsum()
+    cumsum = normalize(weights).cumsum()
 
-    return np.searchsorted(cumsum, probs).astype(int) - 1
+    return np.searchsorted(cumsum, probs).astype(int)
 
 
 def systematic(w):
