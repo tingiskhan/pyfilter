@@ -151,8 +151,11 @@ class SMC2(NESS):
 
         # ===== Check which to accept ===== #
 
-        u = np.log(np.random.uniform(size=quotient.size))
-        toaccept = u < quotient + plogquot[:, 0] + kernel[:, 0]
+        u = np.log(np.random.uniform(size=quotient.shape))
+        if plogquot.ndim > 1:
+            toaccept = u < quotient + plogquot[:, 0] + kernel[:, 0]
+        else:
+            toaccept = u < quotient + plogquot + kernel
 
         if self._disp:
             print('     Acceptance rate of PMCMC move is {:.1%}'.format(toaccept.mean()))

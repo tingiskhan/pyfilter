@@ -301,3 +301,41 @@ class BaseFilter(object):
                 self.s_w[t][indices] = w[indices]
 
         return self
+
+
+class KalmanFilter(BaseFilter):
+    def exchange(self, indices, newfilter):
+        """
+        Exchanges particles of `self` with `indices` of `newfilter`.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newfilter: The new filter to exchange with.
+        :type newfilter: BaseFilter
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        # ===== Exchange parameters ===== #
+
+        self._model.exchange(indices, newfilter._model)
+
+        # ===== Exchange old likelihoods and weights ===== #
+
+        ots_l = np.array(self.s_l)
+        nts_l = np.array(newfilter.s_l)
+
+        ots_l[:, indices] = nts_l[:, indices]
+        self.s_l = list(ots_l)
+
+        # TODO: Fix this
+
+        return self
+
+    def resample(self, indices):
+        self._model.p_apply(lambda x: choose(x[0], indices))
+
+        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._proposal = self._proposal.resample(indices)
+        self.s_l = list(np.array(self.s_l)[:, indices])
+
+        return self
