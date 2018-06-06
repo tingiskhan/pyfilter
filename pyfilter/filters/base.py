@@ -234,6 +234,7 @@ class BaseFilter(object):
 
         self._proposal = self._proposal.resample(indices)
         self.s_l = list(np.array(self.s_l)[:, indices])
+        self.s_mx = list(np.array(self.s_mx)[:, indices])
 
         return self
 
@@ -255,6 +256,7 @@ class BaseFilter(object):
             self.s_w = list()
 
         self.s_l = list()
+        self.s_mx = list()
 
         return self
 
@@ -275,11 +277,13 @@ class BaseFilter(object):
 
         # ===== Exchange old likelihoods and weights ===== #
 
-        ots_l = np.array(self.s_l)
-        nts_l = np.array(newfilter.s_l)
+        for prop in ['s_l', 's_mx']:
+            ots = np.array(getattr(self, prop))
+            nts = np.array(getattr(newfilter, prop))
 
-        ots_l[:, indices] = nts_l[:, indices]
-        self.s_l = list(ots_l)
+            ots[:, indices] = nts[:, indices]
+            setattr(self, prop, list(ots))
+
         self._old_w[indices] = newfilter._old_w[indices]
 
         # ===== Exchange old states ===== #
