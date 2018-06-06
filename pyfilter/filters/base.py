@@ -234,6 +234,7 @@ class BaseFilter(object):
 
         self._proposal = self._proposal.resample(indices)
         self.s_l = list(np.array(self.s_l)[:, indices])
+        self.s_mx = list(np.array(self.s_mx)[:, indices])
 
         return self
 
@@ -255,9 +256,58 @@ class BaseFilter(object):
             self.s_w = list()
 
         self.s_l = list()
+        self.s_mx = list()
 
         return self
 
+    def exchange(self, indices, newfilter):
+        """
+        Exchanges particles of `self` with `indices` of `newfilter`.
+        :param indices: The indices to exchange
+        :type indices: np.ndarray
+        :param newfilter: The new filter to exchange with.
+        :type newfilter: BaseFilter
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        # ===== Exchange parameters ===== #
+
+        self._model.exchange(indices, newfilter._model)
+
+        # ===== Exchange old likelihoods and weights ===== #
+
+        for prop in ['s_l', 's_mx']:
+            ots = np.array(getattr(self, prop))
+            nts = np.array(getattr(newfilter, prop))
+
+            ots[:, indices] = nts[:, indices]
+            setattr(self, prop, list(ots))
+
+        self._old_w[indices] = newfilter._old_w[indices]
+
+        # ===== Exchange old states ===== #
+
+        if newfilter._old_x.ndim > self._old_w.ndim:
+            self._old_x[:, indices] = newfilter._old_x[:, indices]
+        else:
+            self._old_x[indices] = newfilter._old_x[indices]
+
+        # ===== Exchange particle history ===== #
+
+        if self.saveall:
+            for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
+                if x.ndim > w.ndim:
+                    self.s_x[t][:, indices] = x[:, indices]
+                else:
+                    self.s_x[t][indices] = x[indices]
+
+                self.s_w[t][indices] = w[indices]
+
+        return self
+
+
+class KalmanFilter(BaseFilter):
     def exchange(self, indices, newfilter):
         """
         Exchanges particles of `self` with `indices` of `newfilter`.
@@ -280,24 +330,16 @@ class BaseFilter(object):
 
         ots_l[:, indices] = nts_l[:, indices]
         self.s_l = list(ots_l)
-        self._old_w[indices] = newfilter._old_w[indices]
 
-        # ===== Exchange old states ===== #
+        # TODO: Fix this
 
-        if newfilter._old_x.ndim > self._old_w.ndim:
-            self._old_x[:, indices] = newfilter._old_x[:, indices]
-        else:
-            self._old_x[indices] = newfilter._old_x[indices]
+        return self
 
-        # ===== Exchange particle history ===== #
+    def resample(self, indices):
+        self._model.p_apply(lambda x: choose(x[0], indices))
 
-        if self.saveall:
-            for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
-                if x.ndim > w.ndim:
-                    self.s_x[t][:, indices] = x[:, indices]
-                else:
-                    self.s_x[t][indices] = x[indices]
-
-                self.s_w[t][indices] = w[indices]
+        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._proposal = self._proposal.resample(indices)
+        self.s_l = list(np.array(self.s_l)[:, indices])
 
         return self

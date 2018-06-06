@@ -1,5 +1,5 @@
 from pyfilter.timeseries import StateSpaceModel, Base, Observable
-from pyfilter.filters import NESSMC2, RAPF, Linearized, NESS, APF
+from pyfilter.filters import NESSMC2, RAPF, Linearized, NESS, APF, KalmanLaplace
 from pyfilter.proposals import Linearized as Linz
 from pyfilter.distributions.continuous import Gamma, Normal, Beta
 import autograd.numpy as np
@@ -47,11 +47,11 @@ ax[1].plot(x)
 # ===== INFER VALUES ===== #
 
 logvol = Base((fh0, gh0), (fh, gh), (Beta(5, 1), Gamma(1)), (Normal(), Normal()))
-obs = Observable((go, fo), (Gamma(0.5),), Normal())
+obs = Observable((go, fo), (0.6,), Normal())
 
 ssm = StateSpaceModel(logvol, obs)
 
-alg = NESSMC2(ssm, (300, 300), filt=Linearized).initialize()
+alg = NESSMC2(ssm, (800,), filt=KalmanLaplace).initialize()
 
 alg = alg.longfilter(y)
 
@@ -63,10 +63,10 @@ fig2, ax2 = plt.subplots(3)
 
 alpha = pd.DataFrame(ssm.hidden.theta[0])
 sigma = pd.DataFrame(ssm.hidden.theta[1])
-beta = pd.DataFrame(ssm.observable.theta[0])
+# beta = pd.DataFrame(ssm.observable.theta[0])
 
 alpha.plot(kind='kde', ax=ax2[0])
 sigma.plot(kind='kde', ax=ax2[1])
-beta.plot(kind='kde', ax=ax2[2])
+# beta.plot(kind='kde', ax=ax2[2])
 
 plt.show()

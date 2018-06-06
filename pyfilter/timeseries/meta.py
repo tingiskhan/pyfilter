@@ -42,7 +42,7 @@ class Base(object):
         :return: The priors of the model
         :rtype: tuple of Distribution
         """
-        return tuple(p for p in self._o_theta if isinstance(p, Distribution))
+        return tuple(self._o_theta)
 
     def i_mean(self, params=None):
         """

@@ -1,11 +1,11 @@
-from .base import BaseFilter
+from .base import KalmanFilter
 from ..utils.unscentedtransform import UnscentedTransform
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
 from ..utils.utils import customcholesky, choose
 
 
-class UKF(BaseFilter):
+class UKF(KalmanFilter):
     def __init__(self, model, *args, utkwargs=None, **kwargs):
         """
         Implements the Unscented Kalman Filter by van der Merwe.

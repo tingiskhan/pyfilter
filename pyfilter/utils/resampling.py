@@ -18,11 +18,9 @@ def _matrix(weights):
 
     probs = (index_range + u) / n
 
-    normalized = normalize(weights)
-    cumsum = np.zeros((weights.shape[0], n + 1))
-    cumsum[:, 1:] = normalized.cumsum(axis=1)
+    cumsum = normalize(weights).cumsum(axis=-1)
 
-    return searchsorted2d(cumsum, probs).astype(int) - 1
+    return searchsorted2d(cumsum, probs).astype(int)
 
 
 def _vector(weights):
@@ -37,11 +35,9 @@ def _vector(weights):
     u = np.random.uniform()
     probs = (np.arange(n) + u) / n
 
-    cumsum = np.zeros(n + 1)
-    normalized = normalize(weights)
-    cumsum[1:] = normalized.cumsum()
+    cumsum = normalize(weights).cumsum()
 
-    return np.searchsorted(cumsum, probs).astype(int) - 1
+    return np.searchsorted(cumsum, probs).astype(int)
 
 
 def systematic(w):
@@ -66,9 +62,10 @@ def _mn_vector(w):
     :return: Resampled indices
     :rtype: np.ndarray
     """
-    normalized = normalize(w)
+    normalized = normalize(w).cumsum()
+    normalized[-1] = 1
 
-    return np.random.choice(w.size, w.size, p=normalized)
+    return np.searchsorted(normalized, np.random.uniform(0, 1, w.shape))
 
 
 def _mn_matrix(w):
@@ -80,12 +77,10 @@ def _mn_matrix(w):
     :rtype: np.ndarray
     """
 
-    out = np.empty_like(w, dtype=int)
+    normalized = normalize(w).cumsum(axis=-1)
+    normalized[:, -1] = 1
 
-    for i in range(w.shape[0]):
-        out[i] = _mn_vector(w[i])
-
-    return out
+    return searchsorted2d(normalized, np.random.uniform(0, 1, w.shape))
 
 
 def multinomial(w):

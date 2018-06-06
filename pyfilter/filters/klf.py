@@ -1,5 +1,4 @@
 from .ukf import UKF
-from ..utils.unscentedtransform import _get_meancov
 from ..utils.utils import customcholesky, bfgs
 from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
