@@ -42,11 +42,12 @@ class UKF(KalmanFilter):
         else:
             kernel = MultivariateNormal(self._ut.ymean, customcholesky(self._ut.ycov))
 
-        self.s_mx.append(self._ut.xmean.copy())
-        self.s_l.append(kernel.logpdf(y))
-        self._old_x = self._ut.xmean.copy()
+        x = (self._ut.xmean.copy()[0] if self._model.hidden_ndim < 2 else self._ut.xmean.copy())
 
-        self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
+        self.s_mx.append(x)
+        self.s_l.append(kernel.logpdf(y))
+
+        self.s_n.append(self._calc_noise(y, x))
 
         return self
 
