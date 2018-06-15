@@ -3,12 +3,11 @@ from .sisr import SISR
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
 from ..distributions.continuous import Distribution
-import scipy.stats as stats
 import math
 import numpy as np
 
 
-def jitter(params, p):
+def jitter(params, p, ess):
     """
     Jitters the parameters.
     :param params: The parameters of the model, inputs as (values, prior)
@@ -19,12 +18,10 @@ def jitter(params, p):
     :rtype: np.ndarray
     """
 
-    std = params[1].std() / math.sqrt(params[0].size ** ((p + 2) / p))
+    transformed = params[1].transform(params[0])
+    std = transformed.shape[0] / ess / math.sqrt(params[0].size ** ((p + 2) / p))
 
-    a = (params[1].bounds()[0] - params[0]) / std
-    b = (params[1].bounds()[1] - params[0]) / std
-
-    return stats.truncnorm.rvs(a, b, params[0], std, size=params[0].shape)
+    return params[1].inverse_transform(np.random.normal(transformed, std, size=params[0].shape))
 
 
 def flattener(a):
@@ -72,10 +69,14 @@ class NESS(BaseFilter):
         return self
 
     def filter(self, y):
+        if isinstance(self._recw, np.ndarray):
+            prev_ess = get_ess(self._recw)
+        else:
+            prev_ess = self._p_particles[0]
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: jitter(x, self._p))
+        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess))
 
         # ===== PROPAGATE FILTER ===== #
 
