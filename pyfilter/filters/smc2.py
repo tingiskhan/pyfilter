@@ -14,13 +14,12 @@ def _define_pdf(params):
     :rtype: stats.truncnorm
     """
 
-    mean = params[0].mean()
-    std = params[0].std()
+    transformed = params[1].transform(params[0])
 
-    a = (params[1].bounds()[0] - mean) / std
-    b = (params[1].bounds()[1] - mean) / std
+    mean = transformed.mean()
+    std = transformed.std()
 
-    return stats.truncnorm(a, b, mean, std)
+    return stats.norm(mean, std)
 
 
 def _mcmc_move(params):
@@ -32,7 +31,7 @@ def _mcmc_move(params):
     :rtype: np.ndarray
     """
 
-    return _define_pdf(params).rvs(size=params[0].shape)
+    return params[1].inverse_transform(_define_pdf(params).rvs(size=params[0].shape))
 
 
 def _eval_kernel(params, new_params):
@@ -46,7 +45,7 @@ def _eval_kernel(params, new_params):
     :rtype: np.ndarray
     """
 
-    return _define_pdf(params).logpdf(new_params)
+    return _define_pdf(params).logpdf(params[1].transform(new_params))
 
 
 class SMC2(NESS):
