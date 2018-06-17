@@ -31,5 +31,5 @@ The current implementation supports:
 
 ## Using the package
 For examples on how to define models and performing inference please see
-[`examples`](www.github.com/tingiskhan/pyfilter/examples), it should be rather straightforward from there.
+[`examples`](https://github.com/tingiskhan/pyfilter/tree/master/examples), it should be rather straightforward from there.
 
