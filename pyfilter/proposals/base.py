@@ -1,5 +1,5 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils.stategradient import StateGradient, NumericalStateGradient
+from ..utils.stategradient import NumericalStateGradient
 
 
 class Proposal(object):

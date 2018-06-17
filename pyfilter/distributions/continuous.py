@@ -2,8 +2,8 @@ import numpy as np
 import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
-from autograd.core import Node
 from scipy.special import gamma
+from .transforms import NonTransformable, Log, LogOdds, Interval, TransformMixin
 
 
 def _get(x, y):
@@ -16,10 +16,10 @@ def _get(x, y):
 
     out = x if x is not None else y
 
-    return np.array(out) if not isinstance(out, (np.ndarray, Node)) else out
+    return np.array(out) if not isinstance(out, (np.ndarray,)) else out
 
 
-class Distribution(object):
+class Distribution(TransformMixin):
     ndim = None
 
     def logpdf(self, *args, **kwargs):
@@ -85,7 +85,7 @@ class MultiDimensional(Distribution):
         return self._cov
 
 
-class Normal(OneDimensional):
+class Normal(OneDimensional, NonTransformable):
     def __init__(self, loc=0, scale=1):
         self.loc = loc
         self.scale = scale
@@ -107,7 +107,7 @@ class Normal(OneDimensional):
         return stats.norm(loc=self.loc, scale=self.scale).std()
 
 
-class Student(Normal):
+class Student(Normal, NonTransformable):
     def __init__(self, nu, loc=0, scale=1):
         super().__init__(loc, scale)
         self.nu = nu
@@ -132,7 +132,7 @@ class Student(Normal):
         return stats.t.std(self.nu, loc=self.loc, scale=self.scale).std()
 
 
-class Gamma(OneDimensional):
+class Gamma(OneDimensional, Log):
     def __init__(self, a, loc=0, scale=1):
         self.a = a
         self.loc = loc
@@ -159,7 +159,7 @@ class Gamma(OneDimensional):
         return stats.gamma(a=self.a, loc=self.loc, scale=self.scale).std()
 
 
-class InverseGamma(OneDimensional):
+class InverseGamma(OneDimensional, Log):
     def __init__(self, a, loc=0, scale=1):
         self.a = a
         self.loc = loc
@@ -186,7 +186,7 @@ class InverseGamma(OneDimensional):
         return self.loc, np.infty
 
 
-class Beta(OneDimensional):
+class Beta(OneDimensional, LogOdds):
     def __init__(self, a, b):
         self.a = a
         self.b = b
@@ -207,7 +207,7 @@ class Beta(OneDimensional):
         return stats.beta(a=self.a, b=self.b).std()
 
 
-class MultivariateNormal(MultiDimensional):
+class MultivariateNormal(MultiDimensional, NonTransformable):
     def __init__(self, mean=np.zeros(2), scale=np.eye(2), ndim=None):
 
         if ndim:

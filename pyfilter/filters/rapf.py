@@ -1,7 +1,6 @@
 from .base import BaseFilter
 from math import sqrt
 from ..utils.utils import choose, loglikelihood
-import scipy.stats as stats
 import numpy as np
 from ..utils.normalization import normalize
 
@@ -19,28 +18,15 @@ def _shrink(parameter, shrink, weights):
 
 
 def _propose(parameters, indices, h, particles, weights):
-    """
-    Helper class for proposing a parameter
-    :param bounds:
-    :param params:
-    :param indices:
-    :param weights:
-    :return:
-    """
-
-    params = parameters[0]
-    bounds = parameters[1].bounds()
+    transformed = parameters[1].transform(parameters[0])
 
     normalized = normalize(weights)
 
-    means = _shrink(params, sqrt(1 - h ** 2), weights)[indices]
-    mean = np.average(params, weights=normalized)
-    std = h * np.sqrt(np.average((params - mean) ** 2, weights=normalized))
+    means = _shrink(transformed, sqrt(1 - h ** 2), weights)[indices]
+    mean = np.average(transformed, weights=normalized)
+    std = h * np.sqrt(np.average((transformed - mean) ** 2, weights=normalized))
 
-    a = (bounds[0] - means) / std
-    b = (bounds[1] - means) / std
-
-    return stats.truncnorm.rvs(a, b, means, std, size=particles)
+    return parameters[1].inverse_transform(np.random.normal(means, std, size=particles))
 
 
 class RAPF(BaseFilter):
