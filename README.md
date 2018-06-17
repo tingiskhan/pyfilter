@@ -8,7 +8,7 @@ This library is just a hobby of mine to keep me up to date with some of the mode
 fun exercise in coding.
 
 Note that I am not affiliated with or the author of any of the algorithms contained in the package. As such, there
-might be errors in the implementation - you are therefore using the package at your own risk.
+might be errors in the implementation.
 
 ## Installing the package
 Install the package by typing the following in a `git shell` or similar
