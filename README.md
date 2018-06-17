@@ -13,5 +13,5 @@ pip install git+https://github.com/tingiskhan/pyfilter.git
 
 ## Using the package
 For examples on how to define models and performing inference please see
-(`examples`)(www.github.com/tingiskhan/pyfilter/examples), it should be rather straightforward from there.
+[`examples`](www.github.com/tingiskhan/pyfilter/examples), it should be rather straightforward from there.
 
