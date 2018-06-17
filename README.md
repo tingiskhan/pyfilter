@@ -19,9 +19,9 @@ pip install git+https://github.com/tingiskhan/pyfilter.git
 ## Implemented algorithms
 The current implementation supports:
 1. Particle filter
-..1. Bootstrap proposal
-..2. Linearized proposal
-..3. Unscented proposal
+    1. Bootstrap proposal
+    2. Linearized proposal
+    3. Unscented proposal
 2. Auxiliary Particle filter
 3. Unscented Kalman filter
 4. Kalman-Laplace filter
