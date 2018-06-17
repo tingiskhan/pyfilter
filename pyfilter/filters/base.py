@@ -55,7 +55,7 @@ class BaseFilter(object):
         :param args:
         :param kwargs:
         """
-        self._model = model
+        self._model = model.copy()
         self._copy = self._model.copy()
 
         self._particles = particles
