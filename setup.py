@@ -13,7 +13,5 @@ setup(
         'matplotlib>=2.0.0',
         'pandas>=0.19.2',
         'scipy>=0.18.1',
-        'quandl>=3.1.0',
-        'autograd>=1.1.13'
     ]
 )

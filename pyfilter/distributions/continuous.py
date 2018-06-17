@@ -2,7 +2,6 @@ import numpy as np
 import abc
 import scipy.stats as stats
 import pyfilter.utils.utils as helps
-from autograd.core import Node
 from scipy.special import gamma
 from .transforms import NonTransformable, Log, LogOdds, Interval, TransformMixin
 
@@ -17,7 +16,7 @@ def _get(x, y):
 
     out = x if x is not None else y
 
-    return np.array(out) if not isinstance(out, (np.ndarray, Node)) else out
+    return np.array(out) if not isinstance(out, (np.ndarray,)) else out
 
 
 class Distribution(TransformMixin):
