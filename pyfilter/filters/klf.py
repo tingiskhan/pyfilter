@@ -75,6 +75,7 @@ class KalmanLaplace(UKF):
 
         self.s_mx.append(optstate.x)
         # TODO: Fix this
+        # TODO: Investigate the discrepancy between the SISR and this filter in the log likelihood estimation
         self.s_l.append(dist.logpdf(y))
         self.s_n.append(self._calc_noise(y, self._ut.xmean.copy()))
 
