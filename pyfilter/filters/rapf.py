@@ -49,7 +49,7 @@ class RAPF(BaseFilter):
 
     def filter(self, y):
         if not isinstance(self._old_w, np.ndarray):
-            self._old_w = 1 / self._particles * np.ones_like(self._old_x)
+            self._old_w = 1 / self._particles * np.ones(self._particles)
 
         # ==== Propagate APF ===== #
         copy = self._model.copy()
