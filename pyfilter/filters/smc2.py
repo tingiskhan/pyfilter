@@ -180,7 +180,7 @@ class SMC2(NESS):
         """
 
         # ===== Create new filter with double the state particles ===== #
-
+        # TODO: Something goes wrong here
         n_particles = self._filter._particles[0], 2 * self._filter._particles[1]
         t_filt = self._filter.copy().reset(n_particles).longfilter(self._td[:self._ior+1])
 

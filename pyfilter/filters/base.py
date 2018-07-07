@@ -276,7 +276,7 @@ class BaseFilter(object):
         self._model.exchange(indices, newfilter._model)
 
         # ===== Exchange old likelihoods and weights ===== #
-        # TODO: Something goes wrong here
+
         for prop in ['s_l', 's_mx']:
             ots = np.array(getattr(self, prop))
             nts = np.array(getattr(newfilter, prop))
