@@ -14,6 +14,8 @@ def jitter(params, p, ess):
     :type params: (np.ndarray, Distribution)
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
+    :param ess: The effective sample size. Used for increasing/decreasing the variance of the jittering kernel
+    :type ess: float
     :return: Proposed values
     :rtype: np.ndarray
     """
