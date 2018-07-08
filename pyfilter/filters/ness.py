@@ -1,4 +1,4 @@
-from .base import BaseFilter
+from .base import BaseFilter, ParticleFilter, KalmanFilter
 from .sisr import SISR
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
@@ -54,10 +54,18 @@ class NESS(BaseFilter):
                   variance.
         :param filtkwargs: See BaseFilter
         """
-
+        # TODO: Perhaps change behaviour s.t. we pass an instantiated filter?
         super().__init__(model, particles)
 
         self._filter = filt(self._model, particles=particles, **filtkwargs).initialize()
+
+        if isinstance(self._filter, ParticleFilter):
+            if not isinstance(particles, (tuple, list)) or len(particles) != 2:
+                raise ValueError('`particles` must be `tuple` or `list` of length 2!')
+        elif isinstance(self._filter, KalmanFilter):
+            if not isinstance(particles, (tuple, list)) or len(particles) != 1:
+                raise ValueError('`particles` must be `tuple` or `list` of length 1!')
+
         self._recw = 0  # type: np.ndarray
         self._th = threshold
         self._p = p

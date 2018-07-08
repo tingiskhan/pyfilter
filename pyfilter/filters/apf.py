@@ -1,10 +1,10 @@
-from .base import BaseFilter
+from .base import ParticleFilter
 from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
 import numpy as np
 
 
-class APF(BaseFilter):
+class APF(ParticleFilter):
     """
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """

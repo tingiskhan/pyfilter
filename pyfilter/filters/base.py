@@ -307,6 +307,10 @@ class BaseFilter(object):
         return self
 
 
+class ParticleFilter(BaseFilter):
+    pass
+
+
 class KalmanFilter(BaseFilter):
     def exchange(self, indices, newfilter):
         """
