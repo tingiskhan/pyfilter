@@ -29,6 +29,11 @@ The current implementation supports:
 6. SMC2: an efficient algorithm for sequential analysis of state space models (SMC2)
 7. Liu-West filter
 
+## Future implementations
+Some future functionality to be implemented might be:
+1. Quasi Monte Carlo 
+2. Dual/Joint Unscented Kalman Filter (or Kalman-Laplace)
+
 ## Using the package
 For examples on how to define models and performing inference please see
 [`examples`](https://github.com/tingiskhan/pyfilter/tree/master/examples), it should be rather straightforward from there.
