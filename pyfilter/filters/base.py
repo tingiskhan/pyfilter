@@ -281,7 +281,7 @@ class BaseFilter(object):
             ots = np.array(getattr(self, prop))
             nts = np.array(getattr(newfilter, prop))
 
-            ots[:, indices] = nts[:, indices]
+            ots[..., indices] = nts[..., indices]
             setattr(self, prop, list(ots))
 
         self._old_w[indices] = newfilter._old_w[indices]
