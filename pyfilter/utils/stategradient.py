@@ -8,7 +8,8 @@ class NumericalStateGradient(object):
 
     def __init__(self, model):
         """
-        Implements a way for calculating the gradient and hessian of the underlying states.
+        Implements a way for calculating the gradient and hessian of the underlying states. NOTE, this should not be
+        used stand-alone as it currently requires `hess` to be called after `grad`.
         :param model: The model
         :type model: StateSpaceModel
         """
