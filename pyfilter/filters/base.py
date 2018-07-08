@@ -233,8 +233,8 @@ class BaseFilter(object):
         self._old_w = choose(self._old_w, indices)
 
         self._proposal = self._proposal.resample(indices)
-        self.s_l = list(np.array(self.s_l)[:, indices])
-        self.s_mx = list(np.array(self.s_mx)[:, indices])
+        self.s_l = list(np.array(self.s_l)[..., indices])
+        self.s_mx = list(np.array(self.s_mx)[..., indices])
 
         return self
 
