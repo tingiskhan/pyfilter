@@ -33,6 +33,7 @@ The current implementation supports:
 Some future functionality to be implemented might be:
 1. Quasi Monte Carlo 
 2. Dual/Joint Unscented Kalman Filter (or Kalman-Laplace)
+3. Improved jittering kernel in NESS
 
 ## Using the package
 For examples on how to define models and performing inference please see
