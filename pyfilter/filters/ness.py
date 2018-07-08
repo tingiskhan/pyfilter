@@ -47,6 +47,7 @@ class NESS(BaseFilter):
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
         :param particles: See BaseFilter
+        :type particles: (int, int)|(int,)
         :param args: See BaseFilter
         :param filt: See BaseFilter
         :param threshold: The threshold for when to resample the parameters.
@@ -59,12 +60,17 @@ class NESS(BaseFilter):
 
         self._filter = filt(self._model, particles=particles, **filtkwargs).initialize()
 
+        msg = """
+        `particles` must be `tuple` or `list` of length {:d} where the first element is the number of particles 
+        targeting the parameters {:s}
+        """
+
         if isinstance(self._filter, ParticleFilter):
             if not isinstance(particles, (tuple, list)) or len(particles) != 2:
-                raise ValueError('`particles` must be `tuple` or `list` of length 2!')
+                raise ValueError(msg.format(2, 'and the second element the number of particles targeting the states'))
         elif isinstance(self._filter, KalmanFilter):
             if not isinstance(particles, (tuple, list)) or len(particles) != 1:
-                raise ValueError('`particles` must be `tuple` or `list` of length 1!')
+                raise ValueError(msg.format(1, ''))
 
         self._recw = 0  # type: np.ndarray
         self._th = threshold
