@@ -1,4 +1,4 @@
-from .base import BaseFilter
+from .base import BaseFilter, ParticleFilter, KalmanFilter
 from .sisr import SISR
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
@@ -47,6 +47,7 @@ class NESS(BaseFilter):
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
         :param particles: See BaseFilter
+        :type particles: (int, int)|(int,)
         :param args: See BaseFilter
         :param filt: See BaseFilter
         :param threshold: The threshold for when to resample the parameters.
@@ -54,10 +55,23 @@ class NESS(BaseFilter):
                   variance.
         :param filtkwargs: See BaseFilter
         """
-
+        # TODO: Perhaps change behaviour s.t. we pass an instantiated filter?
         super().__init__(model, particles)
 
         self._filter = filt(self._model, particles=particles, **filtkwargs).initialize()
+
+        msg = """
+        `particles` must be `tuple` or `list` of length {:d} where the first element is the number of particles 
+        targeting the parameters {:s}
+        """
+
+        if isinstance(self._filter, ParticleFilter):
+            if not isinstance(particles, (tuple, list)) or len(particles) != 2:
+                raise ValueError(msg.format(2, 'and the second element the number of particles targeting the states'))
+        elif isinstance(self._filter, KalmanFilter):
+            if not isinstance(particles, (tuple, list)) or len(particles) != 1:
+                raise ValueError(msg.format(1, ''))
+
         self._recw = 0  # type: np.ndarray
         self._th = threshold
         self._p = p

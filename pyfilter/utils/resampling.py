@@ -3,7 +3,7 @@ from .normalization import normalize
 from ..utils.utils import searchsorted2d
 
 
-def _matrix(weights):
+def _matrix(weights, u):
     """
     Performs systematic resampling of a 2D array of log weights along the second axis.
     independent of the others.
@@ -13,7 +13,7 @@ def _matrix(weights):
     :rtype: np.ndarray
     """
     n = weights.shape[1]
-    u = np.random.uniform(size=weights.shape[0])[:, None]
+    u = u if u is not None else np.random.uniform(size=weights.shape[0])[:, None]
     index_range = np.arange(n)[None, :] * np.ones(weights.shape)
 
     probs = (index_range + u) / n
@@ -23,7 +23,7 @@ def _matrix(weights):
     return searchsorted2d(cumsum, probs).astype(int)
 
 
-def _vector(weights):
+def _vector(weights, u):
     """
     Performs systematic resampling of a 1D array log weights.
     :param weights: The weights to use for resampling
@@ -32,7 +32,7 @@ def _vector(weights):
     :rtype: np.ndarray
     """
     n = weights.size
-    u = np.random.uniform()
+    u = u or np.random.uniform()
     probs = (np.arange(n) + u) / n
 
     cumsum = normalize(weights).cumsum()
@@ -40,18 +40,20 @@ def _vector(weights):
     return np.searchsorted(cumsum, probs).astype(int)
 
 
-def systematic(w):
+def systematic(w, u=None):
     """
     Performs systematic resampling on either a 1D or 2D array.
     :param w: The weights to use for resampling
     :type w: np.ndarray
+    :param u: Parameter for overriding the sampled index, for testing
+    :type u: sample from np.random.uniform()
     :return: Resampled indices
     :rtype: np.ndarray
     """
     if w.ndim > 1:
-        return _matrix(w)
+        return _matrix(w, u)
 
-    return _vector(w)
+    return _vector(w, u)
 
 
 def _mn_vector(w):

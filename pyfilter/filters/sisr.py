@@ -1,10 +1,9 @@
-from .base import BaseFilter
+from .base import ParticleFilter
 from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
-import numpy as np
 
 
-class SISR(BaseFilter):
+class SISR(ParticleFilter):
     """
     Implements the SISR filter by Gordon et al.
     """
