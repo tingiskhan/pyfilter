@@ -2,6 +2,7 @@ import numpy as np
 from scipy.special import logit, expit
 
 
+# TODO: Write tests
 class TransformMixin(object):
     def transform(self, x):
         """
@@ -64,12 +65,12 @@ class Interval(TransformMixin):
     Implements the transform for variables defined [a, b].
     """
 
-    def transform(self, x):
+    def inverse_transform(self, x):
         a, b = self.bounds()
 
         return (b - a) * expit(x) + a
 
-    def inverse_transform(self, x):
+    def transform(self, x):
         a, b = self.bounds()
 
         return np.log(x - a) - np.log(b - x)
