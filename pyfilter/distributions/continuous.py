@@ -107,6 +107,26 @@ class Normal(OneDimensional, NonTransformable):
         return stats.norm(loc=self.loc, scale=self.scale).std()
 
 
+class Uniform(OneDimensional, Interval):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    def logpdf(self, x, *args, **kwargs):
+        return stats.uniform(self.a, self.b + 1).logpdf(x)
+
+    def rvs(self, a=None, b=None, size=None, **kwargs):
+        a, b = _get(a, self.a), _get(b, self.b)
+
+        return np.random.uniform(a, b, size=size)
+
+    def bounds(self):
+        return self.a, self.b
+
+    def std(self):
+        return stats.uniform(self.a, self.b + 1).std()
+
+
 class Student(Normal, NonTransformable):
     def __init__(self, nu, loc=0, scale=1):
         super().__init__(loc, scale)
