@@ -35,6 +35,15 @@ class Base(object):
         return self._theta
 
     @property
+    def theta_dists(self):
+        """
+        Returns the indices for parameter are distributions.
+        :rtype: tuple
+        """
+
+        return tuple(p for p in self.theta if isinstance(p, Distribution))
+
+    @property
     def theta_vals(self):
         """
         Returns the values of the parameters
