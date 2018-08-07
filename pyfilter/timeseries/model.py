@@ -1,5 +1,6 @@
 import copy
 from ..distributions.continuous import Distribution
+import numpy as np
 
 
 def _get_params(parameters):
