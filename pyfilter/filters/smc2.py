@@ -9,12 +9,12 @@ def _define_pdf(params):
     """
     Helper function for creating the PDF.
     :param params: The parameters to use for defining the distribution
-    :type params: (np.ndarray, Distribution)
+    :type params: Distribution
     :return: A truncated normal distribution
     :rtype: stats.truncnorm
     """
 
-    transformed = params[1].transform(params[0])
+    transformed = params.t_values
 
     mean = transformed.mean()
     std = transformed.std()
@@ -26,26 +26,26 @@ def _mcmc_move(params):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: (np.ndarray, Distribution)
+    :type params: Distribution
     :return: Samples from a truncated normal distribution
     :rtype: np.ndarray
     """
 
-    return params[1].inverse_transform(_define_pdf(params).rvs(size=params[0].shape))
+    return _define_pdf(params).rvs(size=params.values.shape)
 
 
 def _eval_kernel(params, new_params):
     """
     Evaluates the kernel used for performing the MCMC move.
     :param params: The current parameters
-    :type params: (np.ndarray, Distribution)
+    :type params: Distribution
     :param new_params: The new parameters to evaluate against
-    :type new_params: (np.ndarray, Distribution)
+    :type new_params: Distribution
     :return: The log density of the proposal kernel evaluated at `new_params`
     :rtype: np.ndarray
     """
 
-    return _define_pdf(params).logpdf(params[1].transform(new_params))
+    return _define_pdf(params).logpdf(new_params.t_values)
 
 
 class SMC2(NESS):
@@ -99,24 +99,17 @@ class SMC2(NESS):
         # TODO: Consider doing this somewhere else...
 
         out = 0
-        for i in range(len(copy._model.hidden.theta)):
-            if isinstance(copy._model.hidden.priors[i], Distribution):
-
-                newparam = copy._model.hidden.theta[i]
-                oldparam = self._model.hidden.theta[i]
-
-                newkernel = _eval_kernel((newparam, copy._model.hidden.priors[i]), oldparam)
-                oldkernel = _eval_kernel((oldparam, self._model.hidden.priors[i]), newparam)
+        for newp, oldp in zip(copy._model.hidden.theta, self._model.hidden.theta):
+            if isinstance(newp, Distribution):
+                newkernel = _eval_kernel(newp, oldp)
+                oldkernel = _eval_kernel(oldp, newp)
 
                 out += newkernel - oldkernel
 
-        ntso = copy._model.observable
-        otso = self._filter._model.observable
-
-        for i in range(len(otso.theta)):
-            if isinstance(otso.theta[i], Distribution):
-                newkernel = _eval_kernel((ntso.theta[i], ntso.priors[i]), otso.theta[i])
-                oldkernel = _eval_kernel((otso.theta[i], otso.priors[i]), ntso.theta[i])
+        for newp, oldp in zip(copy._model.observable.theta, self._model.observable.theta):
+            if isinstance(newp, Distribution):
+                newkernel = _eval_kernel(newp, oldp)
+                oldkernel = _eval_kernel(oldp, newp)
 
                 out += newkernel - oldkernel
 
@@ -136,7 +129,7 @@ class SMC2(NESS):
         # ===== Define new filters and move via MCMC ===== #
 
         t_filt = self._filter.copy().reset()
-        t_filt._model.p_apply(_mcmc_move)
+        t_filt._model.p_apply(_mcmc_move, transformed=True)
 
         # ===== Filter data ===== #
 

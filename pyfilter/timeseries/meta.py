@@ -21,10 +21,27 @@ class Base(object):
 
         self.f0, self.g0 = initial
         self.f, self.g = funcs
-        self.theta = theta
-        self._o_theta = theta           # We save the original inputs if is of `Distribution`
+        self._theta = theta           # We save the original inputs if is of `Distribution`
         self.noise0, self.noise = noise
         self.q = q
+
+    @property
+    def theta(self):
+        """
+        Returns the parameters of the model.
+        :rtype: tuple of Distribution
+        """
+
+        return self._theta
+
+    @property
+    def theta_vals(self):
+        """
+        Returns the values of the parameters
+        :rtype: tuple of np.ndarray
+        """
+
+        return tuple(th.values if isinstance(th, Distribution) else th for th in self.theta)
 
     @property
     def ndim(self):
@@ -42,7 +59,7 @@ class Base(object):
         :return: The priors of the model
         :rtype: tuple of Distribution
         """
-        return tuple(self._o_theta)
+        return tuple(self.theta)
 
     def i_mean(self, params=None):
         """
@@ -53,7 +70,7 @@ class Base(object):
         :rtype: np.ndarray|float|int
         """
 
-        return resizer(self.f0(*(params or self.theta)))
+        return resizer(self.f0(*(params or self.theta_vals)))
 
     def i_scale(self, params=None):
         """
@@ -64,7 +81,7 @@ class Base(object):
         :rtype: np.ndarray|float|int
         """
 
-        return resizer(self.g0(*(params or self.theta)))
+        return resizer(self.g0(*(params or self.theta_vals)))
 
     def i_weight(self, x, params=None):
         """
@@ -90,7 +107,7 @@ class Base(object):
         :rtype: np.ndarray|float
         """
 
-        return resizer(self.f(x, *(params or self.theta)))
+        return resizer(self.f(x, *(params or self.theta_vals)))
 
     def scale(self, x, params=None):
         """
@@ -103,7 +120,7 @@ class Base(object):
         :rtype: np.ndarray|float
         """
 
-        return resizer(self.g(x, *(params or self.theta)))
+        return resizer(self.g(x, *(params or self.theta_vals)))
 
     def weight(self, y, x, params=None):
         """
@@ -169,16 +186,18 @@ class Base(object):
 
         return np.array(out)
 
-    def p_apply(self, func):
+    def p_apply(self, func, transformed=False):
         """
         Applies `func` to each parameter of the model "inplace", i.e. manipulates `self.theta`.
         :param func: Function to apply, must be of the structure func(param)
         :type func: callable
+        :param transformed: Whether or not results from applied function are transformed variables
+        :type transformed: bool
         :return: Instance of self
         :rtype: Base
         """
 
-        self.theta = self.p_map(func)
+        self._theta = self.p_map(func, transformed=transformed)
 
         return self
 
@@ -189,24 +208,30 @@ class Base(object):
         :rtype: np.ndarray|float
         """
 
-        return sum(self.p_map(lambda x: x[1].logpdf(x[0]), default=0))
+        return sum(p.logpdf(p.values) if isinstance(p, Distribution) else 0 for p in self.theta)
 
-    def p_map(self, func, default=None):
+    def p_map(self, func, default=None, transformed=False):
         """
         Applies the func to the parameters and returns a tuple of objects.
-        :param func: The function to apply to parameters.
+        :param func: The function to apply to parameters. Must return a `numpy.ndarray` object of either transformed
+                     or untransformed parameters
         :type func: callable
         :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
         :type default: np.ndarray|float|int
+        :param transformed: Whether or not results from applied function are transformed variables
+        :type transformed: bool
         :return: Returns tuple of values
         :rtype: np.ndarray|float|int
         """
 
         out = tuple()
-
-        for p, op in zip(self.theta, self._o_theta):
-            if isinstance(op, Distribution):
-                out += (func((p, op)),)
+        for p in self.theta:
+            if isinstance(p, Distribution):
+                if transformed:
+                    p.t_values = func(p)
+                else:
+                    p.values = func(p)
+                out += (p,)
             else:
                 out += (default if default is not None else p,)
 

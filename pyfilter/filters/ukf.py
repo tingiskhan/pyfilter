@@ -52,7 +52,7 @@ class UKF(KalmanFilter):
         return self
 
     def resample(self, indices):
-        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._model.p_apply(lambda x: choose(x.values, indices))
 
         self._ut._mean = choose(self._ut._mean, indices)
         self._ut._cov = choose(self._ut._cov, indices)

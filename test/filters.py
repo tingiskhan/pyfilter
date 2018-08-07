@@ -159,16 +159,16 @@ class Tests(unittest.TestCase):
         self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
-        assert rapf._model.hidden.theta[1].shape == (5000,)
+        assert rapf._model.hidden.theta[1].values.shape == (5000,)
 
         rapf = rapf.longfilter(y)
 
         estimates = rapf._model.hidden.theta[1]
 
-        mean = np.mean(estimates)
-        std = np.std(estimates)
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
 
-        assert mean - 3 * std < 1 < mean + 3 * std
+        assert mean - std < 1 < mean + std
 
     def test_Predict(self):
         x, y = self.model.sample(550)
@@ -204,8 +204,8 @@ class Tests(unittest.TestCase):
 
         estimates = ness._filter._model.hidden.theta[1]
 
-        mean = np.mean(estimates)
-        std = np.std(estimates)
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
 
         assert mean - std < 1 < mean + std
 
@@ -229,7 +229,7 @@ class Tests(unittest.TestCase):
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
     def test_SMC2(self):
-        x, y = self.model.sample(300)
+        x, y = self.model.sample(500)
 
         linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
@@ -241,8 +241,10 @@ class Tests(unittest.TestCase):
 
         weights = normalize(smc2._recw)
 
-        mean = np.average(smc2._filter._model.hidden.theta[1], weights=weights[:, None])
-        std = np.sqrt(np.average((smc2._filter._model.hidden.theta[1] - mean) ** 2, weights=weights[:, None]))
+        values = smc2._filter._model.hidden.theta[1].values
+
+        mean = np.average(values, weights=weights[:, None])
+        std = np.sqrt(np.average((values - mean) ** 2, weights=weights[:, None]))
 
         assert mean - std < 1 < mean + std
 

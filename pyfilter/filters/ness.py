@@ -11,7 +11,7 @@ def jitter(params, p, ess):
     """
     Jitters the parameters.
     :param params: The parameters of the model, inputs as (values, prior)
-    :type params: (np.ndarray, Distribution)
+    :type params: Distribution
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
     :param ess: The effective sample size. Used for increasing/decreasing the variance of the jittering kernel
@@ -20,10 +20,10 @@ def jitter(params, p, ess):
     :rtype: np.ndarray
     """
 
-    transformed = params[1].transform(params[0])
-    std = transformed.shape[0] / ess / math.sqrt(params[0].size ** ((p + 2) / p))
+    transformed = params.t_values
+    std = transformed.shape[0] / ess / math.sqrt(transformed.size ** ((p + 2) / p))
 
-    return params[1].inverse_transform(np.random.normal(transformed, std, size=params[0].shape))
+    return np.random.normal(transformed, std, size=transformed.shape)
 
 
 def flattener(a):
@@ -92,7 +92,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess))
+        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 

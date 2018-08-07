@@ -28,18 +28,11 @@ def _overwriteparams(ts, particles):
     :return:
     """
 
-    parambounds = dict()
-    parameters = tuple()
     for j, p in enumerate(ts.theta):
         if isinstance(p, Distribution):
-            parambounds[j] = p.bounds()
-            parameters += (p.rvs(size=particles),)
-        else:
-            parameters += (p,)
+            p.sample(size=particles)
 
-    ts.theta = parameters
-
-    return parambounds
+    return True
 
 
 class BaseFilter(object):
@@ -97,8 +90,8 @@ class BaseFilter(object):
 
         # ===== HIDDEN ===== #
 
-        self._h_params = _overwriteparams(self._model.hidden, self._p_particles)
-        self._o_params = _overwriteparams(self._model.observable, self._p_particles)
+        _overwriteparams(self._model.hidden, self._p_particles)
+        _overwriteparams(self._model.observable, self._p_particles)
 
         return self
 
@@ -229,7 +222,7 @@ class BaseFilter(object):
         """
 
         self._old_x = choose(self._old_x, indices)
-        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._model.p_apply(lambda x: choose(x.values, indices))
         self._old_w = choose(self._old_w, indices)
 
         self._proposal = self._proposal.resample(indices)
