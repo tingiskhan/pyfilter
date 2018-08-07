@@ -21,6 +21,72 @@ def _get(x, y):
 
 class Distribution(TransformMixin):
     ndim = None
+    _values = None
+
+    @property
+    def values(self):
+        """
+        Returns the values of current instance.
+        :rtype: np.ndarray
+        """
+        return self._values
+
+    @property
+    def t_values(self):
+        """
+        Returns the transformed values of the current instance.
+        :rtype: np.ndarray
+        """
+        return self.transform(self.values)
+
+    @values.setter
+    def values(self, x):
+        """
+        Sets the values of the property.
+        :param x: The new parameters.
+        :type x: float|int|np.ndarray
+        """
+
+        if self._values is None:
+            self._values = x
+            return
+
+        assert isinstance(x, type(self._values))
+
+        low, high = self.bounds()
+        if isinstance(x, np.ndarray):
+            v_low, v_high = x.min(), x.max()
+            assert self._values.shape == x.shape
+        else:
+            v_low, v_high = x, x
+
+        assert (v_low >= low) and (v_high <= high)
+
+        self._values = x
+
+        return
+
+    @t_values.setter
+    def t_values(self, x):
+        """
+        Sets the transformed values of the instance, i.e. inverse transforms the values and sets the values.
+        :param x: The new parameters
+        :type x: float|int|np.ndarray
+        """
+        self.values = self.inverse_transform(x)
+
+    def sample(self, size=None):
+        """
+        Samples a random sample and overwrites `values`.
+        :param size: The size
+        :type size: tuple|list
+        :return: Self
+        :rtype: Distribution
+        """
+
+        self.values = self.rvs(size=size)
+
+        return self
 
     def logpdf(self, *args, **kwargs):
         """
