@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from ..distributions.continuous import Distribution
 import copy
 from ..utils.utils import choose, dot, expanddims
 from ..utils.resampling import multinomial, systematic
@@ -306,18 +305,7 @@ class ParticleFilter(BaseFilter):
 
 class KalmanFilter(BaseFilter):
     def exchange(self, indices, newfilter):
-        """
-        Exchanges particles of `self` with `indices` of `newfilter`.
-        :param indices: The indices to exchange
-        :type indices: np.ndarray
-        :param newfilter: The new filter to exchange with.
-        :type newfilter: BaseFilter
-        :return: Self
-        :rtype: BaseFilter
-        """
-
         # ===== Exchange parameters ===== #
-
         self._model.exchange(indices, newfilter._model)
 
         # ===== Exchange old likelihoods and weights ===== #
@@ -327,8 +315,6 @@ class KalmanFilter(BaseFilter):
 
         ots_l[:, indices] = nts_l[:, indices]
         self.s_l = list(ots_l)
-
-        # TODO: Fix this
 
         return self
 
