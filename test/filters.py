@@ -4,7 +4,6 @@ import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
 from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
-from pyfilter.proposals import Linearized as Linz, Unscented
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
@@ -198,9 +197,9 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = linear
         self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESS(self.model, (300, 300))
+        ness = NESS(self.model, (3000,), filt=UKF)
 
-        ness = ness.longfilter(y[:500])
+        ness = ness.longfilter(y)
 
         estimates = ness._filter._model.hidden.theta[1]
 
