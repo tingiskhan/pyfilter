@@ -28,9 +28,8 @@ def _overwriteparams(ts, particles):
     :return:
     """
 
-    for j, p in enumerate(ts.theta):
-        if isinstance(p, Distribution):
-            p.sample(size=particles)
+    for j, p in enumerate(ts.theta_dists):
+        p.sample(size=particles)
 
     return True
 
@@ -250,6 +249,7 @@ class BaseFilter(object):
 
         self.s_l = list()
         self.s_mx = list()
+        self.s_n = list()
 
         return self
 
@@ -333,9 +333,7 @@ class KalmanFilter(BaseFilter):
         return self
 
     def resample(self, indices):
-        self._model.p_apply(lambda x: choose(x[0], indices))
-
-        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._model.p_apply(lambda x: choose(x.values, indices))
         self._proposal = self._proposal.resample(indices)
         self.s_l = list(np.array(self.s_l)[:, indices])
 
