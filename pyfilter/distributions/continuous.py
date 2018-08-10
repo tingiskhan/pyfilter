@@ -293,6 +293,23 @@ class Beta(OneDimensional, LogOdds):
         return stats.beta(a=self.a, b=self.b).std()
 
 
+class Exponential(OneDimensional, Log):
+    def __init__(self, lam):
+        self.lam = lam
+
+    def rvs(self, lam=None, size=None, **kwargs):
+        return np.random.exponential(1 / _get(lam, self.lam), size=size)
+
+    def logpdf(self, x, lam=None, **kwargs):
+        return stats.expon(scale=1 / _get(lam, self.lam)).logpdf(x)
+
+    def bounds(self):
+        return 0, np.inf
+
+    def std(self):
+        return stats.expon(scale=1 / self.lam).std()
+
+
 class MultivariateNormal(MultiDimensional, NonTransformable):
     def __init__(self, mean=np.zeros(2), scale=np.eye(2), ndim=None):
 

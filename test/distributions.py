@@ -60,3 +60,15 @@ class Tests(unittest.TestCase):
         uniform.t_values = transformed
 
         assert np.all(np.abs(uniform.transform(uniform.values) - transformed) < 1e-12)
+
+    def test_Exponential(self):
+        lam = 50
+        rv = cont.Exponential(lam)
+
+        true_rv = stats.expon(scale=1 / lam)
+
+        x = np.linspace(0, 50, num=10000)
+        y = rv.logpdf(x)
+        true_y = true_rv.logpdf(x)
+
+        assert np.sqrt(((y - true_y) ** 2).mean()) < 1e-14
