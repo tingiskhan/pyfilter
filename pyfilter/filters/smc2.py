@@ -14,12 +14,15 @@ def _define_pdf(params):
     :rtype: stats.truncnorm
     """
 
-    transformed = params.t_values
+    values = params.values
 
-    mean = transformed.mean()
-    std = transformed.std()
+    mean = values.mean()
+    std = values.std()
 
-    return stats.norm(mean, std)
+    low, high = params.bounds()
+    a, b = (low - mean) / std, (high - mean) / std
+
+    return stats.truncnorm(a=a, b=b, loc=mean, scale=std)
 
 
 def _mcmc_move(params):
@@ -45,7 +48,7 @@ def _eval_kernel(params, new_params):
     :rtype: np.ndarray
     """
 
-    return _define_pdf(params).logpdf(new_params.t_values)
+    return _define_pdf(params).logpdf(new_params.values)
 
 
 class SMC2(NESS):
@@ -129,7 +132,7 @@ class SMC2(NESS):
         # ===== Define new filters and move via MCMC ===== #
 
         t_filt = self._filter.copy().reset()
-        t_filt._model.p_apply(_mcmc_move, transformed=True)
+        t_filt._model.p_apply(_mcmc_move, transformed=False)
 
         # ===== Filter data ===== #
 
