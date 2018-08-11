@@ -5,6 +5,7 @@ from ..utils.utils import get_ess
 from ..distributions.continuous import Distribution
 import math
 import numpy as np
+from scipy.stats import truncnorm
 
 
 def jitter(params, p, ess):
@@ -20,10 +21,14 @@ def jitter(params, p, ess):
     :rtype: np.ndarray
     """
 
-    transformed = params.t_values
-    std = transformed.shape[0] / ess / math.sqrt(transformed.size ** ((p + 2) / p))
+    values = params.values
 
-    return np.random.normal(transformed, std, size=transformed.shape)
+    std = values.shape[0] / ess / math.sqrt(values.size ** ((p + 2) / p))
+
+    low, high = params.bounds()
+    a, b = (low - values) / std, (high - values) / std
+
+    return truncnorm(a=a, b=b, loc=values, scale=std).rvs(size=values.shape)
 
 
 def flattener(a):
@@ -92,7 +97,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess), transformed=True)
+        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess), transformed=False)
 
         # ===== PROPAGATE FILTER ===== #
 
