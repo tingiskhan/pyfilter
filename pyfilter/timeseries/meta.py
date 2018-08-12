@@ -206,7 +206,11 @@ class Base(object):
         :rtype: Base
         """
 
-        self._theta = self.p_map(func, transformed=transformed)
+        for p in self.theta_dists:
+            if transformed:
+                p.t_values = func(p)
+            else:
+                p.values = func(p)
 
         return self
 
@@ -217,30 +221,24 @@ class Base(object):
         :rtype: np.ndarray|float
         """
 
-        return sum(p.logpdf(p.values) if isinstance(p, Distribution) else 0 for p in self.theta)
+        return sum(self.p_map(lambda u: u.logpdf(u.values)))
 
-    def p_map(self, func, default=None, transformed=False):
+    def p_map(self, func, default=None):
         """
-        Applies the func to the parameters and returns a tuple of objects.
-        :param func: The function to apply to parameters. Must return a `numpy.ndarray` object of either transformed
-                     or untransformed parameters
+        Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
+        that are distributions.
+        :param func: The function to apply to parameters.
         :type func: callable
         :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
         :type default: np.ndarray|float|int
-        :param transformed: Whether or not results from applied function are transformed variables
-        :type transformed: bool
         :return: Returns tuple of values
-        :rtype: np.ndarray|float|int
+        :rtype: np.ndarray|float|int|object
         """
 
         out = tuple()
         for p in self.theta:
             if isinstance(p, Distribution):
-                if transformed:
-                    p.t_values = func(p)
-                else:
-                    p.values = func(p)
-                out += (p,)
+                out += (func(p),)
             else:
                 out += (default if default is not None else p,)
 
