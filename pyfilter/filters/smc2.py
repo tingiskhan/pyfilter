@@ -95,26 +95,21 @@ class SMC2(NESS):
     def _calc_kernels(self, copy):
         """
         Calculates the kernel likelihood of the respective parameters.
-        :param copy:
+        :param copy: The copy of the filter
+        :type copy: pyfilter.filters.base.BaseFilter
         :return:
         """
 
-        # TODO: Consider doing this somewhere else...
+        processes = [
+            (copy.ssm.hidden.theta_dists, self.ssm.hidden.theta_dists),
+            (copy.ssm.observable.theta_dists, self.ssm.observable.theta_dists)
+
+        ]
 
         out = 0
-        for newp, oldp in zip(copy._model.hidden.theta, self._model.hidden.theta):
-            if isinstance(newp, Distribution):
-                newkernel = _eval_kernel(newp, oldp)
-                oldkernel = _eval_kernel(oldp, newp)
-
-                out += newkernel - oldkernel
-
-        for newp, oldp in zip(copy._model.observable.theta, self._model.observable.theta):
-            if isinstance(newp, Distribution):
-                newkernel = _eval_kernel(newp, oldp)
-                oldkernel = _eval_kernel(oldp, newp)
-
-                out += newkernel - oldkernel
+        for proc in processes:
+            for newp, oldp in zip(*proc):
+                out += _eval_kernel(newp, oldp) - _eval_kernel(oldp, newp)
 
         return out
 
