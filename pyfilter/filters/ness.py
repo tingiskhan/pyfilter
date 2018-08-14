@@ -5,10 +5,10 @@ from ..utils.utils import get_ess
 from ..distributions.continuous import Distribution
 import math
 import numpy as np
-from scipy.stats import truncnorm
+from scipy.stats import truncnorm, bernoulli
 
 
-def jitter(params, p, ess):
+def cont_jitter(params, p, ess):
     """
     Jitters the parameters.
     :param params: The parameters of the model, inputs as (values, prior)
@@ -20,15 +20,33 @@ def jitter(params, p, ess):
     :return: Proposed values
     :rtype: np.ndarray
     """
-
-    values = params.values
-
+    # TODO: Can we improve the jittering kernel?
+    values = params.t_values
     std = values.shape[0] / ess / math.sqrt(values.size ** ((p + 2) / p))
 
-    low, high = params.bounds()
-    a, b = (low - values) / std, (high - values) / std
+    return values + np.random.normal(scale=std, size=values.shape)
 
-    return truncnorm(a=a, b=b, loc=values, scale=std).rvs(size=values.shape)
+
+def disc_jitter(params, p, *args):
+    """
+    Jitters the parameters using discrete propagation.
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: Distribution
+    :param p: The scaling to use for the variance of the proposal
+    :type p: int|float
+    :return: Proposed values
+    :rtype: np.ndarray
+    """
+    # TODO: Think about a better way to do this
+    prob = 1 / params.values.shape[0] ** (p / 2)
+    i = bernoulli(prob).rvs(size=params.values.shape)
+
+    std = params.values.std()
+
+    low, high = params.bounds()
+    a, b = (low - params.values) / std, (high - params.values) / std
+
+    return (1 - i) * params.values + i * truncnorm(a=a, b=b, loc=params.values, scale=std).rvs(size=params.values.shape)
 
 
 def flattener(a):
@@ -97,7 +115,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess), transformed=False)
+        self._model.p_apply(lambda x: cont_jitter(x, self._p, prev_ess), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 
