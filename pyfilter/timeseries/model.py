@@ -1,6 +1,7 @@
 import copy
 from ..distributions.continuous import Distribution
 import numpy as np
+from ..utils.utils import flatten
 
 
 def _get_params(parameters):
@@ -29,22 +30,24 @@ class StateSpaceModel(object):
         self.observable = observable
 
     @property
-    def ind_hiddenparams(self):
+    def theta_dists(self):
         """
-        Returns the indices of the hidden parameters able to tune.
-        :rtype: tuple of int
+        Returns the tuple of parameters for both hidden and observable.
+        :return: (hidden parameters, observable parameters)
+        :rtype: tuple of tuple of Distribution
         """
 
-        return _get_params(self.hidden.priors)
+        return self.hidden.theta_dists, self.observable.theta_dists
 
     @property
-    def ind_obsparams(self):
+    def flat_theta_dists(self):
         """
-        Returns the indices of the hidden parameters able to tune.
-        :rtype: tuple of int
+        Returns the flattened tuple of parameters for both hidden and observable.
+        :return: Parameters
+        :rtype: tuple of Distribution
         """
 
-        return _get_params(self.observable.priors)
+        return flatten(self.theta_dists)
 
     @property
     def hidden_ndim(self):
