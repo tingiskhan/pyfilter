@@ -1,54 +1,69 @@
 from .ness import NESS
-from ..utils.utils import get_ess
+from ..utils.utils import get_ess, expanddims, normalize
 import numpy as np
-import scipy.stats as stats
-from ..distributions.continuous import Distribution
+from ..distributions.continuous import Distribution, MultivariateNormal
+from .base import KalmanFilter
 
 
-def _define_pdf(params):
+def _define_pdf(params, weights):
     """
     Helper function for creating the PDF.
     :param params: The parameters to use for defining the distribution
-    :type params: Distribution
+    :type params: tuple of tuple of Distribution
+    :param weights: The weights to use
+    :type weights: np.ndarray
     :return: A truncated normal distribution
     :rtype: stats.truncnorm
     """
 
-    values = params.values
+    asarray = np.array([p.t_values for p in params])
 
-    mean = values.mean()
-    std = values.std()
+    if asarray.ndim > 2:
+        asarray = asarray[..., 0]
 
-    low, high = params.bounds()
-    a, b = (low - mean) / std, (high - mean) / std
+    mean = (asarray * weights).sum(axis=-1)
+    cov = np.cov(asarray, aweights=weights)
 
-    return stats.truncnorm(a=a, b=b, loc=mean, scale=std)
+    return MultivariateNormal(mean, np.linalg.cholesky(cov))
 
 
-def _mcmc_move(params):
+def _mcmc_move(params, dist):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: Distribution
+    :type params: tuple of Distribution
+    :param dist: The distribution to use for sampling
+    :type dist: stats.multivariate_normal
     :return: Samples from a truncated normal distribution
     :rtype: np.ndarray
     """
+    shape = next(p.t_values.shape for p in params)
+    if len(shape) > 1:
+        shape = shape[:-1]
 
-    return _define_pdf(params).rvs(size=params.values.shape)
+    rvs = dist.rvs(size=shape)
+
+    for p, vals in zip(params, rvs):
+        p.t_values = expanddims(vals, p.t_values.ndim)
+
+    return True
 
 
-def _eval_kernel(params, new_params):
+def _eval_kernel(params, dist, n_params, n_dist):
     """
     Evaluates the kernel used for performing the MCMC move.
     :param params: The current parameters
-    :type params: Distribution
-    :param new_params: The new parameters to evaluate against
-    :type new_params: Distribution
+    :type params: tuple of Distribution
+    :param n_params: The new parameters to evaluate against
+    :type n_params: tuple of Distribution
     :return: The log density of the proposal kernel evaluated at `new_params`
     :rtype: np.ndarray
     """
 
-    return _define_pdf(params).logpdf(new_params.values)
+    p_vals = np.array([p.t_values for p in params])
+    n_p_vals = np.array([p.t_values for p in n_params])
+
+    return n_dist.logpdf(p_vals) - dist.logpdf(n_p_vals)
 
 
 class SMC2(NESS):
@@ -92,32 +107,15 @@ class SMC2(NESS):
 
         return self
 
-    def _calc_kernels(self, copy):
-        """
-        Calculates the kernel likelihood of the respective parameters.
-        :param copy: The copy of the filter
-        :type copy: pyfilter.filters.base.BaseFilter
-        :return:
-        """
-
-        processes = [
-            (copy.ssm.hidden.theta_dists, self.ssm.hidden.theta_dists),
-            (copy.ssm.observable.theta_dists, self.ssm.observable.theta_dists)
-
-        ]
-
-        out = 0
-        for proc in processes:
-            for newp, oldp in zip(*proc):
-                out += _eval_kernel(newp, oldp) - _eval_kernel(oldp, newp)
-
-        return out
-
     def _rejuvenate(self):
         """
         Rejuvenates the particles using a PMCMC move.
         :return:
         """
+
+        # ===== Construct distribution ===== #
+        ll = np.sum(self._filter.s_l, axis=0)
+        dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(ll))
 
         # ===== Resample among parameters ===== #
 
@@ -127,17 +125,19 @@ class SMC2(NESS):
         # ===== Define new filters and move via MCMC ===== #
 
         t_filt = self._filter.copy().reset()
-        t_filt._model.p_apply(_mcmc_move, transformed=False)
+        _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
 
         t_filt.longfilter(self._td[:self._ior+1])
+        t_ll = np.sum(t_filt.s_l, axis=0)
+        t_dist = _define_pdf(t_filt.ssm.flat_theta_dists, normalize(t_ll))
 
         # ===== Calculate acceptance ratio ===== #
 
-        quotient = np.sum(t_filt.s_l, axis=0) - np.sum(self._filter.s_l, axis=0)
+        quotient = t_ll - ll
         plogquot = t_filt._model.p_prior() - self._filter._model.p_prior()
-        kernel = self._calc_kernels(t_filt)
+        kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, t_dist)
 
         # ===== Check which to accept ===== #
 
@@ -160,7 +160,7 @@ class SMC2(NESS):
         if toaccept.mean() < 0.2:
             if self._disp:
                 print('      Acceptance rate fell below threshold - increasing states')
-                self._increase_states()
+            self._increase_states()
 
         return self
 
@@ -169,6 +169,9 @@ class SMC2(NESS):
         Increases the number of states.
         :return:
         """
+
+        if isinstance(self._filter, KalmanFilter):
+            return self
 
         # ===== Create new filter with double the state particles ===== #
         # TODO: Something goes wrong here
