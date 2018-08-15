@@ -22,7 +22,8 @@ def _define_pdf(params, weights):
         asarray = asarray[..., 0]
 
     mean = (asarray * weights).sum(axis=-1)
-    cov = np.cov(asarray, aweights=weights)
+    centralized = asarray.T - mean
+    cov = np.einsum('ij,jk->ik', weights * centralized.T, centralized)
 
     return MultivariateNormal(mean, np.linalg.cholesky(cov))
 
@@ -134,7 +135,7 @@ class SMC2(NESS):
         t_dist = _define_pdf(t_filt.ssm.flat_theta_dists, normalize(t_ll))
 
         # ===== Calculate acceptance ratio ===== #
-
+        # TODO: Might have to add gradients for transformation?
         quotient = t_ll - ll
         plogquot = t_filt._model.p_prior() - self._filter._model.p_prior()
         kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, t_dist)
