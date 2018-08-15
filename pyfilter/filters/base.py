@@ -308,13 +308,12 @@ class KalmanFilter(BaseFilter):
         # ===== Exchange parameters ===== #
         self._model.exchange(indices, newfilter._model)
 
-        # ===== Exchange old likelihoods and weights ===== #
+        for prop in ['s_l', 's_mx']:
+            ots = np.array(getattr(self, prop))
+            nts = np.array(getattr(newfilter, prop))
 
-        ots_l = np.array(self.s_l)
-        nts_l = np.array(newfilter.s_l)
-
-        ots_l[:, indices] = nts_l[:, indices]
-        self.s_l = list(ots_l)
+            ots[..., indices] = nts[..., indices]
+            setattr(self, prop, list(ots))
 
         return self
 
