@@ -20,10 +20,7 @@ class KalmanLaplace(UKF):
         self._opt = None
 
     def initialize(self):
-        self._initialize_parameters()
-        return self
-
-    # TODO: Tidy up and fix stuff
+        return self._initialize_parameters()
 
     def _get_x_map(self, y):
         """
@@ -31,7 +28,7 @@ class KalmanLaplace(UKF):
         :return: The optimization results.
         :rtype: pyfilter.utils.utils.OptimizeResult
         """
-
+        # ====== If first time we run ====== #
         if self._old_x is None:
             start = self.ssm.hidden.i_mean() if self._particles is None else self.ssm.initialize(size=self._p_particles)
 
@@ -40,31 +37,36 @@ class KalmanLaplace(UKF):
             if self.ssm.hidden.ndim < 2 and isinstance(start, np.ndarray):
                 start = start[None]
 
-            return self._opt(lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x)), start)
+            return self._opt(lambda x: -(self.ssm.weight(y, x) + self.ssm.hidden.i_weight(x)), start), (None, None)
 
-        (m, c, _), _ = self._ut.get_meancov()
+        # ====== Otherwise ===== #
+        (m, c, _), (ym, yc, _) = self._ut.get_meancov()
 
         if self.ssm.hidden_ndim < 2:
             dist = Normal(m[0], np.sqrt(c[0, 0]))
         else:
             dist = MultivariateNormal(m, customcholesky(c))
 
-        return self._opt(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m)
+        return self._opt(lambda x: -(self.ssm.weight(y, x) + dist.logpdf(x)), m), (ym, yc)
 
-    def _save(self, y, optstate):
+    def _save(self, y, optstate, ym, yc):
         """
         Saves the data.
         :param optstate: The optimal state
+        :type optstate: pyfilter.utils.utils.OptimizeResult
+        :param ym: The predicted mean of the observation
+        :type ym: np.ndarray
+        :param yc: The predicted covariance of the observation
+        :type yc: np.ndarray
         :return: Self
         :rtype: KalmanLaplace
         """
-
+        # ====== If first time we run ====== #
         if self._old_x is None:
             self._ut.initialize(optstate.x if self.ssm.hidden_ndim > 1 else optstate.x[0])
+            _, (ym, yc, _) = self._ut.get_meancov()
 
-        # TODO: Speed this up since we already do the computations earlier
-        _, (ym, yc, _) = self._ut.get_meancov()
-
+        # ====== Get likelihood etc. ===== #
         if self.ssm.obs_ndim < 2:
             dist = Normal(ym[0], np.sqrt(yc[0, 0]))
         else:
@@ -82,6 +84,6 @@ class KalmanLaplace(UKF):
         return self
 
     def filter(self, y):
-        optstate = self._get_x_map(y)
+        optstate, (ym, yc) = self._get_x_map(y)
 
-        return self._save(y, optstate)
+        return self._save(y, optstate, ym, yc)
