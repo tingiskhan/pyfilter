@@ -136,7 +136,7 @@ class SMC2(NESS):
 
         # ===== Calculate acceptance ratio ===== #
         # TODO: Might have to add gradients for transformation?
-        quotient = t_ll - ll
+        quotient = t_ll - ll[inds]
         plogquot = t_filt._model.p_prior() - self._filter._model.p_prior()
         kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, t_dist)
 
