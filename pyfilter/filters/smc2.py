@@ -120,7 +120,7 @@ class SMC2(NESS):
 
         # ===== Resample among parameters ===== #
 
-        inds = self._resamp(ll)
+        inds = self._resamp(self._recw)
         self._filter.resample(inds)
 
         # ===== Define new filters and move via MCMC ===== #
