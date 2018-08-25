@@ -37,9 +37,6 @@ class NESSMC2(SMC2):
             self._ness._recw = self._smc2._recw
             self._switched = True
 
-            inds = self._resamp(np.sum(self._filter.s_l, axis=0))
-            self._filter.resample(inds)
-
         return self._ness.filter(y)
 
     def longfilter(self, data):
