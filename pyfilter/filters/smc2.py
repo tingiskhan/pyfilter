@@ -116,7 +116,7 @@ class SMC2(NESS):
 
         # ===== Construct distribution ===== #
         ll = np.sum(self._filter.s_l, axis=0)
-        dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(ll))
+        dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(self._recw))
 
         # ===== Resample among parameters ===== #
 
@@ -132,13 +132,12 @@ class SMC2(NESS):
 
         t_filt.longfilter(self._td[:self._ior+1])
         t_ll = np.sum(t_filt.s_l, axis=0)
-        t_dist = _define_pdf(t_filt.ssm.flat_theta_dists, normalize(t_ll))
 
         # ===== Calculate acceptance ratio ===== #
         # TODO: Might have to add gradients for transformation?
         quotient = t_ll - ll[inds]
         plogquot = t_filt._model.p_prior() - self._filter._model.p_prior()
-        kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, t_dist)
+        kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Check which to accept ===== #
 
