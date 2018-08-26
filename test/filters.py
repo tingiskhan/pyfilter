@@ -3,7 +3,7 @@ import numpy as np
 import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
-from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
+from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace, NESSMC2
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
@@ -358,3 +358,21 @@ class Tests(unittest.TestCase):
         logldiff = np.abs((kf.loglikelihood(y) - np.array(filt.s_l).sum()) / kf.loglikelihood(y))
 
         assert rmse < 0.05 and logldiff < 0.01
+
+    def test_NESSMC2(self):
+        x, y = self.model.sample(500)
+
+        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        ness = NESSMC2(self.model, (1000, 100), filt=Linearized)
+
+        ness = ness.longfilter(y)
+
+        estimates = ness._filter._model.hidden.theta[1]
+
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
+
+        assert mean - std < 1 < mean + std
