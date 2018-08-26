@@ -272,7 +272,7 @@ def approx_fprime(x, f, epsilon):
     return grad
 
 
-def line_search(f, x, p, grad, a=1e2, amin=1e-8):
+def line_search(f, x, p, grad, a=10, amin=1e-8):
     """
     Implements a line-search to find the scalar such that a = argmin f(x + u * p)
     :param f: The function to minimize
@@ -290,6 +290,7 @@ def line_search(f, x, p, grad, a=1e2, amin=1e-8):
     :return: The constant(s) that minimize the the function in doc
     :rtype: np.ndarray
     """
+    # TODO: Implement full Wolfe conditions
     c = tau = 0.75
 
     m = (p * grad).sum(axis=0)

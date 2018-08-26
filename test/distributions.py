@@ -42,3 +42,33 @@ class Tests(unittest.TestCase):
         actstuden = stats.t(3, loc=1, scale=2)
 
         assert student.logpdf(2) == actstuden.logpdf(2)
+
+    def test_Sample(self):
+        size = (300, 30, 40)
+        uniform = cont.Uniform(-1, 1).sample(size=size)
+
+        assert uniform.values.shape == size and uniform.t_values.min() < -1 and uniform.values.min() > -1
+
+        newvals = stats.uniform.rvs(size=size)
+
+        uniform.values = newvals
+
+        assert np.all(newvals == uniform.values)
+
+        transformed = stats.norm.rvs(size=size)
+
+        uniform.t_values = transformed
+
+        assert np.all(np.abs(uniform.transform(uniform.values) - transformed) < 1e-12)
+
+    def test_Exponential(self):
+        lam = 50
+        rv = cont.Exponential(lam)
+
+        true_rv = stats.expon(scale=1 / lam)
+
+        x = np.linspace(0, 50, num=10000)
+        y = rv.logpdf(x)
+        true_y = true_rv.logpdf(x)
+
+        assert np.sqrt(((y - true_y) ** 2).mean()) < 1e-14

@@ -1,5 +1,7 @@
 import copy
 from ..distributions.continuous import Distribution
+import numpy as np
+from ..utils.utils import flatten
 
 
 def _get_params(parameters):
@@ -28,22 +30,24 @@ class StateSpaceModel(object):
         self.observable = observable
 
     @property
-    def ind_hiddenparams(self):
+    def theta_dists(self):
         """
-        Returns the indices of the hidden parameters able to tune.
-        :rtype: tuple of int
+        Returns the tuple of parameters for both hidden and observable.
+        :return: (hidden parameters, observable parameters)
+        :rtype: tuple of tuple of Distribution
         """
 
-        return _get_params(self.hidden.priors)
+        return self.hidden.theta_dists, self.observable.theta_dists
 
     @property
-    def ind_obsparams(self):
+    def flat_theta_dists(self):
         """
-        Returns the indices of the hidden parameters able to tune.
-        :rtype: tuple of int
+        Returns the flattened tuple of parameters for both hidden and observable.
+        :return: Parameters
+        :rtype: tuple of Distribution
         """
 
-        return _get_params(self.observable.priors)
+        return flatten(self.theta_dists)
 
     @property
     def hidden_ndim(self):
@@ -143,7 +147,7 @@ class StateSpaceModel(object):
             hidden.append(x)
             obs.append(y)
 
-        return hidden, obs
+        return np.array(hidden), np.array(obs)
 
     def propagate_apf(self, x):
         """
@@ -165,18 +169,20 @@ class StateSpaceModel(object):
 
         return copy.deepcopy(self)
 
-    def p_apply(self, func):
+    def p_apply(self, func, transformed=False):
         """
         Applies `func` to each of the parameters of the model "inplace", i.e. manipulates `self.theta` of hidden and
         observable process.
-        :param func: Function to apply, must be of the structure func(param).
+        :param func: Function to apply, must be of the structure func(param), and must return a `numpy.ndarray`
         :type func: callable
+        :param transformed: Whether or not results from applied function are transformed variables
+        :type transformed: bool
         :return: Self
         :rtype: StateSpaceModel
         """
 
-        self.hidden.p_apply(func)
-        self.observable.p_apply(func)
+        self.hidden.p_apply(func, transformed=transformed)
+        self.observable.p_apply(func, transformed=transformed)
 
         return self
 
@@ -230,14 +236,14 @@ class StateSpaceModel(object):
 
         # ===== Exchange hidden parameters ===== #
 
-        for i, param in enumerate(self.hidden.priors):
-            if isinstance(param, Distribution):
-                self.hidden.theta[i][indices] = newmodel.hidden.theta[i][indices]
+        for newp, oldp in zip(newmodel.hidden.theta, self.hidden.theta):
+            if isinstance(newp, Distribution):
+                oldp.values[indices] = newp.values[indices]
 
         # ===== Exchange observable parameters ====== #
 
-        for i, param in enumerate(self.observable.priors):
-            if isinstance(param, Distribution):
-                self.observable.theta[i][indices] = newmodel.observable.theta[i][indices]
+        for newp, oldp in zip(newmodel.observable.theta, self.observable.theta):
+            if isinstance(newp, Distribution):
+                oldp.values[indices] = newp.values[indices]
 
         return self

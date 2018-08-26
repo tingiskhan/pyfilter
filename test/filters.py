@@ -3,8 +3,7 @@ import numpy as np
 import pykalman
 import scipy.stats as stats
 from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
-from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
-from pyfilter.proposals import Linearized as Linz, Unscented
+from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace, NESSMC2
 from pyfilter.timeseries import StateSpaceModel, Observable, Base
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
@@ -159,16 +158,16 @@ class Tests(unittest.TestCase):
         self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
-        assert rapf._model.hidden.theta[1].shape == (5000,)
+        assert rapf._model.hidden.theta[1].values.shape == (5000,)
 
         rapf = rapf.longfilter(y)
 
         estimates = rapf._model.hidden.theta[1]
 
-        mean = np.mean(estimates)
-        std = np.std(estimates)
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
 
-        assert mean - 3 * std < 1 < mean + 3 * std
+        assert mean - std < 1 < mean + std
 
     def test_Predict(self):
         x, y = self.model.sample(550)
@@ -198,14 +197,14 @@ class Tests(unittest.TestCase):
 
         self.model.hidden = linear
         self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESS(self.model, (300, 300))
+        ness = NESS(self.model, (3000,), filt=UKF)
 
-        ness = ness.longfilter(y[:500])
+        ness = ness.longfilter(y)
 
         estimates = ness._filter._model.hidden.theta[1]
 
-        mean = np.mean(estimates)
-        std = np.std(estimates)
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
 
         assert mean - std < 1 < mean + std
 
@@ -229,7 +228,7 @@ class Tests(unittest.TestCase):
             assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
 
     def test_SMC2(self):
-        x, y = self.model.sample(300)
+        x, y = self.model.sample(500)
 
         linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
@@ -241,8 +240,10 @@ class Tests(unittest.TestCase):
 
         weights = normalize(smc2._recw)
 
-        mean = np.average(smc2._filter._model.hidden.theta[1], weights=weights[:, None])
-        std = np.sqrt(np.average((smc2._filter._model.hidden.theta[1] - mean) ** 2, weights=weights[:, None]))
+        values = smc2._filter._model.hidden.theta[1].values
+
+        mean = np.average(values, weights=weights[:, None])
+        std = np.sqrt(np.average((values - mean) ** 2, weights=weights[:, None]))
 
         assert mean - std < 1 < mean + std
 
@@ -357,3 +358,21 @@ class Tests(unittest.TestCase):
         logldiff = np.abs((kf.loglikelihood(y) - np.array(filt.s_l).sum()) / kf.loglikelihood(y))
 
         assert rmse < 0.05 and logldiff < 0.01
+
+    def test_NESSMC2(self):
+        x, y = self.model.sample(500)
+
+        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+
+        self.model.hidden = linear
+        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        ness = NESSMC2(self.model, (1000, 100), filt=Linearized)
+
+        ness = ness.longfilter(y)
+
+        estimates = ness._filter._model.hidden.theta[1]
+
+        mean = np.mean(estimates.values)
+        std = np.std(estimates.values)
+
+        assert mean - std < 1 < mean + std

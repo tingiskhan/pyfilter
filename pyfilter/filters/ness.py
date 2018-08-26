@@ -5,25 +5,63 @@ from ..utils.utils import get_ess
 from ..distributions.continuous import Distribution
 import math
 import numpy as np
+from scipy.stats import truncnorm, bernoulli
+from .rapf import _propose
 
 
-def jitter(params, p, ess):
+def cont_jitter(params, p, *args, **kwargs):
     """
     Jitters the parameters.
     :param params: The parameters of the model, inputs as (values, prior)
-    :type params: (np.ndarray, Distribution)
+    :type params: Distribution
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
-    :param ess: The effective sample size. Used for increasing/decreasing the variance of the jittering kernel
-    :type ess: float
+    :return: Proposed values
+    :rtype: np.ndarray
+    """
+    # TODO: Can we improve the jittering kernel?
+    values = params.t_values
+    std = 1 / math.sqrt(values.size ** ((p + 2) / p))
+
+    return values + np.random.normal(scale=std, size=values.shape)
+
+
+def shrink_jitter(params, p, w, h, **kwargs):
+    """
+    Jitters the parameters using the same shrinkage kernel as in the RAPF.
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: Distribution
+    :param p: The scaling to use for the variance of the proposal
+    :type p: int|float
+    :param w: The weights to use
+    :type w: np.ndarray
+    :param h: The `a` to use for shrinking
+    :type h: float
     :return: Proposed values
     :rtype: np.ndarray
     """
 
-    transformed = params[1].transform(params[0])
-    std = transformed.shape[0] / ess / math.sqrt(params[0].size ** ((p + 2) / p))
+    return _propose(params, range(params.values.size), h, w)
 
-    return params[1].inverse_transform(np.random.normal(transformed, std, size=params[0].shape))
+
+def disc_jitter(params, p, w, h, i, **kwargs):
+    """
+    Jitters the parameters using discrete propagation.
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: Distribution
+    :param p: The scaling to use for the variance of the proposal
+    :type p: int|float
+    :param w: The weights to use
+    :type w: np.ndarray
+    :param h: The `a` to use for shrinking
+    :type h: float
+    :param i: The indicies to jitter
+    :type i: np.ndarray
+    :return: Proposed values
+    :rtype: np.ndarray
+    """
+    # TODO: Only jitter the relevant particles
+    return (1 - i) * params.t_values + i * shrink_jitter(params, p, w, h)
 
 
 def flattener(a):
@@ -42,7 +80,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, filt=SISR, threshold=0.9, p=4, **filtkwargs):
+    def __init__(self, model, particles, filt=SISR, threshold=0.9, shrinkage=0.95, p=1, **filtkwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
@@ -76,6 +114,11 @@ class NESS(BaseFilter):
         self._th = threshold
         self._p = p
 
+        self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
+        self.h = np.sqrt(1 - self.a ** 2) if shrinkage is not None else None
+
+        self.kernel = disc_jitter if shrinkage is not None else cont_jitter
+
     def initialize(self):
         """
         Overwrites the initialization.
@@ -86,13 +129,19 @@ class NESS(BaseFilter):
 
     def filter(self, y):
         if isinstance(self._recw, np.ndarray):
-            prev_ess = get_ess(self._recw)
+            prev_weight = self._recw
         else:
-            prev_ess = self._p_particles[0]
+            prev_weight = np.ones(self._p_particles)
 
         # ===== JITTER ===== #
+        # TODO: Think about a better way to do this
+        if self.kernel == disc_jitter:
+            prob = 1 / prev_weight.shape[0] ** (self._p / 2)
+            i = bernoulli(prob).rvs(size=self._p_particles)
+        else:
+            i = 0
 
-        self._model.p_apply(lambda x: jitter(x, self._p, prev_ess))
+        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, h=self.h, i=i), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 

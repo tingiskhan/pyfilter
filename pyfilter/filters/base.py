@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from ..distributions.continuous import Distribution
 import copy
 from ..utils.utils import choose, dot, expanddims
 from ..utils.resampling import multinomial, systematic
@@ -28,18 +27,10 @@ def _overwriteparams(ts, particles):
     :return:
     """
 
-    parambounds = dict()
-    parameters = tuple()
-    for j, p in enumerate(ts.theta):
-        if isinstance(p, Distribution):
-            parambounds[j] = p.bounds()
-            parameters += (p.rvs(size=particles),)
-        else:
-            parameters += (p,)
+    for j, p in enumerate(ts.theta_dists):
+        p.sample(size=particles)
 
-    ts.theta = parameters
-
-    return parambounds
+    return True
 
 
 class BaseFilter(object):
@@ -97,8 +88,8 @@ class BaseFilter(object):
 
         # ===== HIDDEN ===== #
 
-        self._h_params = _overwriteparams(self._model.hidden, self._p_particles)
-        self._o_params = _overwriteparams(self._model.observable, self._p_particles)
+        _overwriteparams(self._model.hidden, self._p_particles)
+        _overwriteparams(self._model.observable, self._p_particles)
 
         return self
 
@@ -229,7 +220,7 @@ class BaseFilter(object):
         """
 
         self._old_x = choose(self._old_x, indices)
-        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._model.p_apply(lambda x: choose(x.values, indices))
         self._old_w = choose(self._old_w, indices)
 
         self._proposal = self._proposal.resample(indices)
@@ -257,6 +248,7 @@ class BaseFilter(object):
 
         self.s_l = list()
         self.s_mx = list()
+        self.s_n = list()
 
         return self
 
@@ -313,36 +305,20 @@ class ParticleFilter(BaseFilter):
 
 class KalmanFilter(BaseFilter):
     def exchange(self, indices, newfilter):
-        """
-        Exchanges particles of `self` with `indices` of `newfilter`.
-        :param indices: The indices to exchange
-        :type indices: np.ndarray
-        :param newfilter: The new filter to exchange with.
-        :type newfilter: BaseFilter
-        :return: Self
-        :rtype: BaseFilter
-        """
-
         # ===== Exchange parameters ===== #
-
         self._model.exchange(indices, newfilter._model)
 
-        # ===== Exchange old likelihoods and weights ===== #
+        for prop in ['s_l', 's_mx']:
+            ots = np.array(getattr(self, prop))
+            nts = np.array(getattr(newfilter, prop))
 
-        ots_l = np.array(self.s_l)
-        nts_l = np.array(newfilter.s_l)
-
-        ots_l[:, indices] = nts_l[:, indices]
-        self.s_l = list(ots_l)
-
-        # TODO: Fix this
+            ots[..., indices] = nts[..., indices]
+            setattr(self, prop, list(ots))
 
         return self
 
     def resample(self, indices):
-        self._model.p_apply(lambda x: choose(x[0], indices))
-
-        self._model.p_apply(lambda x: choose(x[0], indices))
+        self._model.p_apply(lambda x: choose(x.values, indices))
         self._proposal = self._proposal.resample(indices)
         self.s_l = list(np.array(self.s_l)[:, indices])
 
