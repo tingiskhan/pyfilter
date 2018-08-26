@@ -34,8 +34,11 @@ class NESSMC2(SMC2):
 
         if not self._switched:
             print('\n===== Switching to NESS =====')
-            self._ness._recw = self._smc2._recw
             self._switched = True
+
+            inds = self._resamp(self._smc2._recw)
+            self._filter.resample(inds)
+            self._recw = 0
 
         return self._ness.filter(y)
 
