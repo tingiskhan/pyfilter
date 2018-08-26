@@ -6,28 +6,47 @@ from ..distributions.continuous import Distribution
 import math
 import numpy as np
 from scipy.stats import truncnorm, bernoulli
+from .rapf import _propose
 
 
-def cont_jitter(params, p, ess):
+def cont_jitter(params, p, *args, **kwargs):
     """
     Jitters the parameters.
     :param params: The parameters of the model, inputs as (values, prior)
     :type params: Distribution
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
-    :param ess: The effective sample size. Used for increasing/decreasing the variance of the jittering kernel
-    :type ess: float
     :return: Proposed values
     :rtype: np.ndarray
     """
     # TODO: Can we improve the jittering kernel?
     values = params.t_values
-    std = values.shape[0] / ess / math.sqrt(values.size ** ((p + 2) / p))
+    std = 1 / math.sqrt(values.size ** ((p + 2) / p))
 
     return values + np.random.normal(scale=std, size=values.shape)
 
 
-def disc_jitter(params, p, *args):
+def shrink_jitter(params, p, w, a, **kwargs):
+    """
+    Jitters the parameters using the same shrinkage kernel as in the RAPF.
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: Distribution
+    :param p: The scaling to use for the variance of the proposal
+    :type p: int|float
+    :param w: The weights to use
+    :type w: np.ndarray
+    :param a: The `a` to use for shrinking
+    :type a: float
+    :return: Proposed values
+    :rtype: np.ndarray
+    """
+
+    h = np.sqrt(1 - a ** 2)
+
+    return _propose(params, range(params.values.size), h, w)
+
+
+def disc_jitter(params, p, *args, **kwargs):
     """
     Jitters the parameters using discrete propagation.
     :param params: The parameters of the model, inputs as (values, prior)
@@ -65,7 +84,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, filt=SISR, threshold=0.9, p=4, **filtkwargs):
+    def __init__(self, model, particles, filt=SISR, threshold=0.95, shrinkage=0.99, p=4, **filtkwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
@@ -99,6 +118,11 @@ class NESS(BaseFilter):
         self._th = threshold
         self._p = p
 
+        self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
+        self.h = np.sqrt(1 - self.a ** 2) if shrinkage is not None else None
+
+        self.kernel = shrink_jitter if shrinkage is not None else cont_jitter
+
     def initialize(self):
         """
         Overwrites the initialization.
@@ -109,13 +133,13 @@ class NESS(BaseFilter):
 
     def filter(self, y):
         if isinstance(self._recw, np.ndarray):
-            prev_ess = get_ess(self._recw)
+            prev_weight = normalize(self._recw)
         else:
-            prev_ess = self._p_particles[0]
+            prev_weight = np.ones(self._p_particles)
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: cont_jitter(x, self._p, prev_ess), transformed=True)
+        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, a=self.a), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 
