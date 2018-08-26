@@ -133,7 +133,7 @@ class NESS(BaseFilter):
 
     def filter(self, y):
         if isinstance(self._recw, np.ndarray):
-            prev_weight = normalize(self._recw)
+            prev_weight = self._recw
         else:
             prev_weight = np.ones(self._p_particles)
 
