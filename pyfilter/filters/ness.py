@@ -26,7 +26,7 @@ def cont_jitter(params, p, *args, **kwargs):
     return values + np.random.normal(scale=std, size=values.shape)
 
 
-def shrink_jitter(params, p, w, a, **kwargs):
+def shrink_jitter(params, p, w, h, **kwargs):
     """
     Jitters the parameters using the same shrinkage kernel as in the RAPF.
     :param params: The parameters of the model, inputs as (values, prior)
@@ -35,13 +35,11 @@ def shrink_jitter(params, p, w, a, **kwargs):
     :type p: int|float
     :param w: The weights to use
     :type w: np.ndarray
-    :param a: The `a` to use for shrinking
-    :type a: float
+    :param h: The `a` to use for shrinking
+    :type h: float
     :return: Proposed values
     :rtype: np.ndarray
     """
-
-    h = np.sqrt(1 - a ** 2)
 
     return _propose(params, range(params.values.size), h, w)
 
@@ -139,7 +137,7 @@ class NESS(BaseFilter):
 
         # ===== JITTER ===== #
 
-        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, a=self.a), transformed=True)
+        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, h=self.h), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 
