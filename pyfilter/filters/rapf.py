@@ -5,27 +5,40 @@ import numpy as np
 from ..utils.normalization import normalize
 
 
-def _shrink(parameter, shrink, weights):
+def _shrink(p, shrink, weights):
     """
     Helper class for shrink parameters
-    :param parameter: 
-    :param shrink:
-    :param weights:
-    :return: 
+    :param p: The parameter
+    :type p: pyfilter.distributions.continuous.Distribution
+    :param shrink: The amount to shrink
+    :type shrink: float
+    :param weights: The weights to use for estimating the mean
+    :type weights: np.ndarray
+    :rtype: np.ndarray
     """
 
-    return shrink * parameter.t_values + (1 - shrink) * np.average(parameter.t_values, weights=normalize(weights))
+    return shrink * p.t_values + (1 - shrink) * np.average(p.t_values, weights=normalize(weights), axis=0)
 
 
-def _propose(p, indices, h, particles, weights):
+def _propose(p, indices, h, weights):
+    """
+    Helper class for shrink parameters
+    :param p: The parameter
+    :type p: pyfilter.distributions.continuous.Distribution
+    :param indices: The indices to resample
+    :type indices: np.ndarray
+    :param weights: The weights to use for estimating the mean
+    :type weights: np.ndarray
+    :rtype: np.ndarray
+    """
     normalized = normalize(weights)
 
     means = _shrink(p, sqrt(1 - h ** 2), weights)[indices]
     transformed = p.t_values
-    mean = np.average(transformed, weights=normalized)
-    std = h * np.sqrt(np.average((transformed - mean) ** 2, weights=normalized))
+    mean = np.average(transformed, weights=normalized, axis=0)
+    std = h * np.sqrt(np.average((transformed - mean) ** 2, weights=normalized, axis=0))
 
-    return np.random.normal(means, std, size=particles)
+    return np.random.normal(means, std, size=p.values.shape)
 
 
 class RAPF(BaseFilter):
@@ -60,7 +73,7 @@ class RAPF(BaseFilter):
         res_ind = self._resamp(t_weights + self._old_w)
 
         # ===== Propose new parameters ===== #
-        self._model.p_apply(lambda u: _propose(u, res_ind, self.h, self._p_particles, self._old_w), transformed=True)
+        self._model.p_apply(lambda u: _propose(u, res_ind, self.h, self._old_w), transformed=True)
 
         # ===== Propagate the good states ===== #
 
