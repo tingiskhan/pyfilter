@@ -44,26 +44,24 @@ def shrink_jitter(params, p, w, h, **kwargs):
     return _propose(params, range(params.values.size), h, w)
 
 
-def disc_jitter(params, p, *args, **kwargs):
+def disc_jitter(params, p, w, h, i, **kwargs):
     """
     Jitters the parameters using discrete propagation.
     :param params: The parameters of the model, inputs as (values, prior)
     :type params: Distribution
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
+    :param w: The weights to use
+    :type w: np.ndarray
+    :param h: The `a` to use for shrinking
+    :type h: float
+    :param i: The indicies to jitter
+    :type i: np.ndarray
     :return: Proposed values
     :rtype: np.ndarray
     """
-    # TODO: Think about a better way to do this
-    prob = 1 / params.values.shape[0] ** (p / 2)
-    i = bernoulli(prob).rvs(size=params.values.shape)
-
-    std = params.values.std()
-
-    low, high = params.bounds()
-    a, b = (low - params.values) / std, (high - params.values) / std
-
-    return (1 - i) * params.values + i * truncnorm(a=a, b=b, loc=params.values, scale=std).rvs(size=params.values.shape)
+    # TODO: Only jitter the relevant particles
+    return (1 - i) * params.t_values + i * shrink_jitter(params, p, w, h)
 
 
 def flattener(a):
@@ -82,7 +80,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, filt=SISR, threshold=0.95, shrinkage=0.99, p=4, **filtkwargs):
+    def __init__(self, model, particles, filt=SISR, threshold=0.95, shrinkage=0.95, p=1, **filtkwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
@@ -119,7 +117,7 @@ class NESS(BaseFilter):
         self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
         self.h = np.sqrt(1 - self.a ** 2) if shrinkage is not None else None
 
-        self.kernel = shrink_jitter if shrinkage is not None else cont_jitter
+        self.kernel = disc_jitter if shrinkage is not None else cont_jitter
 
     def initialize(self):
         """
@@ -136,8 +134,14 @@ class NESS(BaseFilter):
             prev_weight = np.ones(self._p_particles)
 
         # ===== JITTER ===== #
+        # TODO: Think about a better way to do this
+        if self.kernel == disc_jitter:
+            prob = 1 / prev_weight.shape[0] ** (self._p / 2)
+            i = bernoulli(prob).rvs(size=self._p_particles)
+        else:
+            i = 0
 
-        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, h=self.h), transformed=True)
+        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, h=self.h, i=i), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 
