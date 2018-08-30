@@ -1,4 +1,0 @@
-{
-  "test/filters.py::Tests::test_NESSMC2": true,
-  "test/filters.py::Tests::test_NESS_MultipleRounds": true
-}
