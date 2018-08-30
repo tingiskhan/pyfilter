@@ -171,7 +171,7 @@ class NESS(BaseFilter):
             xout.append([flattener(x) for x in xt])
             yout.append(flattener(yt))
 
-        return xout, yout
+        return np.array(xout), np.array(yout)
 
     def filtermeans(self):
         out = list()
