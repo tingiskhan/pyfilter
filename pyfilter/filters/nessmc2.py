@@ -37,8 +37,8 @@ class NESSMC2(SMC2):
             self._switched = True
 
             inds = self._resamp(self._smc2._recw)
-            self._filter.resample(inds)
-            self._recw = 0
+            self._filter = self._ness._filter = self._smc2._filter.resample(inds)
+            self._recw = np.zeros_like(self._smc2._recw)
 
         return self._ness.filter(y)
 
