@@ -153,7 +153,7 @@ class SMC2(NESS):
         # ===== Replace old filters with newly accepted ===== #
 
         self._filter.exchange(toaccept, t_filt)
-        self._recw = 0
+        self._recw = np.zeros_like(self._recw)
 
         # ===== Increase states if less than 20% are accepted ===== #
 

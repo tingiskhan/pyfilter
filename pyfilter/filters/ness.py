@@ -157,7 +157,7 @@ class NESS(BaseFilter):
             indices = self._resamp(self._recw)
             self._filter = self._filter.resample(indices)
 
-            self._recw = 0  # type: np.ndarray
+            self._recw = np.zeros_like(self._recw)
 
         return self
 
