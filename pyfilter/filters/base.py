@@ -196,7 +196,7 @@ class BaseFilter(object):
         Predicts `steps` ahead using the latest available information.
         :param steps: The number of steps forward to predict
         :type steps: int
-        :return: 
+        :return: np.arrays
         """
         x, y = self._model.sample(steps+1, x_s=self._old_x)
 
