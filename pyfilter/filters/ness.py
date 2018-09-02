@@ -55,7 +55,7 @@ def disc_jitter(params, p, w, h, i, **kwargs):
     :type w: np.ndarray
     :param h: The `a` to use for shrinking
     :type h: float
-    :param i: The indicies to jitter
+    :param i: The indices to jitter
     :type i: np.ndarray
     :return: Proposed values
     :rtype: np.ndarray
