@@ -23,8 +23,12 @@ class NESSMC2(SMC2):
         self._hs = handshake
         self._switched = False
 
-        self._smc2 = SMC2(model, particles, **(smc2kwargs or {}), **kwargs)
-        self._ness = NESS(model, particles, **(nesskwargs or {}), **kwargs)
+        # ===== Set some key-worded arguments ===== #
+        nk = nesskwargs or {}
+        sm2k = smc2kwargs or {}
+
+        self._smc2 = SMC2(model, particles, threshold=sm2k.pop('threshold', 0.4), **sm2k, **kwargs)
+        self._ness = NESS(model, particles, shrinkage=nk.pop('shrinkage', 0.95), p=nk.pop('p', 1),  **nk, **kwargs)
 
         self._filter = self._ness._filter = self._smc2._filter
 
@@ -41,19 +45,3 @@ class NESSMC2(SMC2):
             self._recw = np.zeros_like(self._smc2._recw)
 
         return self._ness.filter(y)
-
-    def longfilter(self, data):
-        if isinstance(data, pd.DataFrame):
-            data = data.values
-        elif isinstance(data, list):
-            data = np.array(data)
-
-        # ===== SMC2 needs the entire dataset ==== #
-        self._td = self._smc2._td = data
-
-        for i in range(data.shape[0]):
-            self.filter(data[i])
-
-        self._td = self._smc2._td = None
-
-        return self
