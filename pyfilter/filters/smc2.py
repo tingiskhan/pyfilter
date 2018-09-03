@@ -68,7 +68,7 @@ def _eval_kernel(params, dist, n_params, n_dist):
 
 
 class SMC2(NESS):
-    def __init__(self, model, particles, threshold=0.2, disp=True, **filtkwargs):
+    def __init__(self, model, particles, threshold=0.2, disp=False, **filtkwargs):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param model: See BaseFilter
@@ -130,7 +130,7 @@ class SMC2(NESS):
 
         # ===== Filter data ===== #
 
-        t_filt.longfilter(self._td[:self._ior+1])
+        t_filt.longfilter(self._td[:self._ior+1], bar=False)
         t_ll = np.sum(t_filt.s_l, axis=0)
 
         # ===== Calculate acceptance ratio ===== #
@@ -176,7 +176,7 @@ class SMC2(NESS):
         # ===== Create new filter with double the state particles ===== #
         # TODO: Something goes wrong here
         n_particles = self._filter._particles[0], 2 * self._filter._particles[1]
-        t_filt = self._filter.copy().reset(n_particles).longfilter(self._td[:self._ior+1])
+        t_filt = self._filter.copy().reset(n_particles).longfilter(self._td[:self._ior+1], bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
 

@@ -5,6 +5,7 @@ from ..utils.utils import choose, dot, expanddims
 from ..utils.resampling import multinomial, systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import Base, StateSpaceModel
+from tqdm import tqdm
 
 
 def _numparticles(parts):
@@ -152,10 +153,13 @@ class BaseFilter(object):
 
         return self
 
-    def longfilter(self, data):
+    def longfilter(self, data, bar=True):
         """
         Filters the data for the entire data set.
         :param data: An array of data. Should be {# observations, # dimensions (minimum of 1)}
+        :type data: pd.DataFrame|np.ndarray
+        :param bar: Whether to print a progressbar
+        :type bar: bool
         :return: Self
         :rtype: BaseFilter
         """
@@ -168,7 +172,12 @@ class BaseFilter(object):
         # ===== SMC2 needs the entire dataset ==== #
         self._td = data
 
-        for i in range(data.shape[0]):
+        if bar:
+            iterator = tqdm(range(data.shape[0]), desc=str(self.__class__.__name__))
+        else:
+            iterator = range(data.shape[0])
+
+        for i in iterator:
             self.filter(data[i])
 
         self._td = None

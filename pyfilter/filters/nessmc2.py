@@ -2,6 +2,7 @@ from .smc2 import SMC2
 from .ness import NESS
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 class NESSMC2(SMC2):
@@ -57,7 +58,7 @@ class NESSMC2(SMC2):
         # ===== SMC2 needs the entire dataset ==== #
         self._td = self._smc2._td = data
 
-        for i in range(data.shape[0]):
+        for i in tqdm(range(data.shape[0]), desc=str(self.__class__.__name__), leave=True):
             self.filter(data[i])
 
         self._td = self._smc2._td = None
