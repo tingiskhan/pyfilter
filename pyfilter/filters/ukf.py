@@ -51,11 +51,13 @@ class UKF(KalmanFilter):
 
         return self
 
-    def resample(self, indices):
+    def resample(self, indices, entire_history=True):
         self._model.p_apply(lambda x: choose(x.values, indices))
 
         self._ut._mean = choose(self._ut._mean, indices)
         self._ut._cov = choose(self._ut._cov, indices)
-        self.s_l = list(np.array(self.s_l)[:, indices])
+
+        if entire_history:
+            self.s_l = list(np.array(self.s_l)[:, indices])
 
         return self

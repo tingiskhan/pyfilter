@@ -155,7 +155,7 @@ class NESS(BaseFilter):
 
         if ess < self._th * self._filter._particles[0]:
             indices = self._resamp(self._recw)
-            self._filter = self._filter.resample(indices)
+            self._filter = self._filter.resample(indices, entire_history=False)
 
             self._recw = np.zeros_like(self._recw)
 

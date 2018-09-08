@@ -220,10 +220,13 @@ class BaseFilter(object):
 
         return copy.deepcopy(self)
 
-    def resample(self, indices):
+    def resample(self, indices, entire_history=True):
         """
         Resamples the particles along the first axis.
         :param indices: The indices to choose
+        :type indices: np.ndarray
+        :param entire_history: Whether to resample entire history
+        :type entire_history: bool
         :return: Self
         :rtype: BaseFilter
         """
@@ -233,8 +236,9 @@ class BaseFilter(object):
         self._old_w = choose(self._old_w, indices)
 
         self._proposal = self._proposal.resample(indices)
-        self.s_l = list(np.array(self.s_l)[..., indices])
-        self.s_mx = list(np.array(self.s_mx)[..., indices])
+        if entire_history:
+            self.s_l = list(np.array(self.s_l)[..., indices])
+            self.s_mx = list(np.array(self.s_mx)[..., indices])
 
         return self
 
@@ -326,9 +330,11 @@ class KalmanFilter(BaseFilter):
 
         return self
 
-    def resample(self, indices):
+    def resample(self, indices, entire_history=True):
         self._model.p_apply(lambda x: choose(x.values, indices))
         self._proposal = self._proposal.resample(indices)
-        self.s_l = list(np.array(self.s_l)[:, indices])
+
+        if entire_history:
+            self.s_l = list(np.array(self.s_l)[:, indices])
 
         return self
