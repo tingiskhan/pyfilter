@@ -55,7 +55,7 @@ def disc_jitter(params, p, w, h, i, **kwargs):
     :type w: np.ndarray
     :param h: The `a` to use for shrinking
     :type h: float
-    :param i: The indicies to jitter
+    :param i: The indices to jitter
     :type i: np.ndarray
     :return: Proposed values
     :rtype: np.ndarray
@@ -80,7 +80,7 @@ def flattener(a):
 
 
 class NESS(BaseFilter):
-    def __init__(self, model, particles, filt=SISR, threshold=0.9, shrinkage=0.95, p=1, **filtkwargs):
+    def __init__(self, model, particles, filt=SISR, threshold=0.9, shrinkage=None, p=4, **filtkwargs):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param model: See BaseFilter
@@ -155,7 +155,7 @@ class NESS(BaseFilter):
 
         if ess < self._th * self._filter._particles[0]:
             indices = self._resamp(self._recw)
-            self._filter = self._filter.resample(indices)
+            self._filter = self._filter.resample(indices, entire_history=False)
 
             self._recw = np.zeros_like(self._recw)
 
