@@ -3,9 +3,10 @@ import unittest
 import numpy as np
 import scipy.stats as stats
 
-import pyfilter.distributions.continuous as cont
 import pyfilter.utils.utils as helps
-from pyfilter.timeseries import StateSpaceModel, Observable, Base
+from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
+from torch.distributions import Normal, MultivariateNormal
+import torch
 
 
 def f(x, alpha, sigma):
@@ -41,11 +42,11 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return helps.dot(a, x)
+    return a.dot(x)
 
 
 def f0mvn(a, sigma):
-    return [0, 0]
+    return torch.zeros(2)
 
 
 def fomvn(x, sigma):
@@ -57,24 +58,25 @@ def gomvn(x, sigma):
 
 
 class Tests(unittest.TestCase):
-    linear = Base((f0, g0), (f, g), (1, 1), (stats.norm, stats.norm))
-
-    linearobs = Observable((fo, go), (1, 1), stats.norm)
-
+    # ===== 1D model ===== #
+    norm = Normal(0., 1.)
+    linear = BaseModel((f0, g0), (f, g), (1, 1), (norm, norm))
+    linearobs = Observable((fo, go), (1, 1), norm)
     model = StateSpaceModel(linear, linearobs)
 
-    mat = np.eye(2)
-    scale = np.eye(2)
+    # ===== 2D model ===== #
+    mat = scale = torch.eye(2)
 
-    mvnlinear = Base((f0mvn, g0), (fmvn, g), (mat, scale), (cont.MultivariateNormal(), cont.MultivariateNormal()))
-    mvnoblinear = Observable((fomvn, gomvn), (1,), cont.Normal())
+    mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
+    mvnlinear = BaseModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
+    mvnoblinear = Observable((fomvn, gomvn), (1,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
     def test_InitializeModel1D(self):
         sample = self.model.initialize()
 
-        assert isinstance(sample, float)
+        assert isinstance(sample, torch.Tensor)
 
     def test_InitializeModel(self):
         sample = self.model.initialize(1000)

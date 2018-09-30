@@ -1,8 +1,8 @@
-from .meta import Base
+from .meta import BaseModel
 from ..distributions.continuous import Distribution
 
 
-class Observable(Base):
+class Observable(BaseModel):
     def __init__(self, funcs, theta, noise):
         """
         Object for defining the observable part of an HMM.

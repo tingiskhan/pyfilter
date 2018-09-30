@@ -1,19 +1,8 @@
 import copy
-from ..distributions.continuous import Distribution
 import numpy as np
 from ..utils.utils import flatten
-
-
-def _get_params(parameters):
-    """
-    Returns the indices of the tunable parameters of `process`.
-    :param parameters: The parameters
-    :type parameters: tuple of Distribution
-    :return: The indices
-    :rtype: tuple of int
-    """
-
-    return list(i for i, p in enumerate(parameters) if isinstance(p, Distribution))
+import torch
+from torch.distributions import Distribution
 
 
 class StateSpaceModel(object):
@@ -21,9 +10,9 @@ class StateSpaceModel(object):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: pyfilter.timeseries.meta.Base
+        :type hidden: pyfilter.timeseries.meta.BaseModel
         :param observable: The observable process(es) constituting the SSM
-        :type observable: pyfilter.timeseries.meta.Base
+        :type observable: pyfilter.timeseries.meta.BaseModel
         """
 
         self.hidden = hidden
@@ -132,22 +121,22 @@ class StateSpaceModel(object):
         :rtype: tuple of list
         """
 
-        hidden, obs = list(), list()
+        hidden, obs = torch.zeros(steps), torch.zeros(steps)
 
         x = x_s if x_s is not None else self.initialize()
         y = self.observable.propagate(x)
 
-        hidden.append(x)
-        obs.append(y)
+        hidden[0] = x
+        obs[0] = y
 
         for i in range(1, steps):
             x = self.propagate(x)
             y = self.observable.propagate(x)
 
-            hidden.append(x)
-            obs.append(y)
+            hidden[i] = x
+            obs[i] = y
 
-        return np.array(hidden), np.array(obs)
+        return hidden, obs
 
     def propagate_apf(self, x):
         """
@@ -205,23 +194,6 @@ class StateSpaceModel(object):
         """
 
         return self.hidden.p_map(func, **kwargs), self.observable.p_map(func, **kwargs)
-
-    def p_grad(self, y, x, xo, h=1e-3):
-        """
-        Calculates the gradient of the parameters at the current values.
-        :param y: The current observation
-        :type y: np.ndarray|float|int
-        :param x: The current state
-        :type x: np.ndarray|float|int
-        :param xo: The previous state
-        :type xo: np.ndarray|float|int
-        :param h: The finite difference approximation to use.
-        :type h: float
-        :return: Tuple of gradient estimates for each parameter of the hidden/observable
-        :rtype: tuple of tuple of np.ndarray|float
-        """
-
-        return self.hidden.p_grad(x, xo, h=h), self.observable.p_grad(y, x, h=h)
 
     def exchange(self, indices, newmodel):
         """
