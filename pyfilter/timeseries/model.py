@@ -10,9 +10,9 @@ class StateSpaceModel(object):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: pyfilter.timeseries.meta.BaseModel
+        :type hidden: pyfilter.timeseries.base.BaseModel
         :param observable: The observable process(es) constituting the SSM
-        :type observable: pyfilter.timeseries.meta.BaseModel
+        :type observable: pyfilter.timeseries.base.BaseModel
         """
 
         self.hidden = hidden

@@ -1,4 +1,4 @@
-from .meta import BaseModel
+from .base import BaseModel
 from math import sqrt
 
 
