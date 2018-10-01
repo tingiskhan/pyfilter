@@ -1,6 +1,7 @@
 from torch.distributions import Distribution
 import torch
 from functools import lru_cache
+from .parameter import Parameter
 
 
 class BaseModel(object):
@@ -12,14 +13,14 @@ class BaseModel(object):
         :param funcs: The functions governing the dynamics of the process
         :type funcs: tuple[callable]
         :param theta: The parameters governing the dynamics
-        :type theta: tuple of Distribution|tuple of np.ndarray|tuple of float|tuple of int
+        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
         :param noise: The noise governing the noise process
-        :type noise: (Distribution, Distribution)
+        :type noise: tuple[Distribution]
         """
 
         self.f0, self.g0 = initial
         self.f, self.g = funcs
-        self._theta = theta
+        self._theta = (Parameter(th) for th in theta)
 
         cases = (
             (isinstance(n, Distribution) for n in noise),
@@ -35,7 +36,7 @@ class BaseModel(object):
     def theta(self):
         """
         Returns the parameters of the model.
-        :rtype: tuple of Distribution
+        :rtype: tuple[Parameter]
         """
 
         return self._theta
@@ -44,19 +45,20 @@ class BaseModel(object):
     def theta_dists(self):
         """
         Returns the indices for parameter are distributions.
-        :rtype: tuple
+        :rtype: tuple[Parameter]
         """
 
-        return tuple(p for p in self.theta if isinstance(p, Distribution))
+        return tuple(p for p in self.theta if p.trainable)
 
     @property
+    @lru_cache()
     def theta_vals(self):
         """
         Returns the values of the parameters
-        :rtype: tuple of np.ndarray
+        :rtype: tuple[float|torch.Tensor]
         """
 
-        return tuple(th.values if isinstance(th, Distribution) else th for th in self.theta)
+        return tuple(th.values for th in self.theta)
 
     @property
     @lru_cache()
@@ -302,7 +304,7 @@ class BaseModel(object):
         :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
         :type default: np.ndarray|float|int
         :return: Returns tuple of values
-        :rtype: np.ndarray|float|int|object
+        :rtype: tuple[Parameter]
         """
 
         out = tuple()
