@@ -110,7 +110,8 @@ class BaseModel(object):
         if self.ndim < 2:
             rescaled = (x - loc) / scale
         else:
-            rescaled = scale.inv().dot(x - loc)
+            # TODO: Might not work
+            rescaled = scale.inverse().dot(x - loc)
 
         return self.noise0.log_prob(rescaled)
 
@@ -158,7 +159,25 @@ class BaseModel(object):
         if self.ndim < 2:
             rescaled = (y - loc) / scale
         else:
-            rescaled = scale.inv().dot(y - loc)
+            # ===== Scale ===== #
+            s_shape = (*scale.shape[2:], *scale.shape[:2])
+            inv = scale.reshape(s_shape).inverse()
+            s_ellips = '...' if scale.dim() > 2 else ''
+
+            # ===== Location ===== #
+            l_ellips = '...' if loc.dim() > 1 else ''
+            if isinstance(y, float) or y.dim() < loc.dim():
+                l_shape = (*x.shape[1:], loc.shape[0])
+                transposed = True
+            else:
+                l_shape = loc.shape
+                transposed = False
+
+            diff = y - loc.reshape(l_shape)
+
+            # ===== Calculate ===== #
+            operations = '{:s}ij,j{:s}->{:s}i' if not transposed else '{:s}ij,{:s}j->{:s}i'
+            rescaled = torch.einsum(operations.format(s_ellips, l_ellips, s_ellips or l_ellips), (inv, diff))
 
         return self.noise.log_prob(rescaled)
 
