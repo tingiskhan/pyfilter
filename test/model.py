@@ -42,7 +42,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return a.dot(x)
+    return torch.einsum('ij,j...->i...', (a, x))
 
 
 def f0mvn(a, sigma):
@@ -110,3 +110,9 @@ class Tests(unittest.TestCase):
         x, y = self.mvnmodel.sample(30)
 
         assert len(x) == 30 and x[0].shape == (2,)
+
+    def test_SampleMultivariateSamples(self):
+        shape = ()
+        x, y = self.mvnmodel.sample(30, samples=shape)
+
+        assert x.shape == (30, 2, *shape) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)

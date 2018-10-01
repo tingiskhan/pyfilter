@@ -1,5 +1,6 @@
 from torch.distributions import Distribution
 import torch
+from functools import lru_cache
 
 
 class BaseModel(object):
@@ -58,13 +59,18 @@ class BaseModel(object):
         return tuple(th.values if isinstance(th, Distribution) else th for th in self.theta)
 
     @property
+    @lru_cache()
     def ndim(self):
         """
         Returns the dimension of the process.
         :return: Dimension of process
         :rtype: int
         """
-        return self.noise.mean.shape[0]
+        shape = self.noise.mean.shape
+        if len(shape) < 1:
+            return 1
+
+        return shape[0]
 
     def i_mean(self, params=None):
         """
@@ -168,12 +174,20 @@ class BaseModel(object):
         """
 
         loc, scale = self.i_mean(params), self.i_scale(params)
-        eps = self.noise0.sample(((shape,) if isinstance(shape, int) else shape) or torch.Size())
+        rndshape = ((shape,) if isinstance(shape, int) else shape) or torch.Size()
+        eps = self.noise0.sample(rndshape)
 
         if self.ndim < 2:
             return loc + scale * eps
 
-        return loc + scale.dot(eps)
+        # ===== Handle two-dimensional matrices ===== #
+        ellips = '...' if scale.dim() > 2 else ''
+        temp = torch.einsum('ij' + ellips + ',...j->...i', (scale, eps))
+
+        if loc.dim() == temp.dim():
+            loc = loc.reshape(temp.shape)
+
+        return (loc + temp).reshape((self.ndim, *rndshape))
 
     def propagate(self, x, params=None):
         """
@@ -186,14 +200,25 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        loc = self.mean(x, params)
-        scale = self.scale(x, params)
-        eps = self.noise.sample(x.shape)
+        loc, scale = self.mean(x, params), self.scale(x, params)
+
+        if isinstance(self, Observable):
+            shape = loc.shape if self.ndim < 2 else loc.shape[1:]
+        else:
+            shape = x.shape if self.ndim < 2 else x.shape[1:]
+
+        eps = self.noise.sample(shape)
 
         if self.ndim < 2:
             return loc + scale * eps
 
-        return loc + scale.dot(eps)
+        # ===== Handle two-dimensional matrices ===== #
+        ellips = '...' if scale.dim() > 2 else ''
+        temp = torch.einsum('ij' + ellips + ',...j->...i', (scale, eps))
+        if loc.dim() == temp.dim():
+            loc = loc.reshape(temp.shape)
+
+        return (loc + temp).reshape(x.shape)
 
     def sample(self, steps, samples=None, params=None):
         """
@@ -208,7 +233,12 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        out = torch.zeros(steps, samples or 1)
+        shape = steps, self.ndim
+
+        if samples is not None:
+            shape += ((*((samples,) if not isinstance(samples, (list, tuple)) else samples),),)
+
+        out = torch.zeros(shape)
         out[0] = self.i_sample(shape=samples, params=params)
 
         for i in range(1, steps):
@@ -264,3 +294,17 @@ class BaseModel(object):
                 out += (default if default is not None else p,)
 
         return out
+
+
+class Observable(BaseModel):
+    def __init__(self, funcs, theta, noise):
+        """
+        Object for defining the observable part of an HMM.
+        :param funcs: The functions governing the dynamics of the process
+        :type funcs: tuple of callable
+        :param theta: The parameters governing the dynamics
+        :type theta: tuple of np.ndarray|tuple of float|tuple of Distribution
+        :param noise: The noise governing the noise process
+        :type noise: Distribution
+        """
+        super().__init__((None, None), funcs, theta, (None, noise))

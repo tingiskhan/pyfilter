@@ -110,20 +110,31 @@ class StateSpaceModel(object):
 
         return self.hidden.weight(y, x, params)
 
-    def sample(self, steps, x_s=None):
+    def sample(self, steps, x_s=None, samples=None):
         """
         Constructs a sample trajectory for both the observable and the hidden process.
         :param steps: The number of steps
         :type steps: int
         :param x_s: The starting value
-        :type x_s: np.ndarray|float|int
+        :type x_s: torch.Tensor|float
+        :param samples: How many samples
+        :type samples: tuple[int]|int
         :return: Sampled trajectories
-        :rtype: tuple of list
+        :rtype: tuple[torch.Tensor]
         """
 
-        hidden, obs = torch.zeros(steps), torch.zeros(steps)
+        x_shape = steps, self.hidden.ndim
+        y_shape = steps, self.observable.ndim
 
-        x = x_s if x_s is not None else self.initialize()
+        if samples is not None:
+            tmp = (*((samples,) if not isinstance(samples, (list, tuple)) else samples),)
+            x_shape += tmp
+            y_shape += tmp
+
+        hidden = torch.zeros(x_shape)
+        obs = torch.zeros(y_shape)
+
+        x = x_s if x_s is not None else self.initialize(size=samples)
         y = self.observable.propagate(x)
 
         hidden[0] = x
