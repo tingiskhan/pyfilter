@@ -3,8 +3,7 @@ import unittest
 import numpy as np
 import scipy.stats as stats
 
-import pyfilter.utils.utils as helps
-from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
+from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel, Parameter
 from torch.distributions import Normal, MultivariateNormal
 import torch
 
@@ -120,3 +119,12 @@ class Tests(unittest.TestCase):
         if len(shape) > 1:
             assert self.mvnmodel.h_weight(x[1, :, 0, 0], x[0]).shape == shape
         assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
+
+    def test_Parameter(self):
+        param = Parameter(Normal(0., 1.)).initialize()
+
+        assert param.values.shape == torch.Size([])
+
+        param.values = Normal(0., 1.).sample((300, 300))
+
+
