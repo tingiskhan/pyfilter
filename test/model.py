@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as stats
 
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel, Parameter
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
 
@@ -121,10 +121,16 @@ class Tests(unittest.TestCase):
         assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
 
     def test_Parameter(self):
-        param = Parameter(Normal(0., 1.)).initialize()
+        param = Parameter(Beta(1, 3)).initialize()
 
         assert param.values.shape == torch.Size([])
 
-        param.values = Normal(0., 1.).sample((300, 300))
+        newshape = (300, 100)
+        with self.assertRaises(ValueError):
+            param.values = Normal(0., 1.).sample(newshape)
+
+        param.values = Beta(1, 3).sample(newshape)
+
+        assert param.values.shape == newshape
 
 
