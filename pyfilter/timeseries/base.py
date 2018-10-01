@@ -4,6 +4,22 @@ from functools import lru_cache
 from .parameter import Parameter
 
 
+def _get_shape(x, ndim):
+    """
+    Gets the shape to generate samples for.
+    :param x: The tensor
+    :type x: torch.Tensor|float
+    :param ndim: The dimensions
+    :type ndim: int
+    :rtype: tuple[int]
+    """
+
+    if not isinstance(x, torch.Tensor):
+        return ()
+
+    return x.shape if ndim < 2 else x.shape[1:]
+
+
 class BaseModel(object):
     def __init__(self, initial, funcs, theta, noise):
         """
@@ -224,9 +240,12 @@ class BaseModel(object):
         loc, scale = self.mean(x, params), self.scale(x, params)
 
         if isinstance(self, Observable):
-            shape = loc.shape if self.ndim < 2 else loc.shape[1:]
+            l_shape = _get_shape(loc, self.ndim)
+            s_shape = _get_shape(scale, self.ndim)[1:]
+
+            shape = l_shape if len(l_shape) > len(s_shape) else s_shape
         else:
-            shape = x.shape if self.ndim < 2 else x.shape[1:]
+            shape = _get_shape(x, self.ndim)
 
         eps = self.noise.sample(shape)
 

@@ -112,10 +112,11 @@ class Tests(unittest.TestCase):
         assert len(x) == 30 and x[0].shape == (2,)
 
     def test_SampleMultivariateSamples(self):
-        shape = (400, 100)
+        shape = (100, 100)
         x, y = self.mvnmodel.sample(30, samples=shape)
 
         assert x.shape == (30, 2, *shape) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
-        assert self.mvnmodel.h_weight(x[1], x[0]).shape == (400, 100)
-        assert self.mvnmodel.h_weight(x[1, :, 0, 0], x[0]).shape == (400, 100)
-        assert self.mvnmodel.weight(y[0, 0], x[0]).shape == (400, 100)
+        assert self.mvnmodel.h_weight(x[1], x[0]).shape == shape
+        if len(shape) > 1:
+            assert self.mvnmodel.h_weight(x[1, :, 0, 0], x[0]).shape == shape
+        assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
