@@ -276,7 +276,7 @@ class BaseModel(object):
         shape = steps, self.ndim
 
         if samples is not None:
-            shape += ((*((samples,) if not isinstance(samples, (list, tuple)) else samples),),)
+            shape += (*((samples,) if not isinstance(samples, (list, tuple)) else samples),)
 
         out = torch.zeros(shape)
         out[0] = self.i_sample(shape=samples, params=params)
