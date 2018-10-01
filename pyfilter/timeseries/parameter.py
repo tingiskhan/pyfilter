@@ -64,7 +64,17 @@ class Parameter(object):
         if not self.trainable:
             raise ValueError('Cannot transform parameter not of instance `Distribution`!')
 
-        return self.bijection(self.values)
+        return self.bijection.inv(self.values)
+
+    @t_values.setter
+    def t_values(self, x):
+        """
+        Sets transformed values.
+        :param x: The values
+        :type x: Tensor
+        """
+
+        self.values = self.bijection(x)
 
     def initialize(self, shape=None):
         """

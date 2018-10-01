@@ -125,12 +125,15 @@ class Tests(unittest.TestCase):
 
         assert param.values.shape == torch.Size([])
 
-        newshape = (300, 100)
+        newshape = (3000, 1000)
         with self.assertRaises(ValueError):
             param.values = Normal(0., 1.).sample(newshape)
 
-        param.values = Beta(1, 3).sample(newshape)
+        newvals = Beta(1, 3).sample(newshape)
+        param.values = newvals
 
         assert param.values.shape == newshape
 
+        param.t_values = Normal(0., 1.).sample(newshape)
 
+        assert (param.values != newvals).all()
