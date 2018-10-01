@@ -12,7 +12,7 @@ class Parameter(object):
 
         self._p = p
         self._trainable = isinstance(self._p, dist.Distribution)
-        self._values = None if self._trainable else p
+        self._values = None if self._trainable else self._p
 
     @property
     def values(self):
@@ -22,6 +22,25 @@ class Parameter(object):
         """
 
         return self._values
+
+    @values.setter
+    def values(self, x):
+        """
+        Sets the values of x.
+        :param x: The values
+        :type x: Tensor
+        """
+
+        if not self.trainable:
+            self._values = x
+            return
+
+        support = self._p.support.check(x)
+
+        if (~support).any():
+            raise ValueError('Found values outside bounds!')
+
+        self._values = x
 
     @property
     def trainable(self):
