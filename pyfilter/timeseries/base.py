@@ -39,7 +39,7 @@ class BaseModel(object):
         self._theta = (Parameter(th) for th in theta)
 
         cases = (
-            (isinstance(n, Distribution) for n in noise),
+            all(isinstance(n, Distribution) for n in noise),
             (isinstance(noise[-1], Distribution) and noise[0] is None)
         )
 
