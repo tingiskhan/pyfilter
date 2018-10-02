@@ -33,7 +33,7 @@ def _vector(weights, u):
     :rtype: np.ndarray
     """
     n = weights.shape[0]
-    u = torch.tensor(u) if u is not None else torch.empty().uniform_()
+    u = torch.tensor(u) if u is not None else torch.empty(1).uniform_()
     probs = (torch.arange(n, dtype=u.dtype) + u) / n
 
     cumsum = normalize(weights).cumsum(0)
