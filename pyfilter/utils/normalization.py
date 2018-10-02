@@ -38,12 +38,6 @@ def _matrix(w):
     normalized = reweighed / reweighed.sum(-1)[..., None]
     normalized[torch.isnan(normalized)] = 0
 
-    # ===== Remove Nans from normalized ===== #
-
-    mask = normalized.sum(-1) == 0
-    n = w.shape[-1]
-    normalized[mask] = torch.ones(n) / n
-
     return normalized
 
 

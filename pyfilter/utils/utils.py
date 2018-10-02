@@ -30,10 +30,10 @@ def searchsorted2d(a, b):
     :rtype: np.ndarray
     """
     m, n = a.shape
-    max_num = torch.maximum(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * torch.arange(a.shape[0])[:, None]
-    p = np.searchsorted((a + r).ravel(), (b + r).ravel()).reshape(m, -1)
-    return p - n * torch.arange(m)[:, None]
+    max_num = max(a.max() - a.min(), b.max() - b.min()) + 1
+    r = max_num * torch.arange(a.shape[0], dtype=max_num.dtype)[:, None]
+    p = np.searchsorted((a + r).view(-1), (b + r).view(-1)).reshape(m, -1)
+    return p - n * torch.arange(m, dtype=p.dtype)[:, None]
 
 
 def choose(array, indices):
