@@ -92,7 +92,7 @@ class Tests(unittest.TestCase):
     def test_APF(self):
         x, y = self.model.sample(500)
 
-        filt = APF(self.model, 5000, saveall=True).initialize()
+        filt = APF(self.model, 5000).initialize()
 
         filt = filt.longfilter(y)
 
@@ -101,7 +101,7 @@ class Tests(unittest.TestCase):
         estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        filterestimates = kf.filter(y)
+        filterestimates = kf.filter(y.numpy())
 
         rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
