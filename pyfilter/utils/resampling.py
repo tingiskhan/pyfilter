@@ -1,6 +1,7 @@
 import numpy as np
 from .normalization import normalize
 from ..utils.utils import searchsorted2d
+import torch
 
 
 def _matrix(weights, u):
@@ -13,14 +14,14 @@ def _matrix(weights, u):
     :rtype: np.ndarray
     """
     n = weights.shape[1]
-    u = u if u is not None else np.random.uniform(size=weights.shape[0])[:, None]
-    index_range = np.arange(n)[None, :] * np.ones(weights.shape)
+    u = torch.tensor(u if u is not None else np.random.uniform(size=weights.shape[0])[:, None])
+    index_range = torch.arange(n, dtype=u.dtype)[None, :] * torch.ones(weights.shape)
 
     probs = (index_range + u) / n
 
-    cumsum = normalize(weights).cumsum(axis=-1)
+    cumsum = normalize(weights).cumsum(-1)
 
-    return searchsorted2d(cumsum, probs).astype(int)
+    return searchsorted2d(cumsum, probs)
 
 
 def _vector(weights, u):
@@ -31,13 +32,13 @@ def _vector(weights, u):
     :return: Resampled indices
     :rtype: np.ndarray
     """
-    n = weights.size
-    u = u or np.random.uniform()
-    probs = (np.arange(n) + u) / n
+    n = weights.shape[0]
+    u = torch.tensor(u or np.random.uniform())
+    probs = (torch.arange(n, dtype=u.dtype) + u) / n
 
-    cumsum = normalize(weights).cumsum()
+    cumsum = normalize(weights).cumsum(0)
 
-    return np.searchsorted(cumsum, probs).astype(int)
+    return np.searchsorted(cumsum, probs)
 
 
 def systematic(w, u=None):
@@ -50,7 +51,7 @@ def systematic(w, u=None):
     :return: Resampled indices
     :rtype: np.ndarray
     """
-    if w.ndim > 1:
+    if w.dim() > 1:
         return _matrix(w, u)
 
     return _vector(w, u)
@@ -79,7 +80,7 @@ def _mn_matrix(w):
     :rtype: np.ndarray
     """
 
-    normalized = normalize(w).cumsum(axis=-1)
+    normalized = normalize(w).cumsum(-1)
     normalized[:, -1] = 1
 
     return searchsorted2d(normalized, np.random.uniform(0, 1, w.shape))

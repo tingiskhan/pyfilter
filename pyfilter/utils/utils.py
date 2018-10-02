@@ -1,6 +1,7 @@
 import numpy as np
 from collections import Iterable
 from .normalization import normalize
+import torch
 
 
 def get_ess(w):
@@ -29,10 +30,10 @@ def searchsorted2d(a, b):
     :rtype: np.ndarray
     """
     m, n = a.shape
-    max_num = np.maximum(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * np.arange(a.shape[0])[:, None]
+    max_num = torch.maximum(a.max() - a.min(), b.max() - b.min()) + 1
+    r = max_num * torch.arange(a.shape[0])[:, None]
     p = np.searchsorted((a + r).ravel(), (b + r).ravel()).reshape(m, -1)
-    return p - n * np.arange(m)[:, None]
+    return p - n * torch.arange(m)[:, None]
 
 
 def choose(array, indices):
@@ -46,18 +47,10 @@ def choose(array, indices):
     :rtype: np.ndarray
     """
 
-    if isinstance(array, list):
-        out = list()
-        for it in array:
-            out.append(choose(it, indices))
+    if indices.dim() < 2:
+        return array[..., indices]
 
-        return out
-
-    if indices.ndim < 2:
-        shapematch = np.cumsum([s == indices.shape[0] for s in array.shape])
-        return np.take(array, indices, axis=shapematch.tolist().index(1))
-
-    return array[..., np.arange(array.shape[-2])[:, None], indices]
+    return array[..., torch.arange(array.shape[-2])[:, None], indices]
 
 
 def loglikelihood(w):
@@ -69,9 +62,9 @@ def loglikelihood(w):
     :rtype: np.ndarray
     """
 
-    maxw = np.max(w, axis=-1)
+    maxw, _ = w.max(-1)
 
-    return maxw + np.log(np.exp(w.T - maxw).T.mean(axis=-1))
+    return maxw + torch.log(torch.exp(w - maxw).mean(-1))
 
 
 def dot(a, b):

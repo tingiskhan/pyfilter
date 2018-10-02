@@ -1,8 +1,8 @@
 from .ness import NESS
-from ..utils.utils import get_ess, expanddims, normalize
+from pyfilter.utils.utils import get_ess, expanddims, normalize
 import numpy as np
-from ..distributions.continuous import Distribution, MultivariateNormal
-from .base import KalmanFilter
+from pyfilter.distributions.continuous import Distribution, MultivariateNormal
+from pyfilter.filters.base import KalmanFilter
 
 
 def _define_pdf(params, weights):

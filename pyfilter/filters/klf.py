@@ -10,7 +10,7 @@ class KalmanLaplace(UKF):
         """
         Implements the Kalman-Laplace filter engineered by Paul Bui Qang and Christian Musso. Found here:
             https://ieeexplore.ieee.org/abstract/document/7266743/
-        :param model: See Base
+        :param model: See BaseModel
         :param args: See UKF
         :param kwargs: See UKF
         """

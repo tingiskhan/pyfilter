@@ -38,7 +38,7 @@ class APF(ParticleFilter):
         # ===== Calculate log likelihood ===== #
 
         with np.errstate(divide='ignore'):
-            self.s_l.append(loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
+            self.s_ll.append(loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
 
         if self.saveall:
             self.s_x.append(t_x)

@@ -7,23 +7,17 @@ class SISR(ParticleFilter):
     """
     Implements the SISR filter by Gordon et al.
     """
-    def filter(self, y):
-        t_x = self._proposal.draw(y, self._old_x, size=self._particles)
-        weights = self._proposal.weight(y, t_x, self._old_x)
 
-        resampled_indices = self._resamp(weights)
+    def _filter(self, y):
+        # ===== Resample among old ===== #
+        inds = self._resamp(self._w_old)
+        to_prop = choose(self._x_cur, inds)
+        self._proposal = self._proposal.resample(inds)
 
-        self._proposal = self._proposal.resample(resampled_indices)
-        self._cur_x = t_x
-        self._inds = resampled_indices
-        self._anc_x = self._old_x.copy()
-        self._old_x = choose(t_x, resampled_indices)
-        self._old_w = weights
+        # ===== Propagate ===== #
+        self._x_cur = self._proposal.draw(y, to_prop, size=self._particles)
+        weights = self._proposal.weight(y, self._x_cur, to_prop)
 
-        self.s_l.append(loglikelihood(weights))
+        self._w_old = weights
 
-        if self.saveall:
-            self.s_x.append(t_x)
-            self.s_w.append(weights)
-
-        return self._save_mean_and_noise(y, t_x, normalize(weights))
+        return (normalize(weights) * self._x_cur).sum(-1), loglikelihood(weights)

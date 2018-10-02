@@ -85,7 +85,7 @@ class RAPF(BaseFilter):
         self._old_w = self._proposal.weight(y, x, resampled_x) - choose(t_weights, res_ind)
         self._old_x = x
 
-        self.s_l.append(loglikelihood(self._old_w))
+        self.s_ll.append(loglikelihood(self._old_w))
         self.s_mx.append(np.sum(x * normalize(self._old_w), axis=-1))
 
         if self.saveall:

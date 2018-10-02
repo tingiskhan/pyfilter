@@ -2,11 +2,12 @@ import unittest
 import numpy as np
 import pykalman
 import scipy.stats as stats
-from pyfilter.distributions.continuous import Normal, Gamma, MultivariateNormal
-from pyfilter.filters import Linearized, NESS, RAPF, SMC2, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace, NESSMC2
-from pyfilter.timeseries import StateSpaceModel, Observable, Base
+from torch.distributions import Normal, MultivariateNormal
+from pyfilter.filters import Linearized, RAPF, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
+from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
 from pyfilter.utils.normalization import normalize
 from pyfilter.utils.utils import dot
+import torch
 
 
 def f(x, alpha, sigma):
@@ -54,26 +55,26 @@ def fomvn(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    linear = Base((f0, g0), (f, g), (1, 1), (Normal(), Normal()))
-    linearobs = Observable((fo, go), (1, 1), Normal())
+    norm = Normal(0., 1.)
+    linear = BaseModel((f0, g0), (f, g), (1, 1), (norm, norm))
+    linearobs = Observable((fo, go), (1, 1), norm)
     model = StateSpaceModel(linear, linearobs)
 
-    mvn = Base((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1), (MultivariateNormal(), MultivariateNormal()))
-    mvnobs = Observable((fomvn, go), (1, 1), Normal())
+    mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
+    mvn = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1), (mvn, mvn))
+    mvnobs = Observable((fomvn, go), (1, 1), norm)
     mvnmodel = StateSpaceModel(mvn, mvnobs)
 
     def test_InitializeFilter(self):
-        filt = SISR(self.model, 1000)
+        filt = SISR(self.model, 1000).initialize()
 
-        filt.initialize()
-
-        assert filt._old_x.shape == (1000,)
+        assert filt._x_cur.shape == (1000,)
 
     def test_SISR(self):
 
         x, y = self.model.sample(500)
 
-        filt = SISR(self.model, 5000, saveall=True).initialize()
+        filt = SISR(self.model, 5000).initialize()
 
         filt = filt.longfilter(y)
 
@@ -82,7 +83,7 @@ class Tests(unittest.TestCase):
         estimates = np.array(filt.filtermeans())
 
         kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        filterestimates = kf.filter(y)
+        filterestimates = kf.filter(y.numpy())
 
         rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
 
@@ -138,7 +139,7 @@ class Tests(unittest.TestCase):
 
         shape = 50, 1
 
-        linear = Base((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
+        linear = BaseModel((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
         self.model.hidden = linear
 
         apft = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
@@ -152,10 +153,10 @@ class Tests(unittest.TestCase):
     def test_RAPFSimpleModel(self):
         x, y = self.model.sample(500)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
         assert rapf._model.hidden.theta[1].values.shape == (5000,)
@@ -172,10 +173,10 @@ class Tests(unittest.TestCase):
     def test_Predict(self):
         x, y = self.model.sample(550)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
         rapf = RAPF(self.model, 5000).initialize()
 
         assert rapf._model.hidden[0].theta[1].shape == (5000,)
@@ -193,10 +194,10 @@ class Tests(unittest.TestCase):
     def test_NESS(self):
         x, y = self.model.sample(500)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         ness = NESS(self.model, (3000,), filt=UKF)
 
         ness = ness.longfilter(y)
@@ -211,10 +212,10 @@ class Tests(unittest.TestCase):
     def test_NESSPredict(self):
         x, y = self.model.sample(550)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         ness = NESS(self.model, (300, 300))
 
         ness = ness.longfilter(y[:500])
@@ -230,10 +231,10 @@ class Tests(unittest.TestCase):
     def test_SMC2(self):
         x, y = self.model.sample(500)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         smc2 = SMC2(self.model, (300, 300))
 
         smc2 = smc2.longfilter(y)
@@ -268,10 +269,10 @@ class Tests(unittest.TestCase):
     def test_Gradient(self):
         x, y = self.model.sample(500)
 
-        linear = Base((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
 
         rapf = RAPF(self.model, 3000).initialize().longfilter(y)
 
@@ -362,10 +363,10 @@ class Tests(unittest.TestCase):
     def test_NESSMC2(self):
         x, y = self.model.sample(500)
 
-        linear = Base((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
 
         self.model.hidden = linear
-        self.model.observable = Base((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
         ness = NESSMC2(self.model, (1000, 100), filt=Linearized)
 
         ness = ness.longfilter(y)

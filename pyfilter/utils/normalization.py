@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def _vector(w):
@@ -10,16 +11,16 @@ def _vector(w):
     :rtype: np.ndarray
     """
 
-    reweighed = np.exp(w - w.max())
+    reweighed = torch.exp(w - w.max())
 
     normalized = reweighed / reweighed.sum()
-    normalized[np.isnan(normalized)] = 0
+    normalized[torch.isnan(normalized)] = 0
 
     # ===== Remove Nans from normalized ===== #
 
-    if sum(normalized) == 0:
+    if normalized.sum() == 0:
         n = w.shape[0]
-        normalized = np.ones(n) / n
+        normalized = torch.ones(n) / n
 
     return normalized
 
@@ -33,15 +34,15 @@ def _matrix(w):
     :rtype: np.ndarray
     """
 
-    reweighed = np.exp(w - w.max(axis=-1)[..., None])
-    normalized = reweighed / reweighed.sum(axis=-1)[..., None]
-    normalized[np.isnan(normalized)] = 0
+    reweighed = torch.exp(w - w.max(-1)[0][..., None])
+    normalized = reweighed / reweighed.sum(-1)[..., None]
+    normalized[torch.isnan(normalized)] = 0
 
     # ===== Remove Nans from normalized ===== #
 
-    mask = normalized.sum(axis=-1) == 0
+    mask = normalized.sum(-1) == 0
     n = w.shape[-1]
-    normalized[mask] = np.ones(n) / n
+    normalized[mask] = torch.ones(n) / n
 
     return normalized
 
@@ -55,7 +56,7 @@ def normalize(w):
     :rtype: np.ndarray
     """
 
-    if w.ndim > 1:
+    if w.dim() > 1:
         return _matrix(w)
 
     return _vector(w)
