@@ -64,7 +64,12 @@ def loglikelihood(w):
 
     maxw, _ = w.max(-1)
 
-    return maxw + torch.log(torch.exp(w - maxw).mean(-1))
+    axis = -1
+    if maxw.dim() > 0:
+        axis = 0
+        w = w.t()
+
+    return maxw + torch.log(torch.exp(w - maxw).mean(axis))
 
 
 def dot(a, b):
