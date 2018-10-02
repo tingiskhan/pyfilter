@@ -8,40 +8,25 @@ class APF(ParticleFilter):
     """
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
-    def filter(self, y):
-        # ===== Perform "auxiliary sampling ===== #
-
-        t_x = self._model.propagate_apf(self._old_x)
+    def _filter(self, y):
+        # ===== Perform auxiliary sampling ===== #
+        t_x = self._model.propagate_apf(self._x_cur)
         t_weights = self._model.weight(y, t_x)
 
-        if not isinstance(self._old_w, int):
-            resamp_w = t_weights + self._old_w
-            normalized = normalize(self._old_w)
-        else:
-            resamp_w = t_weights
-            normalized = 1 / t_weights.shape[-1]
+        resamp_w = t_weights + self._w_old
+        normalized = normalize(self._w_old)
 
         # ===== Resample and propagate ===== #
-
         resampled_indices = self._resamp(resamp_w)
-        resampled_x = choose(self._old_x, resampled_indices)
+        resampled_x = choose(self._x_cur, resampled_indices)
 
         t_x = self._proposal.draw(y, resampled_x)
         weights = self._proposal.weight(y, t_x, resampled_x)
 
         self._cur_x = t_x
-        self._inds = resampled_indices
-        self._anc_x = self._old_x.copy()
-        self._old_x = t_x
-        self._old_w = weights - choose(t_weights, resampled_indices)
+        self._w_old = weights - choose(t_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
+        ll = loglikelihood(self._w_old) + np.log((normalized * np.exp(t_weights)).sum(-1))
 
-        with np.errstate(divide='ignore'):
-            self.s_ll.append(loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
-
-        if self.saveall:
-            self.s_x.append(t_x)
-            self.s_w.append(self._old_w)
-
-        return self._save_mean_and_noise(y, t_x, normalize(self._old_w))
+        return (normalize(self._w_old) * t_x).sum(-1), ll
