@@ -84,16 +84,14 @@ class Tests(unittest.TestCase):
                 assert len(filt.s_mx) > 0
 
                 filtmeans = filt.filtermeans()
-                if model is self.model:
-                    estimates = np.array(filtmeans)
-                else:
-                    estimates = torch.cat(filtmeans, 0).numpy().reshape(-1, 2)
 
                 # ===== Run Kalman ===== #
                 if model is self.model:
                     kf = pykalman.KalmanFilter(transition_matrices=1., observation_matrices=1.)
+                    estimates = np.array(filtmeans)
                 else:
                     kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1.]], observation_matrices=[1, 2])
+                    estimates = torch.cat(filtmeans, 0).numpy().reshape(-1, 2)
 
                 filterestimates = kf.filter(y.numpy())
 
