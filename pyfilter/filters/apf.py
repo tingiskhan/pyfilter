@@ -20,13 +20,14 @@ class APF(ParticleFilter):
         resampled_indices = self._resamp(resamp_w)
         resampled_x = choose(self._x_cur, resampled_indices)
 
-        t_x = self._proposal.draw(y, resampled_x)
-        weights = self._proposal.weight(y, t_x, resampled_x)
+        self._proposal = self._proposal.resample(resampled_indices)
 
-        self._cur_x = t_x
+        self._x_cur = self._proposal.draw(y, resampled_x, size=resampled_x.shape)
+        weights = self._proposal.weight(y, self._x_cur, resampled_x)
+
         self._w_old = weights - choose(t_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
         ll = loglikelihood(self._w_old) + np.log((normalized * np.exp(t_weights)).sum(-1))
 
-        return (normalize(self._w_old) * t_x).sum(-1), ll
+        return (normalize(self._w_old) * self._x_cur).sum(-1), ll
