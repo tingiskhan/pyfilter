@@ -6,7 +6,6 @@ from torch.distributions import Normal, MultivariateNormal
 from pyfilter.filters import Linearized, RAPF, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
 from pyfilter.utils.normalization import normalize
-from pyfilter.utils.utils import dot
 import torch
 
 
@@ -35,19 +34,20 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    return dot(np.array([[alpha, 1 / 3], [0, 1]]), x)
+    mat = torch.tensor([[alpha, 1 / 3], [0, 1.]], dtype=torch.float32)
+    return torch.einsum('ij,j...->i...', (mat, x))
 
 
 def gmvn(x, alpha, sigma):
-    return [[sigma, 0], [0, sigma]]
+    return torch.tensor([[sigma, 0], [0, sigma]], dtype=torch.float32)
 
 
 def f0mvn(alpha, sigma):
-    return [0, 0]
+    return torch.tensor([0, 0], dtype=torch.float32)
 
 
 def g0mvn(alpha, sigma):
-    return [[sigma, 0], [0, sigma]]
+    return torch.tensor([[sigma, 0], [0, sigma]], dtype=torch.float32)
 
 
 def fomvn(x, alpha, sigma):
@@ -55,14 +55,16 @@ def fomvn(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
+    # ===== Simple 1D model ===== #
     norm = Normal(0., 1.)
-    linear = BaseModel((f0, g0), (f, g), (1, 1), (norm, norm))
-    linearobs = Observable((fo, go), (1, 1), norm)
+    linear = BaseModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linearobs = Observable((fo, go), (1., 1.), norm)
     model = StateSpaceModel(linear, linearobs)
 
+    # ===== Simple 2D model ===== #
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-    mvn = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1), (mvn, mvn))
-    mvnobs = Observable((fomvn, go), (1, 1), norm)
+    mvn = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1.), (mvn, mvn))
+    mvnobs = Observable((fomvn, go), (1., 1.), norm)
     mvnmodel = StateSpaceModel(mvn, mvnobs)
 
     def test_InitializeFilter(self):
@@ -70,81 +72,53 @@ class Tests(unittest.TestCase):
 
         assert filt._x_cur.shape == (1000,)
 
-    def test_SISR(self):
+    def test_Filters1D(self):
+        for model in [self.model, self.mvnmodel]:
+            x, y = model.sample(500)
 
-        x, y = self.model.sample(500)
+            for filter_, props in [(SISR, {'particles': 5000}), (APF, {'particles': 5000})]:
+                filt = filter_(model, **props).initialize()
 
-        filt = SISR(self.model, 5000).initialize()
+                filt = filt.longfilter(y)
 
-        filt = filt.longfilter(y)
+                assert len(filt.s_mx) > 0
 
-        assert len(filt.s_mx) > 0
+                filtmeans = filt.filtermeans()
+                if model is self.model:
+                    estimates = np.array(filtmeans)
+                else:
+                    estimates = torch.cat(filtmeans, 0).numpy().reshape(-1, 2)
 
-        estimates = np.array(filt.filtermeans())
+                # ===== Run Kalman ===== #
+                if model is self.model:
+                    kf = pykalman.KalmanFilter(transition_matrices=1., observation_matrices=1.)
+                else:
+                    kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1.]], observation_matrices=[1, 2])
 
-        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        filterestimates = kf.filter(y.numpy())
+                filterestimates = kf.filter(y.numpy())
 
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
+                if estimates.ndim < 2:
+                    estimates = estimates[:, None]
 
-        assert rmse < 0.05
+                rel_error = np.abs((estimates - filterestimates[0]) / filterestimates[0]).mean()
 
-    def test_APF(self):
-        x, y = self.model.sample(500)
+                ll = kf.loglikelihood(y.numpy())
 
-        filt = APF(self.model, 5000).initialize()
+                rel_ll_error = np.abs((ll - np.array(filt.s_ll).sum()) / ll)
 
-        filt = filt.longfilter(y)
-
-        assert len(filt.s_mx) > 0
-
-        estimates = np.array(filt.filtermeans())
-
-        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        filterestimates = kf.filter(y.numpy())
-
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
-
-        assert rmse < 0.05
-
-    def test_Likelihood(self):
-        x, y = self.model.sample(500)
-
-        apft = APF(self.model, 1000).initialize().longfilter(y)
-        sisrt = SISR(self.model, 1000).initialize().longfilter(y)
-        linearizedt = Linearized(self.model, 1000).initialize().longfilter(y)
-        upf = UPF(self.model, 1000).initialize().longfilter(y)
-        ukf = UKF(self.model).initialize().longfilter(y)
-
-        rmse = np.sqrt(np.mean((np.array(apft.s_l) - np.array(sisrt.s_l)) ** 2))
-        rmse2 = np.sqrt(np.mean((np.array(linearizedt.s_l) - np.array(sisrt.s_l)) ** 2))
-        rmse3 = np.sqrt(np.mean((np.array(upf.s_l) - np.array(sisrt.s_l)) ** 2))
-        rmse4 = np.sqrt(np.mean((np.array(ukf.s_l) - np.array(sisrt.s_l)) ** 2))
-
-        assert (rmse < 0.1) and (rmse2 < 0.1) and (rmse3 < 0.1) and (rmse4 < 0.1)
-
-        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        kalmanloglikelihood = kf.loglikelihood(y)
-
-        apferror = np.abs((kalmanloglikelihood - np.array(apft.s_l).sum()) / kalmanloglikelihood)
-        sisrerror = np.abs((kalmanloglikelihood - np.array(sisrt.s_l).sum()) / kalmanloglikelihood)
-        linerror = np.abs((kalmanloglikelihood - np.array(linearizedt.s_l).sum()) / kalmanloglikelihood)
-        upferror = np.abs((kalmanloglikelihood - np.array(upf.s_l).sum()) / kalmanloglikelihood)
-        ukferr = np.abs((kalmanloglikelihood - np.array(ukf.s_l).sum()) / kalmanloglikelihood)
-
-        assert (apferror < 0.01) and (sisrerror < 0.01) and (linerror < 0.01) and (upferror < 0.01) and (ukferr < 0.01)
+                assert rel_error < 0.05 and rel_ll_error < 0.01
 
     def test_MultiDimensional(self):
         x, y = self.model.sample(50)
 
         shape = 50, 1
 
-        linear = BaseModel((f0, g0), (f, g), (np.ones(shape), np.ones(shape)), (stats.norm, stats.norm))
+        linear = BaseModel((f0, g0), (f, g), (0.5, 1.), (self.norm, self.norm))
         self.model.hidden = linear
 
-        apft = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
+        filt = SISR(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
-        filtermeans = np.array(apft.filtermeans())
+        filtermeans = np.array(filt.filtermeans())
 
         rmse = np.sqrt(np.mean((filtermeans[:, 0:1] - filtermeans[:, 1:]) ** 2))
 
@@ -247,118 +221,6 @@ class Tests(unittest.TestCase):
         std = np.sqrt(np.average((values - mean) ** 2, weights=weights[:, None]))
 
         assert mean - std < 1 < mean + std
-
-    def test_Linearized(self):
-        x, y = self.model.sample(500)
-
-        filt = Linearized(self.model, 750, saveall=True).initialize()
-
-        filt = filt.longfilter(y)
-
-        assert len(filt.s_mx) > 0
-
-        estimates = np.array(filt.filtermeans())
-
-        kf = pykalman.KalmanFilter(transition_matrices=1, observation_matrices=1)
-        filterestimates = kf.filter(y)
-
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0][:, 0]) ** 2))
-
-        assert rmse < 0.05
-
-    def test_Gradient(self):
-        x, y = self.model.sample(500)
-
-        linear = BaseModel((f0, g0), (f, g), (1., Gamma(1)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-
-        rapf = RAPF(self.model, 3000).initialize().longfilter(y)
-
-        grad = self.model.p_grad(y[-1], rapf.s_mx[-1], rapf.s_mx[-2])
-
-        def truderiv(obs, mu, sigma):
-            return ((obs - mu) ** 2 - sigma ** 2) / sigma ** 3
-
-        truederiv = truderiv(y[-1], rapf.s_mx[-1], self.model.observable.theta[-1])
-
-        assert np.allclose(truederiv, grad[-1][-1], atol=1e-4)
-
-    def test_Linearized2D(self):
-        x, y = self.mvnmodel.sample(500)
-
-        filt = Linearized(self.mvnmodel, 5000, saveall=True).initialize()
-
-        filt = filt.longfilter(y)
-
-        assert len(filt.s_mx) > 0
-
-        estimates = np.array(filt.filtermeans())
-
-        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1/3], [0, 1]], observation_matrices=[1, 2])
-        filterestimates = kf.filter(y)
-
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
-
-        assert rmse < 0.05
-
-    def test_Unscented2D(self):
-        x, y = self.mvnmodel.sample(500)
-
-        for filtr in [UPF, GlobalUPF]:
-            filt = filtr(self.mvnmodel, 3000).initialize()
-
-            filt = filt.longfilter(y)
-
-            assert len(filt.s_mx) > 0
-
-            estimates = np.array(filt.filtermeans())
-
-            kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1/3], [0, 1]], observation_matrices=[1, 2])
-            filterestimates = kf.filter(y)
-
-            rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
-
-            assert rmse < 0.05
-
-    def test_UKF(self):
-        x, y = self.mvnmodel.sample(500)
-
-        filt = UKF(self.mvnmodel).initialize()
-
-        filt = filt.longfilter(y)
-
-        assert len(filt.s_mx) > 0
-
-        estimates = np.array(filt.filtermeans())
-
-        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1]], observation_matrices=[1, 2])
-        filterestimates = kf.filter(y)
-
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
-
-        assert rmse < 0.05
-
-    def test_KLF(self):
-        x, y = self.mvnmodel.sample(500)
-
-        filt = KalmanLaplace(self.mvnmodel).initialize()
-
-        filt = filt.longfilter(y)
-
-        assert len(filt.s_mx) > 0
-
-        estimates = np.array(filt.filtermeans())
-
-        kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1]], observation_matrices=[1, 2])
-        filterestimates = kf.filter(y)
-
-        rmse = np.sqrt(np.mean((estimates - filterestimates[0]) ** 2))
-
-        logldiff = np.abs((kf.loglikelihood(y) - np.array(filt.s_l).sum()) / kf.loglikelihood(y))
-
-        assert rmse < 0.05 and logldiff < 0.01
 
     def test_NESSMC2(self):
         x, y = self.model.sample(500)
