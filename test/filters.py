@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import pykalman
-from torch.distributions import Normal, MultivariateNormal, Gamma
+from torch.distributions import Normal, MultivariateNormal, Exponential
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
 from pyfilter.algorithms import NESS
@@ -123,27 +123,27 @@ class Tests(unittest.TestCase):
 
         assert rmse < 0.1
 
-    def test_NESS(self):
+    def test_Algorithms(self):
         x, y = self.model.sample(500)
 
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1, 1)), (self.norm, self.norm))
+        hidden = BaseModel((f0, g0), (f, g), (1., Exponential(3)), (self.norm, self.norm))
+        observable = BaseModel((f0, g0), (fo, go), (1., Exponential(3)), (self.norm, self.norm))
 
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1, 1)), (self.norm, self.norm))
+        model = StateSpaceModel(hidden, observable)
 
         algs = [
-            (NESS, {'particles': 3000, 'filter_': SISR(self.model, 1000)})
+            (NESS, {'particles': 1000, 'filter_': SISR(model, 400)})
         ]
 
         for alg, props in algs:
             ness = NESS(**props).initialize()
 
-            ness = ness.fit(y)
+            ness = ness.fit(y.numpy())
 
             estimates = ness._filter._model.hidden.theta[1]
 
-            mean = np.mean(estimates.values)
-            std = np.std(estimates.values)
+            mean = estimates.values.mean()
+            std = estimates.values.std()
 
             assert mean - std < 1 < mean + std
 

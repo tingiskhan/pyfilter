@@ -1,4 +1,5 @@
 from ..filters.base import BaseFilter
+from tqdm import tqdm
 
 
 class BaseAlgorithm(object):
@@ -52,7 +53,7 @@ class OnlineAlgorithm(BaseAlgorithm):
         raise NotImplementedError()
 
     def fit(self, y):
-        for yt in y:
+        for yt in tqdm(y, desc=str(self.__class__.__name__)):
             self.update(yt)
 
         return self

@@ -88,7 +88,7 @@ class NESS(OnlineAlgorithm):
         :param threshold: The threshold for when to resample the parameters.
         :param p: For controlling the variance of the jittering kernel. The greater the value, the higher the variance.
         """
-        # TODO: Perhaps change behaviour s.t. we pass an instantiated filter?
+
         super().__init__(filter_)
 
         if isinstance(self._filter, ParticleFilter):
