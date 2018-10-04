@@ -15,7 +15,6 @@ class BaseFilter(object):
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
         :type model: StateSpaceModel
-        :param saveall: Whether to save
         """
 
         if not isinstance(model, StateSpaceModel):
