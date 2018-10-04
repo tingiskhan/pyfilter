@@ -159,6 +159,22 @@ class ParticleFilter(BaseFilter):
 
         self._proposal = proposal.set_model(self._model, isinstance(particles, tuple))
 
+    def set_particles(self, x):
+        """
+        Sets the particles.
+        :param x: The particles
+        :type x: int|tuple[int]
+        :return: Self
+        :rtype: ParticleFilter
+        """
+
+        self._particles = x
+
+        if self._x_cur is not None:
+            return self.initialize()
+
+        return self
+
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
 

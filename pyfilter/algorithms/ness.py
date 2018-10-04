@@ -1,11 +1,12 @@
-from pyfilter.filters.base import BaseFilter, ParticleFilter, KalmanFilter
-from pyfilter.filters.sisr import SISR
-from pyfilter.utils.normalization import normalize
-from pyfilter.utils.utils import get_ess
+from .base import OnlineAlgorithm
+from ..filters.base import ParticleFilter
+from ..utils.normalization import normalize
+from ..utils.utils import get_ess
 import math
 import numpy as np
 from scipy.stats import bernoulli
-from pyfilter.algorithms.rapf import _propose
+from .rapf import _propose
+import torch
 
 
 def cont_jitter(params, p, *args, **kwargs):
@@ -22,7 +23,7 @@ def cont_jitter(params, p, *args, **kwargs):
     values = params.t_values
     std = 1 / math.sqrt(values.size ** ((p + 2) / p))
 
-    return values + np.random.normal(scale=std, size=values.shape)
+    return values + std * torch.empty(values.shape).normal_()
 
 
 def shrink_jitter(params, p, w, h, **kwargs):
@@ -78,38 +79,22 @@ def flattener(a):
     return a.reshape(a.shape[0], a.shape[1] * a.shape[2])
 
 
-class NESS(BaseFilter):
-    def __init__(self, model, particles, filt=SISR, threshold=0.9, shrinkage=None, p=4, **filtkwargs):
+class NESS(OnlineAlgorithm):
+    def __init__(self, filter_, particles, threshold=0.9, shrinkage=None, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
-        :param model: See BaseFilter
-        :param particles: See BaseFilter
-        :type particles: (int, int)|(int,)
-        :param args: See BaseFilter
-        :param filt: See BaseFilter
+        :param particles: The particles to use for approximating the density
+        :type particles: int
         :param threshold: The threshold for when to resample the parameters.
-        :param p: A parameter controlling the variance of the jittering kernel. The greater the value, the higher the
-                  variance.
-        :param filtkwargs: See BaseFilter
+        :param p: For controlling the variance of the jittering kernel. The greater the value, the higher the variance.
         """
         # TODO: Perhaps change behaviour s.t. we pass an instantiated filter?
-        super().__init__(model, particles)
-
-        self._filter = filt(self._model, particles=particles, **filtkwargs).initialize()
-
-        msg = """
-        `particles` must be `tuple` or `list` of length {:d} where the first element is the number of particles 
-        targeting the parameters {:s}
-        """
+        super().__init__(filter_)
 
         if isinstance(self._filter, ParticleFilter):
-            if not isinstance(particles, (tuple, list)) or len(particles) != 2:
-                raise ValueError(msg.format(2, 'and the second element the number of particles targeting the states'))
-        elif isinstance(self._filter, KalmanFilter):
-            if not isinstance(particles, (tuple, list)) or len(particles) != 1:
-                raise ValueError(msg.format(1, ''))
+            self._filter.set_particles((particles, self._filter._particles))
 
-        self._recw = 0  # type: np.ndarray
+        self._w_rec = torch.zeros(particles)
         self._th = threshold
         self._p = p
 
@@ -121,26 +106,27 @@ class NESS(BaseFilter):
     def initialize(self):
         """
         Overwrites the initialization.
-        :return: 
+        :return: Self
+        :rtype: NESS
         """
+
+        for th in self._filter.ssm.flat_theta_dists:
+            th.initialize(self._w_rec.size())
+
+        self._filter.initialize()
 
         return self
 
-    def filter(self, y):
-        if isinstance(self._recw, np.ndarray):
-            prev_weight = self._recw
-        else:
-            prev_weight = np.ones(self._p_particles)
-
+    def update(self, y):
         # ===== JITTER ===== #
         # TODO: Think about a better way to do this
         if self.kernel == disc_jitter:
-            prob = 1 / prev_weight.shape[0] ** (self._p / 2)
+            prob = 1 / self._w_rec.size() ** (self._p / 2)
             i = bernoulli(prob).rvs(size=self._p_particles)
         else:
             i = 0
 
-        self._model.p_apply(lambda x: self.kernel(x, self._p, prev_weight, h=self.h, i=i), transformed=True)
+        self._filter.ssm.p_apply(lambda x: self.kernel(x, self._p, self._w_rec, h=self.h, i=i), transformed=True)
 
         # ===== PROPAGATE FILTER ===== #
 
@@ -148,15 +134,15 @@ class NESS(BaseFilter):
 
         # ===== RESAMPLE PARTICLES ===== #
 
-        self._recw += self._filter.s_l[-1]
+        self._w_rec += self._filter.s_l[-1]
 
-        ess = get_ess(self._recw)
+        ess = get_ess(self._w_rec)
 
         if ess < self._th * self._filter._particles[0]:
-            indices = self._resamp(self._recw)
+            indices = self._resamp(self._w_rec)
             self._filter = self._filter.resample(indices, entire_history=False)
 
-            self._recw = np.zeros_like(self._recw)
+            self._w_rec = np.zeros_like(self._w_rec)
 
         return self
 

@@ -1,9 +1,10 @@
 import unittest
 import numpy as np
 import pykalman
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, Gamma
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
+from pyfilter.algorithms import NESS
 from pyfilter.utils.normalization import normalize
 import torch
 
@@ -122,64 +123,29 @@ class Tests(unittest.TestCase):
 
         assert rmse < 0.1
 
-    def test_RAPFSimpleModel(self):
-        x, y = self.model.sample(500)
-
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
-        rapf = RAPF(self.model, 5000).initialize()
-
-        assert rapf._model.hidden.theta[1].values.shape == (5000,)
-
-        rapf = rapf.longfilter(y)
-
-        estimates = rapf._model.hidden.theta[1]
-
-        mean = np.mean(estimates.values)
-        std = np.std(estimates.values)
-
-        assert mean - std < 1 < mean + std
-
-    def test_Predict(self):
-        x, y = self.model.sample(550)
-
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(a=1, scale=2)), (Normal(), Normal()))
-        rapf = RAPF(self.model, 5000).initialize()
-
-        assert rapf._model.hidden[0].theta[1].shape == (5000,)
-
-        rapf = rapf.longfilter(y[:500])
-
-        x_pred, y_pred = rapf.predict(50)
-
-        for i in range(len(y_pred)):
-            lower = np.percentile(y_pred[i], 1)
-            upper = np.percentile(y_pred[i], 99)
-
-            assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
-
     def test_NESS(self):
         x, y = self.model.sample(500)
 
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
+        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1, 1)), (self.norm, self.norm))
 
         self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESS(self.model, (3000,), filt=UKF)
+        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1, 1)), (self.norm, self.norm))
 
-        ness = ness.longfilter(y)
+        algs = [
+            (NESS, {'particles': 3000, 'filter_': SISR(self.model, 1000)})
+        ]
 
-        estimates = ness._filter._model.hidden.theta[1]
+        for alg, props in algs:
+            ness = NESS(**props).initialize()
 
-        mean = np.mean(estimates.values)
-        std = np.std(estimates.values)
+            ness = ness.fit(y)
 
-        assert mean - std < 1 < mean + std
+            estimates = ness._filter._model.hidden.theta[1]
+
+            mean = np.mean(estimates.values)
+            std = np.std(estimates.values)
+
+            assert mean - std < 1 < mean + std
 
     def test_NESSPredict(self):
         x, y = self.model.sample(550)
