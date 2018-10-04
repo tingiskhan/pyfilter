@@ -107,17 +107,17 @@ class Tests(unittest.TestCase):
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
-    def test_MultiDimensional(self):
+    def test_ParallellFilters(self):
         x, y = self.model.sample(50)
 
-        shape = 50, 1
+        shape = 1000, 1
 
-        linear = BaseModel((f0, g0), (f, g), (0.5, 1.), (self.norm, self.norm))
+        linear = BaseModel((f0, g0), (f, g), (torch.ones(shape), torch.ones(shape)), (self.norm, self.norm))
         self.model.hidden = linear
 
-        filt = SISR(self.model, (shape[0], 1000)).initialize().longfilter(y)
+        filt = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
-        filtermeans = np.array(filt.filtermeans())
+        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1).numpy()
 
         rmse = np.sqrt(np.mean((filtermeans[:, 0:1] - filtermeans[:, 1:]) ** 2))
 
