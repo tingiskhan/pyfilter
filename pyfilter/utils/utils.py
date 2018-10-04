@@ -72,6 +72,25 @@ def loglikelihood(w):
     return maxw + torch.log(torch.exp(w - maxw).mean(axis))
 
 
+def add_dimensions(x, ndim):
+    """
+    Adds the required dimensions to `x`.
+    :param x: The array
+    :type x: torch.Tensor
+    :param ndim: The dimension
+    :type ndim: int
+    :rtype: torch.Tensor
+    """
+
+    if not isinstance(x, torch.Tensor):
+        return x
+
+    for i in range(ndim - x.dim()):
+        x.unsqueeze_(-1)
+
+    return x
+
+
 def dot(a, b):
     """
     Helper function for calculating the dot product between a matrix and a vector.

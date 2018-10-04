@@ -64,7 +64,8 @@ class Tests(unittest.TestCase):
     model = StateSpaceModel(linear, linearobs)
 
     # ===== 2D model ===== #
-    mat = scale = torch.eye(2)
+    mat = torch.eye(2)
+    scale = torch.diag(mat)
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
     mvnlinear = BaseModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))

@@ -2,6 +2,7 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
+from ..utils.utils import add_dimensions
 
 
 def _get_shape(x, ndim):
@@ -174,28 +175,10 @@ class BaseModel(object):
         """
         loc, scale = self.mean(x, params=params), self.scale(x, params=params)
 
-        if self.ndim < 2:
-            rescaled = (y - loc) / scale
-        else:
-            # ===== Scale ===== #
-            s_shape = (*scale.shape[2:], *scale.shape[:2])
-            inv = scale.reshape(s_shape).inverse()
-            s_ellips = '...' if scale.dim() > 2 else ''
+        rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
 
-            # ===== Location ===== #
-            l_ellips = '...' if loc.dim() > 1 else ''
-            if isinstance(y, float) or y.dim() < loc.dim():
-                l_shape = (*x.shape[1:], loc.shape[0])
-                transposed = True
-            else:
-                l_shape = loc.shape
-                transposed = False
-
-            diff = y - loc.reshape(l_shape)
-
-            # ===== Calculate ===== #
-            operations = '{:s}ij,j{:s}->{:s}i' if not transposed else '{:s}ij,{:s}j->{:s}i'
-            rescaled = torch.einsum(operations.format(s_ellips, l_ellips, s_ellips or l_ellips), (inv, diff))
+        if self.ndim > 1:
+            rescaled = rescaled.reshape(*rescaled.shape[1:], -1)
 
         return self.noise.log_prob(rescaled)
 
@@ -214,17 +197,12 @@ class BaseModel(object):
         rndshape = ((shape,) if isinstance(shape, int) else shape) or torch.Size()
         eps = self.noise0.sample(rndshape)
 
-        if self.ndim < 2:
-            return loc + scale * eps
+        if self.ndim > 1:
+            eps = eps.reshape(-1, *rndshape)
+            loc = add_dimensions(loc, eps.dim())
+            scale = add_dimensions(scale, eps.dim())
 
-        # ===== Handle two-dimensional matrices ===== #
-        ellips = '...' if scale.dim() > 2 else ''
-        temp = torch.einsum('ij' + ellips + ',...j->...i', (scale, eps))
-
-        if loc.dim() == temp.dim():
-            loc = loc.reshape(temp.shape)
-
-        return (loc + temp).reshape((self.ndim, *rndshape))
+        return loc + scale * eps
 
     def propagate(self, x, params=None):
         """
@@ -240,25 +218,17 @@ class BaseModel(object):
         loc, scale = self.mean(x, params), self.scale(x, params)
 
         if isinstance(self, Observable):
-            l_shape = _get_shape(loc, self.ndim)
-            s_shape = _get_shape(scale, self.ndim)[1:]
-
-            shape = l_shape if len(l_shape) > len(s_shape) else s_shape
+            shape = _get_shape(loc, self.ndim)
         else:
             shape = _get_shape(x, self.ndim)
 
         eps = self.noise.sample(shape)
+        if self.ndim > 1:
+            eps = eps.reshape(-1, *shape)
+            loc = add_dimensions(loc, eps.dim())
+            scale = add_dimensions(scale, eps.dim())
 
-        if self.ndim < 2:
-            return loc + scale * eps
-
-        # ===== Handle two-dimensional matrices ===== #
-        ellips = '...' if scale.dim() > 2 else ''
-        temp = torch.einsum('ij' + ellips + ',...j->...i', (scale, eps))
-        if loc.dim() == temp.dim():
-            loc = loc.reshape(temp.shape)
-
-        return (loc + temp).reshape(x.shape)
+        return loc + scale * eps
 
     def sample(self, steps, samples=None, params=None):
         """
