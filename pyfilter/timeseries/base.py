@@ -178,7 +178,7 @@ class BaseModel(object):
         rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
 
         if self.ndim > 1:
-            rescaled = rescaled.reshape(*rescaled.shape[1:], -1)
+            rescaled = rescaled.permute(*range(1, rescaled.dim() - 1), 0)
 
         return self.noise.log_prob(rescaled)
 
@@ -198,7 +198,7 @@ class BaseModel(object):
         eps = self.noise0.sample(rndshape)
 
         if self.ndim > 1:
-            eps = eps.reshape(-1, *rndshape)
+            eps = eps.permute(-1, *range(eps.dim() - 1))
             loc = add_dimensions(loc, eps.dim())
             scale = add_dimensions(scale, eps.dim())
 
@@ -224,7 +224,7 @@ class BaseModel(object):
 
         eps = self.noise.sample(shape)
         if self.ndim > 1:
-            eps = eps.reshape(-1, *shape)
+            eps = eps.permute(-1, *range(eps.dim() - 1))
             loc = add_dimensions(loc, eps.dim())
             scale = add_dimensions(scale, eps.dim())
 
