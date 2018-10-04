@@ -2,13 +2,10 @@ from ..timeseries.model import StateSpaceModel
 
 
 class Proposal(object):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
-        :param args: Any arguments passed to the proposal
-        :param kwargs: Any kwargs passed to the proposal
         """
-
         self._model = None
         self._kernel = None
         self._nested = None
@@ -36,11 +33,13 @@ class Proposal(object):
         """
         Defines the method for drawing proposals.
         :param y: The current observation
+        :type y: np.ndarray|float|torch.Tensor
         :param x: The previous hidden states
+        :type x: torch.Tensor
         :param size: The size which to draw
         :param args: Additional arguments
         :param kwargs: Additional kwargs
-        :return:
+        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
@@ -49,11 +48,14 @@ class Proposal(object):
         """
         Defines the method for weighting observations.
         :param y: The current observation
+        :type y: np.ndarray|float|torch.Tensor
         :param xn: The new state
+        :type xn: torch.Tensor
         :param xo: The old state
+        :type xo: torch.Tensor
         :param args: Additional arguments
         :param kwargs: Additional kwargs
-        :return:
+        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
@@ -62,8 +64,10 @@ class Proposal(object):
         """
         For proposals where some of the data is stored locally. As this is only necessary for a few of the proposals,
         it need not be implemented for all.
-        :param inds: The indicies to resample.
-        :return:
+        :param inds: The indicies to resample
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: Proposal
         """
 
         return self
