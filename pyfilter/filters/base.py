@@ -135,6 +135,38 @@ class BaseFilter(object):
         """
         raise NotImplementedError()
 
+    def resample(self, inds, entire_history=False):
+        """
+        Resamples the filter, used in cases where we use nested filters.
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :param entire_history: Whether to resample entire history
+        :type entire_history: bool
+        :return: Self
+        :rtype: BaseFilter
+        """
+        # TODO: Fix this
+        if entire_history:
+            for obj in [self.s_mx, self.s_ll]:
+                as_tens = torch.Tensor(obj)
+
+        # ===== Resample the parameters of the model ====== #
+        self.ssm.p_apply(lambda u: u.values[..., inds, :])
+        self._resample(inds)
+
+        return self
+
+    def _resample(self, inds):
+        """
+        Implements resampling unique for the filter.
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        return self
+
 
 class ParticleFilter(BaseFilter):
     def __init__(self, model, particles, resampling=systematic, proposal=Bootstrap()):
@@ -173,6 +205,8 @@ class ParticleFilter(BaseFilter):
         if self._x_cur is not None:
             return self.initialize()
 
+        self._w_old = torch.zeros(self._particles)
+
         return self
 
     def initialize(self):
@@ -184,6 +218,12 @@ class ParticleFilter(BaseFilter):
         x, y = self._model.sample(steps+1, x_s=self._x_cur)
 
         return x[1:], y[1:]
+
+    def _resample(self, inds):
+        self._x_cur = self._x_cur[..., inds, :]
+        self._w_old = self._w_old[inds]
+
+        return self
 
 
 class KalmanFilter(BaseFilter):

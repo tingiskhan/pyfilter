@@ -37,7 +37,7 @@ class BaseModel(object):
 
         self.f0, self.g0 = initial
         self.f, self.g = funcs
-        self._theta = (Parameter(th) for th in theta)
+        self._theta = tuple(Parameter(th) for th in theta)
 
         cases = (
             all(isinstance(n, Distribution) for n in noise),

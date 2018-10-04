@@ -15,7 +15,7 @@ def get_ess(w):
 
     normalized = normalize(w)
 
-    return np.sum(normalized, axis=-1) ** 2 / np.sum(normalized ** 2, axis=-1)
+    return normalized.sum(-1) ** 2 / (normalized ** 2).sum(-1)
 
 
 def searchsorted2d(a, b):

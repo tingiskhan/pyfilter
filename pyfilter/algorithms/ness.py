@@ -21,7 +21,7 @@ def cont_jitter(params, p, *args, **kwargs):
     """
     # TODO: Can we improve the jittering kernel?
     values = params.t_values
-    std = 1 / math.sqrt(values.size ** ((p + 2) / p))
+    std = 1 / math.sqrt(values.shape[0] ** ((p + 2) / p))
 
     return values + std * torch.empty(values.shape).normal_()
 
@@ -111,14 +111,14 @@ class NESS(OnlineAlgorithm):
         """
 
         for th in self._filter.ssm.flat_theta_dists:
-            th.initialize(self._w_rec.size())
+            th.initialize((self._w_rec.shape[0], 1))
 
         self._filter.initialize()
 
         return self
 
     def update(self, y):
-        # ===== JITTER ===== #
+        # ===== Jitter ===== #
         # TODO: Think about a better way to do this
         if self.kernel == disc_jitter:
             prob = 1 / self._w_rec.size() ** (self._p / 2)
@@ -128,21 +128,19 @@ class NESS(OnlineAlgorithm):
 
         self._filter.ssm.p_apply(lambda x: self.kernel(x, self._p, self._w_rec, h=self.h, i=i), transformed=True)
 
-        # ===== PROPAGATE FILTER ===== #
-
+        # ===== Propagate filter ===== #
         self._filter.filter(y)
 
-        # ===== RESAMPLE PARTICLES ===== #
-
-        self._w_rec += self._filter.s_l[-1]
+        # ===== Resample ===== #
+        self._w_rec += self._filter.s_ll[-1]
 
         ess = get_ess(self._w_rec)
 
         if ess < self._th * self._filter._particles[0]:
-            indices = self._resamp(self._w_rec)
+            indices = self._filter._resamp(self._w_rec)
             self._filter = self._filter.resample(indices, entire_history=False)
 
-            self._w_rec = np.zeros_like(self._w_rec)
+            self._w_rec = torch.zeros_like(self._w_rec)
 
         return self
 
