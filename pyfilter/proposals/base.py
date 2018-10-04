@@ -1,5 +1,4 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils.stategradient import NumericalStateGradient
 
 
 class Proposal(object):
@@ -30,7 +29,6 @@ class Proposal(object):
 
         self._model = model
         self._nested = nested
-        self._sg = NumericalStateGradient(self._model)
 
         return self
 

@@ -1,8 +1,8 @@
-from .base import BaseFilter
+from pyfilter.filters.base import BaseFilter
 from math import sqrt
-from ..utils.utils import choose, loglikelihood
+from pyfilter.utils.utils import choose, loglikelihood
 import numpy as np
-from ..utils.normalization import normalize
+from pyfilter.utils.normalization import normalize
 
 
 def _shrink(p, shrink, weights):

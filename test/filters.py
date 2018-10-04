@@ -1,9 +1,8 @@
 import unittest
 import numpy as np
 import pykalman
-import scipy.stats as stats
 from torch.distributions import Normal, MultivariateNormal
-from pyfilter.filters import Linearized, RAPF, SISR, APF, UPF, GlobalUPF, UKF, KalmanLaplace
+from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
 from pyfilter.utils.normalization import normalize
 import torch

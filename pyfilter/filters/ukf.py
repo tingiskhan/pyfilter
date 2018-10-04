@@ -1,6 +1,5 @@
 from .base import KalmanFilter
 from ..utils.unscentedtransform import UnscentedTransform
-from ..distributions.continuous import Normal, MultivariateNormal
 import numpy as np
 from ..utils.utils import customcholesky, choose
 
