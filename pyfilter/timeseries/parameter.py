@@ -13,7 +13,7 @@ class Parameter(object):
         :type p: float|Tensor|dist.Distribution
         """
 
-        self._p = p if isinstance(p, torch.Tensor) else torch.Tensor([p] if isinstance(p, (int, float)) else p)
+        self._p = p if isinstance(p, torch.Tensor) else torch.tensor(p)
         self._trainable = isinstance(self._p, dist.Distribution)
         self._values = None if self._trainable else self._p
 
