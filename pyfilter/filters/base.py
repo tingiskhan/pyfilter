@@ -167,6 +167,62 @@ class BaseFilter(object):
 
         return self
 
+    def reset(self):
+        """
+        Resets the filter by nullifying the filter specific attributes.
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        self.s_mx = tuple()
+        self.s_ll = tuple()
+
+        self._reset()
+
+        return self
+
+    def _reset(self):
+        """
+        Any filter specific resets.
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        return self
+
+    def exchange(self, filter_, inds):
+        """
+        Exchanges the filters.
+        :param filter_: The new filter
+        :type filter_: BaseFilter
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        self._model.exchange(inds, filter_.ssm)
+
+        for obj in [self.s_mx, self.s_ll]:
+            pass
+
+        self._exchange(filter_, inds)
+
+        return self
+
+    def _exchange(self, filter_, inds):
+        """
+        Filter specific exchanges.
+        :param filter_: The new filter
+        :type filter_: BaseFilter
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        return self
+
 
 class ParticleFilter(BaseFilter):
     def __init__(self, model, particles, resampling=systematic, proposal=Bootstrap()):
