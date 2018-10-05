@@ -179,6 +179,7 @@ class BaseModel(object):
         if self.ndim > 1:
             rescaled = rescaled.permute(*range(1, rescaled.dim() - 1), 0)
 
+        # TODO: Won't work for multi-dimensional distributions
         return self.noise.log_prob(rescaled) - torch.log(scale)
 
     def i_sample(self, shape=None, params=None):
