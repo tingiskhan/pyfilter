@@ -2,7 +2,6 @@ import copy
 import numpy as np
 from ..utils.utils import flatten
 import torch
-from torch.distributions import Distribution
 from .parameter import Parameter
 
 
@@ -218,16 +217,13 @@ class StateSpaceModel(object):
         :rtype: StateSpaceModel
         """
 
-        # ===== Exchange hidden parameters ===== #
+        procs = (
+            (newmodel.hidden.theta_dists, self.hidden.theta_dists),
+            (newmodel.observable.theta_dists, self.observable.theta_dists)
+        )
 
-        for newp, oldp in zip(newmodel.hidden.theta, self.hidden.theta):
-            if isinstance(newp, Distribution):
-                oldp.values[indices] = newp.values[indices]
-
-        # ===== Exchange observable parameters ====== #
-
-        for newp, oldp in zip(newmodel.observable.theta, self.observable.theta):
-            if isinstance(newp, Distribution):
+        for proc in procs:
+            for newp, oldp in zip(*proc):
                 oldp.values[indices] = newp.values[indices]
 
         return self

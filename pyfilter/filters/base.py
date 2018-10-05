@@ -145,10 +145,11 @@ class BaseFilter(object):
         :return: Self
         :rtype: BaseFilter
         """
-        # TODO: Fix this
         if entire_history:
-            for obj in [self.s_mx, self.s_ll]:
-                as_tens = torch.Tensor(obj)
+            length = len(self.s_mx)
+            for obj, name in [(self.s_mx, 's_mx'), (self.s_ll, 's_ll')]:
+                tmp = torch.cat(obj).reshape(length, -1)
+                setattr(self, name, tuple(tmp[:, inds]))
 
         # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: u.values[..., inds, :])
@@ -278,6 +279,12 @@ class ParticleFilter(BaseFilter):
     def _resample(self, inds):
         self._x_cur = self._x_cur[..., inds, :]
         self._w_old = self._w_old[inds]
+
+        return self
+
+    def _exchange(self, filter_, inds):
+        self._x_cur[..., inds, :] = filter_._x_cur[..., inds, :]
+        self._w_old[inds] = filter_._w_old[inds]
 
         return self
 

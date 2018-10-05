@@ -112,15 +112,13 @@ class SMC2(NESS):
 
         # ===== Resample among parameters ===== #
         inds = self._filter._resamp(self._w_rec)
-        self._filter.resample(inds)
+        self._filter.resample(inds, entire_history=True)
 
         # ===== Define new filters and move via MCMC ===== #
-
         t_filt = self._filter.copy().reset().initialize()
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-
         t_filt.longfilter(np.array(self._td), bar=False)
         t_ll = torch.cat(t_filt.s_ll).reshape(self._ior + 1, -1).sum(0)
 
@@ -139,12 +137,11 @@ class SMC2(NESS):
             toaccept = u < quotient + plogquot + kernel
 
         # ===== Replace old filters with newly accepted ===== #
-        self._filter.exchange(toaccept, t_filt)
+        self._filter.exchange(t_filt, toaccept)
         self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
-
-        if toaccept.mean() < 0.2:
+        if toaccept.sum() < 0.2 * toaccept.shape[0]:
             self._increase_states()
 
         return self
@@ -159,13 +156,12 @@ class SMC2(NESS):
             return self
 
         # ===== Create new filter with double the state particles ===== #
-        # TODO: Something goes wrong here
-        n_particles = self._filter._particles[0], 2 * self._filter._particles[1]
-        t_filt = self._filter.copy().reset(n_particles).longfilter(self._td[:self._ior+1], bar=False)
+        n_particles = self._w_rec.shape[0], 2 * self._filter._particles[1]
+        t_filt = self._filter.copy().reset().set_particles(n_particles).initalize().longfilter(self._td, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-
-        self._w_rec = np.sum(t_filt.s_l, axis=0) - np.sum(self._filter.s_l, axis=0)
+        # TODO: Fix this
+        # self._w_rec = torch.sum(t_filt.s_ll, axis=0) - np.sum(self._filter.s_l, axis=0)
         self._filter = t_filt
 
         return self
