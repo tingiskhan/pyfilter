@@ -242,7 +242,7 @@ class ParticleFilter(BaseFilter):
         self._x_cur = None                          # type: torch.Tensor
         self._inds = None                           # type: torch.Tensor
         self._particles = particles
-        self._w_old = torch.zeros(self._particles)  # type: torch.Tensor
+        self._w_old = None                          # type: torch.Tensor
 
         self._resamp = resampling
 
@@ -262,12 +262,11 @@ class ParticleFilter(BaseFilter):
         if self._x_cur is not None:
             return self.initialize()
 
-        self._w_old = torch.zeros(self._particles)
-
         return self
 
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
+        self._w_old = torch.zeros(self._particles)
 
         return self
 
