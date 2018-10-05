@@ -189,8 +189,14 @@ class BaseFilter(object):
 
         self._model.exchange(inds, filter_.ssm)
 
-        for obj in [self.s_mx, self.s_ll]:
-            pass
+        length = len(self.s_mx)
+        for obj, name in [(self.s_mx, 's_mx'), (self.s_ll, 's_ll')]:
+            tmp = torch.cat(obj).reshape(length, -1)
+            new_tmp = torch.cat(getattr(filter_, name)).reshape(length, -1)
+
+            tmp[:, inds] = new_tmp[:, inds]
+
+            setattr(self, name, tuple(tmp))
 
         self._exchange(filter_, inds)
 
