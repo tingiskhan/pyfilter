@@ -179,7 +179,7 @@ class BaseModel(object):
         if self.ndim > 1:
             rescaled = rescaled.permute(*range(1, rescaled.dim() - 1), 0)
 
-        return self.noise.log_prob(rescaled)
+        return self.noise.log_prob(rescaled) - torch.log(scale)
 
     def i_sample(self, shape=None, params=None):
         """
