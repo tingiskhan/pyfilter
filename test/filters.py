@@ -126,7 +126,7 @@ class Tests(unittest.TestCase):
         x, y = self.model.sample(500)
 
         hidden = BaseModel((f0, g0), (f, g), (1., Exponential(1)), (self.norm, self.norm))
-        observable = BaseModel((f0, g0), (fo, go), (1., Exponential(1)), (self.norm, self.norm))
+        observable = Observable((fo, go), (1., Exponential(1)), self.norm)
 
         model = StateSpaceModel(hidden, observable)
 
