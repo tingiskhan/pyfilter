@@ -140,9 +140,12 @@ class Tests(unittest.TestCase):
 
             ness = ness.fit(y.numpy())
 
-            estimates = ness._filter._model.hidden.theta[1]
+            parameter = ness.filter.ssm.hidden.theta[1]
 
-            mean = estimates.values.mean()
-            std = estimates.values.std()
+            kde = parameter.get_kde()
 
-            assert mean - std < 1 < mean + std
+            tru_val = self.model.hidden.theta_vals[-1]
+            densval = kde.score_samples(tru_val)
+            priorval = parameter.dist.log_prob(tru_val)
+
+            assert bool(densval > priorval)
