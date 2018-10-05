@@ -178,9 +178,11 @@ class BaseModel(object):
 
         if self.ndim > 1:
             rescaled = rescaled.permute(*range(1, rescaled.dim() - 1), 0)
+            log_scale = scale.abs().log().sum(0)
+        else:
+            log_scale = scale.log()
 
-        # TODO: Won't work for multi-dimensional distributions
-        return self.noise.log_prob(rescaled) - torch.log(scale)
+        return self.noise.log_prob(rescaled) - log_scale
 
     def i_sample(self, shape=None, params=None):
         """
