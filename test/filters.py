@@ -126,8 +126,8 @@ class Tests(unittest.TestCase):
     def test_Algorithms(self):
         x, y = self.model.sample(500)
 
-        hidden = BaseModel((f0, g0), (f, g), (1., Exponential(3)), (self.norm, self.norm))
-        observable = BaseModel((f0, g0), (fo, go), (1., Exponential(3)), (self.norm, self.norm))
+        hidden = BaseModel((f0, g0), (f, g), (1., Exponential(1)), (self.norm, self.norm))
+        observable = BaseModel((f0, g0), (fo, go), (1., Exponential(1)), (self.norm, self.norm))
 
         model = StateSpaceModel(hidden, observable)
 
@@ -146,60 +146,3 @@ class Tests(unittest.TestCase):
             std = estimates.values.std()
 
             assert mean - std < 1 < mean + std
-
-    def test_NESSPredict(self):
-        x, y = self.model.sample(550)
-
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESS(self.model, (300, 300))
-
-        ness = ness.longfilter(y[:500])
-
-        x_pred, y_pred = ness.predict(50)
-
-        for i in range(len(y_pred)):
-            lower = np.percentile(y_pred[i], 1)
-            upper = np.percentile(y_pred[i], 99)
-
-            assert (y[500 + i] >= lower) and (y[500 + i] <= upper)
-
-    def test_SMC2(self):
-        x, y = self.model.sample(500)
-
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        smc2 = SMC2(self.model, (300, 300))
-
-        smc2 = smc2.longfilter(y)
-
-        weights = normalize(smc2._recw)
-
-        values = smc2._filter._model.hidden.theta[1].values
-
-        mean = np.average(values, weights=weights[:, None])
-        std = np.sqrt(np.average((values - mean) ** 2, weights=weights[:, None]))
-
-        assert mean - std < 1 < mean + std
-
-    def test_NESSMC2(self):
-        x, y = self.model.sample(500)
-
-        linear = BaseModel((f0, g0), (f, g), (1, Gamma(1)), (Normal(), Normal()))
-
-        self.model.hidden = linear
-        self.model.observable = BaseModel((f0, g0), (fo, go), (1, Gamma(1)), (Normal(), Normal()))
-        ness = NESSMC2(self.model, (1000, 100), filt=Linearized)
-
-        ness = ness.longfilter(y)
-
-        estimates = ness._filter._model.hidden.theta[1]
-
-        mean = np.mean(estimates.values)
-        std = np.std(estimates.values)
-
-        assert mean - std < 1 < mean + std
