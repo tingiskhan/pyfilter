@@ -284,7 +284,7 @@ class BaseModel(object):
         :rtype: np.ndarray|float
         """
 
-        return sum(self.p_map(lambda u: u.logpdf(u.values)))
+        return sum(self.p_map(lambda u: u.dist.log_prob(u.values), default=torch.zeros(1)))
 
     def p_map(self, func, default=None):
         """
@@ -300,7 +300,7 @@ class BaseModel(object):
 
         out = tuple()
         for p in self.theta:
-            if isinstance(p, Distribution):
+            if p.trainable:
                 out += (func(p),)
             else:
                 out += (default if default is not None else p,)
