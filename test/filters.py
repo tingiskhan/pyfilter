@@ -4,7 +4,7 @@ import pykalman
 from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
-from pyfilter.algorithms import NESS
+from pyfilter.algorithms import NESS, SMC2
 import torch
 
 
@@ -131,15 +131,16 @@ class Tests(unittest.TestCase):
         model = StateSpaceModel(hidden, observable)
 
         algs = [
-            (NESS, {'particles': 1000, 'filter_': SISR(model, 400)})
+            (NESS, {'particles': 1000, 'filter_': SISR(model, 400)}),
+            (SMC2, {'particles': 1000, 'filter_': SISR(model, 400)})
         ]
 
         for alg, props in algs:
-            ness = NESS(**props).initialize()
+            alg = alg(**props).initialize()
 
-            ness = ness.fit(y.numpy())
+            alg = alg.fit(y.numpy())
 
-            parameter = ness.filter.ssm.hidden.theta[1]
+            parameter = alg.filter.ssm.hidden.theta[1]
 
             kde = parameter.get_kde()
 
