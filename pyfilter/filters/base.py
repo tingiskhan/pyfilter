@@ -21,12 +21,10 @@ class BaseFilter(object):
             raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
 
         self._model = model
-        self._td = None     # type: np.ndarray
 
         # ===== Some helpers ===== #
         self.s_ll = tuple()
         self.s_mx = tuple()
-        self.s_n = tuple()
 
     @property
     def ssm(self):
@@ -86,9 +84,6 @@ class BaseFilter(object):
         if isinstance(y, pd.DataFrame):
             y = y.values
 
-        # ===== Make a temporary copy of the data ==== #
-        self._td = y
-
         if bar:
             iterator = tqdm(range(y.shape[0]), desc=str(self.__class__.__name__))
         else:
@@ -96,8 +91,6 @@ class BaseFilter(object):
 
         for i in iterator:
             self.filter(y[i])
-
-        self._td = None
 
         return self
 
@@ -117,14 +110,6 @@ class BaseFilter(object):
         """
 
         return self.s_mx
-
-    def noisemeans(self):
-        """
-        Calculates the means for the noise and returns a timeseries.
-        :return:
-        """
-
-        return self.s_n
 
     def predict(self, steps):
         """
