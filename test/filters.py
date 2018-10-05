@@ -1,11 +1,10 @@
 import unittest
 import numpy as np
 import pykalman
-from torch.distributions import Normal, MultivariateNormal, Exponential
+from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
 from pyfilter.algorithms import NESS
-from pyfilter.utils.normalization import normalize
 import torch
 
 
@@ -63,7 +62,7 @@ class Tests(unittest.TestCase):
     model = StateSpaceModel(linear, linearobs)
 
     # ===== Simple 2D model ===== #
-    mvn = MultivariateNormal(torch.zeros(2), scale_tril=torch.eye(2))
+    mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
     mvn = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1.), (mvn, mvn))
     mvnobs = Observable((fomvn, go), (1., 1.), norm)
     mvnmodel = StateSpaceModel(mvn, mvnobs)
