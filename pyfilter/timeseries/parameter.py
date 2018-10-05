@@ -1,5 +1,8 @@
 from torch import Tensor, distributions as dist, Size
-from sklearn.neighbors.kde import KernelDensity
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
+import numpy as np
+import torch
 
 
 class Parameter(object):
@@ -76,6 +79,18 @@ class Parameter(object):
 
         self.values = self.bijection(x)
 
+    @property
+    def dist(self):
+        """
+        Returns the distribution.
+        :rtype: torch.distributions.Distribution
+        """
+
+        if self.trainable:
+            return self._p
+
+        raise ValueError('Does not have a distribution!')
+
     def initialize(self, shape=None):
         """
         Initializes the variable.
@@ -99,14 +114,43 @@ class Parameter(object):
 
         return self._trainable
 
-    def kde(self):
+    def get_kde(self, cv=20):
         """
         Constructs KDE of the discrete representation.
+        :param cv: The number of cross-validations to use
+        :type cv: int
         :return: KDE object
         :rtype: KernelDensity
         """
+        array = self.values.numpy()
 
-        raise NotImplementedError()
+        if array.ndim < 2:
+            array = array[..., None]
+
+        grid = GridSearchCV(KernelDensity(), {'bandwidth': np.linspace(1e-6, 1, 50)}, cv=cv)
+        grid = grid.fit(array)
+
+        return KernelDensity(**grid.best_params_).fit(array)
+
+    def get_range(self, std=3, num=100):
+        """
+        Gets the range of values within a given number of standard deviations.
+        :param std: The number of standard deviations
+        :type std: float
+        :param num: The number of points in the discretized range
+        :type num: int
+        :rtype: np.ndarray
+        """
+
+        vals = self.t_values
+
+        p_mean = vals.mean()
+        p_std = vals.std()
+
+        range_ = torch.linspace(p_mean - std * p_std, p_mean + std * p_std, num)
+
+        return self.bijection(range_).numpy()
+
 
 
 

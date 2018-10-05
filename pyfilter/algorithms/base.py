@@ -13,6 +13,15 @@ class BaseAlgorithm(object):
         self._filter = filter_
         self._y = None          # type: numpy.ndarray
 
+    @property
+    def filter(self):
+        """
+        Returns the filter
+        :rtype: BaseFilter
+        """
+
+        return self._filter
+
     def fit(self, y):
         """
         Fits the algorithm to data.
