@@ -3,6 +3,8 @@ from .normalization import normalize
 from ..utils.utils import searchsorted2d
 import torch
 
+INFTY = float('Inf')
+
 
 def _matrix(weights, u):
     """
@@ -51,6 +53,10 @@ def systematic(w, u=None):
     :return: Resampled indices
     :rtype: np.ndarray
     """
+
+    mask = INFTY == w.abs()
+    w[mask] = -2e20
+
     if w.dim() > 1:
         return _matrix(w, u)
 
