@@ -53,7 +53,7 @@ def disc_jitter(parameter, p, w, h, i, *args):
     means = a * transformed + (1 - a) * weighted_mean
     std = h * torch.sqrt(((transformed - weighted_mean) ** 2).mean())
 
-    return (1 - i) * parameter.t_values + i * Normal(means, std).sample()
+    return (1 - i) * transformed + i * Normal(means, std).sample()
 
 
 def flattener(a):
