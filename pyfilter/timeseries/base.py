@@ -2,7 +2,21 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils.utils import add_dimensions
+from ..utils.utils import add_dimensions, isfinite
+
+
+def finite_decorator(func):
+    def wrapper(*args, **kwargs):
+        out = func(*args, **kwargs)
+
+        mask = isfinite(out)
+
+        if (~mask).any():
+            raise ValueError('Infinite values encountered!')
+
+        return out
+
+    return wrapper
 
 
 def _get_shape(x, ndim):
@@ -159,6 +173,7 @@ class BaseModel(object):
 
         return self.g(x, *(params or self.theta_vals))
 
+    @finite_decorator
     def weight(self, y, x, params=None):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
