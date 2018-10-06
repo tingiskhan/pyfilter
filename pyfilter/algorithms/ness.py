@@ -2,66 +2,58 @@ from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
+from ..timeseries.parameter import Parameter
 import math
 import numpy as np
-from scipy.stats import bernoulli
-from .rapf import _propose
+from torch.distributions import Bernoulli, Normal
 import torch
+from math import sqrt
 
 
-def cont_jitter(params, p, *args, **kwargs):
+def cont_jitter(parameter, p, *args):
     """
     Jitters the parameters.
-    :param params: The parameters of the model, inputs as (values, prior)
-    :type params: Distribution
+    :param parameter: The parameters of the model, inputs as (values, prior)
+    :type parameter: Parameter
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
     :return: Proposed values
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     # TODO: Can we improve the jittering kernel?
-    values = params.t_values
+    values = parameter.t_values
     std = 1 / math.sqrt(values.shape[0] ** ((p + 2) / p))
 
     return values + std * torch.empty(values.shape).normal_()
 
 
-def shrink_jitter(params, p, w, h, **kwargs):
-    """
-    Jitters the parameters using the same shrinkage kernel as in the RAPF.
-    :param params: The parameters of the model, inputs as (values, prior)
-    :type params: Distribution
-    :param p: The scaling to use for the variance of the proposal
-    :type p: int|float
-    :param w: The weights to use
-    :type w: np.ndarray
-    :param h: The `a` to use for shrinking
-    :type h: float
-    :return: Proposed values
-    :rtype: np.ndarray
-    """
-
-    return _propose(params, range(params.values.size), h, w)
-
-
-def disc_jitter(params, p, w, h, i, **kwargs):
+def disc_jitter(parameter, p, w, h, i, *args):
     """
     Jitters the parameters using discrete propagation.
-    :param params: The parameters of the model, inputs as (values, prior)
-    :type params: Distribution
+    :param parameter: The parameters of the model, inputs as (values, prior)
+    :type parameter: Parameter
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
     :param w: The weights to use
-    :type w: np.ndarray
-    :param h: The `a` to use for shrinking
+    :type w: torch.Tensor
+    :param h: The `h` to use for shrinking
     :type h: float
     :param i: The indices to jitter
-    :type i: np.ndarray
+    :type i: torch.Tensor
     :return: Proposed values
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
-    # TODO: Only jitter the relevant particles
-    return (1 - i) * params.t_values + i * shrink_jitter(params, p, w, h)
+    normalized = normalize(w)[..., None]
+    transformed = parameter.t_values
+
+    weighted_mean = (transformed * normalized).sum(0)
+
+    # ===== Shrink ===== #
+    a = sqrt(1 - h ** 2)
+    means = a * transformed + (1 - a) * weighted_mean
+    std = h * torch.sqrt(((transformed - weighted_mean) ** 2).mean())
+
+    return (1 - i) * parameter.t_values + i * Normal(means, std).sample()
 
 
 def flattener(a):
@@ -99,9 +91,14 @@ class NESS(SequentialAlgorithm):
         self._p = p
 
         self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
-        self.h = np.sqrt(1 - self.a ** 2) if shrinkage is not None else None
+        self.h = sqrt(1 - self.a ** 2) if shrinkage is not None else None
 
-        self.kernel = cont_jitter
+        self._index = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
+        if shrinkage is None:
+            self.kernel = lambda u, w: cont_jitter(u, self._p, w)
+        else:
+            shape = self._w_rec.shape[0], 1
+            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=self._index.sample(shape))
 
     def initialize(self):
         """
@@ -119,14 +116,7 @@ class NESS(SequentialAlgorithm):
 
     def update(self, y):
         # ===== Jitter ===== #
-        # TODO: Think about a better way to do this
-        if self.kernel == disc_jitter:
-            prob = 1 / self._w_rec.shape[0] ** (self._p / 2)
-            i = bernoulli(prob).rvs(size=self._p_particles)
-        else:
-            i = 0
-
-        self._filter.ssm.p_apply(lambda x: self.kernel(x, self._p, self._w_rec, h=self.h, i=i), transformed=True)
+        self._filter.ssm.p_apply(lambda x: self.kernel(x, self._w_rec), transformed=True)
 
         # ===== Propagate filter ===== #
         self._filter.filter(y)
