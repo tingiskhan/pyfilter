@@ -80,7 +80,6 @@ class SMC2(NESS):
         super().__init__(filter_, particles)
 
         self._th = threshold
-        self._ior = 0
         self._td = tuple()
 
     def update(self, y):
@@ -96,8 +95,6 @@ class SMC2(NESS):
         if ess < self._th * self._w_rec.shape[0]:
             self._rejuvenate()
 
-        self._ior += 1
-
         return self
 
     def _rejuvenate(self):
@@ -107,7 +104,7 @@ class SMC2(NESS):
         """
 
         # ===== Construct distribution ===== #
-        ll = torch.cat(self._filter.s_ll).reshape(self._ior + 1, -1).sum(0)
+        ll = torch.cat(self._filter.s_ll).reshape(len(self._td), -1).sum(0)
         dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
         # ===== Resample among parameters ===== #
@@ -120,7 +117,7 @@ class SMC2(NESS):
 
         # ===== Filter data ===== #
         t_filt.longfilter(np.array(self._td), bar=False)
-        t_ll = torch.cat(t_filt.s_ll).reshape(self._ior + 1, -1).sum(0)
+        t_ll = torch.cat(t_filt.s_ll).reshape(len(self._td), -1).sum(0)
 
         # ===== Calculate acceptance ratio ===== #
         # TODO: Might have to add gradients for transformation?

@@ -1,4 +1,4 @@
-from .base import OnlineAlgorithm
+from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter
 from ..utils.normalization import normalize
 from ..utils.utils import get_ess
@@ -79,7 +79,7 @@ def flattener(a):
     return a.reshape(a.shape[0], a.shape[1] * a.shape[2])
 
 
-class NESS(OnlineAlgorithm):
+class NESS(SequentialAlgorithm):
     def __init__(self, filter_, particles, threshold=0.9, shrinkage=None, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
@@ -91,7 +91,7 @@ class NESS(OnlineAlgorithm):
 
         super().__init__(filter_)
 
-        if isinstance(self._filter, ParticleFilter):
+        if isinstance(self._filter, ParticleFilter) and isinstance(self._filter._particles, int):
             self._filter.set_particles((particles, self._filter._particles))
 
         self._w_rec = torch.zeros(particles)
@@ -101,7 +101,7 @@ class NESS(OnlineAlgorithm):
         self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
         self.h = np.sqrt(1 - self.a ** 2) if shrinkage is not None else None
 
-        self.kernel = disc_jitter if shrinkage is not None else cont_jitter
+        self.kernel = cont_jitter
 
     def initialize(self):
         """
@@ -121,7 +121,7 @@ class NESS(OnlineAlgorithm):
         # ===== Jitter ===== #
         # TODO: Think about a better way to do this
         if self.kernel == disc_jitter:
-            prob = 1 / self._w_rec.size() ** (self._p / 2)
+            prob = 1 / self._w_rec.shape[0] ** (self._p / 2)
             i = bernoulli(prob).rvs(size=self._p_particles)
         else:
             i = 0

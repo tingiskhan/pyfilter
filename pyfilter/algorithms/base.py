@@ -45,7 +45,7 @@ class BaseAlgorithm(object):
         return self
 
 
-class OnlineAlgorithm(BaseAlgorithm):
+class SequentialAlgorithm(BaseAlgorithm):
     """
     Algorithm for online inference.
     """
@@ -56,7 +56,7 @@ class OnlineAlgorithm(BaseAlgorithm):
         :param y: The observation
         :type y: numpy.ndarray|float
         :return: Self
-        :rtype: OnlineAlgorithm
+        :rtype: SequentialAlgorithm
         """
 
         raise NotImplementedError()
