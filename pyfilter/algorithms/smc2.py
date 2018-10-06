@@ -154,7 +154,7 @@ class SMC2(NESS):
 
         # ===== Create new filter with double the state particles ===== #
         n_particles = self._w_rec.shape[0], 2 * self._filter._particles[1]
-        t_filt = self._filter.copy().reset().set_particles(n_particles).initalize().longfilter(self._td, bar=False)
+        t_filt = self._filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._td, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         # TODO: Fix this
