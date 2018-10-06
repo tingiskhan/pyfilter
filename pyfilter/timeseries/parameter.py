@@ -114,7 +114,7 @@ class Parameter(object):
 
         return self._trainable
 
-    def get_kde(self, cv=20):
+    def get_kde(self, cv=10):
         """
         Constructs KDE of the discrete representation.
         :param cv: The number of cross-validations to use
