@@ -4,7 +4,7 @@ import pykalman
 from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
-from pyfilter.algorithms import NESS, SMC2
+from pyfilter.algorithms import NESS, SMC2, NESSMC2
 import torch
 
 
@@ -132,7 +132,8 @@ class Tests(unittest.TestCase):
 
         algs = [
             (NESS, {'particles': 1000, 'filter_': SISR(model, 400)}),
-            (SMC2, {'particles': 1000, 'filter_': SISR(model, 400)})
+            (SMC2, {'particles': 1000, 'filter_': SISR(model, 400)}),
+            (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 400)})
         ]
 
         for alg, props in algs:
