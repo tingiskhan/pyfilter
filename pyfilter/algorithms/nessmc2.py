@@ -32,5 +32,6 @@ class NESSMC2(SMC2):
         if not self._switched:
             self._switched = True
             self._filter = self._ness._filter = self._smc2._filter
+            self._ness._w_rec = self._smc2._w_rec
 
         return self._ness.update(y)
