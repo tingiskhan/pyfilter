@@ -2,6 +2,7 @@ from .base import ParticleFilter
 from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
 import numpy as np
+import torch
 
 
 class APF(ParticleFilter):
@@ -28,6 +29,6 @@ class APF(ParticleFilter):
         self._w_old = weights - choose(t_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
-        ll = loglikelihood(self._w_old) + np.log((normalized * np.exp(t_weights)).sum(-1))
+        ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(t_weights)).sum(-1))
 
         return (normalize(self._w_old) * self._x_cur).sum(-1), ll
