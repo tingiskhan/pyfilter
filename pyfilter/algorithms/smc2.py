@@ -1,6 +1,6 @@
 from .ness import NESS
 import torch
-from pyfilter.utils.utils import get_ess, add_dimensions, normalize
+from ..utils.utils import get_ess, add_dimensions, normalize
 import numpy as np
 from ..filters.base import KalmanFilter
 from torch.distributions import MultivariateNormal
