@@ -132,6 +132,7 @@ class Tests(unittest.TestCase):
 
         algs = [
             (NESS, {'particles': 1000, 'filter_': SISR(model, 400)}),
+            (NESS, {'particles': 1000, 'filter_': SISR(model, 400), 'p': 1, 'shrinkage': 0.95}),
             (SMC2, {'particles': 1000, 'filter_': SISR(model, 400)}),
             (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 400)})
         ]
