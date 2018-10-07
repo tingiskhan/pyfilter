@@ -12,7 +12,7 @@ def finite_decorator(func):
         mask = isfinite(out)
 
         if (~mask).any():
-            raise ValueError('Infinite values encountered!')
+            out[~mask] = -2e20
 
         return out
 
