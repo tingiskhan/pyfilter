@@ -192,7 +192,7 @@ class BaseModel(object):
         rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
 
         if self.ndim > 1:
-            rescaled = rescaled.permute(*range(1, rescaled.dim() - 1), 0)
+            rescaled = rescaled.permute(*range(1, rescaled.dim()), 0)
             log_scale = scale.abs().log().sum(0)
         else:
             log_scale = scale.log()
