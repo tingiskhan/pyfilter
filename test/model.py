@@ -1,9 +1,6 @@
 import unittest
-
 import numpy as np
-import scipy.stats as stats
-
-from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel, Parameter
+from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel, Parameter, LinearGaussianObservations
 from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
@@ -59,8 +56,8 @@ def gomvn(x, sigma):
 class Tests(unittest.TestCase):
     # ===== 1D model ===== #
     norm = Normal(0., 1.)
-    linear = BaseModel((f0, g0), (f, g), (1, 1), (norm, norm))
-    linearobs = Observable((fo, go), (1, 1), norm)
+    linear = BaseModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linearobs = Observable((fo, go), (1., 1.), norm)
     model = StateSpaceModel(linear, linearobs)
 
     # ===== 2D model ===== #
@@ -69,7 +66,7 @@ class Tests(unittest.TestCase):
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
     mvnlinear = BaseModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
-    mvnoblinear = Observable((fomvn, gomvn), (1,), norm)
+    mvnoblinear = Observable((fomvn, gomvn), (1.,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
@@ -90,21 +87,10 @@ class Tests(unittest.TestCase):
 
         assert sample.shape == (1000,)
 
-    def test_Weight(self):
-        x = self.model.initialize(1000)
-
-        y = 0
-
-        w = self.model.weight(y, x)
-
-        truew = stats.norm.logpdf(y, loc=x, scale=self.model.observable.theta[1])
-
-        assert np.allclose(w, truew)
-
     def test_Sample(self):
         x, y = self.model.sample(50)
 
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 1)
 
     def test_SampleMultivariate(self):
         x, y = self.mvnmodel.sample(30)
@@ -138,3 +124,20 @@ class Tests(unittest.TestCase):
         param.t_values = Normal(0., 1.).sample(newshape)
 
         assert (param.values != newvals).all()
+
+    def test_LinearGaussianObservations(self):
+        linearmodel = LinearGaussianObservations(self.linear)
+
+        steps = 30
+
+        x, y = linearmodel.sample(steps)
+
+        assert len(x) == steps and len(y) == steps
+
+        mat = torch.eye(2)
+
+        mvn_linearmodel = LinearGaussianObservations(self.mvnlinear, a=mat)
+
+        x, y = mvn_linearmodel.sample(30)
+
+        assert len(x) == steps and len(y) == steps
