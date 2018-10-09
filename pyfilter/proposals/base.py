@@ -8,24 +8,17 @@ class Proposal(object):
         """
         self._model = None
         self._kernel = None
-        self._nested = None
 
-        self._meaner = lambda x: x
-        self._sg = None
-
-    def set_model(self, model, nested=False):
+    def set_model(self, model):
         """
         Sets the model and all required attributes.
         :param model: The model to ues
         :type model: StateSpaceModel
-        :param nested: A boolean for specifying if the algorithm is running nested PFs
-        :type nested: bool
         :return: Self
         :rtype: Proposal
         """
 
         self._model = model
-        self._nested = nested
 
         return self
 
