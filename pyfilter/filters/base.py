@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
 import copy
-from ..utils.utils import choose, dot, expanddims
-from ..utils.resampling import multinomial, systematic
+from ..proposals import LinearGaussianObservations
+from ..utils.resampling import systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import BaseModel, StateSpaceModel
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 
@@ -219,16 +219,21 @@ class BaseFilter(object):
         return self
 
 
+_PROPOSAL_MAPPING = {
+    LGO: LinearGaussianObservations
+}
+
+
 class ParticleFilter(BaseFilter):
-    def __init__(self, model, particles, resampling=systematic, proposal=Bootstrap()):
+    def __init__(self, model, particles, resampling=systematic, proposal='auto'):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
         :type particles: int
         :param resampling: Which resampling method to use
         :type resampling: callable
-        :param proposal: Which proposal to use
-        :type proposal: Proposal
+        :param proposal: Which proposal to use, set to `auto` to let algorithm decide
+        :type proposal: Proposal|str
         """
 
         super().__init__(model)
@@ -240,7 +245,13 @@ class ParticleFilter(BaseFilter):
 
         self._resamp = resampling
 
-        self._proposal = proposal.set_model(self._model, isinstance(particles, tuple))
+        if proposal == 'auto':
+            try:
+                proposal = _PROPOSAL_MAPPING[type(self._model)]()
+            except KeyError:
+                proposal = Bootstrap()
+
+        self._proposal = proposal.set_model(self._model)
 
     def set_particles(self, x):
         """
