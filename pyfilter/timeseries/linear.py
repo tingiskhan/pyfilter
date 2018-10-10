@@ -5,10 +5,10 @@ from torch import distributions as dists
 
 
 def f(x, a, scale):
-    if a.dim() < 2:
+    if a.dim() < 1:
         return a * x
 
-    return torch.einsum('ij,j...->j...', (a, x))
+    return a @ x
 
 
 def g(x, a, scale):
@@ -32,7 +32,7 @@ class LinearGaussianObservations(StateSpaceModel):
         if isinstance(a, float) or a.dim() < 2:
             noise = dists.Normal(torch.zeros(1), 1)
         else:
-            noise = dists.Independent(dists.Normal(torch.zeros(a.dim()), 1), 1)
+            noise = dists.Independent(dists.Normal(torch.zeros(a.dim()), torch.ones(a.dim())), 1)
 
         observable = Observable((f, g), (a, scale), noise)
 
