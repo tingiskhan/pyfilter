@@ -91,6 +91,23 @@ def add_dimensions(x, ndim):
     return x
 
 
+def broadcast_all(*args):
+    """
+    Basically same as Torch's, but on the other axis.
+    :type args: tuple[torch.Tensor]
+    :rtype: tuple[torch.Tensor]
+    """
+    # TODO: Switch to PyTorch's when it comes
+
+    biggest = max(a.dim() for a in args)
+
+    out = tuple()
+    for a in args:
+        out += (add_dimensions(a, biggest),)
+
+    return out
+
+
 def isfinite(x):
     """
     Returns mask for finite values. Solution: https://gist.github.com/wassname/df8bc03e60f81ff081e1895aabe1f519 .
