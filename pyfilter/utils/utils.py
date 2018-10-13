@@ -86,7 +86,7 @@ def add_dimensions(x, ndim):
         return x
 
     for i in range(ndim - x.dim()):
-        x.unsqueeze_(-1)
+        x = x.unsqueeze(-1)
 
     return x
 
