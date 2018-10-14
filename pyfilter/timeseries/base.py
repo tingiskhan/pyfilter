@@ -5,6 +5,18 @@ from .parameter import Parameter
 from ..utils.utils import add_dimensions, isfinite
 
 
+def broadcast_decorator(func):
+    def wrapper(*args, **kwargs):
+        out = func(*args, **kwargs)
+
+        if isinstance(args[0], Observable):
+            return out
+
+        return add_dimensions(out, args[1].dim())
+
+    return wrapper
+
+
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)
@@ -147,6 +159,7 @@ class BaseModel(object):
 
         return self.noise0.log_prob(rescaled)
 
+    @broadcast_decorator
     def mean(self, x, params=None):
         """
         Calculates the mean of the process conditional on the previous state and current parameters.
@@ -160,6 +173,7 @@ class BaseModel(object):
 
         return self.f(x, *(params or self.theta_vals))
 
+    @broadcast_decorator
     def scale(self, x, params=None):
         """
         Calculates the scale of the process conditional on the current state and parameters.
@@ -242,8 +256,6 @@ class BaseModel(object):
         eps = self.noise.sample(shape)
         if self.ndim > 1:
             eps = eps.permute(-1, *range(eps.dim() - 1))
-            loc = add_dimensions(loc, eps.dim())
-            scale = add_dimensions(scale, eps.dim())
 
         return loc + scale * eps
 

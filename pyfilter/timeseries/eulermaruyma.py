@@ -1,4 +1,4 @@
-from .base import BaseModel
+from .base import BaseModel, broadcast_decorator
 from math import sqrt
 
 
@@ -17,8 +17,10 @@ class EulerMaruyma(BaseModel):
         super().__init__(initial, funcs, theta, noise)
         self.dt = sqrt(dt)
 
+    @broadcast_decorator
     def mean(self, x, params=None):
         return x + self.f(x, *(params or self.theta_vals)) * self.dt
 
+    @broadcast_decorator
     def scale(self, x, params=None):
         return self.g(x, *(params or self.theta_vals)) * sqrt(self.dt)
