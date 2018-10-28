@@ -35,13 +35,19 @@ class LinearGaussianObservations(Proposal):
         o_var_inv = 1 / (self._model.observable.theta_vals[-1] * self._model.observable.noise.stddev) ** 2
 
         if self._model.hidden_ndim < 2:
-            self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
+            kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
         else:
-            self._kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
+            kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
 
-        return self._kernel.sample()
+        return kernel.sample()
 
     def weight(self, y, xn, xo, *args, **kwargs):
-        k_prob = self._kernel.log_prob(xn)
+        if self._model.hidden_ndim < 2:
+            c = self._model.observable.theta_vals[0]
+            m = c * self._model.hidden.mean(xo)
 
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - k_prob
+            std = (self._model.hidden.scale(xo) ** 2 + (c * self._model.observable.scale(xo)) ** 2).sqrt()
+
+            return Normal(m, std).log_prob(y)
+
+        raise NotImplementedError()
