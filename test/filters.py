@@ -2,8 +2,8 @@ import unittest
 import numpy as np
 import pykalman
 from torch.distributions import Normal, Exponential, Independent
-from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import StateSpaceModel, Observable, BaseModel
+from pyfilter.filters import SISR, APF
+from pyfilter.timeseries import BaseModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2
 import torch
 
@@ -58,14 +58,14 @@ class Tests(unittest.TestCase):
     # ===== Simple 1D model ===== #
     norm = Normal(0., 1.)
     linear = BaseModel((f0, g0), (f, g), (1., 1.), (norm, norm))
-    linearobs = Observable((fo, go), (1., 1.), norm)
-    model = StateSpaceModel(linear, linearobs)
+    model = LinearGaussianObservations(linear, 1., 1.)
 
     # ===== Simple 2D model ===== #
     mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
     mvn = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1.), (mvn, mvn))
-    mvnobs = Observable((fomvn, go), (1., 1.), norm)
-    mvnmodel = StateSpaceModel(mvn, mvnobs)
+    a = torch.Tensor([1., 2.])
+
+    mvnmodel = LinearGaussianObservations(mvn, a, 1.)
 
     def test_InitializeFilter(self):
         filt = SISR(self.model, 1000).initialize()
@@ -126,21 +126,19 @@ class Tests(unittest.TestCase):
         x, y = self.model.sample(500)
 
         hidden = BaseModel((f0, g0), (f, g), (1., Exponential(1)), (self.norm, self.norm))
-        observable = Observable((fo, go), (1., Exponential(1)), self.norm)
-
-        model = StateSpaceModel(hidden, observable)
+        model = LinearGaussianObservations(hidden, 1., Exponential(1.))
 
         algs = [
-            (NESS, {'particles': 1000, 'filter_': SISR(model, 400)}),
-            (NESS, {'particles': 1000, 'filter_': SISR(model, 400), 'p': 1, 'shrinkage': 0.95}),
-            (SMC2, {'particles': 1000, 'filter_': SISR(model, 400)}),
-            (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 400)})
+            (NESS, {'particles': 1000, 'filter_': SISR(model, 200)}),
+            (NESS, {'particles': 1000, 'filter_': SISR(model, 200), 'p': 1, 'shrinkage': 0.95}),
+            (SMC2, {'particles': 1000, 'filter_': SISR(model, 200)}),
+            (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 200)})
         ]
 
         for alg, props in algs:
             alg = alg(**props).initialize()
 
-            alg = alg.fit(y.numpy())
+            alg = alg.fit(y)
 
             parameter = alg.filter.ssm.hidden.theta[1]
 
