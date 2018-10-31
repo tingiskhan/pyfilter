@@ -26,7 +26,7 @@ class NESSMC2(SMC2):
         return self
 
     def update(self, y):
-        if len(self._smc2._td) < self._hs:
+        if len(self._smc2._y) < self._hs:
             return self._smc2.update(y)
 
         if not self._switched:

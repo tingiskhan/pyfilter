@@ -80,11 +80,10 @@ class SMC2(NESS):
         super().__init__(filter_, particles)
 
         self._th = threshold
-        self._td = tuple()
 
     def update(self, y):
         # ===== Perform a filtering move ===== #
-        self._td += (y,)
+        self._y += (y,)
         self._filter.filter(y)
         self._w_rec += self._filter.s_ll[-1]
 
@@ -104,7 +103,7 @@ class SMC2(NESS):
         """
 
         # ===== Construct distribution ===== #
-        ll = torch.cat(self._filter.s_ll).reshape(len(self._td), -1).sum(0)
+        ll = torch.cat(self._filter.s_ll).reshape(len(self._y), -1).sum(0)
         dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
         # ===== Resample among parameters ===== #
@@ -116,8 +115,8 @@ class SMC2(NESS):
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        t_filt.longfilter(np.array(self._td), bar=False)
-        t_ll = torch.cat(t_filt.s_ll).reshape(len(self._td), -1).sum(0)
+        t_filt.longfilter(self._y, bar=False)
+        t_ll = torch.cat(t_filt.s_ll).reshape(len(self._y), -1).sum(0)
 
         # ===== Calculate acceptance ratio ===== #
         # TODO: Might have to add gradients for transformation?
@@ -154,7 +153,7 @@ class SMC2(NESS):
 
         # ===== Create new filter with double the state particles ===== #
         n_particles = self._w_rec.shape[0], 2 * self._filter._particles[1]
-        t_filt = self._filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._td, bar=False)
+        t_filt = self._filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         # TODO: Fix this
