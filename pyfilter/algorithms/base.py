@@ -11,7 +11,7 @@ class BaseAlgorithm(object):
         """
 
         self._filter = filter_
-        self._y = None          # type: numpy.ndarray
+        self._y = tuple()          # type: tuple[torch.Tensor]
 
     @property
     def filter(self):
@@ -26,7 +26,7 @@ class BaseAlgorithm(object):
         """
         Fits the algorithm to data.
         :param y: The data to fit
-        :type y: numpy.ndarray|pandas.DataFrame
+        :type y: numpy.ndarray|pandas.DataFrame|torch.Tensor
         :return: Self
         :rtype: BaseAlgorithm
         """
@@ -54,7 +54,7 @@ class SequentialAlgorithm(BaseAlgorithm):
         """
         Performs an update using a single observation `y`.
         :param y: The observation
-        :type y: numpy.ndarray|float
+        :type y: numpy.ndarray|float|torch.Tensor
         :return: Self
         :rtype: SequentialAlgorithm
         """
