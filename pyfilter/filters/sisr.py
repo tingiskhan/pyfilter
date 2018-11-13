@@ -1,6 +1,7 @@
 from .base import ParticleFilter
 from ..utils.utils import loglikelihood, choose
 from ..utils.normalization import normalize
+import torch
 
 
 class SISR(ParticleFilter):
@@ -10,7 +11,7 @@ class SISR(ParticleFilter):
 
     def _filter(self, y):
         # ===== Resample among old ===== #
-        inds = self._resamp(self._w_old)
+        inds, mask = self._resample_state(self._w_old)
         to_prop = choose(self._x_cur, inds)
         self._proposal = self._proposal.resample(inds)
 
@@ -18,6 +19,10 @@ class SISR(ParticleFilter):
         self._x_cur = self._proposal.draw(y, to_prop, size=self._particles)
         weights = self._proposal.weight(y, self._x_cur, to_prop)
 
-        self._w_old = weights
+        # ===== Update weights ===== #
+        tw = torch.zeros(weights.shape)
+        tw[~mask] = self._w_old[~mask]
+
+        self._w_old = weights + tw
 
         return (normalize(weights) * self._x_cur).sum(-1), loglikelihood(weights)

@@ -7,6 +7,7 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
+from ..utils.utils import get_ess
 
 
 class BaseFilter(object):
@@ -225,7 +226,7 @@ _PROPOSAL_MAPPING = {
 
 
 class ParticleFilter(BaseFilter):
-    def __init__(self, model, particles, resampling=systematic, proposal='auto'):
+    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.5):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
@@ -234,6 +235,8 @@ class ParticleFilter(BaseFilter):
         :type resampling: callable
         :param proposal: Which proposal to use, set to `auto` to let algorithm decide
         :type proposal: Proposal|str
+        :param ess: At which level to resample
+        :type ess: float
         """
 
         super().__init__(model)
@@ -242,6 +245,7 @@ class ParticleFilter(BaseFilter):
         self._inds = None                           # type: torch.Tensor
         self._particles = particles
         self._w_old = None                          # type: torch.Tensor
+        self._ess = ess
 
         self._resamp = resampling
 
@@ -252,6 +256,33 @@ class ParticleFilter(BaseFilter):
                 proposal = Bootstrap()
 
         self._proposal = proposal.set_model(self._model)
+
+    def _resample_state(self, weights):
+        """
+        Resamples the state in accordance with the weigths.
+        :param weights: The weights
+        :type weights: torch.Tensor
+        :return: The indices and mask
+        :rtype: tuple[torch.Tensor]
+        """
+
+        # ===== Get the ones requiring resampling ====== #
+        ess = get_ess(weights) / weights.shape[-1]
+        mask = ess < self._ess
+
+        # ===== Create a default array for resampling ===== #
+        temp = torch.arange(weights.shape[-1])
+        out = temp * torch.ones(weights.shape, dtype=temp.dtype)
+
+        # ===== Return based on if it's nested or not ===== #
+        if not mask.any():
+            return out, mask
+        elif not isinstance(self._particles, tuple):
+            return self._resamp(weights), mask
+
+        out[mask] = self._resamp(weights[mask])
+
+        return out, mask
 
     def set_particles(self, x):
         """
