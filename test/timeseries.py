@@ -82,12 +82,6 @@ class Tests(unittest.TestCase):
 
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
 
-    def test_OverrideParameters(self):
-        "Just make sure it runs"
-        sample = self.linear.i_sample(shape=500)
-
-        x = self.linear.propagate(sample, params=(2, 2))
-
     def test_EulerMaruyama(self):
         mod = EulerMaruyma((lambda: 0., lambda: 1.), (lambda u: 0, lambda u: 1), (), (Normal(0., 1.), Normal(0., 1.)))
 

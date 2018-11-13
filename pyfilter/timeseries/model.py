@@ -80,35 +80,31 @@ class StateSpaceModel(object):
 
         return self.hidden.propagate(x)
 
-    def weight(self, y, x, params=None):
+    def weight(self, y, x):
         """
         Weights the model using the current observation `y` and the current state `x`.
         :param y: The current observation
         :type y: torch.Tensor|float
         :param x: The current state
         :type x: torch.Tensor
-        :param params: Whether to override the current set of parameters
-        :type params: tuple[Parameter]
         :return: The corresponding log-weights
         :rtype: torch.Tensor
         """
 
-        return self.observable.weight(y, x, params)
+        return self.observable.weight(y, x)
 
-    def h_weight(self, y, x, params=None):
+    def h_weight(self, y, x):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
         :param y: The current hidden state
         :type y: torch.Tensor
         :param x: The previous hidden state
         :type x: torch.Tensor
-        :param params: Whether to override the current set of parameters
-        :type params: tuple of np.ndarray|tuple of float|tuple of int
         :return: The corresponding log-weights
         :rtype: np.ndarray|float|int
         """
 
-        return self.hidden.weight(y, x, params)
+        return self.hidden.weight(y, x)
 
     def sample(self, steps, x_s=None, samples=None):
         """

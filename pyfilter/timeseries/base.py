@@ -5,18 +5,6 @@ from .parameter import Parameter
 from ..utils.utils import add_dimensions, isfinite
 
 
-def broadcast_decorator(func):
-    def wrapper(*args, **kwargs):
-        out = func(*args, **kwargs)
-
-        if isinstance(args[0], Observable):
-            return out
-
-        return add_dimensions(out, args[1].dim())
-
-    return wrapper
-
-
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)
@@ -116,7 +104,7 @@ class BaseModel(object):
 
         return shape[0]
 
-    def i_mean(self, params=None):
+    def i_mean(self):
         """
         Calculates the mean of the initial distribution.
         :param params: Used for overriding the parameters
@@ -125,9 +113,9 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.f0(*(params or self.theta_vals))
+        return self.f0(*self.theta_vals)
 
-    def i_scale(self, params=None):
+    def i_scale(self):
         """
         Calculates the scale of the initial distribution.
         :param params: Used for overriding the parameters
@@ -136,20 +124,18 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.g0(*(params or self.theta_vals))
+        return self.g0(*self.theta_vals)
 
-    def i_weight(self, x, params=None):
+    def i_weight(self, x):
         """
         Weights the process of the initial state.
         :param x: The state at `x_0`.
         :type x: torch.Tensor
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: The log-weights
         :rtype: torch.Tensor
         """
 
-        loc, scale = self.i_mean(params), self.i_scale(params)
+        loc, scale = self.i_mean(), self.i_scale()
 
         if self.ndim < 2:
             rescaled = (x - loc) / scale
@@ -159,36 +145,30 @@ class BaseModel(object):
 
         return self.noise0.log_prob(rescaled)
 
-    @broadcast_decorator
-    def mean(self, x, params=None):
+    def mean(self, x):
         """
         Calculates the mean of the process conditional on the previous state and current parameters.
         :param x: The state of the process.
         :type x: torch.Tensor|float
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: The mean
         :rtype: torch.Tensor|float
         """
 
-        return self.f(x, *(params or self.theta_vals))
+        return self.f(x, *self.theta_vals)
 
-    @broadcast_decorator
-    def scale(self, x, params=None):
+    def scale(self, x):
         """
         Calculates the scale of the process conditional on the current state and parameters.
         :param x: The state of the process
         :type x: torch.Tensor|float
-        :param params: Used for overriding the parameters
-        :type params: tuple of np.ndarray|float|int
         :return: The scale
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *(params or self.theta_vals))
+        return self.g(x, *self.theta_vals)
 
     @finite_decorator
-    def weight(self, y, x, params=None):
+    def weight(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.
@@ -196,12 +176,10 @@ class BaseModel(object):
         :type y: torch.Tensor|float
         :param x: The value at x_{t-1}
         :type x: torch.Tensor|float
-        :param params: Used of overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: The log-weights
         :rtype: torch.Tensor|float
         """
-        loc, scale = self.mean(x, params=params), self.scale(x, params=params)
+        loc, scale = self.mean(x), self.scale(x)
 
         rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
 
@@ -213,18 +191,16 @@ class BaseModel(object):
 
         return self.noise.log_prob(rescaled) - log_scale
 
-    def i_sample(self, shape=None, params=None):
+    def i_sample(self, shape=None):
         """
         Samples from the initial distribution.
         :param shape: The number of samples
         :type shape: int|tuple[int]
-        :param params: Any parameters to use instead
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
 
-        loc, scale = self.i_mean(params), self.i_scale(params)
+        loc, scale = self.i_mean(), self.i_scale()
         rndshape = ((shape,) if isinstance(shape, int) else shape) or torch.Size()
         eps = self.noise0.sample(rndshape)
 
@@ -235,18 +211,16 @@ class BaseModel(object):
 
         return loc + scale * eps
 
-    def propagate(self, x, params=None):
+    def propagate(self, x):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
         :type x: torch.Tensor|float
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: Samples from the model
         :rtype: torch.Tensor|float
         """
 
-        loc, scale = self.mean(x, params), self.scale(x, params)
+        loc, scale = self.mean(x), self.scale(x)
 
         if isinstance(self, Observable):
             shape = _get_shape(loc, self.ndim)
@@ -259,15 +233,13 @@ class BaseModel(object):
 
         return loc + scale * eps
 
-    def sample(self, steps, samples=None, params=None):
+    def sample(self, steps, samples=None):
         """
         Samples a trajectory from the model.
         :param steps: The number of steps
         :type steps: int
         :param samples: Number of sample paths
         :type samples: int
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: An array of sampled values
         :rtype: torch.Tensor
         """
@@ -278,10 +250,10 @@ class BaseModel(object):
             shape += (*((samples,) if not isinstance(samples, (list, tuple)) else samples),)
 
         out = torch.zeros(shape)
-        out[0] = self.i_sample(shape=samples, params=params)
+        out[0] = self.i_sample(shape=samples)
 
         for i in range(1, steps):
-            out[i] = self.propagate(out[i-1], params=params)
+            out[i] = self.propagate(out[i-1])
 
         return out
 
