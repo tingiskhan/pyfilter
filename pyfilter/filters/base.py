@@ -8,6 +8,7 @@ from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 from ..utils.utils import get_ess
+from functools import lru_cache
 
 
 class BaseFilter(object):
@@ -225,6 +226,19 @@ _PROPOSAL_MAPPING = {
 }
 
 
+@lru_cache()
+def _construct_empty(shape):
+    """
+    Constructs an empty array based on the shape.
+    :param shape: The shape
+    :type shape: tuple
+    :rtype: torch.Tensor
+    """
+
+    temp = torch.arange(shape[-1])
+    return temp * torch.ones(shape, dtype=temp.dtype)
+
+
 class ParticleFilter(BaseFilter):
     def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.5):
         """
@@ -271,8 +285,7 @@ class ParticleFilter(BaseFilter):
         mask = ess < self._ess
 
         # ===== Create a default array for resampling ===== #
-        temp = torch.arange(weights.shape[-1])
-        out = temp * torch.ones(weights.shape, dtype=temp.dtype)
+        out = _construct_empty(weights.shape)
 
         # ===== Return based on if it's nested or not ===== #
         if not mask.any():
