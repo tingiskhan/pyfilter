@@ -137,9 +137,13 @@ class BaseFilter(object):
         """
         if entire_history:
             length = len(self.s_mx)
-            for obj, name in [(self.s_mx, 's_mx'), (self.s_ll, 's_ll')]:
-                tmp = torch.cat(obj).reshape(length, -1)
-                setattr(self, name, tuple(tmp[:, inds]))
+
+            ll_shape = (length, -1)
+            x_shape = (length, self._model.hidden_ndim, -1) if self._model.hidden_ndim > 1 else ll_shape
+
+            for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
+                tmp = torch.cat(obj).reshape(*shape)
+                setattr(self, name, tuple(tmp[..., inds]))
 
         # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: u.values[..., inds, :])
@@ -195,11 +199,15 @@ class BaseFilter(object):
         self._model.exchange(inds, filter_.ssm)
 
         length = len(self.s_mx)
-        for obj, name in [(self.s_mx, 's_mx'), (self.s_ll, 's_ll')]:
-            tmp = torch.cat(obj).reshape(length, -1)
-            new_tmp = torch.cat(getattr(filter_, name)).reshape(length, -1)
 
-            tmp[:, inds] = new_tmp[:, inds]
+        ll_shape = (length, -1)
+        x_shape = (length, self._model.hidden_ndim, -1) if self._model.hidden_ndim > 1 else ll_shape
+
+        for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
+            tmp = torch.cat(obj).reshape(*shape)
+            new_tmp = torch.cat(getattr(filter_, name)).reshape(*shape)
+
+            tmp[..., inds] = new_tmp[..., inds]
 
             setattr(self, name, tuple(tmp))
 
@@ -226,7 +234,6 @@ _PROPOSAL_MAPPING = {
 }
 
 
-@lru_cache()
 def _construct_empty(shape):
     """
     Constructs an empty array based on the shape.
