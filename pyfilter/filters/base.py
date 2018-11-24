@@ -8,7 +8,6 @@ from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 from ..utils.utils import get_ess
-from functools import lru_cache
 
 
 class BaseFilter(object):
