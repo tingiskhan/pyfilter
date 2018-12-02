@@ -13,6 +13,7 @@ setup(
         'matplotlib>=2.0.0',
         'pandas>=0.19.2',
         'scipy>=0.18.1',
-        'torch>=0.4.1'
+        'torch>=0.4.1',
+        'tqdm>=4.26'
     ]
 )
