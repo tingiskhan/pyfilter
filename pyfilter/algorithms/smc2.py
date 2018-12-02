@@ -1,7 +1,6 @@
 from .ness import NESS
 import torch
 from ..utils.utils import get_ess, add_dimensions, normalize
-import numpy as np
 from ..filters.base import KalmanFilter
 from torch.distributions import MultivariateNormal
 
@@ -84,8 +83,8 @@ class SMC2(NESS):
     def update(self, y):
         # ===== Perform a filtering move ===== #
         self._y += (y,)
-        self._filter.filter(y)
-        self._w_rec += self._filter.s_ll[-1]
+        self.filter.filter(y)
+        self._w_rec += self.filter.s_ll[-1]
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
@@ -103,37 +102,37 @@ class SMC2(NESS):
         """
 
         # ===== Construct distribution ===== #
-        ll = torch.cat(self._filter.s_ll).reshape(len(self._y), -1).sum(0)
-        dist = _define_pdf(self._filter.ssm.flat_theta_dists, normalize(self._w_rec))
+        ll = self.filter.loglikelihood
+        dist = _define_pdf(self.filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
         # ===== Resample among parameters ===== #
-        inds = self._filter._resamp(self._w_rec)
-        self._filter.resample(inds, entire_history=True)
+        inds = self.filter._resampler(self._w_rec)
+        self.filter.resample(inds, entire_history=True)
 
         # ===== Define new filters and move via MCMC ===== #
-        t_filt = self._filter.copy().reset().initialize()
+        t_filt = self.filter.copy().reset().initialize()
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
         t_filt.longfilter(self._y, bar=False)
-        t_ll = torch.cat(t_filt.s_ll).reshape(len(self._y), -1).sum(0)
+        t_ll = t_filt.loglikelihood
 
         # ===== Calculate acceptance ratio ===== #
         # TODO: Might have to add gradients for transformation?
         quotient = t_ll - ll[inds]
-        plogquot = t_filt._model.p_prior() - self._filter._model.p_prior()
-        kernel = _eval_kernel(self._filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, dist)
+        plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
+        kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Check which to accept ===== #
 
-        u = np.log(torch.empty(quotient.shape).uniform_())
+        u = torch.empty(quotient.shape).uniform_().log()
         if plogquot.dim() > 1:
             toaccept = u < quotient + plogquot[:, 0] + kernel
         else:
             toaccept = u < quotient + plogquot + kernel
 
         # ===== Replace old filters with newly accepted ===== #
-        self._filter.exchange(t_filt, toaccept)
+        self.filter.exchange(t_filt, toaccept)
         self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
@@ -148,16 +147,15 @@ class SMC2(NESS):
         :return:
         """
 
-        if isinstance(self._filter, KalmanFilter):
+        if isinstance(self.filter, KalmanFilter):
             return self
 
         # ===== Create new filter with double the state particles ===== #
-        n_particles = self._w_rec.shape[0], 2 * self._filter._particles[1]
-        t_filt = self._filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._y, bar=False)
+        n_particles = self._w_rec.shape[0], 2 * self.filter.particles[1]
+        t_filt = self.filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-        # TODO: Fix this
-        # self._w_rec = torch.sum(t_filt.s_ll, axis=0) - np.sum(self._filter.s_l, axis=0)
-        self._filter = t_filt
+        self._w_rec = t_filt.loglikelihood - self.filter.loglikelihood
+        self.filter = t_filt
 
         return self

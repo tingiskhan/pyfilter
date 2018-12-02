@@ -17,7 +17,7 @@ class APF(ParticleFilter):
         normalized = normalize(self._w_old)
 
         # ===== Resample and propagate ===== #
-        resampled_indices = self._resamp(resamp_w)
+        resampled_indices = self._resampler(resamp_w)
         resampled_x = choose(self._x_cur, resampled_indices)
 
         self._proposal = self._proposal.resample(resampled_indices)

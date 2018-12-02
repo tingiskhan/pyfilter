@@ -10,8 +10,8 @@ class BaseAlgorithm(object):
         :type filter_: BaseFilter
         """
 
-        self._filter = filter_
-        self._y = tuple()          # type: tuple[torch.Tensor]
+        self._filter = filter_      # type: BaseFilter
+        self._y = tuple()           # type: tuple[torch.Tensor]
 
     @property
     def filter(self):
@@ -21,6 +21,19 @@ class BaseAlgorithm(object):
         """
 
         return self._filter
+
+    @filter.setter
+    def filter(self, x):
+        """
+        Sets the filter
+        :param x: The new filter
+        :type x: BaseFilter
+        """
+
+        if not isinstance(x, self.filter):
+            raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
+
+        self._filter = x
 
     def fit(self, y):
         """

@@ -93,12 +93,12 @@ class NESS(SequentialAlgorithm):
         self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
         self.h = sqrt(1 - self.a ** 2) if shrinkage is not None else None
 
-        self._index = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
         if shrinkage is None:
             self.kernel = lambda u, w: cont_jitter(u, self._p, w)
         else:
             shape = self._w_rec.shape[0], 1
-            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=self._index.sample(shape))
+            bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
+            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=bernoulli.sample(shape))
 
     def initialize(self):
         """
@@ -119,23 +119,23 @@ class NESS(SequentialAlgorithm):
         self._filter.ssm.p_apply(lambda x: self.kernel(x, self._w_rec), transformed=True)
 
         # ===== Propagate filter ===== #
-        self._filter.filter(y)
+        self.filter.filter(y)
 
         # ===== Resample ===== #
         self._w_rec += self._filter.s_ll[-1]
 
         ess = get_ess(self._w_rec)
 
-        if ess < self._th * self._filter._particles[0]:
-            indices = self._filter._resamp(self._w_rec)
-            self._filter = self._filter.resample(indices, entire_history=False)
+        if ess < self._th * self._w_rec.shape[0]:
+            indices = self.filter._resampler(self._w_rec)
+            self._filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec = torch.zeros_like(self._w_rec)
 
         return self
 
-    def predict(self, steps, **kwargs):
-        xp, yp = self._filter.predict(steps, **kwargs)
+    def predict(self, steps):
+        xp, yp = self.filter.predict(steps)
 
         xout = list()
         yout = list()
@@ -148,15 +148,7 @@ class NESS(SequentialAlgorithm):
 
     def filtermeans(self):
         out = list()
-        for tw, tx in zip(self._filter.s_l, self._filter.s_mx):
-            normalized = normalize(tw)
-            out.append(np.sum(tx * normalized, axis=-1))
-
-        return out
-
-    def noisemeans(self):
-        out = list()
-        for tw, tx in zip(self._filter.s_l, self._filter.s_n):
+        for tw, tx in zip(self.filter.s_ll, self._filter.s_mx):
             normalized = normalize(tw)
             out.append(np.sum(tx * normalized, axis=-1))
 

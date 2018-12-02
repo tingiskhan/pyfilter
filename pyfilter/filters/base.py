@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import copy
 from ..proposals import LinearGaussianObservations
 from ..utils.resampling import systematic
@@ -28,6 +27,15 @@ class BaseFilter(object):
         self.s_mx = tuple()
 
     @property
+    def loglikelihood(self):
+        """
+        Returns the total loglikelihood
+        :rtype: torch.Tensor
+        """
+
+        return torch.cat(self.s_ll).reshape(len(self.s_ll), -1).sum(0)
+
+    @property
     def ssm(self):
         """
         Returns the SSM as an object.
@@ -48,7 +56,7 @@ class BaseFilter(object):
         """
         Performs a filtering the model for the observation `y`.
         :param y: The observation
-        :type y: float|np.ndarray
+        :type y: float|torch.Tensor
         :return: Self
         :rtype: BaseFilter
         """
@@ -64,7 +72,7 @@ class BaseFilter(object):
         """
         The actual filtering procedure. Overwrite this.
         :param y: The observation
-        :type y: float|np.ndarray
+        :type y: float|torch.Tensor
         :return: Mean of state, likelihood
         :rtype: torch.Tensor, torch.Tensor
         """
@@ -75,7 +83,7 @@ class BaseFilter(object):
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type y: pd.DataFrame|np.ndarray
+        :type y: pd.DataFrame|torch.Tensor
         :param bar: Whether to print a progressbar
         :type bar: bool
         :return: Self
@@ -267,7 +275,7 @@ class ParticleFilter(BaseFilter):
         self._w_old = None                          # type: torch.Tensor
         self._ess = ess
 
-        self._resamp = resampling
+        self._resampler = resampling
 
         if proposal == 'auto':
             try:
@@ -276,6 +284,15 @@ class ParticleFilter(BaseFilter):
                 proposal = Bootstrap()
 
         self._proposal = proposal.set_model(self._model)
+
+    @property
+    def particles(self):
+        """
+        Returns the particles
+        :rtype: int|tuple[int]
+        """
+
+        return self._particles
 
     def _resample_state(self, weights):
         """
@@ -297,9 +314,9 @@ class ParticleFilter(BaseFilter):
         if not mask.any():
             return out, mask
         elif not isinstance(self._particles, tuple):
-            return self._resamp(weights), mask
+            return self._resampler(weights), mask
 
-        out[mask] = self._resamp(weights[mask])
+        out[mask] = self._resampler(weights[mask])
 
         return out, mask
 
