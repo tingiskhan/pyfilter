@@ -7,6 +7,7 @@ from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 from ..utils.utils import get_ess
+from numpy import ndarray
 
 
 class BaseFilter(object):
@@ -93,7 +94,7 @@ class BaseFilter(object):
         if isinstance(y, (pd.Series, pd.DataFrame)):
             y = y.values
 
-        if isinstance(y, np.ndarray):
+        if isinstance(y, ndarray):
             y = tuple(y)
 
         if bar:
