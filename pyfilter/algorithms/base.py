@@ -30,7 +30,7 @@ class BaseAlgorithm(object):
         :type x: BaseFilter
         """
 
-        if not isinstance(x, self.filter):
+        if not isinstance(x, type(self.filter)):
             raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
 
         self._filter = x
