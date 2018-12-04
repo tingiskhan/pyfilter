@@ -1,4 +1,4 @@
-from ..filters.base import BaseFilter
+from ..filters.base import BaseFilter, enforce_tensor
 from tqdm import tqdm
 
 
@@ -63,6 +63,7 @@ class SequentialAlgorithm(BaseAlgorithm):
     Algorithm for online inference.
     """
 
+    @enforce_tensor
     def update(self, y):
         """
         Performs an update using a single observation `y`.
@@ -74,6 +75,7 @@ class SequentialAlgorithm(BaseAlgorithm):
 
         raise NotImplementedError()
 
+    @enforce_tensor
     def fit(self, y):
         for yt in tqdm(y, desc=str(self.__class__.__name__)):
             self.update(yt)

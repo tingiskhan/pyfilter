@@ -10,6 +10,16 @@ from ..utils.utils import get_ess
 from numpy import ndarray
 
 
+def enforce_tensor(func):
+    def wrapper(obj, y, **kwargs):
+        if not isinstance(y, torch.Tensor):
+            y = torch.tensor(y)
+
+        return func(obj, y, **kwargs)
+
+    return wrapper
+
+
 class BaseFilter(object):
     def __init__(self, model):
         """
@@ -69,6 +79,7 @@ class BaseFilter(object):
 
         return self
 
+    @enforce_tensor
     def _filter(self, y):
         """
         The actual filtering procedure. Overwrite this.
@@ -80,6 +91,7 @@ class BaseFilter(object):
 
         raise NotImplementedError()
 
+    @enforce_tensor
     def longfilter(self, y, bar=True):
         """
         Filters the entire data set `y`.
