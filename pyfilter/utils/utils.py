@@ -8,7 +8,7 @@ def get_ess(w):
     """
     Calculates the ESS from an array of log weights.
     :param w: The log weights
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :return: The effective sample size
     :rtype: float
     """
@@ -23,11 +23,11 @@ def searchsorted2d(a, b):
     Searches a sorted 2D array along the second axis. Basically performs a vectorized digitize. Solution provided here:
     https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy.
     :param a: The array to take the elements from
-    :type a: np.ndarray
+    :type a: torch.Tensor
     :param b: The indices of the elements in `a`.
-    :type b: np.ndarray
+    :type b: torch.Tensor
     :return: An array of indices
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     m, n = a.shape
     max_num = max(a.max() - a.min(), b.max() - b.min()) + 1
@@ -40,11 +40,11 @@ def choose(array, indices):
     """
     Function for choosing on either columns or index.
     :param array: The array to choose on
-    :type array: np.ndarray
+    :type array: torch.Tensor
     :param indices: The indices to choose from `array`
-    :type indices: np.ndarray
+    :type indices: torch.Tensor
     :return: Returns the chosen elements from `array`
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
 
     if indices.dim() < 2:
@@ -57,9 +57,9 @@ def loglikelihood(w):
     """
     Calculates the estimated loglikehood given weights.
     :param w: The log weights, corresponding to likelihood
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :return: The log-likelihood
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
 
     maxw, _ = w.max(-1)
