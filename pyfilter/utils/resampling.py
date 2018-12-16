@@ -49,10 +49,22 @@ def systematic(w, u=None):
     :rtype: torch.Tensor
     """
 
-    u = u if u is not None else (torch.empty(1) if w.dim() < 2 else torch.empty(w.shape[0])).uniform_()
+    u = u if u is not None else (torch.empty(1) if w.dim() < 2 else torch.empty((w.shape[0], 1))).uniform_()
     w = normalize(w)
 
     if w.dim() > 1:
         return _matrix(w, u)
 
     return _vector(w, u)
+
+
+def multinomial(w):
+    """
+    Performs multinomial sampling.
+    :param w: The weights to use for resampling
+    :type w: torch.Tensor
+    :return: Resampled indices
+    :rtype: torch.Tensor
+    """
+
+    return torch.multinomial(normalize(w), w.shape[-1], replacement=True)
