@@ -29,24 +29,12 @@ def filterpy_systematic_resample(weights, u):
 
 
 class ResamplingTests(TestCase):
-    def test_Systematic1D(self):
-        np.random.seed(123)
-
-        weights = torch.tensor(np.random.normal(size=300))
-
-        u = np.random.uniform()
-
-        pyfilter_inds = systematic(weights, u)
-        filterpy_inds = filterpy_systematic_resample(normalize(weights).numpy(), u)
-
-        assert (pyfilter_inds.numpy() == filterpy_inds).all() and isinstance(pyfilter_inds, torch.Tensor)
-
-    def test_Systematic2D(self):
+    def test_Systematic(self):
         weights = torch.tensor(np.random.normal(size=(1000, 300)))
 
         u = np.random.uniform(size=(weights.shape[0], 1))
 
-        pyfilter_inds = systematic(weights, u)
+        pyfilter_inds = systematic(weights, torch.tensor(u))
 
         assert isinstance(pyfilter_inds, torch.Tensor)
 
