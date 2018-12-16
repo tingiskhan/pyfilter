@@ -14,12 +14,10 @@ def _matrix(weights, u):
     :rtype: np.ndarray
     """
     n = weights.shape[1]
-    u = torch.tensor(u) if u is not None else torch.empty((weights.shape[0], 1)).uniform_()
     index_range = torch.arange(n, dtype=u.dtype)[None, :] * torch.ones(weights.shape, dtype=u.dtype)
 
     probs = (index_range + u) / n
-
-    cumsum = normalize(weights).cumsum(-1)
+    cumsum = weights.cumsum(-1)
 
     return searchsorted2d(cumsum, probs)
 
@@ -33,10 +31,9 @@ def _vector(weights, u):
     :rtype: np.ndarray
     """
     n = weights.shape[0]
-    u = torch.tensor(u) if u is not None else torch.empty(1).uniform_()
     probs = (torch.arange(n, dtype=u.dtype) + u) / n
 
-    cumsum = normalize(weights).cumsum(0)
+    cumsum = weights.cumsum(0)
 
     return np.searchsorted(cumsum, probs)
 
