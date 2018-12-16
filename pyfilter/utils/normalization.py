@@ -6,9 +6,9 @@ def _vector(w):
     """
     Normalizes a 1D array of log weights.
     :param w: The weights
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :return: Normalized weights
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
 
     reweighed = torch.exp(w - w.max())
@@ -29,9 +29,9 @@ def _matrix(w):
     """
     Normalizes a 2D array of log weights along the second axis.
     :param w: The weights
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :return: Normalized weights
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
 
     reweighed = torch.exp(w - w.max(-1)[0][..., None])
@@ -45,9 +45,9 @@ def normalize(w):
     """
     Normalizes a 1D or 2D array of log weights.
     :param w: The weights
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :return: Normalized weights
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
 
     if w.dim() > 1:
