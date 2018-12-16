@@ -76,7 +76,7 @@ class Tests(unittest.TestCase):
         for model in [self.model, self.mvnmodel]:
             x, y = model.sample(500)
 
-            for filter_, props in [(SISR, {'particles': 5000}), (APF, {'particles': 5000})]:
+            for filter_, props in [(SISR, {'particles': 500}), (APF, {'particles': 500})]:
                 filt = filter_(model, **props).initialize()
 
                 filt = filt.longfilter(y)
@@ -106,26 +106,27 @@ class Tests(unittest.TestCase):
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
-    def test_ParallellFilters(self):
+    def test_ParallellFiltersAndStability(self):
         x, y = self.model.sample(50)
 
         shape = 1000, 1
 
-        linear = BaseModel((f0, g0), (f, g), (torch.ones(shape), torch.ones(shape)), (self.norm, self.norm))
+        linear = BaseModel((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
         self.model.hidden = linear
 
         filt = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
 
-        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1).numpy()
+        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1)
 
-        rmse = np.sqrt(np.mean((filtermeans[:, 0:1] - filtermeans[:, 1:]) ** 2))
+        x = filtermeans[:, 0:1]
+        mape = ((x - filtermeans[:, 1:]) / x).abs()
 
-        assert rmse < 0.1
+        assert mape.median(0)[0].max() < 0.05
 
     def test_Algorithms(self):
         x, y = self.model.sample(500)
 
-        hidden = BaseModel((f0, g0), (f, g), (1., Exponential(1)), (self.norm, self.norm))
+        hidden = BaseModel((f0, g0), (f, g), (Exponential(2.), Exponential(2.)), (self.norm, self.norm))
         model = LinearGaussianObservations(hidden, 1., Exponential(1.))
 
         algs = [
