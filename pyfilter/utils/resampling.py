@@ -9,9 +9,9 @@ def _matrix(weights, u):
     Performs systematic resampling of a 2D array of log weights along the second axis.
     independent of the others.
     :param weights: The weights to use for resampling
-    :type weights: np.ndarray
+    :type weights: torch.Tensor
     :return: Resampled indices
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     n = weights.shape[1]
     index_range = torch.arange(n, dtype=u.dtype)[None, :] * torch.ones(weights.shape, dtype=u.dtype)
@@ -26,9 +26,9 @@ def _vector(weights, u):
     """
     Performs systematic resampling of a 1D array log weights.
     :param weights: The weights to use for resampling
-    :type weights: np.ndarray
+    :type weights: torch.Tensor
     :return: Resampled indices
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     n = weights.shape[0]
     probs = (torch.arange(n, dtype=u.dtype) + u) / n
@@ -42,58 +42,17 @@ def systematic(w, u=None):
     """
     Performs systematic resampling on either a 1D or 2D array.
     :param w: The weights to use for resampling
-    :type w: np.ndarray
+    :type w: torch.Tensor
     :param u: Parameter for overriding the sampled index, for testing
-    :type u: sample from np.random.uniform()
+    :type u: float|torch.Tensor
     :return: Resampled indices
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
+
+    u = u if u is not None else (torch.empty(1) if w.dim() < 2 else torch.empty(w.shape[0])).uniform_()
+    w = normalize(w)
 
     if w.dim() > 1:
         return _matrix(w, u)
 
     return _vector(w, u)
-
-
-def _mn_vector(w):
-    """
-    Resamples a vector array of weights using multinomial resampling.
-    :param w: The weights to use for resampling
-    :type w: np.ndarray
-    :return: Resampled indices
-    :rtype: np.ndarray
-    """
-    normalized = normalize(w).cumsum()
-    normalized[-1] = 1
-
-    return np.searchsorted(normalized, np.random.uniform(0, 1, w.shape))
-
-
-def _mn_matrix(w):
-    """
-    Resamples a matrix array of weights using multinomial resampling.
-    :param w: The weights to use for resampling
-    :type w: np.ndarray
-    :return: Resampled indices
-    :rtype: np.ndarray
-    """
-
-    normalized = normalize(w).cumsum(-1)
-    normalized[:, -1] = 1
-
-    return searchsorted2d(normalized, np.random.uniform(0, 1, w.shape))
-
-
-def multinomial(w):
-    """
-    Performs multinomial resampling on either a 1D or 2D array.
-    :param w: The weights to use for resampling
-    :type w: np.ndarray
-    :return: Resampled indices
-    :rtype: np.ndarray
-    """
-
-    if w.ndim > 1:
-        return _mn_matrix(w)
-
-    return _mn_vector(w)
