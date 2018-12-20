@@ -35,7 +35,7 @@ def go(x, alpha, sigma):
 def fmvn(x, alpha, sigma):
     x1 = alpha * x[0] + x[1] / 3
     x2 = x[1]
-    return torch.cat((x1[None], x2[None]))
+    return x1, x2
 
 
 def gmvn(x, alpha, sigma):
@@ -48,10 +48,6 @@ def f0mvn(alpha, sigma):
 
 def g0mvn(alpha, sigma):
     return sigma
-
-
-def fomvn(x, alpha, sigma):
-    return x[0] + 2 * x[1]
 
 
 class Tests(unittest.TestCase):
@@ -98,7 +94,7 @@ class Tests(unittest.TestCase):
                 if estimates.ndim < 2:
                     estimates = estimates[:, None]
 
-                rel_error = np.abs((estimates - filterestimates[0]) / filterestimates[0]).mean()
+                rel_error = np.median(np.abs((estimates - filterestimates[0]) / filterestimates[0]))
 
                 ll = kf.loglikelihood(y.numpy())
 
@@ -149,4 +145,4 @@ class Tests(unittest.TestCase):
             densval = kde.score_samples(tru_val)
             priorval = parameter.dist.log_prob(tru_val)
 
-            assert bool(densval > priorval)
+            assert bool(densval > priorval.numpy())
