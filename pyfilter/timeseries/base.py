@@ -184,7 +184,7 @@ class BaseModel(object):
         """
         loc, scale = self.mean(x), self.scale(x)
 
-        rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
+        rescaled = (y - loc) / scale
 
         if self.ndim > 1:
             log_scale = scale.abs().log().sum(0)
