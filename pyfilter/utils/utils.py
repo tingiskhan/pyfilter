@@ -48,7 +48,7 @@ def choose(array, indices):
     """
 
     if indices.dim() < 2:
-        return array[..., indices]
+        return array[indices]
 
     return array[..., torch.arange(array.shape[-2])[:, None], indices]
 

@@ -3,6 +3,7 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter
 from ..utils.utils import add_dimensions, isfinite
+from .statevariable import tensor_caster
 
 
 def finite_decorator(func):
@@ -32,7 +33,7 @@ def _get_shape(x, ndim):
     if not isinstance(x, torch.Tensor):
         return ()
 
-    return x.shape if ndim < 2 else x.shape[1:]
+    return x.shape if ndim < 2 else x.shape[:-1]
 
 
 class BaseModel(object):
@@ -145,6 +146,7 @@ class BaseModel(object):
 
         return self.noise0.log_prob(rescaled)
 
+    @tensor_caster
     def mean(self, x):
         """
         Calculates the mean of the process conditional on the previous state and current parameters.
@@ -156,6 +158,7 @@ class BaseModel(object):
 
         return self.f(x, *self.theta_vals)
 
+    @tensor_caster
     def scale(self, x):
         """
         Calculates the scale of the process conditional on the current state and parameters.
@@ -184,7 +187,6 @@ class BaseModel(object):
         rescaled = (add_dimensions(y, loc.dim()) - loc) / scale
 
         if self.ndim > 1:
-            rescaled = rescaled.permute(*range(1, rescaled.dim()), 0)
             log_scale = scale.abs().log().sum(0)
         else:
             log_scale = scale.log()
@@ -203,11 +205,6 @@ class BaseModel(object):
         loc, scale = self.i_mean(), self.i_scale()
         rndshape = ((shape,) if isinstance(shape, int) else shape) or torch.Size()
         eps = self.noise0.sample(rndshape)
-
-        if self.ndim > 1:
-            eps = eps.permute(-1, *range(eps.dim() - 1))
-            loc = add_dimensions(loc, eps.dim())
-            scale = add_dimensions(scale, eps.dim())
 
         return loc + scale * eps
 
@@ -228,8 +225,6 @@ class BaseModel(object):
             shape = _get_shape(x, self.ndim)
 
         eps = self.noise.sample(shape)
-        if self.ndim > 1:
-            eps = eps.permute(-1, *range(eps.dim() - 1))
 
         return loc + scale * eps
 

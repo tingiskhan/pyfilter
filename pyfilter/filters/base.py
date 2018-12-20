@@ -287,6 +287,7 @@ class ParticleFilter(BaseFilter):
         self._particles = particles
         self._w_old = None                          # type: torch.Tensor
         self._ess = ess
+        self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
 
         self._resampler = resampling
 

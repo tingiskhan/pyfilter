@@ -8,7 +8,10 @@ def f(x, a, scale):
     if a.dim() < 1:
         return a * x
 
-    return a @ x
+    if a.dim() == 1:
+        return x @ a
+
+    return x @ a.t()
 
 
 def g(x, a, scale):

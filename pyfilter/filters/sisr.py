@@ -25,4 +25,6 @@ class SISR(ParticleFilter):
 
         self._w_old = weights + tw
 
-        return (normalize(weights) * self._x_cur).sum(-1), loglikelihood(weights)
+        normw = normalize(weights) if weights.dim() == self._x_cur.dim() else normalize(weights).unsqueeze(-1)
+
+        return (normw * self._x_cur).sum(self._sumaxis), loglikelihood(weights)
