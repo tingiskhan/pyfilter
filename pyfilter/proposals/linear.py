@@ -4,6 +4,24 @@ from ..timeseries import LinearGaussianObservations as LGO
 import torch
 
 
+def construct_diag(x):
+    """
+    Constructs a diagonal matrix based on batched data. Solution found here:
+    https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
+    :param x: The tensor
+    :type x: torch.Tensor
+    :rtype: torch.Tensor
+    """
+
+    if x.dim() < 2:
+        return torch.diag(x)
+
+    b = torch.eye(x.size(1))
+    c = x.unsqueeze(2).expand(*x.size(), x.size(1))
+
+    return c * b
+
+
 # TODO: Seems to work for 1D models currently, will need to extend to multidimensional
 class LinearGaussianObservations(Proposal):
     def set_model(self, model):
@@ -29,7 +47,7 @@ class LinearGaussianObservations(Proposal):
         # ===== Define covariance ===== #
         t2 = torch.matmul(tc.t(), o_var_inv.unsqueeze(-1) * tc)
 
-        cov = (torch.diag(h_var_inv) + t2).inverse()
+        cov = (construct_diag(h_var_inv) + t2).inverse()
 
         # ===== Get mean ===== #
         t1 = h_var_inv * loc
