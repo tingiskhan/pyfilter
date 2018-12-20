@@ -35,9 +35,9 @@ class LinearGaussianObservations(Proposal):
         t1 = h_var_inv * loc
 
         t2 = o_var_inv * y
-        t3 = torch.matmul(tc.t(), t2) if t2.dim() > 1 else c * t2
+        t3 = torch.matmul(tc.t(), t2)
 
-        m = torch.matmul(cov, (t1.unsqueeze(-1) + t3))[..., 0]
+        m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov))
 
