@@ -29,7 +29,7 @@ class LinearGaussianObservations(Proposal):
         # ===== Define covariance ===== #
         t2 = torch.matmul(tc.t(), o_var_inv.unsqueeze(-1) * tc)
 
-        cov = (h_var_inv + t2).inverse()
+        cov = (torch.diag(h_var_inv) + t2).inverse()
 
         # ===== Get mean ===== #
         t1 = h_var_inv * loc
@@ -59,11 +59,12 @@ class LinearGaussianObservations(Proposal):
 
     def weight(self, y, xn, xo, *args, **kwargs):
         c = self._model.observable.theta_vals[0]
+        fx = self._model.observable.mean(xo)
+
+        m = self._model.observable.mean(fx)
 
         h_var = self._model.hidden.scale(xo) ** 2
         o_var = self._model.observable.scale(xo) ** 2
-
-        m = self._model.observable.mean(xo)
 
         if self._model.hidden_ndim < 2:
             std = (h_var + c ** 2 * o_var).sqrt()
@@ -71,6 +72,6 @@ class LinearGaussianObservations(Proposal):
             return Normal(m, std).log_prob(y)
 
         temp = torch.matmul(c, o_var.unsqueeze(-1) * c.t())
-        cov = h_var + temp
+        cov = torch.diag(h_var) + temp
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov)).log_prob(y)
