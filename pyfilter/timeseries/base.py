@@ -63,6 +63,7 @@ class BaseModel(object):
             raise ValueError('All must be of instance `torch.distributions.Distribution`!')
 
         self.noise0, self.noise = noise
+        self._scaler = torch.ones_like(self.noise.stddev)
 
     @property
     def theta(self):
@@ -168,7 +169,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *self.theta_vals) * self.noise.stddev
+        return self.g(x, *self.theta_vals) * self._scaler
 
     @finite_decorator
     def weight(self, y, x):
