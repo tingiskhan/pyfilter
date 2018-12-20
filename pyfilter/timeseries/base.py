@@ -168,7 +168,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *self.theta_vals)
+        return self.g(x, *self.theta_vals) * self.noise.stddev
 
     @finite_decorator
     def weight(self, y, x):
