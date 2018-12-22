@@ -122,125 +122,22 @@ def isfinite(x):
     return not_inf & not_nan
 
 
-def dot(a, b):
+def construct_diag(x):
     """
-    Helper function for calculating the dot product between a matrix and a vector.
-    :param a: The A array
-    :type a: np.ndarray
-    :param b: The B vector
-    :type b: np.ndarray
-    :return: Returns the matrix product
-    :rtype: np.ndarray
+    Constructs a diagonal matrix based on batched data. Solution found here:
+    https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
+    :param x: The tensor
+    :type x: torch.Tensor
+    :rtype: torch.Tensor
     """
 
-    return np.einsum('ij...,j...->i...', a, b)
+    if x.dim() < 2:
+        return torch.diag(x)
 
+    b = torch.eye(x.size(1))
+    c = x.unsqueeze(2).expand(*x.size(), x.size(1))
 
-def outer(a, b):
-    """
-    Calculates the outer product B * X * B^t.
-    :param a: The B-matrix
-    :type a: np.ndarray
-    :param b: The X-matrix
-    :type b: np.ndarray
-    :return: The outer product
-    :rtype: np.ndarray
-    """
-
-    xbt = np.einsum('ij...,kj...->ik...', b, a)
-    bxbt = np.einsum('ij...,jk...->ik...', a, xbt)
-
-    return bxbt
-
-
-def square(a, b):
-    """
-    Calculates the square product x^t * A * x.
-    :param a: The vector x
-    :type a: np.ndarray
-    :param b: The matrix A
-    :type b: np.ndarray
-    :return: The squared matrix
-    :rtype: np.ndarray
-    """
-
-    return np.einsum('i...,i...->...', a, dot(b, a))
-
-
-def outerv(a, b):
-    """
-    Performs the outer multiplication of the expression a * b^t.
-    :param a: The vector a
-    :type a: np.ndarray
-    :param b: The vector b
-    :type b: np.ndarray
-    :return: The outer product
-    :rtype: np.ndarray
-    """
-
-    return np.einsum('i...,j...->ij...', a, b)
-
-
-def expanddims(array, ndims):
-    """
-    Expand dimensions to the right to target the dimensions of ndims.
-    :param array: The current array
-    :type array: np.ndarray
-    :param ndims: The target number of dimensions.
-    :type ndims: int
-    :return: Expanded array
-    :rtype: np.ndarray
-    """
-
-    if array.ndim == ndims:
-        return array
-
-    copy = np.expand_dims(array, -1)
-
-    return expanddims(copy, ndims)
-
-
-def mdot(a, b):
-    """
-    Performs the matrix dot product `a * b`.
-    :param a: The a matrix
-    :type a: np.ndarray
-    :param b: The b matrix
-    :type b: np.ndarray
-    :return: The matrix dot product
-    :rtype: np.ndarray
-    """
-
-    return np.einsum('ij...,jk...->ik...', a, b)
-
-
-def outerm(a, b):
-    """
-    Calculates the outer matrix product, ie A * B^t
-    :param a: The array a
-    :type a: np.ndarray
-    :param b: The array b
-    :type b: np.ndarray
-    :return: The outer matrix product
-    :rtype: np.ndarray
-    """
-
-    return np.einsum('ij...,kj...->ik...', a, b)
-
-
-def customcholesky(a):
-    """
-    Performs a custom Cholesky factorization of the array a.
-    :param a: The array a
-    :type a: np.ndarray
-    :return: Cholesky decomposition of `a`
-    :rtype: np.ndarray
-    """
-
-    firstaxes = (*range(2, 2 + len(a.shape[2:])), 0, 1)
-    secondaxes = (-2, -1, *range(len(a.shape[2:])))
-
-    return np.linalg.cholesky(a.transpose(firstaxes)).transpose(secondaxes)
+    return c * b
 
 
 def resizer(tup):

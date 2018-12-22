@@ -1,25 +1,8 @@
 from .base import Proposal
-from torch.distributions import Normal, MultivariateNormal, Independent
+from torch.distributions import Normal, MultivariateNormal
 from ..timeseries import LinearGaussianObservations as LGO
 import torch
-
-
-def construct_diag(x):
-    """
-    Constructs a diagonal matrix based on batched data. Solution found here:
-    https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
-    :param x: The tensor
-    :type x: torch.Tensor
-    :rtype: torch.Tensor
-    """
-
-    if x.dim() < 2:
-        return torch.diag(x)
-
-    b = torch.eye(x.size(1))
-    c = x.unsqueeze(2).expand(*x.size(), x.size(1))
-
-    return c * b
+from ..utils import construct_diag
 
 
 # TODO: Seems to work for 1D models currently, will need to extend to multidimensional
