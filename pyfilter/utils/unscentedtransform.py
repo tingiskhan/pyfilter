@@ -22,9 +22,12 @@ def _propagate_sps(spx, spn, process):
     scale = process.scale(spx)
 
     if process.ndim < 2:
+        if mean.dim() < spn.dim():
+            mean = mean.unsqueeze(-1)
+
         return mean + scale * spn
 
-    return mean + scale.unsqueeze(-1) * spn
+    return mean + scale.unsqueeze(-2) * spn
 
 
 def _helpweighter(a, b):
@@ -227,7 +230,7 @@ class UnscentedTransform(object):
         :rtype: torch.Tensor
         """
 
-        return self._cov[self._sslc, self._sslc]
+        return self._cov[..., self._sslc, self._sslc]
 
     @xcov.setter
     def xcov(self, x):
@@ -237,7 +240,7 @@ class UnscentedTransform(object):
         :type x: torch.Tensor
         """
 
-        self._cov[self._sslc, self._sslc] = x
+        self._cov[..., self._sslc, self._sslc] = x
 
     @property
     def ymean(self):
@@ -334,7 +337,17 @@ class UnscentedTransform(object):
         (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
-        xycov = _covcalc(spx - xmean, spy - ymean, self._wc)
+        if xmean.dim() > 1:
+            tx = spx - xmean.unsqueeze(-2)
+        else:
+            tx = spx - xmean
+
+        if xmean.dim() > 1:
+            ty = spy - ymean.unsqueeze(-2)
+        else:
+            ty = spy - ymean
+
+        xycov = _covcalc(tx, ty, self._wc)
 
         # ==== Calculate the gain ==== #
         gain = torch.matmul(xycov, ycov.inverse())
