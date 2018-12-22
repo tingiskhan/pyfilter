@@ -182,7 +182,7 @@ class Tests(unittest.TestCase):
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
         # ===== Perform unscented transform ===== #
-        x = mvnmodel.hidden.i_sample()
+        x = mvnmodel.hidden.i_sample(shape=3000)
 
         ut = UnscentedTransform(mvnmodel).initialize(x).construct(0.)
 
