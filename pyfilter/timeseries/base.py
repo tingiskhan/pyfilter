@@ -126,7 +126,7 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.g0(*self.theta_vals)
+        return self.g0(*self.theta_vals) * self._scaler
 
     def i_weight(self, x):
         """
