@@ -2,6 +2,7 @@ from ..timeseries import StateSpaceModel, BaseModel
 import numpy as np
 import torch
 from math import sqrt
+from torch.distributions import Normal, MultivariateNormal
 
 
 def _propagate_sps(spx, spn, process):
@@ -209,7 +210,7 @@ class UnscentedTransform(object):
         :rtype: torch.Tensor
         """
 
-        return self._mean[self._sslc]
+        return self._mean[..., self._sslc]
 
     @xmean.setter
     def xmean(self, x):
@@ -219,7 +220,7 @@ class UnscentedTransform(object):
         :type x: torch.Tensor
         """
 
-        self._mean[self._sslc] = x
+        self._mean[..., self._sslc] = x
 
     @property
     def xcov(self):
@@ -261,6 +262,29 @@ class UnscentedTransform(object):
 
         return self._ycov
 
+    @property
+    def x_dist(self):
+        """
+        Returns the current X-distribution.
+        :rtype: Normal|MultivariateNormal
+        """
+
+        if self._model.hidden_ndim < 2:
+            return Normal(self.xmean[..., 0], self.xcov[..., 0, 0].sqrt())
+
+        return MultivariateNormal(self.xmean, scale_tril=torch.cholesky(self.xcov))
+
+    @property
+    def y_dist(self):
+        """
+        Returns the current Y-distribution.
+        :rtype: Normal|MultivariateNormal
+        """
+        if self._model.obs_ndim < 2:
+            return Normal(self.ymean[..., 0], self.ycov[..., 0, 0].sqrt())
+
+        return MultivariateNormal(self.ymean, scale_tril=torch.cholesky(self.ycov))
+
     def construct(self, y):
         """
         Constructs the mean and covariance given the current observation and previous state.
@@ -278,10 +302,10 @@ class UnscentedTransform(object):
 
         self._ymean = ymean
         self._ycov = ycov
-        self._mean[self._sslc] = txmean
-        self._cov[self._sslc, self._sslc] = txcov
+        self._mean[..., self._sslc] = txmean
+        self._cov[..., self._sslc, self._sslc] = txcov
 
-        return txmean, txcov
+        return self
 
     def get_meancov(self):
         """
@@ -313,46 +337,15 @@ class UnscentedTransform(object):
         (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
-
         xycov = _covcalc(spx - xmean[..., None], spy - ymean[..., None], self._wc)
 
         # ==== Calculate the gain ==== #
-
-        gain = mdot(xycov, np.linalg.inv(ycov.T).T)
+        gain = torch.matmul(xycov, ycov.inverse())
 
         # ===== Calculate true mean and covariance ==== #
+        txmean = xmean + torch.matmul(gain, (y - ymean).unsqueeze(-1))[..., 0]
 
-        txmean = xmean + dot(gain, expanddims(y, ymean.ndim) - ymean)
-        txcov = xcov - dot(gain, outerm(ycov, gain))
+        temp = torch.einsum('...ij,...kj->...ik', (ycov, gain))
+        txcov = xcov - torch.matmul(gain, temp)
 
         return txmean, txcov, ymean, ycov
-
-    def globalconstruct(self, y, x):
-        """
-        Constructs the mean and covariance given the current observation and previous state.
-        :param y: The current observation
-        :type y: torch.Tensor
-        :param x: The previous state
-        :type x: torch.Tensor
-        :return: The mean and covariance of the state
-        :rtype: tuple of torch.Tensor
-        """
-
-        # ==== Overwrite mean and covariance ==== #
-
-        x += np.random.normal(scale=1e-3, size=x.shape)
-        mean = expanddims(x.mean(axis=-1), x.ndim)
-        centered = x - mean
-        if self._model.hidden_ndim > 1:
-            cov = expanddims(outerv(centered, centered).mean(axis=-1), x.ndim+1)
-        else:
-            cov = expanddims((centered ** 2).mean(axis=-1), x.ndim)
-
-        self._mean[self._sslc] = mean
-        self._cov[self._sslc, self._sslc] = cov
-
-        # ==== Get mean and covariance ==== #
-
-        txmean, txcov, ymean, ycov = self._get_m_and_p(y)
-
-        return txmean, txcov
