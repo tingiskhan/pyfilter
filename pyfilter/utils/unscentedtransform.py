@@ -69,7 +69,7 @@ def _get_meancov(spxy, wm, wc):
     """
 
     x = (wm.unsqueeze(-1) * spxy).sum(-2)
-    centered = spxy - x
+    centered = spxy - x.unsqueeze(-2)
 
     return x, _covcalc(centered, centered, wc)
 
