@@ -21,7 +21,10 @@ def _propagate_sps(spx, spn, process):
     mean = process.mean(spx)
     scale = process.scale(spx)
 
-    return mean + scale * spn
+    if process.ndim < 2:
+        return mean + scale * spn
+
+    return mean + scale.unsqueeze(-1) * spn
 
 
 def _helpweighter(a, b):
@@ -47,7 +50,7 @@ def _covcalc(a, b, wc):
     :return: The covariance
     :rtype: torch.Tensor
     """
-    cov = torch.einsum('...ij,...kj->...jik', a, b)
+    cov = torch.einsum('...ji,...jk->...jik', a, b)
 
     return torch.einsum('i,...ijk->...jk', wc, cov)
 
@@ -65,8 +68,8 @@ def _get_meancov(spxy, wm, wc):
     :rtype: tuple of torch.Tensor
     """
 
-    x = (wm * spxy).sum(-1)
-    centered = spxy - x[..., None]
+    x = (wm.unsqueeze(-1) * spxy).sum(-2)
+    centered = spxy - x
 
     return x, _covcalc(centered, centered, wc)
 
@@ -138,7 +141,7 @@ class UnscentedTransform(object):
 
         self._mean = torch.zeros((*parts, self._ndim))
         self._cov = torch.zeros((*parts, self._ndim, self._ndim))
-        self._sps = torch.zeros((*parts, self._ndim, 1 + 2 * self._ndim))
+        self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
 
         return self
 
@@ -160,8 +163,8 @@ class UnscentedTransform(object):
         self._cov[..., self._sslc, self._sslc] = construct_diag(self._model.hidden.i_scale() ** 2)
 
         # ==== Set noise covariance ===== #
-        self._cov[..., self._hslc, self._hslc] = self._model.hidden.noise.variance
-        self._cov[..., self._oslc, self._oslc] = self._model.observable.noise.variance
+        self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.noise.variance)
+        self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.noise.variance)
 
         return self
 
@@ -173,9 +176,9 @@ class UnscentedTransform(object):
         """
         cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
 
-        self._sps[..., 0] = self._mean
-        self._sps[..., 1:self._ndim+1] = self._mean[:, None] + cholcov
-        self._sps[..., self._ndim+1:] = self._mean[:, None] - cholcov
+        self._sps[..., 0, :] = self._mean
+        self._sps[..., 1:self._ndim+1, :] = self._mean[:, None] + cholcov
+        self._sps[..., self._ndim+1:, :] = self._mean[:, None] - cholcov
 
         return self._sps
 
@@ -188,11 +191,11 @@ class UnscentedTransform(object):
 
         sps = self.get_sps()
 
-        spx = _propagate_sps(sps[..., self._sslc, :], sps[..., self._hslc, :], self._model.hidden)
+        spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden)
         if only_x:
             return spx
 
-        spy = _propagate_sps(spx, sps[..., self._oslc, :], self._model.observable)
+        spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable)
 
         return spx, spy
 
@@ -331,7 +334,7 @@ class UnscentedTransform(object):
         (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
-        xycov = _covcalc(spx - xmean[..., None], spy - ymean[..., None], self._wc)
+        xycov = _covcalc(spx - xmean, spy - ymean, self._wc)
 
         # ==== Calculate the gain ==== #
         gain = torch.matmul(xycov, ycov.inverse())
