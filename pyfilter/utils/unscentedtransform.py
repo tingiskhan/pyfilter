@@ -290,8 +290,8 @@ class UnscentedTransform(object):
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
         :type y: torch.Tensor|float
-        :return: Estimated tate mean and covariance
-        :rtype: tuple of torch.Tensor
+        :return: Self
+        :rtype: UnscentedTransform
         """
 
         # ==== Get mean and covariance ===== #
