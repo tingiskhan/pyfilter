@@ -1,25 +1,23 @@
 from ..timeseries import StateSpaceModel, BaseModel
 import numpy as np
-from .utils import outerm, expanddims, customcholesky, dot, mdot, outerv
+import torch
+from math import sqrt
 
 
 def _propagate_sps(spx, spn, process):
     """
     Propagate the Sigma points through the given process.
     :param spx: The state Sigma points
-    :type spx: np.ndarray
+    :type spx: torch.Tensor
     :param spn: The noise Sigma points
-    :type spn: np.ndarray
+    :type spn: torch.Tensor
     :param process: The process
     :type process: BaseModel
     :return: Translated and scaled sigma points
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     mean = process.mean(spx)
     scale = process.scale(spx)
-
-    if process.noise.ndim > 1:
-        return mean + dot(scale, spn)
 
     return mean + scale * spn
 
@@ -28,11 +26,11 @@ def _helpweighter(a, b):
     """
     Performs a weighting along the second axis of `b` using `a` and sums.
     :param a: The weight array
-    :type a: np.ndarray
+    :type a: torch.Tensor
     :param b: The array to weight.
-    :type b: np.ndarray
+    :type b: torch.Tensor
     :return: Weighted array
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
     return np.einsum('i,ki...->k...', a, b)
 
@@ -41,32 +39,32 @@ def _covcalc(a, b, wc):
     """
     Calculates the covariance from a * b^t
     :param a: The `a` matrix
-    :type a: np.ndarray
+    :type a: torch.Tensor
     :param b: The `b` matrix
-    :type b: np.ndarray
+    :type b: torch.Tensor
     :return: The covariance
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
-    cov = np.einsum('ij...,kj...->jik...', a, b)
+    cov = torch.einsum('...ij,...kj->...jik', a, b)
 
-    return np.einsum('i,i...->...', wc, cov)
+    return torch.einsum('i,...ijk->...jk', wc, cov)
 
 
 def _get_meancov(spxy, wm, wc):
     """
     Calculates the mean and covariance given sigma points for 2D processes.
     :param spxy: The state/observation sigma points
-    :type spxy: np.ndarray
+    :type spxy: torch.Tensor
     :param wm: The W^m
-    :type wm: np.ndarray
+    :type wm: torch.Tensor
     :param wc: The W^c
-    :type wc: np.ndarray
+    :type wc: torch.Tensor
     :return: Mean and covariance
-    :rtype: tuple of np.ndarray
+    :rtype: tuple of torch.Tensor
     """
 
-    x = _helpweighter(wm, spxy)
-    centered = spxy - x[:, None, ...]
+    x = (wm * spxy).sum(-1)
+    centered = spxy - x[..., None]
 
     return x, _covcalc(centered, centered, wc)
 
@@ -113,8 +111,8 @@ class UnscentedTransform(object):
         :rtype: UnscentedTransform
         """
 
-        self._wm = np.zeros(1 + 2 * self._ndim)
-        self._wc = self._wm.copy()
+        self._wm = torch.zeros(1 + 2 * self._ndim)
+        self._wc = self._wm[:]
         self._wm[0] = self._lam / (self._ndim + self._lam)
         self._wc[0] = self._wm[0] + (1 - self._a ** 2 + self._b)
         self._wm[1:] = self._wc[1:] = 1 / 2 / (self._ndim + self._lam)
@@ -125,21 +123,21 @@ class UnscentedTransform(object):
         """
         Sets the mean and covariance arrays.
         :param x: The initial state.
-        :type x: np.ndarray
+        :type x: torch.Tensor
         :return: Instance of self
         :rtype: UnscentedTransform
         """
 
         # ==== Define empty arrays ===== #
 
-        if not isinstance(x, np.ndarray):
+        if not isinstance(x, torch.Tensor):
             x = np.array(x)
 
-        parts = x.shape[1:] if self._model.hidden_ndim > 1 else x.shape
+        parts = x.shape[:-1] if self._model.hidden_ndim > 1 else x.shape
 
-        self._mean = np.zeros((self._ndim, *parts))
-        self._cov = np.zeros((self._ndim, self._ndim, *parts))
-        self._sps = np.zeros((self._ndim, 1 + 2 * self._ndim, *parts))
+        self._mean = torch.zeros((*parts, self._ndim))
+        self._cov = torch.zeros((*parts, self._ndim, self._ndim))
+        self._sps = torch.zeros((*parts, self._ndim, 1 + 2 * self._ndim))
 
         return self
 
@@ -147,7 +145,7 @@ class UnscentedTransform(object):
         """
         Initializes UnscentedTransform class.
         :param x: The initial values of the mean of the distribution.
-        :type x: np.ndarray
+        :type x: torch.Tensor
         :return: Instance of self
         :rtype: UnscentedTransform
         """
@@ -156,19 +154,19 @@ class UnscentedTransform(object):
 
         # ==== Set mean ===== #
 
-        self._mean[self._sslc] = x
+        self._mean[..., self._sslc] = x if self._model.hidden_ndim > 1 else x.unsqueeze(-1)
 
         # ==== Set state covariance ===== #
-        scale = self._model.hidden.i_scale()
+        var = self._model.hidden.i_scale() ** 2
         if self._model.hidden_ndim > 1:
-            self._cov[self._sslc, self._sslc] = expanddims(outerm(scale, scale), self._cov.ndim)
+            self._cov[..., self._sslc, self._sslc] = var
         else:
-            self._cov[self._sslc, self._sslc] = scale ** 2
+            self._cov[..., self._sslc, self._sslc] = var
 
         # ==== Set noise covariance ===== #
 
-        self._cov[self._hslc, self._hslc] = expanddims(self._model.hidden.noise.cov(), self._cov.ndim)
-        self._cov[self._oslc, self._oslc] = expanddims(self._model.observable.noise.cov(), self._cov.ndim)
+        self._cov[..., self._hslc, self._hslc] = self._model.hidden.noise.variance
+        self._cov[..., self._oslc, self._oslc] = self._model.observable.noise.variance
 
         return self
 
@@ -176,13 +174,13 @@ class UnscentedTransform(object):
         """
         Constructs the Sigma points used for propagation.
         :return: Sigma points
-        :rtype: np.ndarray
+        :rtype: torch.Tensor
         """
-        cholcov = np.sqrt(self._lam + self._ndim) * customcholesky(self._cov)
+        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
 
-        self._sps[:, 0] = self._mean
-        self._sps[:, 1:self._ndim+1] = self._mean[:, None] + cholcov
-        self._sps[:, self._ndim+1:] = self._mean[:, None] - cholcov
+        self._sps[..., 0] = self._mean
+        self._sps[..., 1:self._ndim+1] = self._mean[:, None] + cholcov
+        self._sps[..., self._ndim+1:] = self._mean[:, None] - cholcov
 
         return self._sps
 
@@ -190,16 +188,16 @@ class UnscentedTransform(object):
         """
         Propagate the Sigma points through the given process.
         :return: Sigma points of x and y
-        :rtype: tuple of np.ndarray
+        :rtype: tuple of torch.Tensor
         """
 
         sps = self.get_sps()
 
-        spx = _propagate_sps(sps[self._sslc], sps[self._hslc], self._model.hidden)
+        spx = _propagate_sps(sps[..., self._sslc, :], sps[..., self._hslc, :], self._model.hidden)
         if only_x:
             return spx
 
-        spy = _propagate_sps(spx, sps[self._oslc], self._model.observable)
+        spy = _propagate_sps(spx, sps[..., self._oslc, :], self._model.observable)
 
         return spx, spy
 
@@ -208,7 +206,7 @@ class UnscentedTransform(object):
         """
         Returns the mean of the latest state.
         :return: The mean of state
-        :rtype: np.ndarray
+        :rtype: torch.Tensor
         """
 
         return self._mean[self._sslc]
@@ -218,7 +216,7 @@ class UnscentedTransform(object):
         """
         Sets the mean of the latest state.
         :param x: The mean state to use for overriding
-        :type x: np.ndarray
+        :type x: torch.Tensor
         """
 
         self._mean[self._sslc] = x
@@ -228,7 +226,7 @@ class UnscentedTransform(object):
         """
         Returns the covariance of the latest state.
         :return: The state covariance
-        :rtype: np.ndarray
+        :rtype: torch.Tensor
         """
 
         return self._cov[self._sslc, self._sslc]
@@ -238,7 +236,7 @@ class UnscentedTransform(object):
         """
         Sets the covariance of the latest state
         :param x: The state covariance to use for overriding
-        :type x: np.ndarray
+        :type x: torch.Tensor
         """
 
         self._cov[self._sslc, self._sslc] = x
@@ -248,7 +246,7 @@ class UnscentedTransform(object):
         """
         Returns the mean of the observation.
         :return: The mean of the observational process
-        :rtype: np.ndarray
+        :rtype: torch.Tensor
         """
 
         return self._ymean
@@ -258,7 +256,7 @@ class UnscentedTransform(object):
         """
         Returns the covariance of the observation.
         :return: The covariance of the observational process
-        :rtype: np.ndarray
+        :rtype: torch.Tensor
         """
 
         return self._ycov
@@ -267,9 +265,9 @@ class UnscentedTransform(object):
         """
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
-        :type y: np.ndarray
+        :type y: torch.Tensor|float
         :return: Estimated tate mean and covariance
-        :rtype: tuple of np.ndarray
+        :rtype: tuple of torch.Tensor
         """
 
         # ==== Get mean and covariance ===== #
@@ -307,16 +305,16 @@ class UnscentedTransform(object):
         """
         Helper method for generating the mean and covariance.
         :param y: The latest observation
-        :type y: float|np.ndarray
+        :type y: float|torch.Tensor
         :return: The estimated mean and covariances of state and observation
-        :rtype: tuple of np.ndarray
+        :rtype: tuple of torch.Tensor
         """
 
         (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
 
         # ==== Calculate cross covariance ==== #
 
-        xycov = _covcalc(spx - xmean[:, None], spy - ymean[:, None], self._wc)
+        xycov = _covcalc(spx - xmean[..., None], spy - ymean[..., None], self._wc)
 
         # ==== Calculate the gain ==== #
 
@@ -333,11 +331,11 @@ class UnscentedTransform(object):
         """
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
-        :type y: np.ndarray
+        :type y: torch.Tensor
         :param x: The previous state
-        :type x: np.ndarray
+        :type x: torch.Tensor
         :return: The mean and covariance of the state
-        :rtype: tuple of np.ndarray
+        :rtype: tuple of torch.Tensor
         """
 
         # ==== Overwrite mean and covariance ==== #
