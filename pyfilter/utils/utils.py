@@ -131,7 +131,9 @@ def construct_diag(x):
     :rtype: torch.Tensor
     """
 
-    if x.dim() < 2:
+    if x.dim() < 1 or x.shape[-1] < 2:
+        return x
+    elif x.dim() < 2:
         return torch.diag(x)
 
     b = torch.eye(x.size(1))

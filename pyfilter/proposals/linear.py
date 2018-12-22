@@ -2,7 +2,7 @@ from .base import Proposal
 from torch.distributions import Normal, MultivariateNormal
 from ..timeseries import LinearGaussianObservations as LGO
 import torch
-from ..utils import construct_diag
+from ..utils.utils import construct_diag
 
 
 # TODO: Seems to work for 1D models currently, will need to extend to multidimensional

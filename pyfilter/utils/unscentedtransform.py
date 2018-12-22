@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
+from .utils import construct_diag
 
 
 def _propagate_sps(spx, spn, process):
@@ -130,7 +131,6 @@ class UnscentedTransform(object):
         """
 
         # ==== Define empty arrays ===== #
-
         if not isinstance(x, torch.Tensor):
             x = np.array(x)
 
@@ -154,18 +154,12 @@ class UnscentedTransform(object):
         self._set_weights()._set_slices()._set_arrays(x)
 
         # ==== Set mean ===== #
-
         self._mean[..., self._sslc] = x if self._model.hidden_ndim > 1 else x.unsqueeze(-1)
 
         # ==== Set state covariance ===== #
-        var = self._model.hidden.i_scale() ** 2
-        if self._model.hidden_ndim > 1:
-            self._cov[..., self._sslc, self._sslc] = var
-        else:
-            self._cov[..., self._sslc, self._sslc] = var
+        self._cov[..., self._sslc, self._sslc] = construct_diag(self._model.hidden.i_scale() ** 2)
 
         # ==== Set noise covariance ===== #
-
         self._cov[..., self._hslc, self._hslc] = self._model.hidden.noise.variance
         self._cov[..., self._oslc, self._oslc] = self._model.observable.noise.variance
 
