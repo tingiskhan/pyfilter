@@ -23,7 +23,7 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        if obj.ndim > 1:
+        if obj._inputdim > 1:
             x = StateVariable(x)
 
         out = func(obj, x)

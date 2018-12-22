@@ -17,6 +17,7 @@ class StateSpaceModel(object):
 
         self.hidden = hidden
         self.observable = observable
+        self.observable._inputdim = self.hidden_ndim
 
     @property
     def theta_dists(self):

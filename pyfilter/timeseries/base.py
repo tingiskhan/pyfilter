@@ -64,6 +64,7 @@ class BaseModel(object):
 
         self.noise0, self.noise = noise
         self._scaler = torch.ones_like(self.noise.stddev)
+        self._inputdim = self.ndim
 
     @property
     def theta(self):
