@@ -120,7 +120,7 @@ class UnscentedTransform(object):
         """
 
         self._wm = torch.zeros(1 + 2 * self._ndim)
-        self._wc = self._wm[:]
+        self._wc = self._wm.clone()
         self._wm[0] = self._lam / (self._ndim + self._lam)
         self._wc[0] = self._wm[0] + (1 - self._a ** 2 + self._b)
         self._wm[1:] = self._wc[1:] = 1 / 2 / (self._ndim + self._lam)
@@ -210,7 +210,7 @@ class UnscentedTransform(object):
         :rtype: torch.Tensor
         """
 
-        return self._mean[..., self._sslc]
+        return self._mean[..., self._sslc].clone()
 
     @xmean.setter
     def xmean(self, x):
