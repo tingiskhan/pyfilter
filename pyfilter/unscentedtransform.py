@@ -86,6 +86,17 @@ class UnscentedTransform(object):
         self._ymean = None
         self._ycov = None
 
+        self._initialized = False
+
+    @property
+    def initialized(self):
+        """
+        Returns boolean indicating whether it is initialized or not.
+        :rtype: bool
+        """
+
+        return self._initialized
+
     def _set_slices(self):
         """
         Sets the different slices for selecting states and noise.
@@ -155,6 +166,8 @@ class UnscentedTransform(object):
         # ==== Set noise covariance ===== #
         self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.noise.variance)
         self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.noise.variance)
+
+        self._initialized = True
 
         return self
 

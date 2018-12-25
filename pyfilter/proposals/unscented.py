@@ -12,7 +12,7 @@ class Unscented(Proposal):
         return self
 
     def draw(self, y, x, size=None, *args, **kwargs):
-        if self._ut.ymean is None:
+        if not self._ut.initialized:
             self._ut.initialize(x)
 
         self._ut = self._ut.construct(y)
