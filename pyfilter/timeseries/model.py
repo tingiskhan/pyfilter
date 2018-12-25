@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from ..utils.utils import flatten
+from ..utils import flatten
 import torch
 from .parameter import Parameter
 
@@ -59,7 +59,7 @@ class StateSpaceModel(object):
 
         return self.observable.ndim
 
-    def initialize(self, size=None, **kwargs):
+    def initialize(self, size=None):
         """
         Initializes the algorithm and samples from the hidden densities.
         :param size: The number of samples to for estimation of the hidden state
@@ -68,7 +68,7 @@ class StateSpaceModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.hidden.i_sample(size, **kwargs)
+        return self.hidden.i_sample(size)
 
     def propagate(self, x):
         """

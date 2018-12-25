@@ -1,7 +1,7 @@
 from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter
-from ..utils.normalization import normalize
-from ..utils.utils import get_ess
+from ..normalization import normalize
+from ..utils import get_ess
 from ..timeseries.parameter import Parameter
 import math
 import numpy as np

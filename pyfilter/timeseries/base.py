@@ -2,7 +2,7 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils.utils import add_dimensions, isfinite
+from pyfilter.utils import isfinite
 from .statevariable import tensor_caster
 
 

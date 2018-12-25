@@ -168,3 +168,21 @@ def approx_fprime(x, f, epsilon):
 
     return grad
 
+
+def flatten(iterable):
+    """
+    Flattens an array comprised of an arbitrary number of lists. Solution found at:
+        https://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists
+    :param iterable: The iterable you wish to flatten.
+    :type iterable: collections.Iterable
+    :return:
+    """
+    out = list()
+    for el in iterable:
+        if isinstance(el, Iterable) and not isinstance(el, (str, bytes, torch.Tensor)):
+            out.extend(flatten(el))
+        else:
+            out.append(el)
+
+    return out
+

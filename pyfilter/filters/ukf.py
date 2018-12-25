@@ -1,5 +1,5 @@
 from .base import KalmanFilter
-from ..utils.unscentedtransform import UnscentedTransform
+from ..unscentedtransform import UnscentedTransform
 
 
 class UKF(KalmanFilter):

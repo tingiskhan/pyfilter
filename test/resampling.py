@@ -1,5 +1,5 @@
-from pyfilter.utils.resampling import systematic
-from pyfilter.utils.utils import normalize
+from pyfilter.resampling import systematic
+from pyfilter.normalization import normalize
 from unittest import TestCase
 import numpy as np
 import torch

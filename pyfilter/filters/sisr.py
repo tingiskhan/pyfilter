@@ -1,6 +1,6 @@
 from .base import ParticleFilter
-from ..utils.utils import loglikelihood, choose
-from ..utils.normalization import normalize
+from ..utils import loglikelihood, choose
+from ..normalization import normalize
 import torch
 
 

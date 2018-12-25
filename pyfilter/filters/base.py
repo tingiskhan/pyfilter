@@ -1,12 +1,12 @@
 import pandas as pd
 import copy
 from ..proposals import LinearGaussianObservations
-from ..utils.resampling import systematic
+from ..resampling import systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils.utils import get_ess
+from ..utils import get_ess
 from numpy import ndarray
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 from .normalization import normalize
-from ..utils.utils import searchsorted2d
+from .utils import searchsorted2d
 import torch
 
 

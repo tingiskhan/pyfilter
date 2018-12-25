@@ -1,4 +1,4 @@
-from ..timeseries import StateSpaceModel, BaseModel
+from .timeseries import StateSpaceModel, BaseModel
 import numpy as np
 import torch
 from math import sqrt
@@ -28,19 +28,6 @@ def _propagate_sps(spx, spn, process):
         return mean + scale * spn
 
     return mean + scale.unsqueeze(-2) * spn
-
-
-def _helpweighter(a, b):
-    """
-    Performs a weighting along the second axis of `b` using `a` and sums.
-    :param a: The weight array
-    :type a: torch.Tensor
-    :param b: The array to weight.
-    :type b: torch.Tensor
-    :return: Weighted array
-    :rtype: torch.Tensor
-    """
-    return np.einsum('i,ki...->k...', a, b)
 
 
 def _covcalc(a, b, wc):
