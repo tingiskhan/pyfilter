@@ -2,7 +2,7 @@ from .timeseries import StateSpaceModel, BaseModel
 import numpy as np
 import torch
 from math import sqrt
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, Independent
 from .utils import construct_diag
 
 
@@ -87,6 +87,7 @@ class UnscentedTransform(object):
         self._ycov = None
 
         self._initialized = False
+        self._diaginds = range(model.hidden_ndim)
 
     @property
     def initialized(self):
@@ -273,6 +274,18 @@ class UnscentedTransform(object):
             return Normal(self.xmean[..., 0], self.xcov[..., 0, 0].sqrt())
 
         return MultivariateNormal(self.xmean, scale_tril=torch.cholesky(self.xcov))
+
+    @property
+    def x_dist_indep(self):
+        """
+        Returns the current X-distribution but independent.
+        :rtype: Normal|MultivariateNormal
+        """
+
+        if self._model.hidden_ndim < 2:
+            return self.x_dist
+
+        return Independent(Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt()), -1)
 
     @property
     def y_dist(self):
