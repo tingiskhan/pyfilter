@@ -1,10 +1,6 @@
 import unittest
-from scipy.stats import wishart
-import numpy as np
-from scipy.optimize import minimize
-from time import time
 from pyfilter.timeseries import BaseModel, Observable, StateSpaceModel
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
 
@@ -90,3 +86,4 @@ class Tests(unittest.TestCase):
         ut = UnscentedTransform(mvnmodel).initialize(x).construct(0.)
 
         assert isinstance(ut.x_dist, MultivariateNormal) and isinstance(ut.y_dist, Normal)
+        assert isinstance(ut.x_dist_indep, Independent)
