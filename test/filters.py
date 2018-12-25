@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pykalman
 from torch.distributions import Normal, Exponential, Independent
-from pyfilter.filters import SISR, APF
+from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import BaseModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2
 import torch
@@ -72,7 +72,7 @@ class Tests(unittest.TestCase):
         for model in [self.model, self.mvnmodel]:
             x, y = model.sample(500)
 
-            for filter_, props in [(SISR, {'particles': 500}), (APF, {'particles': 500})]:
+            for filter_, props in [(SISR, {'particles': 500}), (APF, {'particles': 500}), (UKF, {})]:
                 filt = filter_(model, **props).initialize()
 
                 filt = filt.longfilter(y)
