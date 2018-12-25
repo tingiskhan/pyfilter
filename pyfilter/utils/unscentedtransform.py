@@ -180,8 +180,8 @@ class UnscentedTransform(object):
         cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
 
         self._sps[..., 0, :] = self._mean
-        self._sps[..., 1:self._ndim+1, :] = self._mean[None] + cholcov
-        self._sps[..., self._ndim+1:, :] = self._mean[None] - cholcov
+        self._sps[..., 1:self._ndim+1, :] = self._mean[..., None, :] + cholcov
+        self._sps[..., self._ndim+1:, :] = self._mean[..., None, :] - cholcov
 
         return self._sps
 
