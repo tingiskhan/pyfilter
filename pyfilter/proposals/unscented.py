@@ -18,10 +18,10 @@ class Unscented(Proposal):
 
         self._ut = self._ut.construct(y)
 
-        return self._ut.x_dist.sample()
+        return self._ut.x_dist_indep.sample()
 
     def weight(self, y, xn, xo, *args, **kwargs):
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._ut.x_dist.log_prob(xn)
+        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._ut.x_dist_indep.log_prob(xn)
 
     def resample(self, inds):
         if not self._ut.initialized:
