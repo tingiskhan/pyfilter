@@ -180,8 +180,8 @@ class UnscentedTransform(object):
         cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
 
         self._sps[..., 0, :] = self._mean
-        self._sps[..., 1:self._ndim+1, :] = self._mean[:, None] + cholcov
-        self._sps[..., self._ndim+1:, :] = self._mean[:, None] - cholcov
+        self._sps[..., 1:self._ndim+1, :] = self._mean[None] + cholcov
+        self._sps[..., self._ndim+1:, :] = self._mean[None] - cholcov
 
         return self._sps
 
@@ -342,7 +342,7 @@ class UnscentedTransform(object):
         else:
             tx = spx - xmean
 
-        if xmean.dim() > 1:
+        if ymean.dim() > 1:
             ty = spy - ymean.unsqueeze(-2)
         else:
             ty = spy - ymean
