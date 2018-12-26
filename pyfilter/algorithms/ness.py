@@ -83,12 +83,16 @@ class NESS(SequentialAlgorithm):
 
         super().__init__(filter_)
 
-        if isinstance(self._filter, ParticleFilter) and isinstance(self._filter._particles, int):
-            self._filter.set_particles((particles, self._filter._particles))
+        self._filter.set_nparallel(particles)
 
         self._w_rec = torch.zeros(particles)
         self._th = threshold
         self._p = p
+
+        if isinstance(filter_, ParticleFilter):
+            self._shape = particles, 1
+        else:
+            self._shape = particles
 
         self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
         self.h = sqrt(1 - self.a ** 2) if shrinkage is not None else None
@@ -96,9 +100,8 @@ class NESS(SequentialAlgorithm):
         if shrinkage is None:
             self.kernel = lambda u, w: cont_jitter(u, self._p, w)
         else:
-            shape = self._w_rec.shape[0], 1
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
-            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=bernoulli.sample(shape))
+            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=bernoulli.sample(self._shape))
 
     def initialize(self):
         """
@@ -108,7 +111,7 @@ class NESS(SequentialAlgorithm):
         """
 
         for th in self._filter.ssm.flat_theta_dists:
-            th.initialize((self._w_rec.shape[0], 1))
+            th.initialize(self._shape)
 
         self._filter.initialize()
 

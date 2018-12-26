@@ -32,6 +32,7 @@ class BaseFilter(object):
             raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
 
         self._model = model
+        self._n_parallel = None
 
         # ===== Some helpers ===== #
         self.s_ll = tuple()
@@ -53,6 +54,16 @@ class BaseFilter(object):
         :rtype: StateSpaceModel
         """
         return self._model
+
+    def set_nparallel(self, n):
+        """
+        Sets the number of parallel filters to use
+        :param n: The number of parallel filters
+        :type n: int
+        :rtype: BaseFilter
+        """
+
+        raise ValueError()
 
     def initialize(self):
         """
@@ -334,16 +345,14 @@ class ParticleFilter(BaseFilter):
 
         return out, mask
 
-    def set_particles(self, x):
-        """
-        Sets the particles.
-        :param x: The particles
-        :type x: int|tuple[int]
-        :return: Self
-        :rtype: ParticleFilter
-        """
+    def set_nparallel(self, n):
+        self._n_parallel = n
 
-        self._particles = x
+        temp = self._particles[-1] if isinstance(self._particles, (tuple, list)) else self._particles
+        if n is not None:
+            self._particles = self._n_parallel, temp
+        else:
+            self._particles = temp
 
         if self._x_cur is not None:
             return self.initialize()
@@ -375,4 +384,7 @@ class ParticleFilter(BaseFilter):
 
 
 class KalmanFilter(BaseFilter):
-    pass
+    def set_nparallel(self, n):
+        self._n_parallel = n
+
+        return self
