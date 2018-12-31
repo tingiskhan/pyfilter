@@ -22,12 +22,13 @@ def _propagate_sps(spx, spn, process):
     scale = process.scale(spx)
 
     if process.ndim < 2:
-        if mean.dim() < spn.dim():
-            mean = mean.unsqueeze(-1)
+        if 0 < mean.dim() < spn.dim():
+            mean.unsqueeze_(-1)
 
-        return mean + scale * spn
+        if 0 < scale.dim() < spn.dim():
+            scale.unsqueeze_(-1)
 
-    return mean + scale.unsqueeze(-2) * spn
+    return mean + scale * spn
 
 
 def _covcalc(a, b, wc):
