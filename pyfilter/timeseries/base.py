@@ -149,7 +149,7 @@ class BaseModel(object):
         # TODO: For n-D models we must do an unsqueeze to get the correct dimensionality when we have nested filters.
         # Not really loving this solution however...
         if out.dim() > 1 and self._inputdim > 1:
-            out.unsqueeze_(1)
+            out = out.unsqueeze(1)
 
         return out * self._scaler
 
