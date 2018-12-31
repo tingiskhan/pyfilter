@@ -136,8 +136,8 @@ def construct_diag(x):
     elif x.dim() < 2:
         return torch.diag(x)
 
-    b = torch.eye(x.size(1))
-    c = x.unsqueeze(2).expand(*x.size(), x.size(1))
+    b = torch.eye(x.size(-1))
+    c = x.unsqueeze(-1).expand(*x.size(), x.size(-1))
 
     return c * b
 
