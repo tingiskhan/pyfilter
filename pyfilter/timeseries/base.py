@@ -36,6 +36,27 @@ def _get_shape(x, ndim):
     return x.shape if ndim < 2 else x.shape[:-1]
 
 
+def parameter_caster(ndim, *args):
+    """
+    Wrapper for re-casting parameters to correct sizes.
+    :rtype: torch.Tensor
+    """
+    targs = tuple()
+    for a in args:
+        vals = a.values
+
+        if a.trainable and vals.dim() > 0:
+            diff = ndim - vals.dim()
+            # TODO: Must be better way
+            if diff > 0:
+                for i in range(diff):
+                    vals = vals.unsqueeze(1)
+
+        targs += (vals,)
+
+    return targs
+
+
 class BaseModel(object):
     def __init__(self, initial, funcs, theta, noise):
         """
@@ -110,8 +131,6 @@ class BaseModel(object):
     def i_mean(self):
         """
         Calculates the mean of the initial distribution.
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: The mean of the initial distribution
         :rtype: torch.Tensor
         """
@@ -121,13 +140,18 @@ class BaseModel(object):
     def i_scale(self):
         """
         Calculates the scale of the initial distribution.
-        :param params: Used for overriding the parameters
-        :type params: tuple[torch.Tensor]|tuple[float]
         :return: The scale of the initial distribution
         :rtype: torch.Tensor
         """
 
-        return self.g0(*self.theta_vals) * self._scaler
+        out = self.g0(*self.theta_vals)
+
+        # TODO: For n-D models we must do an unsqueeze to get the correct dimensionality when we have nested filters.
+        # Not really loving this solution however...
+        if out.dim() > 1 and self._inputdim > 1:
+            out.unsqueeze_(1)
+
+        return out * self._scaler
 
     def i_weight(self, x):
         """
@@ -158,7 +182,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.f(x, *self.theta_vals)
+        return self.f(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
 
     @tensor_caster
     def scale(self, x):
@@ -170,7 +194,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *self.theta_vals) * self._scaler
+        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta)) * self._scaler
 
     @finite_decorator
     def weight(self, y, x):
@@ -189,7 +213,7 @@ class BaseModel(object):
         rescaled = (y - loc) / scale
 
         if self.ndim > 1:
-            log_scale = scale.abs().log().sum(0)
+            log_scale = scale.abs().log().sum(-1)
         else:
             log_scale = scale.log()
 
