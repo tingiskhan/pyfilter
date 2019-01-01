@@ -6,6 +6,7 @@ from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import BaseModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2
 import torch
+from pyfilter.proposals import Unscented
 
 
 def f(x, alpha, sigma):
@@ -17,7 +18,7 @@ def g(x, alpha, sigma):
 
 
 def f0(alpha, sigma):
-    return 0
+    return torch.tensor(0.)
 
 
 def g0(alpha, sigma):
@@ -39,7 +40,7 @@ def fmvn(x, alpha, sigma):
 
 
 def gmvn(x, alpha, sigma):
-    return sigma
+    return sigma, sigma
 
 
 def f0mvn(alpha, sigma):
@@ -47,7 +48,7 @@ def f0mvn(alpha, sigma):
 
 
 def g0mvn(alpha, sigma):
-    return sigma
+    return sigma, sigma
 
 
 class Tests(unittest.TestCase):
@@ -105,12 +106,29 @@ class Tests(unittest.TestCase):
     def test_ParallellFiltersAndStability(self):
         x, y = self.model.sample(50)
 
-        shape = 1000, 1
+        shape = 30
 
         linear = BaseModel((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
         self.model.hidden = linear
 
-        filt = APF(self.model, (shape[0], 1000)).initialize().longfilter(y)
+        filt = APF(self.model, 1000).set_nparallel(shape).initialize().longfilter(y)
+
+        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1)
+
+        x = filtermeans[:, 0:1]
+        mape = ((x - filtermeans[:, 1:]) / x).abs()
+
+        assert mape.median(0)[0].max() < 0.05
+
+    def test_ParallelUnscented(self):
+        x, y = self.model.sample(50)
+
+        shape = 30
+
+        linear = BaseModel((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
+        self.model.hidden = linear
+
+        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().longfilter(y)
 
         filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1)
 
@@ -120,29 +138,36 @@ class Tests(unittest.TestCase):
         assert mape.median(0)[0].max() < 0.05
 
     def test_Algorithms(self):
-        x, y = self.model.sample(500)
+        priors = Exponential(2.), Exponential(2.)
+        # ===== Test for multiple models ===== #
+        hidden1d = BaseModel((f0, g0), (f, g), priors, (self.linear.noise0, self.linear.noise))
+        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
 
-        hidden = BaseModel((f0, g0), (f, g), (Exponential(2.), Exponential(2.)), (self.norm, self.norm))
-        model = LinearGaussianObservations(hidden, 1., Exponential(1.))
+        hidden2d = BaseModel((f0mvn, g0mvn), (fmvn, gmvn), priors, (self.mvn.noise0, self.mvn.noise))
+        twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
-        algs = [
-            (NESS, {'particles': 1000, 'filter_': SISR(model, 200)}),
-            (NESS, {'particles': 1000, 'filter_': SISR(model, 200), 'p': 1, 'shrinkage': 0.95}),
-            (SMC2, {'particles': 1000, 'filter_': SISR(model, 200)}),
-            (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 200)})
-        ]
+        # ====== Run inference ===== #
+        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
+            x, y = trumod.sample(50)
 
-        for alg, props in algs:
-            alg = alg(**props).initialize()
+            algs = [
+                (NESS, {'particles': 400, 'filter_': SISR(model, 200)}),
+                (NESS, {'particles': 400, 'filter_': SISR(model, 200), 'p': 1, 'shrinkage': 0.95}),
+                (SMC2, {'particles': 1000, 'filter_': SISR(model, 200)}),
+                (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 200)})
+            ]
 
-            alg = alg.fit(y)
+            for alg, props in algs:
+                alg = alg(**props).initialize()
 
-            parameter = alg.filter.ssm.hidden.theta[1]
+                alg = alg.fit(y)
 
-            kde = parameter.get_kde()
+                parameter = alg.filter.ssm.hidden.theta[-1]
 
-            tru_val = self.model.hidden.theta_vals[-1]
-            densval = kde.score_samples(tru_val)
-            priorval = parameter.dist.log_prob(tru_val)
+                kde = parameter.get_kde()
 
-            assert bool(densval > priorval.numpy())
+                tru_val = trumod.hidden.theta_vals[-1]
+                densval = kde.score_samples(tru_val)
+                priorval = parameter.dist.log_prob(tru_val)
+
+                assert bool(densval > priorval.numpy())
