@@ -139,13 +139,16 @@ def construct_diag(x):
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
+    Do note that it only considers the last axis.
     :param x: The tensor
     :type x: torch.Tensor
     :rtype: torch.Tensor
     """
 
-    if x.dim() < 1 or x.shape[-1] < 2:
+    if x.dim() < 1:
         return x
+    elif x.shape[-1] < 2:
+        return x.unsqueeze(-1)
     elif x.dim() < 2:
         return torch.diag(x)
 

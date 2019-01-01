@@ -2,7 +2,7 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from pyfilter.utils import isfinite
+from ..utils import isfinite, concater
 from .statevariable import tensor_caster
 
 
@@ -55,6 +55,13 @@ def parameter_caster(ndim, *args):
         targs += (vals,)
 
     return targs
+
+
+def init_caster(func):
+    def wrapper(obj):
+        return concater(func(obj))
+
+    return wrapper
 
 
 class BaseModel(object):
@@ -128,6 +135,7 @@ class BaseModel(object):
 
         return shape[0]
 
+    @init_caster
     def i_mean(self):
         """
         Calculates the mean of the initial distribution.
@@ -137,6 +145,7 @@ class BaseModel(object):
 
         return self.f0(*self.theta_vals)
 
+    @init_caster
     def i_scale(self):
         """
         Calculates the scale of the initial distribution.
@@ -144,14 +153,7 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        out = self.g0(*self.theta_vals)
-
-        # TODO: For n-D models we must do an unsqueeze to get the correct dimensionality when we have nested filters.
-        # Not really loving this solution however...
-        if out.dim() > 1 and self._inputdim > 1:
-            out = out.unsqueeze(1)
-
-        return out * self._scaler
+        return self.g0(*self.theta_vals)
 
     def i_weight(self, x):
         """
@@ -194,7 +196,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta)) * self._scaler
+        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
 
     @finite_decorator
     def weight(self, y, x):
