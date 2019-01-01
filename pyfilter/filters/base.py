@@ -371,7 +371,7 @@ class ParticleFilter(BaseFilter):
         return x[1:], y[1:]
 
     def _resample(self, inds):
-        self._x_cur = self._x_cur[..., inds, :]
+        self._x_cur = self._x_cur[inds]
         self._w_old = self._w_old[inds]
 
         return self
