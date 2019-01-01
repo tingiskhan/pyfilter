@@ -22,7 +22,7 @@ class UKF(KalmanFilter):
         self._ut = UnscentedTransform(model, **kwargs)
 
     def initialize(self):
-        self._ut.initialize(self._model.hidden.i_sample())
+        self._ut.initialize(self._model.hidden.i_sample(self._n_parallel))
 
         return self
 
