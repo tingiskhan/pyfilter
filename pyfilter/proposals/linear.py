@@ -28,7 +28,8 @@ class LinearGaussianObservations(Proposal):
         tc = c if c.dim() > 1 else c.unsqueeze(0)
 
         # ===== Define covariance ===== #
-        t2 = torch.matmul(tc.t(), o_var_inv.unsqueeze(-1) * tc)
+        o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 1 else o_var_inv.unsqueeze(-1))
+        t2 = torch.matmul(tc.t(), o_var_inv * tc)
 
         cov = (construct_diag(h_var_inv) + t2).inverse()
 
@@ -36,7 +37,7 @@ class LinearGaussianObservations(Proposal):
         t1 = h_var_inv * loc
 
         t2 = o_var_inv * y
-        t3 = torch.matmul(tc.t(), t2)
+        t3 = torch.matmul(tc.t(), t2)[..., 0]
 
         m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
 
@@ -75,7 +76,7 @@ class LinearGaussianObservations(Proposal):
         tc = c if c.dim() > 1 else c.unsqueeze(0)
 
         temp = torch.matmul(tc, h_var.unsqueeze(-1) * tc.t())
-        cov = torch.diag(o_var) + temp
+        cov = construct_diag(o_var if self._model.observable.ndim > 1 else o_var.unsqueeze(-1)) + temp
 
         if self._model.obs_ndim > 1:
             return MultivariateNormal(m, scale_tril=torch.cholesky(cov)).log_prob(y)
