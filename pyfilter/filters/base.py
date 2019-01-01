@@ -377,7 +377,7 @@ class ParticleFilter(BaseFilter):
         return self
 
     def _exchange(self, filter_, inds):
-        self._x_cur[..., inds, :] = filter_._x_cur[..., inds, :]
+        self._x_cur[inds] = filter_._x_cur[inds]
         self._w_old[inds] = filter_._w_old[inds]
 
         return self
