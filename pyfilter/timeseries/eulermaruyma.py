@@ -16,7 +16,7 @@ class EulerMaruyma(BaseModel):
 
         super().__init__(initial, funcs, theta, noise)
         self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
-        self._sqdt = dt.sqrt()
+        self._sqdt = self.dt.sqrt()
 
     def mean(self, x):
         return x + self.f_val(x) * self.dt
