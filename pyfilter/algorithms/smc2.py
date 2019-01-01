@@ -151,8 +151,9 @@ class SMC2(NESS):
             return self
 
         # ===== Create new filter with double the state particles ===== #
-        n_particles = self._w_rec.shape[0], 2 * self.filter.particles[1]
-        t_filt = self.filter.copy().reset().set_particles(n_particles).initialize().longfilter(self._y, bar=False)
+        t_filt = self.filter.copy().reset()
+        t_filt._particles = 2 * self.filter._particles[1]
+        t_filt.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = t_filt.loglikelihood - self.filter.loglikelihood
