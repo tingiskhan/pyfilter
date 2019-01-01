@@ -6,7 +6,7 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess
+from ..utils import get_ess, choose
 from numpy import ndarray
 
 
@@ -177,7 +177,7 @@ class BaseFilter(object):
                 setattr(self, name, tuple(tmp[..., inds]))
 
         # ===== Resample the parameters of the model ====== #
-        self.ssm.p_apply(lambda u: u.values[..., inds, :])
+        self.ssm.p_apply(lambda u: choose(u.values, inds))
         self._resample(inds)
 
         return self
