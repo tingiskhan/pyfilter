@@ -41,9 +41,9 @@ def _covcalc(a, b, wc):
     :return: The covariance
     :rtype: torch.Tensor
     """
-    cov = torch.einsum('...ji,...jk->...jik', a, b)
+    cov = a.unsqueeze(-1) * b.unsqueeze(-2)
 
-    return torch.einsum('i,...ijk->...jk', wc, cov)
+    return (wc[:, None, None] * cov).sum(-3)
 
 
 def _get_meancov(spxy, wm, wc):
@@ -373,7 +373,7 @@ class UnscentedTransform(object):
         # ===== Calculate true mean and covariance ==== #
         txmean = xmean + torch.matmul(gain, (y - ymean).unsqueeze(-1))[..., 0]
 
-        temp = torch.einsum('...ij,...kj->...ik', (ycov, gain))
+        temp = torch.matmul(ycov, gain.transpose(-1, -2))
         txcov = xcov - torch.matmul(gain, temp)
 
         return txmean, txcov, ymean, ycov
