@@ -163,7 +163,11 @@ class UnscentedTransform(object):
         self._mean[..., self._sslc] = x if self._model.hidden_ndim > 1 else x.unsqueeze(-1)
 
         # ==== Set state covariance ===== #
-        self._cov[..., self._sslc, self._sslc] = construct_diag(self._model.hidden.i_scale() ** 2)
+        var = self._model.hidden.i_scale() ** 2
+        if self._model.hidden_ndim < 2:
+            var.unsqueeze_(-1)
+
+        self._cov[..., self._sslc, self._sslc] = construct_diag(var)
 
         # ==== Set noise covariance ===== #
         self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.noise.variance)
