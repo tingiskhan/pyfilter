@@ -1,5 +1,6 @@
 from .base import KalmanFilter
 from ..unscentedtransform import UnscentedTransform
+from ..utils import choose
 
 
 class UKF(KalmanFilter):
@@ -29,3 +30,9 @@ class UKF(KalmanFilter):
         self._ut = self._ut.construct(y)    # type: UnscentedTransform
 
         return self._ut.xmean, self._ut.y_dist.log_prob(y)
+
+    def _resample(self, inds):
+        self._ut.xmean = choose(self._ut.xmean, inds)
+        self._ut.xcov = choose(self._ut.xcov, inds)
+
+        return self
