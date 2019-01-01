@@ -1,5 +1,5 @@
 from .base import BaseModel
-from math import sqrt
+import torch
 
 
 class EulerMaruyma(BaseModel):
@@ -15,10 +15,11 @@ class EulerMaruyma(BaseModel):
         """
 
         super().__init__(initial, funcs, theta, noise)
-        self.dt = dt
+        self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self._sqdt = dt.sqrt()
 
     def mean(self, x):
-        return x + self.f(x, *self.theta_vals) * self.dt
+        return x + self.f_val(x) * self.dt
 
     def scale(self, x, params=None):
-        return self.g(x, *self.theta_vals) * sqrt(self.dt)
+        return self.g_val(x) * self._sqdt

@@ -175,9 +175,9 @@ class BaseModel(object):
         return self.noise0.log_prob(rescaled)
 
     @tensor_caster
-    def mean(self, x):
+    def f_val(self, x):
         """
-        Calculates the mean of the process conditional on the previous state and current parameters.
+        Evaluates the drift part of the process.
         :param x: The state of the process.
         :type x: torch.Tensor|float
         :return: The mean
@@ -187,6 +187,28 @@ class BaseModel(object):
         return self.f(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
 
     @tensor_caster
+    def g_val(self, x):
+        """
+        Evaluates the diffusion part of the process.
+        :param x: The state of the process.
+        :type x: torch.Tensor|float
+        :return: The mean
+        :rtype: torch.Tensor|float
+        """
+
+        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
+
+    def mean(self, x):
+        """
+        Calculates the mean of the process conditional on the previous state and current parameters.
+        :param x: The state of the process.
+        :type x: torch.Tensor|float
+        :return: The mean
+        :rtype: torch.Tensor|float
+        """
+
+        return self.f_val(x)
+
     def scale(self, x):
         """
         Calculates the scale of the process conditional on the current state and parameters.
@@ -196,7 +218,7 @@ class BaseModel(object):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
+        return self.g_val(x)
 
     @finite_decorator
     def weight(self, y, x):
