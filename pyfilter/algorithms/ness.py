@@ -8,6 +8,7 @@ import numpy as np
 from torch.distributions import Bernoulli, Normal
 import torch
 from math import sqrt
+from ..resampling import systematic
 
 
 def cont_jitter(parameter, p, *args):
@@ -72,7 +73,7 @@ def flattener(a):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, shrinkage=None, p=4):
+    def __init__(self, filter_, particles, threshold=0.9, shrinkage=None, resampler=systematic, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -88,6 +89,7 @@ class NESS(SequentialAlgorithm):
         self._w_rec = torch.zeros(particles)
         self._th = threshold
         self._p = p
+        self._resampler = resampler
 
         if isinstance(filter_, ParticleFilter):
             self._shape = particles, 1
@@ -130,7 +132,7 @@ class NESS(SequentialAlgorithm):
         ess = get_ess(self._w_rec)
 
         if ess < self._th * self._w_rec.shape[0]:
-            indices = self.filter._resampler(self._w_rec)
+            indices = self._resampler(self._w_rec)
             self._filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec = torch.zeros_like(self._w_rec)
