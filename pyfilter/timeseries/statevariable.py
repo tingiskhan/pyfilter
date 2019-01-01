@@ -1,4 +1,5 @@
 import torch
+from ..utils import concater
 
 
 class StateVariable(torch.Tensor):
@@ -26,11 +27,6 @@ def tensor_caster(func):
         if obj._inputdim > 1:
             x = StateVariable(x)
 
-        out = func(obj, x)
-
-        if not isinstance(out, tuple):
-            return out
-
-        return torch.cat(tuple(tx.unsqueeze(-1) for tx in out), dim=-1)
+        return concater(func(obj, x))
 
     return wrapper

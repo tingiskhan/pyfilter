@@ -122,6 +122,19 @@ def isfinite(x):
     return not_inf & not_nan
 
 
+def concater(x):
+    """
+    Concatenates output.
+    :type x: tuple[torch.Tensor]|torch.Tensor
+    :rtype: torch.Tensor
+    """
+
+    if not isinstance(x, tuple):
+        return x
+
+    return torch.cat(tuple(tx.unsqueeze(-1) for tx in x), dim=-1)
+
+
 def construct_diag(x):
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
