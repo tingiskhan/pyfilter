@@ -290,7 +290,8 @@ class UnscentedTransform(object):
         if self._model.hidden_ndim < 2:
             return self.x_dist
 
-        return Independent(Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt()), -1)
+        dist = Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt())
+        return Independent(dist, self.xmean.dim() - 1)
 
     @property
     def y_dist(self):
