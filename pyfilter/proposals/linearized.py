@@ -69,12 +69,12 @@ def approx_fprime(f, x, order=2, h=eps):
         return diff(x[..., 0], h)
 
     grad = tuple()
-    ei = torch.zeros_like(x)
+    ei = torch.zeros(x.shape[-1])
     for k in range(x.shape[-1]):
-        ei[..., k] = h
+        ei[k] = h
 
         grad += (diff(x, ei).unsqueeze(-1),)
-        ei[..., k] = 0.
+        ei[k] = 0.
 
     return torch.cat(grad, dim=-1)
 
