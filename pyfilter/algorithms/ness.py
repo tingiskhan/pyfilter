@@ -135,7 +135,7 @@ class NESS(SequentialAlgorithm):
             indices = self._resampler(self._w_rec)
             self._filter = self.filter.resample(indices, entire_history=False)
 
-            self._w_rec = torch.zeros_like(self._w_rec)
+            self._w_rec *= 0.
 
         return self
 
