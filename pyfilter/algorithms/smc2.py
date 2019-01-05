@@ -133,7 +133,7 @@ class SMC2(NESS):
 
         # ===== Replace old filters with newly accepted ===== #
         self.filter.exchange(t_filt, toaccept)
-        self._w_rec = torch.zeros_like(self._w_rec)
+        self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
         if toaccept.sum() < 0.2 * toaccept.shape[0]:
