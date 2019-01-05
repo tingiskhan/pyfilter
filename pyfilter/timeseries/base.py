@@ -91,7 +91,6 @@ class BaseModel(object):
             raise ValueError('All must be of instance `torch.distributions.Distribution`!')
 
         self.noise0, self.noise = noise
-        self._scaler = torch.ones_like(self.noise.stddev)
         self._inputdim = self.ndim
 
     @property
