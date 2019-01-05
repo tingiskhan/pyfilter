@@ -65,19 +65,18 @@ def approx_fprime(f, x, order=2, h=eps):
     else:
         raise ValueError('Only 1st and 2nd order precision available!')
 
+    if x.shape[-1] < 2:
+        return diff(x[..., 0], h)
+
     grad = tuple()
     ei = torch.zeros_like(x)
-
     for k in range(x.shape[-1]):
         ei[..., k] = h
 
-        grad += (diff(x, ei),)
+        grad += (diff(x, ei).unsqueeze(-1),)
         ei[..., k] = 0.
 
-    if len(grad) < 2:
-        return grad[-1][..., 0]
-
-    return torch.cat([g.unsqueeze(-1) for g in grad], dim=-1)
+    return torch.cat(grad, dim=-1)
 
 
 # TODO: Not too fast. Try finding the bottleneck
