@@ -58,7 +58,7 @@ def approx_fprime(f, x, order=2, h=eps):
     """
 
     if order == 1:
-        f0 = f(x)
+        f0 = f(x[..., 0] if x.shape[-1] < 2 else x)
         diff = lambda u, v: (f(u + v) - f0) / h
     elif order == 2:
         diff = lambda u, v: (f(u + v) - f(u - v)) / 2 / h
