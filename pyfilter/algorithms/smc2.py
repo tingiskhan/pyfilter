@@ -106,7 +106,7 @@ class SMC2(NESS):
         dist = _define_pdf(self.filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
         # ===== Resample among parameters ===== #
-        inds = self.filter._resampler(self._w_rec)
+        inds = self._resampler(self._w_rec)
         self.filter.resample(inds, entire_history=True)
 
         # ===== Define new filters and move via MCMC ===== #
