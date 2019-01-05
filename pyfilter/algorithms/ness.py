@@ -138,23 +138,3 @@ class NESS(SequentialAlgorithm):
             self._w_rec *= 0.
 
         return self
-
-    def predict(self, steps):
-        xp, yp = self.filter.predict(steps)
-
-        xout = list()
-        yout = list()
-
-        for xt, yt in zip(xp, yp):
-            xout.append([flattener(x) for x in xt])
-            yout.append(flattener(yt))
-
-        return np.array(xout), np.array(yout)
-
-    def filtermeans(self):
-        out = list()
-        for tw, tx in zip(self.filter.s_ll, self._filter.s_mx):
-            normalized = normalize(tw)
-            out.append(np.sum(tx * normalized, axis=-1))
-
-        return out
