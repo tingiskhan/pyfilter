@@ -83,7 +83,7 @@ class Tests(unittest.TestCase):
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_EulerMaruyama(self):
-        mod = EulerMaruyma((lambda: 0., lambda: 1.), (lambda u: 0, lambda u: 1), (), (Normal(0., 1.), Normal(0., 1.)))
+        mod = EulerMaruyma((lambda: 0., lambda: 1.), (lambda u: 0, lambda u: 1), (), ndim=1)
 
         samples = mod.sample(30)
 
