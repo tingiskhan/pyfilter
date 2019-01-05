@@ -11,7 +11,7 @@ eps = sqrt(torch.finfo(torch.float32).eps)
 def get_mean_expr():
     """
     Gets the expression of the mean as a function of the parameters.
-    :return: Returns the function of the mean as an expression of (y, xo, a(xo), b(xo),d(xo), g(xo), gradient)
+    :return: Returns the function of the mean as an expression of (y, xo, a(xo), b(xo), d(xo), g(xo), gradient)
     :rtype: callable
     """
 
