@@ -3,7 +3,7 @@ import torch
 
 
 class EulerMaruyma(BaseModel):
-    def __init__(self, initial, funcs, theta, noise, dt=1):
+    def __init__(self, initial, funcs, theta, noise, dt=1.):
         """
         Implements the Euler-Maruyama scheme.
         :param initial: See BaseModel
@@ -15,7 +15,7 @@ class EulerMaruyma(BaseModel):
         """
 
         super().__init__(initial, funcs, theta, noise)
-        self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self.dt = torch.tensor(float(dt)) if not isinstance(dt, torch.Tensor) else dt
         self._sqdt = self.dt.sqrt()
 
     def mean(self, x):
