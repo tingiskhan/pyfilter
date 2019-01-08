@@ -291,7 +291,7 @@ class UnscentedTransform(object):
             return self.x_dist
 
         dist = Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt())
-        return Independent(dist, self.xmean.dim() - 1)
+        return Independent(dist, 1)
 
     @property
     def y_dist(self):
@@ -314,11 +314,9 @@ class UnscentedTransform(object):
         """
 
         # ==== Get mean and covariance ===== #
-
         txmean, txcov, ymean, ycov = self._get_m_and_p(y)
 
         # ==== Overwrite mean and covariance ==== #
-
         self._ymean = ymean
         self._ycov = ycov
         self._mean[..., self._sslc] = txmean
@@ -334,11 +332,9 @@ class UnscentedTransform(object):
         """
 
         # ==== Propagate Sigma points ==== #
-
         spx, spy = self.propagate_sps()
 
         # ==== Construct mean and covariance ==== #
-
         xmean, xcov = _get_meancov(spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(spy, self._wm, self._wc)
 

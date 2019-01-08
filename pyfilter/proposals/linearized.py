@@ -121,8 +121,7 @@ class Linearized(Proposal):
         if self._model.hidden.ndim < 2:
             self._kernel = dist
         else:
-            # TODO: Verify multi-dimensional models
-            self._kernel = Independent(dist, x.dim() - 1)
+            self._kernel = Independent(dist, 1)
 
         return self._kernel.sample()
 
