@@ -47,10 +47,7 @@ def parameter_caster(ndim, *args):
 
         if a.trainable and vals.dim() > 0:
             diff = ndim - vals.dim()
-            # TODO: Must be better way
-            if diff > 0:
-                for i in range(diff):
-                    vals = vals.unsqueeze(1)
+            vals = vals.view(*vals.shape, *(diff * (1,)))
 
         targs += (vals,)
 
