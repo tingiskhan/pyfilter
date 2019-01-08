@@ -45,7 +45,7 @@ class BaseFilter(object):
         :rtype: torch.Tensor
         """
 
-        return torch.cat(self.s_ll).reshape(len(self.s_ll), -1).sum(0)
+        return sum(self.s_ll)
 
     @property
     def ssm(self):
@@ -170,11 +170,11 @@ class BaseFilter(object):
             length = len(self.s_mx)
 
             ll_shape = (length, -1)
-            x_shape = (length, self._model.hidden_ndim, -1) if self._model.hidden_ndim > 1 else ll_shape
+            x_shape = (length, -1, self._model.hidden_ndim) if self._model.hidden_ndim > 1 else ll_shape
 
             for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
                 tmp = torch.cat(obj).reshape(*shape)
-                setattr(self, name, tuple(tmp[..., inds]))
+                setattr(self, name, tuple(tmp[:, inds]))
 
         # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: choose(u.values, inds))
@@ -232,13 +232,13 @@ class BaseFilter(object):
         length = len(self.s_mx)
 
         ll_shape = (length, -1)
-        x_shape = (length, self._model.hidden_ndim, -1) if self._model.hidden_ndim > 1 else ll_shape
+        x_shape = (length, -1, self._model.hidden_ndim) if self._model.hidden_ndim > 1 else ll_shape
 
         for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
             tmp = torch.cat(obj).reshape(*shape)
             new_tmp = torch.cat(getattr(filter_, name)).reshape(*shape)
 
-            tmp[..., inds] = new_tmp[..., inds]
+            tmp[:, inds] = new_tmp[:, inds]
 
             setattr(self, name, tuple(tmp))
 
