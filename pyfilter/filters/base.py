@@ -74,6 +74,7 @@ class BaseFilter(object):
 
         return self
 
+    @enforce_tensor
     def filter(self, y):
         """
         Performs a filtering the model for the observation `y`.
@@ -90,7 +91,6 @@ class BaseFilter(object):
 
         return self
 
-    @enforce_tensor
     def _filter(self, y):
         """
         The actual filtering procedure. Overwrite this.
