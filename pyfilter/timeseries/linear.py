@@ -11,7 +11,7 @@ def f(x, a, scale):
     if a.dim() == 1:
         return x @ a
 
-    return torch.matmul(a, x.unsqueeze(-1))
+    return torch.matmul(a, x.unsqueeze(-1))[..., 0]
 
 
 def g(x, a, scale):
