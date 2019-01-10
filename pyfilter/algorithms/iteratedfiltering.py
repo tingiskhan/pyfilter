@@ -63,7 +63,6 @@ class IteratedFilteringV2(BatchAlgorithm):
         for m in iterator:
             # ===== Iterate over data ===== #
             iterator.set_description('{:s} - Iteration {:d}'.format(str(self), m + 1))
-            iterator.refresh()
 
             self.filter.initialize()
             scale = 0.02 * exp(-self._cooling * m)
