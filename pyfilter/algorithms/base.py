@@ -12,6 +12,7 @@ class BaseAlgorithm(object):
 
         self._filter = filter_      # type: BaseFilter
         self._y = tuple()           # type: tuple[torch.Tensor]
+        self._iterator = None
 
     @property
     def filter(self):
@@ -57,6 +58,9 @@ class BaseAlgorithm(object):
 
         return self
 
+    def __repr__(self):
+        return str(self.__class__.__name__)
+
 
 class SequentialAlgorithm(BaseAlgorithm):
     """
@@ -77,7 +81,9 @@ class SequentialAlgorithm(BaseAlgorithm):
 
     @enforce_tensor
     def fit(self, y):
-        for yt in tqdm(y, desc=str(self.__class__.__name__)):
+        self._iterator = tqdm(y, desc=str(self))
+
+        for yt in self._iterator:
             self.update(yt)
 
         return self
@@ -87,3 +93,20 @@ class BatchAlgorithm(BaseAlgorithm):
     """
     Algorithm for batch inference.
     """
+
+    def _fit(self, y):
+        """
+        The method to override by sub-classes.
+        :param y: The data in iterator format
+        :type y: iterator
+        :return: Self
+        :rtype: BatchAlgorithm
+        """
+
+        raise NotImplementedError()
+
+    @enforce_tensor
+    def fit(self, y):
+        self.initialize()._fit(y)
+
+        return self

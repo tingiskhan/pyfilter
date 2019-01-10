@@ -3,6 +3,7 @@ import torch
 from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter
 from torch.distributions import MultivariateNormal
+from time import sleep
 
 
 def _define_pdf(params, weights):
@@ -92,6 +93,7 @@ class SMC2(NESS):
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._th * self._w_rec.shape[0]:
             self._rejuvenate()
+            self._iterator.set_description(desc=str(self))
 
         return self
 
@@ -100,6 +102,9 @@ class SMC2(NESS):
         Rejuvenates the particles using a PMCMC move.
         :return:
         """
+
+        # ===== Update the description ===== #
+        self._iterator.set_description(desc='{:s} - Rejuvenating particles'.format(str(self)))
 
         # ===== Construct distribution ===== #
         ll = self.filter.loglikelihood
@@ -131,12 +136,17 @@ class SMC2(NESS):
         else:
             toaccept = u < quotient + plogquot + kernel
 
+        # ===== Update the description ===== #
+        accepted = float(toaccept.sum()) / float(toaccept.shape[0])
+        self._iterator.set_description(desc='{:s} - Accepted particles is {:.1%}'.format(str(self), accepted))
+        sleep(1)
+
         # ===== Replace old filters with newly accepted ===== #
         self.filter.exchange(t_filt, toaccept)
         self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
-        if toaccept.sum() < 0.2 * toaccept.shape[0]:
+        if accepted < 0.2:
             self._increase_states()
 
         return self
