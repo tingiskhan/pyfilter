@@ -15,7 +15,7 @@ class EulerMaruyma(BaseModel):
 
         dist = Normal(torch.zeros(ndim), torch.ones(ndim))
         if ndim > 1:
-            dist = Independent(dist, 0)
+            dist = Independent(dist, 1)
 
         super().__init__(initial, funcs, theta, (dist, dist))
         self.dt = torch.tensor(float(dt)) if not isinstance(dt, torch.Tensor) else dt
