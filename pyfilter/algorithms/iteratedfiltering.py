@@ -21,17 +21,17 @@ def jittering(parameter, scale):
 
 
 class IteratedFilteringV2(BatchAlgorithm):
-    def __init__(self, particles, filter_, iterations=30, resampler=systematic, cooling=0.5):
+    def __init__(self, filter_, particles, iterations=30, resampler=systematic, cooling=0.1):
         """
         Implements the Iterated Filtering version 2 (IF2) algorithm by Ionides et al.
-        :param particles: The number of particles to use
-        :type particles: int
         :param filter_: The filter to use. If `filter_` is of type `ParticleFilter` and the number of particles is not
                         the same, the number of particles in `filter_` will be overridden.
         :type filter_: BaseFilter
+        :param particles: The number of particles to use
+        :type particles: int
         :param iterations: The number of iterations
         :type iterations: int
-        :param cooling: How much the scale shall have reduced by the time we reach `iterations`.
+        :param cooling: How much of the scale to remain after all the iterations
         :type cooling: float
         """
 
@@ -50,7 +50,7 @@ class IteratedFilteringV2(BatchAlgorithm):
         if not (0 < cooling < 1):
             raise ValueError('`cooling` must be in range "(0, 1)"!')
 
-        self._cooling = log(1 / (1 - cooling)) / iterations
+        self._cooling = log(1 / cooling) / iterations
 
     def initialize(self):
         for th in self._filter.ssm.flat_theta_dists:
@@ -65,7 +65,9 @@ class IteratedFilteringV2(BatchAlgorithm):
             iterator.set_description('{:s} - Iteration {:d}'.format(str(self), m + 1))
 
             self.filter.initialize()
-            scale = 0.02 * exp(-self._cooling * m)
+
+            # TODO: Should perhaps be a dynamic setting of initial variance
+            scale = 0.1 * exp(-self._cooling * m)
             for yt in y:
                 # ===== Update parameters ===== #
                 self.filter.ssm.p_apply(lambda x: jittering(x, scale), transformed=True)
