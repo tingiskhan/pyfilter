@@ -114,19 +114,14 @@ class BaseFilter(object):
         :rtype: BaseFilter
         """
 
-        if isinstance(y, (pd.Series, pd.DataFrame)):
-            y = y.values
-
-        if isinstance(y, ndarray):
-            y = tuple(y)
-
+        astuple = tuple(y)
         if bar:
-            iterator = tqdm(range(len(y)), desc=str(self.__class__.__name__))
+            iterator = tqdm(astuple, desc=str(self.__class__.__name__))
         else:
-            iterator = range(len(y))
+            iterator = astuple
 
-        for i in iterator:
-            self.filter(y[i])
+        for yt in iterator:
+            self.filter(yt)
 
         return self
 
