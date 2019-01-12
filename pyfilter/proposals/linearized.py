@@ -79,7 +79,7 @@ def approx_fprime(f, x, order=2, h=eps):
     return grad
 
 
-# TODO: Not too fast. Try finding the bottleneck
+# TODO: Check if we can speed up
 class Linearized(Proposal):
     def __init__(self, order=2, h=eps):
         """
@@ -172,6 +172,7 @@ class ModeFinding(Linearized):
                 else:
                     gamma = -(xn - xo) * gdiff / gdiff ** 2
 
+                # TODO: Perhaps use gradient info instead?
                 gamma[torch.isnan(gamma)] = 0.
 
             xo = xn
