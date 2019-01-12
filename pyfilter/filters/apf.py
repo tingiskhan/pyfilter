@@ -22,7 +22,7 @@ class APF(ParticleFilter):
 
         self._proposal = self._proposal.resample(resampled_indices)
 
-        self._x_cur = self._proposal.draw(y, resampled_x, size=resampled_x.shape)
+        self._x_cur = self._proposal.draw(y, resampled_x)
         weights = self._proposal.weight(y, self._x_cur, resampled_x)
 
         self._w_old = weights - choose(t_weights, resampled_indices)

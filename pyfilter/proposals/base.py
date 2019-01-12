@@ -22,22 +22,19 @@ class Proposal(object):
 
         return self
 
-    def draw(self, y, x, size=None, *args, **kwargs):
+    def draw(self, y, x):
         """
         Defines the method for drawing proposals.
         :param y: The current observation
         :type y: np.ndarray|float|torch.Tensor
         :param x: The previous hidden states
         :type x: torch.Tensor
-        :param size: The size which to draw
-        :param args: Additional arguments
-        :param kwargs: Additional kwargs
         :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
 
-    def weight(self, y, xn, xo, *args, **kwargs):
+    def weight(self, y, xn, xo):
         """
         Defines the method for weighting observations.
         :param y: The current observation

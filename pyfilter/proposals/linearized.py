@@ -100,7 +100,7 @@ class Linearized(Proposal):
         self._order = order
         self._h = h
 
-    def draw(self, y, x, size=None, *args, **kwargs):
+    def draw(self, y, x):
         # ===== Define function ===== #
         f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
 
@@ -125,5 +125,60 @@ class Linearized(Proposal):
 
         return self._kernel.sample()
 
-    def weight(self, y, xn, xo, *args, **kwargs):
+    def weight(self, y, xn, xo):
         return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
+
+
+class ModeFinding(Linearized):
+    def __init__(self, iterations=5, **kwargs):
+        """
+        Tries to find the mode of the distribution p(x_t |y_t, x_{t-1}) and sample therefrom. Note that this proposal
+        should be used in the same setting as `Linearized`, i.e. when distribution is log-concave.
+        :param iterations: The maximum number of iterations to perform
+        :type iterations: int
+        :param kwargs: Any key-worded arguments passed to `Linearized`
+        """
+
+        super().__init__(**kwargs)
+        self._iters = iterations
+
+    def draw(self, y, x):
+        # ===== Define function ===== #
+        f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
+
+        # ===== Initialize gradient ===== #
+        xn = xo = self._model.hidden.mean(x)
+
+        # TODO: Completely arbitrary starting, might not be optimal
+        gamma = 1.
+        grads = tuple()
+        for i in range(self._iters - 1):
+            grads += (approx_fprime(
+                f, xn.unsqueeze(-1) if self._model.hidden.ndim < 2 else xn,
+                order=self._order,
+                h=self._h
+            ),)
+
+            # ===== Calculate step size ===== #
+            if len(grads) > 1:
+                gdiff = grads[-1] - grads[-2]
+
+                if self._model.hidden_ndim > 1:
+                    gamma = -(((xn - xo) * gdiff).sum(-1) / (gdiff ** 2).sum(-1)).unsqueeze(-1)
+                else:
+                    gamma = -(xn - xo) * gdiff / gdiff ** 2
+
+                gamma[torch.isnan(gamma)] = 0.
+
+            # TODO: Implement convergence checks to speed up
+            xo = xn
+            xn = xo + gamma * grads[-1]
+
+        # ===== Get distribution ====== #
+        dist = Normal(xn, self._model.hidden.scale(xn))
+        if self._model.hidden.ndim < 2:
+            self._kernel = dist
+        else:
+            self._kernel = Independent(dist, 1)
+
+        return self._kernel.sample()

@@ -16,7 +16,7 @@ class SISR(ParticleFilter):
         self._proposal = self._proposal.resample(inds)
 
         # ===== Propagate ===== #
-        self._x_cur = self._proposal.draw(y, to_prop, size=self._particles)
+        self._x_cur = self._proposal.draw(y, to_prop)
         weights = self._proposal.weight(y, self._x_cur, to_prop)
 
         # ===== Update weights ===== #
