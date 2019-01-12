@@ -130,17 +130,20 @@ class Linearized(Proposal):
 
 
 class ModeFinding(Linearized):
-    def __init__(self, iterations=5, **kwargs):
+    def __init__(self, iterations=5, tol=1e-3, **kwargs):
         """
         Tries to find the mode of the distribution p(x_t |y_t, x_{t-1}) and sample therefrom. Note that this proposal
         should be used in the same setting as `Linearized`, i.e. when distribution is log-concave.
         :param iterations: The maximum number of iterations to perform
         :type iterations: int
+        :param tol: The tolerance of gradient to quit iterating
+        :type tol: float
         :param kwargs: Any key-worded arguments passed to `Linearized`
         """
 
         super().__init__(**kwargs)
         self._iters = iterations
+        self._tol = tol
 
     def draw(self, y, x):
         # ===== Define function ===== #
@@ -170,9 +173,13 @@ class ModeFinding(Linearized):
 
                 gamma[torch.isnan(gamma)] = 0.
 
-            # TODO: Implement convergence checks to speed up
             xo = xn
             xn = xo + gamma * grads[-1]
+
+            # TODO: Use while perhaps
+            gradsqsum = ((grads[-1] if self._model.hidden_ndim > 1 else grads[-1].unsqueeze(-1)) ** 2).sum(-1)
+            if (gradsqsum.sqrt() < self._tol).sum() >= gradsqsum.numel() * 0.9:
+                break
 
         # ===== Get distribution ====== #
         dist = Normal(xn, self._model.hidden.scale(xn))
