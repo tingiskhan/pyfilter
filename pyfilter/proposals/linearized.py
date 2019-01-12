@@ -132,8 +132,9 @@ class Linearized(Proposal):
 class ModeFinding(Linearized):
     def __init__(self, iterations=5, tol=1e-3, **kwargs):
         """
-        Tries to find the mode of the distribution p(x_t |y_t, x_{t-1}) and sample therefrom. Note that this proposal
-        should be used in the same setting as `Linearized`, i.e. when distribution is log-concave.
+        Tries to find the mode of the distribution p(x_t |y_t, x_{t-1}) and then approximate the distribution using a
+        normal distribution. Note that this proposal should be used in the same setting as `Linearized`, i.e. when
+        the observational density is log-concave.
         :param iterations: The maximum number of iterations to perform
         :type iterations: int
         :param tol: The tolerance of gradient to quit iterating
