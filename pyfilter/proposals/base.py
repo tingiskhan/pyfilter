@@ -43,8 +43,6 @@ class Proposal(object):
         :type xn: torch.Tensor
         :param xo: The old state
         :type xo: torch.Tensor
-        :param args: Additional arguments
-        :param kwargs: Additional kwargs
         :rtype: torch.Tensor
         """
 
