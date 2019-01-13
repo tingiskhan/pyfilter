@@ -7,6 +7,11 @@ from ..utils import construct_diag
 
 # TODO: Seems to work for 1D models currently, will need to extend to multidimensional
 class LinearGaussianObservations(Proposal):
+    """
+    Proposal designed for cases when the observation density is a linear combination of the states, and has a Gaussian
+    density. Note that in order for this to work for multi-dimensional models you must use matrices to form the
+    combination.
+    """
     def set_model(self, model):
         if not isinstance(model, LGO):
             raise ValueError('Model must be of instance {}'.format(LGO.__name__))

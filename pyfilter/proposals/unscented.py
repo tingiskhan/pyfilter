@@ -4,7 +4,9 @@ from ..utils import choose
 
 
 class Unscented(Proposal):
-    _kernel = None  # type: UnscentedTransform
+    """
+    Implements the unscented proposal by van der Merwe et al.
+    """
 
     def set_model(self, model):
         self._model = model
@@ -18,10 +20,10 @@ class Unscented(Proposal):
 
         self._kernel = self._kernel.construct(y)
 
-        return self._kernel.x_dist_indep.sample()
+        return self._kernel.x_dist.sample()
 
     def weight(self, y, xn, xo, *args, **kwargs):
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.x_dist_indep.log_prob(xn)
+        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.x_dist.log_prob(xn)
 
     def resample(self, inds):
         if not self._kernel.initialized:
