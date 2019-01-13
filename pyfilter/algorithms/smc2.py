@@ -1,4 +1,4 @@
-from .ness import NESS
+from .ness import NESS, enforce_tensor
 import torch
 from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter
@@ -81,6 +81,7 @@ class SMC2(NESS):
 
         self._th = threshold
 
+    @enforce_tensor
     def update(self, y):
         # ===== Perform a filtering move ===== #
         self._y += (y,)

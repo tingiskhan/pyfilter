@@ -1,4 +1,4 @@
-from .base import SequentialAlgorithm
+from .base import SequentialAlgorithm, enforce_tensor
 from ..filters.base import ParticleFilter
 from ..normalization import normalize
 from ..utils import get_ess
@@ -119,6 +119,7 @@ class NESS(SequentialAlgorithm):
 
         return self
 
+    @enforce_tensor
     def update(self, y):
         # ===== Jitter ===== #
         self._filter.ssm.p_apply(lambda x: self.kernel(x, self._w_rec), transformed=True)
