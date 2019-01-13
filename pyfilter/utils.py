@@ -10,7 +10,7 @@ def get_ess(w):
     :param w: The log weights
     :type w: torch.Tensor
     :return: The effective sample size
-    :rtype: float
+    :rtype: torch.Tensor
     """
 
     normalized = normalize(w)
