@@ -114,7 +114,7 @@ class Parameter(object):
 
         return self._trainable
 
-    def get_kde(self, cv=10):
+    def get_kde(self, cv=4):
         """
         Constructs KDE of the discrete representation.
         :param cv: The number of cross-validations to use
@@ -132,7 +132,7 @@ class Parameter(object):
 
         return KernelDensity(**grid.best_params_).fit(array)
 
-    def get_range(self, std=3, num=100):
+    def get_range(self, std=4, num=100):
         """
         Gets the range of values within a given number of standard deviations.
         :param std: The number of standard deviations
@@ -150,6 +150,19 @@ class Parameter(object):
         range_ = torch.linspace(p_mean - std * p_std, p_mean + std * p_std, num)
 
         return self.bijection(range_).numpy()
+
+    def get_plottable(self, cv=4, std=4, num=100):
+        """
+        Gets the range and likelihood of the parameter as numpy. Used for plotting.
+        :return: Range, likelihood
+        :rtype: tuple[np.ndarray]
+        """
+
+        xrange = self.get_range(std=std, num=num).reshape(-1, 1)
+        kde = self.get_kde(cv=cv)
+
+        return xrange, np.exp(kde.score_samples(xrange))
+
 
 
 
