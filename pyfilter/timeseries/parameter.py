@@ -162,8 +162,3 @@ class Parameter(object):
         kde = self.get_kde(cv=cv)
 
         return xrange, np.exp(kde.score_samples(xrange))
-
-
-
-
-
