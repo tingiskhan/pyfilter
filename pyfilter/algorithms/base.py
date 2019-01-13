@@ -79,7 +79,6 @@ class SequentialAlgorithm(BaseAlgorithm):
 
         raise NotImplementedError()
 
-    @enforce_tensor
     def fit(self, y):
         self._iterator = tqdm(y, desc=str(self))
 
