@@ -42,8 +42,8 @@ class LinearGaussianObservations(Proposal):
         # ===== Get mean ===== #
         t1 = h_var_inv * loc
 
-        t2 = o_var_inv * y
-        t3 = torch.matmul(ttc, t2.unsqueeze(-1))[..., 0]
+        t2 = diag_o_var_inv * y
+        t3 = torch.matmul(ttc, t2)[..., 0]
 
         m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
 
