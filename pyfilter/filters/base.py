@@ -102,7 +102,6 @@ class BaseFilter(object):
 
         raise NotImplementedError()
 
-    @enforce_tensor
     def longfilter(self, y, bar=True):
         """
         Filters the entire data set `y`.
