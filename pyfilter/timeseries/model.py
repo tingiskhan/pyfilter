@@ -183,14 +183,16 @@ class StateSpaceModel(object):
 
         return self
 
-    def p_prior(self):
+    def p_prior(self, transformed=True):
         """
         Calculates the prior likelihood of current values of parameters.
+        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
+        :type transformed: bool
         :return: The prior evaluated at current parameter values
         :rtype: torch.Tensor|float
         """
 
-        return self.hidden.p_prior() + self.observable.p_prior()
+        return self.hidden.p_prior(transformed) + self.observable.p_prior(transformed)
 
     def p_map(self, func, **kwargs):
         """

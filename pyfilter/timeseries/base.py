@@ -317,14 +317,21 @@ class BaseModel(object):
 
         return self
 
-    def p_prior(self):
+    def p_prior(self, transformed=True):
         """
         Calculates the prior log-likelihood of the current values.
+        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
+        :type transformed: bool
         :return: The prior of the current parameter values
         :rtype: np.ndarray|float
         """
 
-        return sum(self.p_map(lambda u: u.dist.log_prob(u.values), default=torch.zeros(1)))
+        if transformed:
+            prop = 'transformed_dist'
+        else:
+            prop = 'dist'
+
+        return sum(self.p_map(lambda u: getattr(u, prop).log_prob(u.values), default=torch.zeros(1)))
 
     def p_map(self, func, default=None):
         """
