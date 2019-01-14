@@ -164,6 +164,10 @@ class SMC2(NESS):
         # ===== Create new filter with double the state particles ===== #
         t_filt = self.filter.copy().reset()
         t_filt._particles = 2 * self.filter._particles[1]
+
+        msg = '{:s} - Increasing number of state particle from {:d} -> {:d}'
+        self._iterator.set_description(desc=msg.format(str(self), self._filter.particles[-1], t_filt._particles[-1]))
+
         t_filt.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
