@@ -327,11 +327,13 @@ class BaseModel(object):
         """
 
         if transformed:
-            prop = 'transformed_dist'
+            prop1 = 'transformed_dist'
+            prop2 = 't_values'
         else:
-            prop = 'dist'
+            prop1 = 'dist'
+            prop2 = 'values'
 
-        return sum(self.p_map(lambda u: getattr(u, prop).log_prob(u.values), default=torch.zeros(1)))
+        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2)), default=torch.zeros(1)))
 
     def p_map(self, func, default=None):
         """
