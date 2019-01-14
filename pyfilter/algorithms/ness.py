@@ -11,21 +11,20 @@ from math import sqrt
 from ..resampling import systematic
 
 
-def cont_jitter(parameter, p, *args):
+def cont_jitter(parameter, scale, *args):
     """
     Jitters the parameters.
     :param parameter: The parameters of the model, inputs as (values, prior)
     :type parameter: Parameter
-    :param p: The scaling to use for the variance of the proposal
-    :type p: int|float
+    :param scale: The scale to use for propagating the parameters
+    :type scale: float
     :return: Proposed values
     :rtype: torch.Tensor
     """
     # TODO: Can we improve the jittering kernel?
     values = parameter.t_values
-    std = 1 / math.sqrt(values.shape[0] ** ((p + 2) / p))
 
-    return values + std * torch.empty(values.shape).normal_()
+    return values + scale * torch.empty(values.shape).normal_()
 
 
 def disc_jitter(parameter, p, w, h, i, *args):
@@ -100,7 +99,8 @@ class NESS(SequentialAlgorithm):
         self.h = sqrt(1 - self.a ** 2) if shrinkage is not None else None
 
         if shrinkage is None:
-            self.kernel = lambda u, w: cont_jitter(u, self._p, w)
+            scale = 1 / math.sqrt(particles ** ((p + 2) / p))
+            self.kernel = lambda u, w: cont_jitter(u, scale, w)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
             self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=bernoulli.sample(self._shape))
