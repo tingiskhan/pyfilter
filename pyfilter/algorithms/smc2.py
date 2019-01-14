@@ -101,7 +101,8 @@ class SMC2(NESS):
     def _rejuvenate(self):
         """
         Rejuvenates the particles using a PMCMC move.
-        :return:
+        :return: Self
+        :rtype: SMC2
         """
 
         # ===== Update the description ===== #
@@ -155,7 +156,8 @@ class SMC2(NESS):
     def _increase_states(self):
         """
         Increases the number of states.
-        :return:
+        :return: Self
+        :rtype: SMC2
         """
 
         if isinstance(self.filter, KalmanFilter):
