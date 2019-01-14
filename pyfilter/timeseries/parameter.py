@@ -3,6 +3,7 @@ from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
 import numpy as np
 import torch
+from functools import lru_cache
 
 
 class Parameter(object):
@@ -16,6 +17,20 @@ class Parameter(object):
         self._p = p if isinstance(p, (torch.Tensor, dist.Distribution)) else torch.tensor(p)
         self._trainable = isinstance(self._p, dist.Distribution)
         self._values = None if self._trainable else self._p
+
+    @property
+    @lru_cache()
+    def transformed_dist(self):
+        """
+        Returns the unconstrained distribution.
+        :return: Transformed distribution
+        :rtype: dist.TransformedDistribution
+        """
+
+        if not self.trainable:
+            raise ValueError('Is not of `Distribution` instance!')
+
+        return dist.TransformedDistribution(self._p, [self.bijection.inv])
 
     @property
     def bijection(self):
