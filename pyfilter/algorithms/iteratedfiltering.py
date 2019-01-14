@@ -12,6 +12,8 @@ def jittering(parameter, scale):
     Jitters the parameter.
     :param parameter: The parameter
     :type parameter: Parameter
+    :param scale: The scale to use when jittering parameters
+    :type scale: float
     :return: Jittered parameters
     :rtype: torch.Tensor
     """
