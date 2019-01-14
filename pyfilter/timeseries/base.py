@@ -323,7 +323,7 @@ class BaseModel(object):
         :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
         :type transformed: bool
         :return: The prior of the current parameter values
-        :rtype: np.ndarray|float
+        :rtype: torch.Tensor
         """
 
         if transformed:
@@ -340,7 +340,7 @@ class BaseModel(object):
         :param func: The function to apply to parameters.
         :type func: callable
         :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
-        :type default: np.ndarray|float|int
+        :type default: None|torch.Tensor
         :return: Returns tuple of values
         :rtype: tuple[Parameter]
         """
@@ -362,7 +362,7 @@ class Observable(BaseModel):
         :param funcs: The functions governing the dynamics of the process
         :type funcs: tuple of callable
         :param theta: The parameters governing the dynamics
-        :type theta: tuple of np.ndarray|tuple of float|tuple of Distribution
+        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
         :param noise: The noise governing the noise process
         :type noise: Distribution
         """
