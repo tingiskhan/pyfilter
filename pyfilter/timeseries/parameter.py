@@ -20,7 +20,7 @@ class Parameter(object):
     @property
     def bijection(self):
         """
-        Returns a bijected function for transforms from constrained to unconstrained space.
+        Returns a bijected function for transforms from unconstrained to constrained space.
         :rtype: callable
         """
         if not self.trainable:
