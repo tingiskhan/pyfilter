@@ -27,14 +27,14 @@ def cont_jitter(parameter, scale, *args):
     return values + scale * torch.empty(values.shape).normal_()
 
 
-def disc_jitter(parameter, p, w, h, i, *args):
+def disc_jitter(parameter, w, h, i, *args):
     """
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
     :type parameter: Parameter
     :param p: The scaling to use for the variance of the proposal
     :type p: int|float
-    :param w: The weights to use
+    :param w: The normalized weights to use
     :type w: torch.Tensor
     :param h: The `h` to use for shrinking
     :type h: float
@@ -43,10 +43,9 @@ def disc_jitter(parameter, p, w, h, i, *args):
     :return: Proposed values
     :rtype: torch.Tensor
     """
-    normalized = normalize(w)[..., None]
     transformed = parameter.t_values
 
-    weighted_mean = (transformed * normalized).sum(0)
+    weighted_mean = (transformed * w).sum(0)
 
     # ===== Shrink ===== #
     a = sqrt(1 - h ** 2)
@@ -103,7 +102,7 @@ class NESS(SequentialAlgorithm):
             self.kernel = lambda u, w: cont_jitter(u, scale, w)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
-            self.kernel = lambda u, w: disc_jitter(u, self._p, w, h=self.h, i=bernoulli.sample(self._shape))
+            self.kernel = lambda u, w: disc_jitter(u, w, h=self.h, i=bernoulli.sample(self._shape))
 
     def initialize(self):
         """
@@ -122,7 +121,8 @@ class NESS(SequentialAlgorithm):
     @enforce_tensor
     def update(self, y):
         # ===== Jitter ===== #
-        self._filter.ssm.p_apply(lambda x: self.kernel(x, self._w_rec), transformed=True)
+        normalized = normalize(self._w_rec)[..., None]
+        self._filter.ssm.p_apply(lambda x: self.kernel(x, normalized), transformed=True)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
