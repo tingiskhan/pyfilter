@@ -168,7 +168,7 @@ class SMC2(NESS):
         t_filt._particles = 2 * self.filter._particles[1]
 
         msg = '{:s} - Increasing number of state particle from {:d} -> {:d}'
-        self._iterator.set_description(desc=msg.format(str(self), self._filter.particles[-1], t_filt._particles[-1]))
+        self._iterator.set_description(desc=msg.format(str(self), self._filter.particles[-1], t_filt._particles))
 
         t_filt.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
