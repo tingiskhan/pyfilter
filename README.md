@@ -28,8 +28,7 @@ For filters 1. and 2. there exist different proposals, s.a.
 The currently implemented algorithms are
 1. [NESS](https://arxiv.org/abs/1308.1883)
 2. [SMC2](https://arxiv.org/abs/1101.1528)
-
-There are plans on implementing Iterated Filtering by Ionides et al.
+3. A preliminary version of Iterated Filter (IF2) by Ionides et al.
 
 ## Caveats
 Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
