@@ -130,19 +130,25 @@ class Parameter(object):
         return self._trainable
 
     # TODO: This is very slow
-    def get_kde(self, cv=4, weights=None, kernel='epanechnikov'):
+    def get_kde(self, cv=4, weights=None, kernel='epanechnikov', transformed=True):
         """
-        Constructs KDE of the discrete representation.
+        Constructs KDE of the discrete representation on the transformed space.
         :param cv: The number of cross-validations to use
         :type cv: int
         :param weights: The weights to use
         :type weights: torch.Tensor
         :param kernel: Which kernel to se
         :type kernel: str
+        :param transformed: Whether to perform on transformed or actual values
+        :type transformed: bool
         :return: KDE object
         :rtype: KernelDensity
         """
-        array = self.values.numpy()
+        if transformed:
+            array = self.t_values.numpy()
+        else:
+            array = self.values.numpy()
+
         weights = weights.numpy() if weights is not None else weights
 
         if array.ndim < 2:
@@ -160,20 +166,21 @@ class Parameter(object):
         :rtype: tuple[np.ndarray]
         """
 
-        kde = self.get_kde(**kwargs)
+        transformd = kwargs.pop('transformed', None)
+        kde = self.get_kde(transformed=True, **kwargs)
 
         # ===== Gets the range to plot ===== #
         # TODO: This would optimally be done using the inverse of the CDF. However, scikit-learn does not have that and
         # scipy 1.2.0 is not currently on anaconda on it seems
-        low = self.values.min().numpy().reshape(-1, 1)
-        high = self.values.max().numpy().reshape(-1, 1)
+        low = self.t_values.min()
+        high = self.t_values.max()
 
-        while np.exp(kde.score_samples(low)) > 1e-3:
+        while kde.score_samples(low.numpy().reshape(-1, 1)) > np.log(1e-3):
             low -= 1e-2
 
-        while np.exp(kde.score_samples(high)) > 1e-3:
+        while kde.score_samples(high.numpy().reshape(-1, 1)) > np.log(1e-3):
             high += 1e-2
 
-        xrange_ = np.linspace(low[0, 0], high[0, 0], num=num).reshape(-1, 1)
+        xrange_ = torch.linspace(low, high, num).reshape(-1, 1)
 
-        return xrange_, np.exp(kde.score_samples(xrange_))
+        return self.bijection(xrange_).numpy(), np.exp(kde.score_samples(xrange_.numpy()))
