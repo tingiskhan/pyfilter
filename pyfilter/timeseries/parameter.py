@@ -129,51 +129,51 @@ class Parameter(object):
 
         return self._trainable
 
-    def get_kde(self, cv=4):
+    # TODO: This is very slow
+    def get_kde(self, cv=4, weights=None, kernel='epanechnikov'):
         """
         Constructs KDE of the discrete representation.
         :param cv: The number of cross-validations to use
         :type cv: int
+        :param weights: The weights to use
+        :type weights: torch.Tensor
+        :param kernel: Which kernel to se
+        :type kernel: str
         :return: KDE object
         :rtype: KernelDensity
         """
         array = self.values.numpy()
+        weights = weights.numpy() if weights is not None else weights
 
         if array.ndim < 2:
             array = array[..., None]
 
-        grid = GridSearchCV(KernelDensity(), {'bandwidth': np.linspace(1e-6, 1, 50)}, cv=cv)
-        grid = grid.fit(array)
+        grid = GridSearchCV(KernelDensity(kernel=kernel), {'bandwidth': np.linspace(1e-6, 1, 20)}, cv=cv)
+        grid = grid.fit(array, sample_weight=weights)
 
-        return KernelDensity(**grid.best_params_).fit(array)
+        return KernelDensity(kernel=kernel, **grid.best_params_).fit(array, sample_weight=weights)
 
-    def get_range(self, std=4, num=100):
+    def get_plottable(self, num=100, **kwargs):
         """
-        Gets the range of values within a given number of standard deviations.
-        :param std: The number of standard deviations
-        :type std: float
-        :param num: The number of points in the discretized range
-        :type num: int
-        :rtype: np.ndarray
-        """
-
-        vals = self.t_values
-
-        p_mean = vals.mean()
-        p_std = vals.std()
-
-        range_ = torch.linspace(p_mean - std * p_std, p_mean + std * p_std, num)
-
-        return self.bijection(range_).numpy()
-
-    def get_plottable(self, cv=4, std=4, num=100):
-        """
-        Gets the range and likelihood of the parameter as numpy. Used for plotting.
+        Gets the range and likelihood of the parameter as a `numpy.ndarray`. Used for plotting.
         :return: Range, likelihood
         :rtype: tuple[np.ndarray]
         """
 
-        xrange = self.get_range(std=std, num=num).reshape(-1, 1)
-        kde = self.get_kde(cv=cv)
+        kde = self.get_kde(**kwargs)
 
-        return xrange, np.exp(kde.score_samples(xrange))
+        # ===== Gets the range to plot ===== #
+        # TODO: This would optimally be done using the inverse of the CDF. However, scikit-learn does not have that and
+        # scipy 1.2.0 is not currently on anaconda on it seems
+        low = self.values.min().numpy().reshape(-1, 1)
+        high = self.values.max().numpy().reshape(-1, 1)
+
+        while np.exp(kde.score_samples(low)) > 1e-3:
+            low -= 1e-2
+
+        while np.exp(kde.score_samples(high)) > 1e-3:
+            high += 1e-2
+
+        xrange_ = np.linspace(low[0, 0], high[0, 0], num=num).reshape(-1, 1)
+
+        return xrange_, np.exp(kde.score_samples(xrange_))
