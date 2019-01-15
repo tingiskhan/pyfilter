@@ -4,7 +4,7 @@ import pykalman
 from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import BaseModel, LinearGaussianObservations
-from pyfilter.algorithms import NESS, SMC2, NESSMC2
+from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
 from pyfilter.proposals import Unscented
 
@@ -151,10 +151,11 @@ class Tests(unittest.TestCase):
             x, y = trumod.sample(50)
 
             algs = [
-                (NESS, {'particles': 400, 'filter_': SISR(model, 200)}),
-                (NESS, {'particles': 400, 'filter_': SISR(model, 200), 'p': 1, 'shrinkage': 0.95}),
-                (SMC2, {'particles': 1000, 'filter_': SISR(model, 200)}),
-                (NESSMC2, {'particles': 1000, 'filter_': SISR(model, 200)})
+                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200), 'p': 1, 'shrinkage': 0.99}),
+                (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
             ]
 
             for alg, props in algs:
@@ -164,7 +165,7 @@ class Tests(unittest.TestCase):
 
                 parameter = alg.filter.ssm.hidden.theta[-1]
 
-                kde = parameter.get_kde()
+                kde = parameter.get_kde(transformed=False)
 
                 tru_val = trumod.hidden.theta_vals[-1]
                 densval = kde.score_samples(tru_val)
