@@ -43,6 +43,6 @@ class NESSMC2(SMC2):
             self.filter = self._ness.filter = self._smc2.filter
             self._ness._w_rec = self._smc2._w_rec
 
-            self._iterator.set_description(desc=str(self))
+            self._iterator.set_description(desc=str(self._ness))
 
         return self._ness.update(y)
