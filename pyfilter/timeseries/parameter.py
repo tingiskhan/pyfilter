@@ -148,7 +148,7 @@ class Parameter(object):
         if array.ndim < 2:
             array = array[..., None]
 
-        grid = GridSearchCV(KernelDensity(kernel=kernel), {'bandwidth': np.linspace(1e-6, 1, 20)}, cv=cv)
+        grid = GridSearchCV(KernelDensity(kernel=kernel), {'bandwidth': np.linspace(1e-6, 1, 50)}, cv=cv)
         grid = grid.fit(array, sample_weight=weights)
 
         return KernelDensity(kernel=kernel, **grid.best_params_).fit(array, sample_weight=weights)
