@@ -21,7 +21,8 @@ The currently implemented filters are
 For filters 1. and 2. there exist different proposals, s.a.
 1. Optimal proposal when observations are linear combinations of states, and normally distributed.
 2. Locally linearized observation density, mainly used for models having log-concave observation density.
-3. Unscented proposal of van der Merwe et al.
+3. A mode finding proposal. Similar to 2. but performs gradient ascent in order to find mode of joint distribution.
+4. Unscented proposal of van der Merwe et al.
 
 ### Algorithms
 The currently implemented algorithms are
