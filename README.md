@@ -27,7 +27,7 @@ For filters 1. and 2. there exist different proposals, s.a.
 ### Algorithms
 The currently implemented algorithms are
 1. [NESS](https://arxiv.org/abs/1308.1883)
-2. [SMC2](https://arxiv.org/abs/1101.1528) (not fully implemented yet)
+2. [SMC2](https://arxiv.org/abs/1101.1528)
 
 There are plans on implementing Iterated Filtering by Ionides et al.
 
