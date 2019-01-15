@@ -125,13 +125,11 @@ class SMC2(NESS):
         t_ll = t_filt.loglikelihood
 
         # ===== Calculate acceptance ratio ===== #
-        # TODO: Might have to add gradients for transformation?
         quotient = t_ll - ll[inds]
         plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
         kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Check which to accept ===== #
-
         u = torch.empty(quotient.shape).uniform_().log()
         if plogquot.dim() > 1:
             toaccept = u < quotient + plogquot[:, 0] + kernel
