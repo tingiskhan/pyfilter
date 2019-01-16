@@ -1,27 +1,34 @@
 from .base import SequentialAlgorithm, enforce_tensor
 from ..filters.base import ParticleFilter
-from ..utils import get_ess
+from ..utils import get_ess, normalize
 from ..timeseries.parameter import Parameter
-import math
 from torch.distributions import Bernoulli
 import torch
 from ..resampling import systematic, multinomial
 
 
-def cont_jitter(parameter, scale):
+def cont_jitter(parameter, w):
     """
-    Jitters the parameters.
+    Jitters the parameters using the optimal shrinkage of ...
     :param parameter: The parameters of the model, inputs as (values, prior)
     :type parameter: Parameter
-    :param scale: The scale to use for propagating the parameters
-    :type scale: float
+    :param w: The normalized weights
+    :type w: torch.Tensor
     :return: Proposed values
     :rtype: torch.Tensor
     """
-    # TODO: Can we improve the jittering kernel?
     values = parameter.t_values
 
-    return values + scale * torch.empty(values.shape).normal_()
+    ess = get_ess(w)
+
+    mean = (w.unsqueeze(-1) * values).sum(0)
+    var = (w.unsqueeze(-1) * (values - mean) ** 2).sum(0)
+
+    bw = 1.59 * var.sqrt() * ess ** (-1 / 3)
+
+    beta = ((var - bw ** 2) / var).sqrt()
+
+    return mean + beta * (values - mean) + bw * torch.empty(values.shape).normal_()
 
 
 def disc_jitter(parameter, i):
@@ -78,8 +85,7 @@ class NESS(SequentialAlgorithm):
             self._shape = particles
 
         if continuous:
-            scale = 1 / math.sqrt(particles ** ((p + 2) / p))
-            self.kernel = lambda u: cont_jitter(u, scale)
+            self.kernel = lambda u, w: cont_jitter(u, w)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
 
@@ -88,7 +94,7 @@ class NESS(SequentialAlgorithm):
             else:
                 sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
 
-            self.kernel = lambda u: disc_jitter(u, i=sampler())
+            self.kernel = lambda u, _: disc_jitter(u, i=sampler())
 
     def initialize(self):
         """
@@ -107,7 +113,7 @@ class NESS(SequentialAlgorithm):
     @enforce_tensor
     def update(self, y):
         # ===== Jitter ===== #
-        self._filter.ssm.p_apply(lambda x: self.kernel(x), transformed=True)
+        self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec)), transformed=True)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
