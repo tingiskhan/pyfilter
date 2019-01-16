@@ -123,10 +123,9 @@ class SMC2(NESS):
 
         # ===== Filter data ===== #
         t_filt.longfilter(self._y, bar=False)
-        t_ll = t_filt.loglikelihood
 
         # ===== Calculate acceptance ratio ===== #
-        quotient = t_ll - self.filter.loglikelihood
+        quotient = t_filt.loglikelihood - self.filter.loglikelihood
         plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
         kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
 
