@@ -27,7 +27,7 @@ def cont_jitter(parameter, scale, *args):
     return values + scale * torch.empty(values.shape).normal_()
 
 
-def disc_jitter(parameter, w, h, i, *args):
+def disc_jitter(parameter, h, i, *args):
     """
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
