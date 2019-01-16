@@ -3,7 +3,6 @@ from ..filters.base import ParticleFilter
 from ..utils import get_ess
 from ..timeseries.parameter import Parameter
 import math
-import numpy as np
 from torch.distributions import Bernoulli
 import torch
 from ..resampling import systematic
@@ -55,7 +54,7 @@ def disc_jitter(parameter, i):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=False, resampler=systematic, p=4):
+    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampler=systematic, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
