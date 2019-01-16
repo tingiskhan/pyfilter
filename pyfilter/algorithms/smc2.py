@@ -4,6 +4,7 @@ from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter
 from torch.distributions import MultivariateNormal
 from time import sleep
+from ..resampling import multinomial
 
 
 def _define_pdf(params, weights):
@@ -71,7 +72,7 @@ def _eval_kernel(params, dist, n_params):
 
 
 class SMC2(NESS):
-    def __init__(self, filter_, particles, threshold=0.2):
+    def __init__(self, filter_, particles, threshold=0.2, resampling=multinomial):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param particles: The amount of particles
@@ -79,7 +80,7 @@ class SMC2(NESS):
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :type threshold: float
         """
-        super().__init__(filter_, particles)
+        super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
 

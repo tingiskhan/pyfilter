@@ -1,10 +1,12 @@
-from .smc2 import SMC2
+from .base import SequentialAlgorithm
 from .ness import NESS
+from .smc2 import SMC2
 from tqdm import tqdm
+from ..resampling import multinomial
 
 
-class NESSMC2(SMC2):
-    def __init__(self, filter_, particles, handshake=200, threshold=0.5, nesskwargs=None):
+class NESSMC2(SequentialAlgorithm):
+    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.2, resampling=multinomial, **nesskwargs):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
@@ -12,15 +14,15 @@ class NESSMC2(SMC2):
         :param handshake: At which point to switch algorithms, in number of observations
         :type handshake: int
         """
-        super().__init__(filter_, particles)
+
+        super().__init__(filter_)
 
         self._hs = handshake
         self._switched = False
 
         # ===== Set some key-worded arguments ===== #
-        nk = nesskwargs or {}
-        self._smc2 = SMC2(self._filter, particles, threshold=threshold)
-        self._ness = NESS(self._filter, particles, **nk)
+        self._smc2 = SMC2(self.filter, particles, resampling=resampling, threshold=smc2_threshold)
+        self._ness = NESS(self._smc2.filter, particles, resampling=resampling, **nesskwargs)
 
     def initialize(self):
         self._smc2.initialize()
@@ -40,7 +42,6 @@ class NESSMC2(SMC2):
 
         if not self._switched:
             self._switched = True
-            self.filter = self._ness.filter = self._smc2.filter
             self._ness._w_rec = self._smc2._w_rec
 
             self._iterator.set_description(desc=str(self._ness))

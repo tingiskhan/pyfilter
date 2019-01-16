@@ -5,7 +5,7 @@ from ..timeseries.parameter import Parameter
 import math
 from torch.distributions import Bernoulli
 import torch
-from ..resampling import systematic
+from ..resampling import systematic, multinomial
 
 
 def cont_jitter(parameter, scale):
@@ -52,7 +52,7 @@ def disc_jitter(parameter, i):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampler=systematic, p=4):
+    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=multinomial, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -70,7 +70,7 @@ class NESS(SequentialAlgorithm):
 
         self._w_rec = torch.zeros(particles)
         self._th = threshold
-        self._resampler = resampler
+        self._resampler = resampling
 
         if isinstance(filter_, ParticleFilter):
             self._shape = particles, 1
