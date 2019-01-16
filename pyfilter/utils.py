@@ -141,33 +141,6 @@ def construct_diag(x):
     return c * b
 
 
-def approx_fprime(x, f, epsilon):
-    """
-    Wrapper for scipy's `approx_fprime`. Handles vectorized functions.
-    :param x: The point at which to approximate the gradient
-    :type x: torch.Tensor
-    :param f: The function to approximate
-    :type f: callable
-    :param epsilon: The discretization to use
-    :type epsilon: float
-    :return: The gradient
-    :rtype: torch.Tensor
-    """
-
-    f0 = f(x)
-
-    grad = np.zeros_like(x)
-    ei = np.zeros_like(x)
-
-    for k in range(x.shape[0]):
-        ei[k] = 1.
-        d = epsilon * ei
-        grad[k] = (f(x + d) - f0) / d[k]
-        ei[k] = 0.
-
-    return grad
-
-
 def flatten(iterable):
     """
     Flattens an array comprised of an arbitrary number of lists. Solution found at:
