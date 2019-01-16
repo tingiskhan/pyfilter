@@ -9,7 +9,7 @@ import torch
 from ..resampling import systematic
 
 
-def cont_jitter(parameter, scale, *args):
+def cont_jitter(parameter, scale):
     """
     Jitters the parameters.
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -25,7 +25,7 @@ def cont_jitter(parameter, scale, *args):
     return values + scale * torch.empty(values.shape).normal_()
 
 
-def disc_jitter(parameter, i, *args):
+def disc_jitter(parameter, i):
     """
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -94,7 +94,7 @@ class NESS(SequentialAlgorithm):
 
         if continuous:
             scale = 1 / math.sqrt(particles ** ((p + 2) / p))
-            self.kernel = lambda u, w: cont_jitter(u, scale, w)
+            self.kernel = lambda u: cont_jitter(u, scale)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
             self.kernel = lambda u: disc_jitter(u, i=bernoulli.sample(self._shape))
