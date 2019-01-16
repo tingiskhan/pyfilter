@@ -20,7 +20,7 @@ class NESSMC2(SMC2):
         # ===== Set some key-worded arguments ===== #
         nk = nesskwargs or {}
         self._smc2 = SMC2(self._filter, particles, threshold=threshold)
-        self._ness = NESS(self._filter, particles, shrinkage=nk.pop('shrinkage', 0.99), p=nk.pop('p', 1),  **nk)
+        self._ness = NESS(self._filter, particles, continuous=nk.pop('continuous', False), p=nk.pop('p', 1),  **nk)
 
     def initialize(self):
         self._smc2.initialize()

@@ -43,16 +43,11 @@ def disc_jitter(parameter, w, h, i, *args):
     :return: Proposed values
     :rtype: torch.Tensor
     """
+    # TODO: Check if this even makes sense
     transformed = parameter.t_values
+    std = h * transformed.std()
 
-    weighted_mean = (transformed * w).sum(0)
-
-    # ===== Shrink ===== #
-    a = sqrt(1 - h ** 2)
-    means = a * transformed + (1 - a) * weighted_mean
-    std = h * torch.sqrt(((transformed - weighted_mean) ** 2).mean())
-
-    return (1 - i) * transformed + i * (means + std * torch.empty_like(transformed).normal_())
+    return (1 - i) * transformed + i * (transformed + std * torch.empty_like(transformed).normal_())
 
 
 def flattener(a):
@@ -71,12 +66,15 @@ def flattener(a):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, shrinkage=None, resampler=systematic, p=4):
+    def __init__(self, filter_, particles, threshold=0.9, continuous=False, resampler=systematic, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
         :type particles: int
-        :param threshold: The threshold for when to resample the parameters.
+        :param threshold: The threshold for when to resample the parameters
+        :type threshold: float
+        :param continuous: Whether to use continuous or discrete jittering
+        :type continuous: bool
         :param p: For controlling the variance of the jittering kernel. The greater the value, the higher the variance.
         """
 
@@ -94,15 +92,12 @@ class NESS(SequentialAlgorithm):
         else:
             self._shape = particles
 
-        self.a = (3 * shrinkage - 1) / 2 / shrinkage if shrinkage is not None else None
-        self.h = sqrt(1 - self.a ** 2) if shrinkage is not None else None
-
-        if shrinkage is None:
+        if continuous:
             scale = 1 / math.sqrt(particles ** ((p + 2) / p))
             self.kernel = lambda u, w: cont_jitter(u, scale, w)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (self._p / 2))
-            self.kernel = lambda u, w: disc_jitter(u, w, h=self.h, i=bernoulli.sample(self._shape))
+            self.kernel = lambda u, w: disc_jitter(u, w, h=sqrt(1 - 0.95 ** 2), i=bernoulli.sample(self._shape))
 
     def initialize(self):
         """
