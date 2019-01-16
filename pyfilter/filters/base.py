@@ -1,13 +1,12 @@
 import pandas as pd
 import copy
 from ..proposals import LinearGaussianObservations
-from ..resampling import systematic
+from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose
-from numpy import ndarray
 
 
 def enforce_tensor(func):
@@ -272,7 +271,7 @@ def _construct_empty(shape):
 
 
 class ParticleFilter(BaseFilter):
-    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.5):
+    def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.5):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
