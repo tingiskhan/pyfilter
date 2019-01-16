@@ -37,6 +37,9 @@ def disc_jitter(parameter, i):
     :return: Proposed values
     :rtype: torch.Tensor
     """
+    if i.sum() == 0:
+        return parameter.t_values
+
     # TODO: Check if this even makes sense
     transformed = parameter.t_values
     std = 1.06 * transformed.std() * transformed.shape[0] ** (-1 / 5)
