@@ -24,9 +24,9 @@ def _define_pdf(params, weights):
 
     mean = (asarray * weights[:, None]).sum(0)
     centralized = asarray - mean
-    cov = torch.einsum('ij,jk->ik', (weights * centralized.t(), centralized))
+    cov = torch.matmul(weights * centralized.t(), centralized)
 
-    return MultivariateNormal(mean, cov)
+    return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
 
 
 def _mcmc_move(params, dist):
@@ -51,21 +51,23 @@ def _mcmc_move(params, dist):
     return True
 
 
-def _eval_kernel(params, dist, n_params, n_dist):
+def _eval_kernel(params, dist, n_params):
     """
     Evaluates the kernel used for performing the MCMC move.
     :param params: The current parameters
     :type params: tuple of Distribution
+    :param dist: The distribution to use for evaluating the prior
+    :type dist: Distribution
     :param n_params: The new parameters to evaluate against
     :type n_params: tuple of Distribution
-    :return: The log density of the proposal kernel evaluated at `new_params`
-    :rtype: np.ndarray
+    :return: The log difference in priors
+    :rtype: torch.Tensor
     """
 
     p_vals = torch.cat([p.t_values for p in params], 1)
     n_p_vals = torch.cat([p.t_values for p in n_params], 1)
 
-    return n_dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
+    return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
 
 class SMC2(NESS):
@@ -109,7 +111,6 @@ class SMC2(NESS):
         self._iterator.set_description(desc='{:s} - Rejuvenating particles'.format(str(self)))
 
         # ===== Construct distribution ===== #
-        ll = self.filter.loglikelihood
         dist = _define_pdf(self.filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
         # ===== Resample among parameters ===== #
@@ -125,9 +126,9 @@ class SMC2(NESS):
         t_ll = t_filt.loglikelihood
 
         # ===== Calculate acceptance ratio ===== #
-        quotient = t_ll - ll[inds]
+        quotient = t_ll - self.filter.loglikelihood
         plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
-        kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists, dist)
+        kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
 
         # ===== Check which to accept ===== #
         u = torch.empty(quotient.shape).uniform_().log()
