@@ -81,7 +81,7 @@ class LinearGaussianObservations(Proposal):
         tc = c if c.dim() > 1 else c.unsqueeze(-2)
 
         temp = torch.matmul(tc, torch.matmul(construct_diag(h_var), tc.transpose(-2, -1)))
-        cov = construct_diag(o_var) + temp
+        cov = construct_diag(o_var.unsqueeze(-1) if self._model.observable.ndim < 2 else o_var) + temp
 
         if self._model.obs_ndim > 1:
             return MultivariateNormal(m, scale_tril=torch.cholesky(cov)).log_prob(y)
