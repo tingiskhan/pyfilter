@@ -51,21 +51,6 @@ def disc_jitter(parameter, i):
     return transformed
 
 
-def flattener(a):
-    """
-    Flattens array a.
-    :param a: An array
-    :type a: np.ndarray
-    :return: Flattened array
-    :rtype: np.ndarray
-    """
-
-    if a.ndim < 3:
-        return a.flatten()
-
-    return a.reshape(a.shape[0], a.shape[1] * a.shape[2])
-
-
 class NESS(SequentialAlgorithm):
     def __init__(self, filter_, particles, threshold=0.9, continuous=False, resampler=systematic, p=4):
         """
