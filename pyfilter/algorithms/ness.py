@@ -82,7 +82,13 @@ class NESS(SequentialAlgorithm):
             self.kernel = lambda u: cont_jitter(u, scale)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
-            self.kernel = lambda u: disc_jitter(u, i=bernoulli.sample(self._shape))
+
+            if isinstance(self._shape, tuple):
+                sampler = lambda: bernoulli.sample(self._shape)
+            else:
+                sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
+
+            self.kernel = lambda u: disc_jitter(u, i=sampler())
 
     def initialize(self):
         """
