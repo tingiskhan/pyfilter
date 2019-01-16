@@ -29,8 +29,6 @@ def disc_jitter(parameter, i):
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
     :type parameter: Parameter
-    :param h: The `h` to use for shrinking
-    :type h: float
     :param i: The indices to jitter
     :type i: torch.Tensor
     :return: Proposed values
