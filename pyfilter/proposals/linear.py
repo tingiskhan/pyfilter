@@ -5,7 +5,6 @@ import torch
 from ..utils import construct_diag
 
 
-# TODO: Seems to work for 1D models currently, will need to extend to multidimensional
 class LinearGaussianObservations(Proposal):
     """
     Proposal designed for cases when the observation density is a linear combination of the states, and has a Gaussian
