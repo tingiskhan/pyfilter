@@ -53,11 +53,13 @@ def choose(array, indices):
     return array[torch.arange(array.shape[0])[:, None], indices]
 
 
-def loglikelihood(w):
+def loglikelihood(w, weights=None):
     """
     Calculates the estimated loglikehood given weights.
     :param w: The log weights, corresponding to likelihood
     :type w: torch.Tensor
+    :param weights: Whether to weight the log-likelihood.
+    :type weights: torch.Tensor
     :return: The log-likelihood
     :rtype: torch.Tensor
     """
@@ -65,11 +67,15 @@ def loglikelihood(w):
     maxw, _ = w.max(-1)
 
     axis = -1
-    if maxw.dim() > 0:
-        axis = 0
-        w = w.t()
+    maxw = maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw
 
-    return maxw + torch.log(torch.exp(w - maxw).mean(axis))
+    # ===== Calculate the second term ===== #
+    if weights is None:
+        temp = torch.exp(w - maxw).mean(axis).log()
+    else:
+        temp = (weights * torch.exp(w - maxw)).sum(axis).log()
+
+    return maxw + temp
 
 
 def add_dimensions(x, ndim):
