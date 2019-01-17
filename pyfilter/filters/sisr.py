@@ -11,6 +11,9 @@ class SISR(ParticleFilter):
 
     def _filter(self, y):
         # ===== Resample among old ===== #
+        # TODO: Not optimal as we normalize in several other functions, fix this
+        old_normw = normalize(self._w_old)
+
         inds, mask = self._resample_state(self._w_old)
         to_prop = choose(self._x_cur, inds)
         self._proposal = self._proposal.resample(inds)
@@ -25,6 +28,6 @@ class SISR(ParticleFilter):
 
         self._w_old = weights + tw
 
-        normw = normalize(weights) if weights.dim() == self._x_cur.dim() else normalize(weights).unsqueeze(-1)
+        normw = normalize(self._w_old) if weights.dim() == self._x_cur.dim() else normalize(self._w_old).unsqueeze(-1)
 
-        return (normw * self._x_cur).sum(self._sumaxis), loglikelihood(weights)
+        return (normw * self._x_cur).sum(self._sumaxis), loglikelihood(weights, old_normw)

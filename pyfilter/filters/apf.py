@@ -29,7 +29,6 @@ class APF(ParticleFilter):
 
         # ===== Calculate log likelihood ===== #
         ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(t_weights)).sum(-1))
-
         normw = normalize(self._w_old) if weights.dim() == self._x_cur.dim() else normalize(self._w_old).unsqueeze(-1)
 
         return (normw * self._x_cur).sum(self._sumaxis), ll
