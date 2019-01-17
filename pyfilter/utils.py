@@ -66,14 +66,11 @@ def loglikelihood(w, weights=None):
 
     maxw, _ = w.max(-1)
 
-    axis = -1
-    maxw = maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw
-
     # ===== Calculate the second term ===== #
     if weights is None:
-        temp = torch.exp(w - maxw).mean(axis).log()
+        temp = torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)).mean(-1).log()
     else:
-        temp = (weights * torch.exp(w - maxw)).sum(axis).log()
+        temp = (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))).sum(-1).log()
 
     return maxw + temp
 
