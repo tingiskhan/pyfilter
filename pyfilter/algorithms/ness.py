@@ -21,8 +21,11 @@ def cont_jitter(parameter, w):
 
     ess = get_ess(w)
 
-    mean = (w.unsqueeze(-1) * values).sum(0)
-    var = (w.unsqueeze(-1) * (values - mean) ** 2).sum(0)
+    if values.dim() > w.dim():
+        w = w.unsqueeze_(-1)
+
+    mean = (w * values).sum(0)
+    var = (w * (values - mean) ** 2).sum(0)
 
     bw = 1.59 * var.sqrt() * ess ** (-1 / 3)
 
