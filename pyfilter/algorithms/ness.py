@@ -99,6 +99,8 @@ class NESS(SequentialAlgorithm):
         else:
             self._shape = particles
 
+        # ====== Select proposal kernel ===== #
+        # TODO: Need to figure out why kernels aren't working too good...
         if continuous:
             if shrink:
                 self.kernel = lambda u, w: shrinkage_jitter(u, w)
