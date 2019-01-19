@@ -4,10 +4,26 @@ from ..utils import get_ess, normalize
 from ..timeseries.parameter import Parameter
 from torch.distributions import Bernoulli
 import torch
-from ..resampling import systematic, multinomial
+from ..resampling import systematic
+import math
 
 
-def cont_jitter(parameter, w):
+def cont_jitter(params, scale):
+    """
+    Jitters the parameters.
+    :param params: The parameters of the model, inputs as (values, prior)
+    :type params: Distribution
+    :param scale: The scaling to use for the variance of the proposal
+    :type scale: float
+    :return: Proposed values
+    :rtype: np.ndarray
+    """
+    values = params.t_values
+
+    return values + scale * torch.empty_like(values).normal_()
+
+
+def shrinkage_jitter(parameter, w):
     """
     Jitters the parameters using the optimal shrinkage of ...
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -26,7 +42,6 @@ def cont_jitter(parameter, w):
 
     mean = (w * values).sum(0)
 
-    # TODO: Should be weighted... somehow
     sort, _ = values.sort(0)
     std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
 
@@ -55,11 +70,11 @@ def disc_jitter(parameter, i, w):
     if i.sum() == 0:
         return parameter.t_values
 
-    return (1 - i) * parameter.t_values + i * cont_jitter(parameter, w)
+    return (1 - i) * parameter.t_values + i * shrinkage_jitter(parameter, w)
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=systematic, p=4):
+    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=systematic, shrink=False, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -85,7 +100,11 @@ class NESS(SequentialAlgorithm):
             self._shape = particles
 
         if continuous:
-            self.kernel = lambda u, w: cont_jitter(u, w)
+            if shrink:
+                self.kernel = lambda u, w: shrinkage_jitter(u, w)
+            else:
+                scale = 1 / math.sqrt(particles ** ((p + 2) / p))
+                self.kernel = lambda u, w: cont_jitter(u, scale)
         else:
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
 
