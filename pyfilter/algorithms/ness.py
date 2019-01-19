@@ -19,46 +19,41 @@ def cont_jitter(parameter, w):
     """
     values = parameter.t_values
 
-    ess = get_ess(w)
+    ess = get_ess(w, normalized=True)
 
     if values.dim() > w.dim():
         w = w.unsqueeze_(-1)
 
     mean = (w * values).sum(0)
-    var = (w * (values - mean) ** 2).sum(0)
 
-    bw = 1.59 * var.sqrt() * ess ** (-1 / 3)
+    # TODO: Should be weighted... somehow
+    std, _ = (values - mean).abs().median(0)
+    var = std ** 2
+
+    bw = 1.59 * std * ess ** (-1 / 3)
 
     beta = ((var - bw ** 2) / var).sqrt()
 
     return mean + beta * (values - mean) + bw * torch.empty(values.shape).normal_()
 
 
-def disc_jitter(parameter, i):
+def disc_jitter(parameter, i, w):
     """
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
     :type parameter: Parameter
     :param i: The indices to jitter
     :type i: torch.Tensor
+    :param w: The normalized weights
+    :type w: torch.Tensor
     :return: Proposed values
     :rtype: torch.Tensor
     """
+    # TODO: This may be improved
     if i.sum() == 0:
         return parameter.t_values
 
-    # TODO: Check if this even makes sense
-    transformed = parameter.t_values
-    std = 1.06 * transformed.std() * transformed.shape[0] ** (-1 / 5)
-
-    indices = torch.multinomial(torch.ones(transformed.shape[0]), num_samples=int(i.sum()))
-    propagated = transformed[indices] + std * torch.empty_like(transformed[indices]).normal_()
-
-    # ===== Define out ===== #
-    # TODO: Fix this
-    transformed[i.byte()] = propagated[..., 0]
-
-    return transformed
+    return (1 - i) * parameter.t_values + i * cont_jitter(parameter, w)
 
 
 class NESS(SequentialAlgorithm):
@@ -97,7 +92,7 @@ class NESS(SequentialAlgorithm):
             else:
                 sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
 
-            self.kernel = lambda u, _: disc_jitter(u, i=sampler())
+            self.kernel = lambda u, w: disc_jitter(u, i=sampler(), w=w)
 
     def initialize(self):
         """
