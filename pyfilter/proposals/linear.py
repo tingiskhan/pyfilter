@@ -48,7 +48,7 @@ class LinearGaussianObservations(Proposal):
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov))
 
-    def draw(self, y, x):
+    def construct(self, y, x):
         # ===== Hidden ===== #
         loc = self._model.hidden.mean(x)
         h_var_inv = 1 / self._model.hidden.scale(x) ** 2
@@ -58,11 +58,11 @@ class LinearGaussianObservations(Proposal):
         o_var_inv = 1 / self._model.observable.scale(x) ** 2
 
         if self._model.hidden_ndim < 2:
-            kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
+            self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
         else:
-            kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
+            self._kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
 
-        return kernel.sample()
+        return self
 
     def weight(self, y, xn, xo):
         c = self._model.observable.theta_vals[0]

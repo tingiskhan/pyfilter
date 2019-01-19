@@ -4,32 +4,33 @@ from ..utils import choose
 
 
 class Unscented(Proposal):
-    """
-    Implements the unscented proposal by van der Merwe et al.
-    """
+    def __init__(self):
+        """
+        Implements the unscented proposal by van der Merwe et al.
+        """
+        super().__init__()
+        self._ut = None
 
     def set_model(self, model):
         self._model = model
-        self._kernel = UnscentedTransform(self._model)
+        self._ut = UnscentedTransform(self._model)
 
         return self
 
-    def draw(self, y, x):
-        if not self._kernel.initialized:
-            self._kernel.initialize(x)
+    def construct(self, y, x):
+        if not self._ut.initialized:
+            self._ut.initialize(x)
 
-        self._kernel = self._kernel.construct(y)
+        self._ut = self._ut.construct(y)
+        self._kernel = self._ut.x_dist
 
-        return self._kernel.x_dist.sample()
-
-    def weight(self, y, xn, xo, *args, **kwargs):
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.x_dist.log_prob(xn)
+        return self
 
     def resample(self, inds):
-        if not self._kernel.initialized:
+        if not self._ut.initialized:
             return self
 
-        self._kernel.xmean = choose(self._kernel.xmean, inds)
-        self._kernel.xcov = choose(self._kernel.xcov, inds)
+        self._ut.xmean = choose(self._ut.xmean, inds)
+        self._ut.xcov = choose(self._ut.xcov, inds)
 
         return self

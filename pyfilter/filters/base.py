@@ -301,7 +301,7 @@ class ParticleFilter(BaseFilter):
             except KeyError:
                 proposal = Bootstrap()
 
-        self._proposal = proposal.set_model(self._model)
+        self._proposal = proposal.set_model(self._model)    # type: Proposal
 
     @property
     def particles(self):

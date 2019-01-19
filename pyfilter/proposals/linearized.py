@@ -100,7 +100,7 @@ class Linearized(Proposal):
         self._order = order
         self._h = h
 
-    def draw(self, y, x):
+    def construct(self, y, x):
         # ===== Define function ===== #
         f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
 
@@ -123,10 +123,7 @@ class Linearized(Proposal):
         else:
             self._kernel = Independent(dist, 1)
 
-        return self._kernel.sample()
-
-    def weight(self, y, xn, xo):
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
+        return self
 
 
 class ModeFinding(Linearized):
@@ -146,7 +143,7 @@ class ModeFinding(Linearized):
         self._iters = iterations
         self._tol = tol
 
-    def draw(self, y, x):
+    def construct(self, y, x):
         # ===== Define function ===== #
         f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
 
@@ -190,4 +187,4 @@ class ModeFinding(Linearized):
         else:
             self._kernel = Independent(dist, 1)
 
-        return self._kernel.sample()
+        return self

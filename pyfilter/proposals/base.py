@@ -22,23 +22,32 @@ class Proposal(object):
 
         return self
 
-    def draw(self, y, x):
+    def construct(self, y, x):
+        """
+        Constructs the kernel used in `draw` and `weight`.
+        :param y: The observation
+        :type y: torch.Tensor
+        :param x: The old state
+        :type x: torch.Tensor
+        :return: Self
+        :rtype: Proposal
+        """
+
+        return self
+
+    def draw(self):
         """
         Defines the method for drawing proposals.
-        :param y: The current observation
-        :type y: np.ndarray|float|torch.Tensor
-        :param x: The previous hidden states
-        :type x: torch.Tensor
         :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self._kernel.sample()
 
     def weight(self, y, xn, xo):
         """
         Defines the method for weighting observations.
         :param y: The current observation
-        :type y: np.ndarray|float|torch.Tensor
+        :type y: torch.Tensor
         :param xn: The new state
         :type xn: torch.Tensor
         :param xo: The old state
@@ -46,7 +55,7 @@ class Proposal(object):
         :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
 
     def resample(self, inds):
         """

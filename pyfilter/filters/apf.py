@@ -10,6 +10,7 @@ class APF(ParticleFilter):
     """
     def _filter(self, y):
         # ===== Perform auxiliary sampling ===== #
+        # TODO: Proposal should propagate APF
         t_x = self._model.propagate_apf(self._x_cur)
         t_weights = self._model.weight(y, t_x)
 
@@ -22,7 +23,7 @@ class APF(ParticleFilter):
 
         self._proposal = self._proposal.resample(resampled_indices)
 
-        self._x_cur = self._proposal.draw(y, resampled_x)
+        self._x_cur = self._proposal.construct(y, resampled_x).draw()
         weights = self._proposal.weight(y, self._x_cur, resampled_x)
 
         self._w_old = weights - choose(t_weights, resampled_indices)
