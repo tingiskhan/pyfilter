@@ -27,7 +27,9 @@ def cont_jitter(parameter, w):
     mean = (w * values).sum(0)
 
     # TODO: Should be weighted... somehow
-    std, _ = (values - mean).abs().median(0)
+    sort, _ = values.sort(0)
+    std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+
     var = std ** 2
 
     bw = 1.59 * std * ess ** (-1 / 3)
