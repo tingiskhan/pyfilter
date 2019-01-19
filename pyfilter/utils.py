@@ -4,18 +4,21 @@ from .normalization import normalize
 import torch
 
 
-def get_ess(w):
+def get_ess(w, normalized=False):
     """
     Calculates the ESS from an array of log weights.
     :param w: The log weights
     :type w: torch.Tensor
+    :param normalized: Whether input is normalized
+    :type normalized: bool
     :return: The effective sample size
     :rtype: torch.Tensor
     """
 
-    normalized = normalize(w)
+    if not normalized:
+        w = normalize(w)
 
-    return normalized.sum(-1) ** 2 / (normalized ** 2).sum(-1)
+    return w.sum(-1) ** 2 / (w ** 2).sum(-1)
 
 
 def searchsorted2d(a, b):
