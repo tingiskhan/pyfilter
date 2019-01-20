@@ -2,11 +2,11 @@ from .base import SequentialAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 from tqdm import tqdm
-from ..resampling import multinomial
+from ..resampling import systematic
 
 
 class NESSMC2(SequentialAlgorithm):
-    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.2, resampling=multinomial, **nesskwargs):
+    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.2, resampling=systematic, **nesskwargs):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
