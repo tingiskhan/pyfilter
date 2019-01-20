@@ -74,7 +74,7 @@ def disc_jitter(parameter, i, w):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=systematic, shrink=False, p=4):
+    def __init__(self, filter_, particles, threshold=1., continuous=True, resampling=systematic, shrink=True, p=4):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
