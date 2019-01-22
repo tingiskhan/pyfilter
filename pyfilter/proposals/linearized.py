@@ -153,7 +153,7 @@ class ModeFinding(Linearized):
         # TODO: Completely arbitrary starting, might not be optimal
         gamma = 1.
         grads = tuple()
-        for i in range(self._iters - 1):
+        for i in range(self._iters):
             grads += (approx_fprime(
                 f, xn.unsqueeze(-1) if self._model.hidden.ndim < 2 else xn,
                 order=self._order,
@@ -177,7 +177,7 @@ class ModeFinding(Linearized):
 
             # TODO: Use while perhaps
             gradsqsum = ((grads[-1] if self._model.hidden_ndim > 1 else grads[-1].unsqueeze(-1)) ** 2).sum(-1)
-            if (gradsqsum.sqrt() < self._tol).sum() >= gradsqsum.numel() * 0.9:
+            if (gradsqsum.sqrt() < self._tol).float().mean() >= 0.9:
                 break
 
         # ===== Get distribution ====== #
