@@ -103,7 +103,7 @@ class NESS(SequentialAlgorithm):
         # TODO: Need to figure out why kernels aren't working too good...
         if continuous:
             if shrink:
-                self.kernel = lambda u, w: shrinkage_jitter(u, w)
+                self.kernel = shrinkage_jitter
             else:
                 scale = 1 / math.sqrt(particles ** ((p + 2) / p))
                 self.kernel = lambda u, w: cont_jitter(u, scale)
@@ -111,12 +111,11 @@ class NESS(SequentialAlgorithm):
             bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
 
             if isinstance(self._shape, tuple):
-                sampler = lambda: bernoulli.sample(self._shape)
+                self.sampler = lambda: bernoulli.sample(self._shape)
             else:
-                sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
+                self.sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
 
-            # TODO: This is wrong, should be one sampling of indices
-            self.kernel = lambda u, w: disc_jitter(u, i=sampler(), w=w)
+            self.kernel = disc_jitter
 
     def initialize(self):
         """
@@ -139,7 +138,11 @@ class NESS(SequentialAlgorithm):
         self._w_rec += self._filter.s_ll[-1]
 
         # ===== Jitter ===== #
-        self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec)), transformed=True)
+        if self.kernel is disc_jitter:
+            i = self.sampler()
+            self._filter.ssm.p_apply(lambda x: self.kernel(x, i, normalize(self._w_rec)), transformed=True)
+        else:
+            self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec)), transformed=True)
 
         # ===== Resample ===== #
         ess = get_ess(self._w_rec)
