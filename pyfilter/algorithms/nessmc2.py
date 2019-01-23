@@ -43,7 +43,7 @@ class NESSMC2(SequentialAlgorithm):
         if not self._switched:
             self._switched = True
             self._ness._w_rec = self._smc2._w_rec
-            self.filter = self.ness.filter = self.smc2.filter
+            self.filter = self._ness.filter = self._smc2.filter
 
             self._iterator.set_description(desc=str(self._ness))
 
