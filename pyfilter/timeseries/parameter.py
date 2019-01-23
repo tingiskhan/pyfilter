@@ -130,7 +130,7 @@ class Parameter(object):
         return self._trainable
 
     # TODO: This is very slow
-    def get_kde(self, cv=4, weights=None, kernel='epanechnikov', transformed=True):
+    def get_kde(self, cv=4, weights=None, kernel='gaussian', transformed=True):
         """
         Constructs KDE of the discrete representation on the transformed space.
         :param cv: The number of cross-validations to use
