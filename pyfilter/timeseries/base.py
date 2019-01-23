@@ -2,18 +2,14 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils import isfinite, concater
+from ..utils import concater
 from .statevariable import tensor_caster
 
 
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)
-
-        mask = isfinite(out)
-
-        if (~mask).any():
-            out[~mask] = -2e20
+        out[~torch.isfinite(out)] = float('-inf')
 
         return out
 
