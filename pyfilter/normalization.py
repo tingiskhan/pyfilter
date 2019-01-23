@@ -9,17 +9,13 @@ def _vector(w):
     :return: Normalized weights
     :rtype: torch.Tensor
     """
+    mask = torch.isfinite(w)
+    w[~mask] = float('-inf')
 
     reweighed = torch.exp(w - w.max())
 
     normalized = reweighed / reweighed.sum()
     normalized[torch.isnan(normalized)] = 0
-
-    # ===== Remove Nans from normalized ===== #
-
-    if normalized.sum() == 0:
-        n = w.shape[0]
-        normalized = torch.ones(n) / n
 
     return normalized
 
@@ -32,6 +28,8 @@ def _matrix(w):
     :return: Normalized weights
     :rtype: torch.Tensor
     """
+    mask = torch.isfinite(w)
+    w[~mask] = float('-inf')
 
     reweighed = torch.exp(w - w.max(-1)[0][..., None])
     normalized = reweighed / reweighed.sum(-1)[..., None]
