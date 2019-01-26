@@ -4,7 +4,7 @@ from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter
 from torch.distributions import MultivariateNormal
 from time import sleep
-from ..resampling import multinomial
+from ..resampling import systematic
 
 
 def _define_pdf(params, weights):
@@ -72,7 +72,7 @@ def _eval_kernel(params, dist, n_params):
 
 
 class SMC2(NESS):
-    def __init__(self, filter_, particles, threshold=0.2, resampling=multinomial):
+    def __init__(self, filter_, particles, threshold=0.2, resampling=systematic):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param particles: The amount of particles
