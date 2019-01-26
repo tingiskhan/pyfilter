@@ -5,7 +5,6 @@ from ..timeseries.parameter import Parameter
 from torch.distributions import Bernoulli
 import torch
 from ..resampling import systematic
-import math
 
 
 def cont_jitter(params, scale):
@@ -23,7 +22,7 @@ def cont_jitter(params, scale):
     return values + scale * torch.empty_like(values).normal_()
 
 
-def shrinkage_jitter(parameter, w, p):
+def shrinkage_jitter(parameter, w, p, ess, shrink=True):
     """
     Jitters the parameters using the optimal shrinkage of ...
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -32,31 +31,39 @@ def shrinkage_jitter(parameter, w, p):
     :type w: torch.Tensor
     :param p: The p parameter
     :type p: float
+    :param ess: The previous ESS
+    :type ess: float
+    :param shrink: Whether to shrink as well as adjusting variance
+    :type shrink: bool
     :return: Proposed values
     :rtype: torch.Tensor
     """
     values = parameter.t_values
 
-    ess = get_ess(w, normalized=True)
+    # ===== Calculate STD ===== #
+    sort, _ = values.sort(0)
+    std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+
+    var = std ** 2
+
+    # ===== Calculate bandwidth ===== #
+    bw = 1.59 * std * ess ** (-p / (p + 2))
+
+    if not shrink:
+        return values + bw * torch.empty(values.shape).normal_()
+
+    # ===== Calculate shrinkage and shrink ===== #
+    beta = ((var - bw ** 2) / var).sqrt()
 
     if values.dim() > w.dim():
         w = w.unsqueeze_(-1)
 
     mean = (w * values).sum(0)
 
-    sort, _ = values.sort(0)
-    std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
-
-    var = std ** 2
-
-    bw = 1.59 * std * ess ** (-p / (p + 2))
-
-    beta = ((var - bw ** 2) / var).sqrt()
-
     return mean + beta * (values - mean) + bw * torch.empty(values.shape).normal_()
 
 
-def disc_jitter(parameter, i, w):
+def disc_jitter(parameter, i, w, ess):
     """
     Jitters the parameters using discrete propagation.
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -65,6 +72,8 @@ def disc_jitter(parameter, i, w):
     :type i: torch.Tensor
     :param w: The normalized weights
     :type w: torch.Tensor
+    :param ess: The previous ESS
+    :type ess: float
     :return: Proposed values
     :rtype: torch.Tensor
     """
@@ -72,11 +81,11 @@ def disc_jitter(parameter, i, w):
     if i.sum() == 0:
         return parameter.t_values
 
-    return (1 - i) * parameter.t_values + i * shrinkage_jitter(parameter, w, 1)
+    return (1 - i) * parameter.t_values + i * shrinkage_jitter(parameter, w, 1, ess)
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=systematic, shrink=True, p=1.):
+    def __init__(self, filter_, particles, threshold=0.9, continuous=False, resampling=systematic, shrink=True, p=1.):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -87,7 +96,7 @@ class NESS(SequentialAlgorithm):
         :type continuous: bool
         :param p: For controlling the variance of the jittering kernel. The greater the value, the higher the variance
         for `shrink=False`. When `shrink=True`, `p` controls the amount of shrinkage applied. The smaller the value the
-        more shrinkage is applied. Note that `p=1` is recommendended when using `continuous=False`.
+        more shrinkage is applied. Note that `p=1` is recommended when using `continuous=False`.
         """
 
         super().__init__(filter_)
@@ -97,6 +106,8 @@ class NESS(SequentialAlgorithm):
         self._w_rec = torch.zeros(particles)
         self._th = threshold
         self._resampler = resampling
+        self._ess = particles
+        self._p = p
 
         if isinstance(filter_, ParticleFilter):
             self._shape = particles, 1
@@ -106,19 +117,9 @@ class NESS(SequentialAlgorithm):
         # ====== Select proposal kernel ===== #
         # TODO: Need to figure out why kernels aren't working too good...
         if continuous:
-            if shrink:
-                self.kernel = lambda u, w: shrinkage_jitter(u, w, p=p)
-            else:
-                scale = 1 / math.sqrt(particles ** ((p + 2) / p))
-                self.kernel = lambda u, w: cont_jitter(u, scale)
+            self.kernel = lambda u, w, ess: shrinkage_jitter(u, w, p, ess, shrink=shrink)
         else:
-            bernoulli = Bernoulli(1 / self._w_rec.shape[0] ** (p / 2))
-
-            if isinstance(self._shape, tuple):
-                self.sampler = lambda: bernoulli.sample(self._shape)
-            else:
-                self.sampler = lambda: bernoulli.sample((self._shape, 1))[..., 0]
-
+            self._shape = particles, 1
             self.kernel = disc_jitter
 
     def initialize(self):
@@ -137,21 +138,25 @@ class NESS(SequentialAlgorithm):
 
     @enforce_tensor
     def update(self, y):
+        # ===== Jitter ===== #
+        if self.kernel is disc_jitter:
+            i = Bernoulli(1 / self._ess ** (self._p / 2)).sample(self._shape)
+
+            if not isinstance(self.filter, ParticleFilter):
+                i = i[..., 0]
+
+            self._filter.ssm.p_apply(lambda x: self.kernel(x, i, normalize(self._w_rec), self._ess), transformed=True)
+        else:
+            self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec), self._ess), transformed=True)
+
         # ===== Propagate filter ===== #
         self.filter.filter(y)
         self._w_rec += self._filter.s_ll[-1]
 
-        # ===== Jitter ===== #
-        if self.kernel is disc_jitter:
-            i = self.sampler()
-            self._filter.ssm.p_apply(lambda x: self.kernel(x, i, normalize(self._w_rec)), transformed=True)
-        else:
-            self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec)), transformed=True)
-
         # ===== Resample ===== #
-        ess = get_ess(self._w_rec)
+        self._ess = get_ess(self._w_rec)
 
-        if ess < self._th * self._w_rec.shape[0]:
+        if self._ess < self._th * self._w_rec.shape[0]:
             indices = self._resampler(self._w_rec)
             self._filter = self.filter.resample(indices, entire_history=False)
 
