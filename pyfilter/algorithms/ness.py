@@ -5,6 +5,7 @@ from ..timeseries.parameter import Parameter
 from torch.distributions import Bernoulli
 import torch
 from ..resampling import systematic
+from scipy.stats import normaltest
 
 
 def cont_jitter(params, scale):
@@ -40,11 +41,22 @@ def shrinkage_jitter(parameter, w, p, ess, shrink=True):
     """
     values = parameter.t_values
 
-    # ===== Calculate STD ===== #
-    sort, _ = values.sort(0)
-    std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+    # ===== Calculate mean ===== #
+    if values.dim() > w.dim():
+        w = w.unsqueeze_(-1)
 
-    var = std ** 2
+    mean = (w * values).sum(0)
+
+    # ===== Calculate STD ===== #
+    # TODO: Convert function to torch
+    if normaltest(values)[-1] < 0.05:
+        sort, _ = values.sort(0)
+        std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+
+        var = std ** 2
+    else:
+        var = (w * (values - mean) ** 2).sum(0)
+        std = var.sqrt()
 
     # ===== Calculate bandwidth ===== #
     bw = 1.59 * std * ess ** (-p / (p + 2))
@@ -54,11 +66,6 @@ def shrinkage_jitter(parameter, w, p, ess, shrink=True):
 
     # ===== Calculate shrinkage and shrink ===== #
     beta = ((var - bw ** 2) / var).sqrt()
-
-    if values.dim() > w.dim():
-        w = w.unsqueeze_(-1)
-
-    mean = (w * values).sum(0)
 
     return mean + beta * (values - mean) + bw * torch.empty(values.shape).normal_()
 
