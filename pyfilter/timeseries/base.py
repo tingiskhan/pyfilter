@@ -281,10 +281,13 @@ class BaseModel(object):
         :rtype: torch.Tensor
         """
 
-        shape = steps, self.ndim
+        if samples is None:
+            shape = steps, self.ndim
+        else:
+            shape = steps, *((samples,) if not isinstance(samples, (list, tuple)) else samples), self.ndim
 
-        if samples is not None:
-            shape += (*((samples,) if not isinstance(samples, (list, tuple)) else samples),)
+        if self.ndim < 2:
+            shape = shape[:-1]
 
         out = torch.zeros(shape)
         out[0] = self.i_sample(shape=samples)
@@ -292,7 +295,7 @@ class BaseModel(object):
         for i in range(1, steps):
             out[i] = self.propagate(out[i-1])
 
-        return out
+        return out if self.ndim > 1 else out.unsqueeze(-1)
 
     def p_apply(self, func, transformed=False):
         """
