@@ -1,4 +1,4 @@
-from .ness import NESS, enforce_tensor
+from .ness import NESS
 import torch
 from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter
