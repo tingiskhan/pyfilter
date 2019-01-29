@@ -146,17 +146,6 @@ class StateSpaceModel(object):
 
         return hidden, obs
 
-    def propagate_apf(self, x):
-        """
-        Propagates one step ahead using the mean of the hidden timeseries distribution - used in the APF.
-        :param x: Previous states
-        :type x: torch.Tensor
-        :return: The mean of the next sample
-        :rtype: torch.Tensor
-        """
-
-        return self.hidden.mean(x)
-
     def copy(self):
         """
         Returns a copy of the model.

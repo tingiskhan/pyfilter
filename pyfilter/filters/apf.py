@@ -10,11 +10,9 @@ class APF(ParticleFilter):
     """
     def _filter(self, y):
         # ===== Perform auxiliary sampling ===== #
-        # TODO: Proposal should propagate APF
-        t_x = self._model.propagate_apf(self._x_cur)
-        t_weights = self._model.weight(y, t_x)
+        pre_weights = self.proposal.pre_weight(y, self._x_cur)
 
-        resamp_w = t_weights + self._w_old
+        resamp_w = pre_weights + self._w_old
         normalized = normalize(self._w_old)
 
         # ===== Resample and propagate ===== #
@@ -26,10 +24,10 @@ class APF(ParticleFilter):
         self._x_cur = self._proposal.construct(y, resampled_x).draw()
         weights = self._proposal.weight(y, self._x_cur, resampled_x)
 
-        self._w_old = weights - choose(t_weights, resampled_indices)
+        self._w_old = weights - choose(pre_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
-        ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(t_weights)).sum(-1))
+        ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
         normw = normalize(self._w_old) if weights.dim() == self._x_cur.dim() else normalize(self._w_old).unsqueeze(-1)
 
         return (normw * self._x_cur).sum(self._sumaxis), ll

@@ -6,7 +6,7 @@ class Proposal(object):
         """
         Defines a proposal object for how to draw the particles.
         """
-        self._model = None
+        self._model = None      # type: StateSpaceModel
         self._kernel = None
 
     def set_model(self, model):
@@ -68,3 +68,16 @@ class Proposal(object):
         """
 
         return self
+
+    def pre_weight(self, y, x):
+        """
+        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the time-series model.
+        :param y: The observation
+        :type y: torch.Tensor|float
+        :param x: The old sample
+        :type x: torch.Tensor
+        :return: The weight
+        :rtype: torch.Tensor
+        """
+
+        return self._model.weight(y, self._model.hidden.mean(x))

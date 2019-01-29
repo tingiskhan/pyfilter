@@ -304,6 +304,28 @@ class ParticleFilter(BaseFilter):
         self._proposal = proposal.set_model(self._model)    # type: Proposal
 
     @property
+    def proposal(self):
+        """
+        Returns the proposal.
+        :rtype: Proposal
+        """
+
+        return self._proposal
+
+    @proposal.setter
+    def proposal(self, x):
+        """
+        Sets the proposal
+        :param x: The new proposal
+        :type x: Proposal
+        """
+
+        if not isinstance(x, Proposal):
+            raise ValueError('`x` must be {:s}!'.format(Proposal.__name__))
+
+        self._proposal = x
+
+    @property
     def particles(self):
         """
         Returns the particles
