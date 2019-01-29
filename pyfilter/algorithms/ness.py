@@ -1,29 +1,28 @@
-from .base import SequentialAlgorithm, enforce_tensor
+from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter
 from ..utils import get_ess, normalize
 from ..timeseries.parameter import Parameter
-from torch.distributions import Bernoulli
 import torch
 from ..resampling import systematic
 from scipy.stats import normaltest
+from math import sqrt
 
 
-def cont_jitter(params, scale):
+def jitter(values, scale):
     """
     Jitters the parameters.
-    :param params: The parameters of the model, inputs as (values, prior)
-    :type params: Distribution
+    :param values: The values
+    :type values: torch.Tensor
     :param scale: The scaling to use for the variance of the proposal
     :type scale: float
     :return: Proposed values
-    :rtype: np.ndarray
+    :rtype: torch.Tensor
     """
-    values = params.t_values
 
     return values + scale * torch.empty_like(values).normal_()
 
 
-def shrinkage_jitter(parameter, w, p, ess, shrink=True):
+def continuous_jitter(parameter, w, p, ess, shrink=True):
     """
     Jitters the parameters using the optimal shrinkage of ...
     :param parameter: The parameters of the model, inputs as (values, prior)
@@ -41,6 +40,53 @@ def shrinkage_jitter(parameter, w, p, ess, shrink=True):
     """
     values = parameter.t_values
 
+    if not shrink:
+        return jitter(values, 1 / sqrt(ess ** ((p + 2) / p)))
+
+    mean, beta, bw = shrink_(values, w, p, ess)
+
+    return jitter(mean + beta * (values - mean), bw)
+
+
+def disc_jitter(parameter, i, w, p, ess, shrink):
+    """
+    Jitters the parameters using discrete propagation.
+    :param parameter: The parameters of the model, inputs as (values, prior)
+    :type parameter: Parameter
+    :param i: The indices to jitter
+    :type i: torch.Tensor
+    :param w: The normalized weights
+    :type w: torch.Tensor
+    :param p: The p parameter
+    :type p: float
+    :param ess: The previous ESS
+    :type ess: float
+    :param shrink: Whether to shrink as well as adjusting variance
+    :type shrink: bool
+    :return: Proposed values
+    :rtype: torch.Tensor
+    """
+    # TODO: This may be improved
+    if i.sum() == 0:
+        return parameter.t_values
+
+    return (1 - i) * parameter.t_values + i * continuous_jitter(parameter, w, p, ess, shrink=shrink)
+
+
+def shrink_(values, w, p, ess):
+    """
+    Shrinks the parameters towards their mean.
+    :param values: The values
+    :type values: torch.Tensor
+    :param w: The normalized weights
+    :type w: torch.Tensor
+    :param p: The p parameter
+    :type p: float
+    :param ess: The previous ESS
+    :type ess: float
+    :return: The mean, shrinkage factor and bandwidth
+    :rtype: torch.Tensor, torch.Tensor
+    """
     # ===== Calculate mean ===== #
     if values.dim() > w.dim():
         w = w.unsqueeze_(-1)
@@ -61,34 +107,10 @@ def shrinkage_jitter(parameter, w, p, ess, shrink=True):
     # ===== Calculate bandwidth ===== #
     bw = 1.59 * std * ess ** (-p / (p + 2))
 
-    if not shrink:
-        return values + bw * torch.empty(values.shape).normal_()
-
     # ===== Calculate shrinkage and shrink ===== #
     beta = ((var - bw ** 2) / var).sqrt()
 
-    return mean + beta * (values - mean) + bw * torch.empty(values.shape).normal_()
-
-
-def disc_jitter(parameter, i, w, ess):
-    """
-    Jitters the parameters using discrete propagation.
-    :param parameter: The parameters of the model, inputs as (values, prior)
-    :type parameter: Parameter
-    :param i: The indices to jitter
-    :type i: torch.Tensor
-    :param w: The normalized weights
-    :type w: torch.Tensor
-    :param ess: The previous ESS
-    :type ess: float
-    :return: Proposed values
-    :rtype: torch.Tensor
-    """
-    # TODO: This may be improved
-    if i.sum() == 0:
-        return parameter.t_values
-
-    return (1 - i) * parameter.t_values + i * shrinkage_jitter(parameter, w, 1, ess)
+    return mean, beta, bw
 
 
 class NESS(SequentialAlgorithm):
@@ -112,9 +134,11 @@ class NESS(SequentialAlgorithm):
 
         self._w_rec = torch.zeros(particles)
         self._th = threshold
+
         self._resampler = resampling
         self._ess = particles
         self._p = p
+        self._shrink = shrink
 
         if isinstance(filter_, ParticleFilter):
             self._shape = particles, 1
@@ -124,7 +148,7 @@ class NESS(SequentialAlgorithm):
         # ====== Select proposal kernel ===== #
         # TODO: Need to figure out why kernels aren't working too good...
         if continuous:
-            self.kernel = lambda u, w, ess: shrinkage_jitter(u, w, p, ess, shrink=shrink)
+            self.kernel = continuous_jitter
         else:
             self.kernel = disc_jitter
 
@@ -146,9 +170,11 @@ class NESS(SequentialAlgorithm):
         # ===== Jitter ===== #
         if self.kernel is disc_jitter:
             i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
-            self._filter.ssm.p_apply(lambda x: self.kernel(x, i, normalize(self._w_rec), self._ess), transformed=True)
+            f = lambda x: self.kernel(x, i, normalize(self._w_rec), self._ess, self._shrink)
         else:
-            self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec), self._ess), transformed=True)
+            f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, self._ess, self._shrink)
+
+        self._filter.ssm.p_apply(f, transformed=True)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
