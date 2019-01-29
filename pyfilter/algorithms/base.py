@@ -67,6 +67,17 @@ class SequentialAlgorithm(BaseAlgorithm):
     Algorithm for online inference.
     """
 
+    def _update(self, y):
+        """
+        The function to override by the inherited algorithm.
+        :param y: The observation
+        :type y: torch.Tensor
+        :return: Self
+        :rtype: SequentialAlgorithm
+        """
+
+        raise NotImplementedError()
+
     @enforce_tensor
     def update(self, y):
         """
@@ -77,7 +88,7 @@ class SequentialAlgorithm(BaseAlgorithm):
         :rtype: SequentialAlgorithm
         """
 
-        raise NotImplementedError()
+        return self._update(y)
 
     def fit(self, y):
         self._iterator = tqdm(y, desc=str(self))

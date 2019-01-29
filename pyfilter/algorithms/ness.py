@@ -126,7 +126,6 @@ class NESS(SequentialAlgorithm):
         if continuous:
             self.kernel = lambda u, w, ess: shrinkage_jitter(u, w, p, ess, shrink=shrink)
         else:
-            self._shape = particles, 1
             self.kernel = disc_jitter
 
     def initialize(self):
@@ -143,15 +142,10 @@ class NESS(SequentialAlgorithm):
 
         return self
 
-    @enforce_tensor
-    def update(self, y):
+    def _update(self, y):
         # ===== Jitter ===== #
         if self.kernel is disc_jitter:
-            i = Bernoulli(1 / self._ess ** (self._p / 2)).sample(self._shape)
-
-            if not isinstance(self.filter, ParticleFilter):
-                i = i[..., 0]
-
+            i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
             self._filter.ssm.p_apply(lambda x: self.kernel(x, i, normalize(self._w_rec), self._ess), transformed=True)
         else:
             self._filter.ssm.p_apply(lambda x: self.kernel(x, normalize(self._w_rec), self._ess), transformed=True)

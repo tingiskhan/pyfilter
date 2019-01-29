@@ -84,8 +84,7 @@ class SMC2(NESS):
 
         self._th = threshold
 
-    @enforce_tensor
-    def update(self, y):
+    def _update(self, y):
         # ===== Perform a filtering move ===== #
         self._y += (y,)
         self.filter.filter(y)
