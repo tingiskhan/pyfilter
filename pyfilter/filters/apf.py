@@ -19,10 +19,10 @@ class APF(ParticleFilter):
         resampled_indices = self._resampler(resamp_w)
         resampled_x = choose(self._x_cur, resampled_indices)
 
-        self._proposal = self._proposal.resample(resampled_indices)
+        self.proposal = self.proposal.resample(resampled_indices)
 
-        self._x_cur = self._proposal.construct(y, resampled_x).draw()
-        weights = self._proposal.weight(y, self._x_cur, resampled_x)
+        self._x_cur = self.proposal.construct(y, resampled_x).draw()
+        weights = self.proposal.weight(y, self._x_cur, resampled_x)
 
         self._w_old = weights - choose(pre_weights, resampled_indices)
 
