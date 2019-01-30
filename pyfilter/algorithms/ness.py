@@ -1,6 +1,6 @@
 from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter
-from ..utils import get_ess, normalize
+from ..utils import get_ess, normalize, loglikelihood
 from ..timeseries.parameter import Parameter
 import torch
 from ..resampling import systematic
@@ -43,9 +43,9 @@ def continuous_jitter(parameter, w, p, ess, shrink=True):
     if not shrink:
         return jitter(values, 1 / sqrt(ess ** ((p + 2) / p)))
 
-    mean, beta, bw = shrink_(values, w, p, ess)
+    mean, bw = shrink_(values, w, p, ess)
 
-    return jitter(mean + beta * (values - mean), bw)
+    return jitter(mean, bw)
 
 
 def disc_jitter(parameter, i, w, p, ess, shrink):
@@ -84,7 +84,7 @@ def shrink_(values, w, p, ess):
     :type p: float
     :param ess: The previous ESS
     :type ess: float
-    :return: The mean, shrinkage factor and bandwidth
+    :return: The mean of the shrunk distribution and bandwidth
     :rtype: torch.Tensor, torch.Tensor
     """
     # ===== Calculate mean ===== #
@@ -110,7 +110,7 @@ def shrink_(values, w, p, ess):
     # ===== Calculate shrinkage and shrink ===== #
     beta = ((var - bw ** 2) / var).sqrt()
 
-    return mean, beta, bw
+    return mean + beta * (values - mean), bw
 
 
 class NESS(SequentialAlgorithm):
@@ -174,18 +174,18 @@ class NESS(SequentialAlgorithm):
         else:
             f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, self._ess, self._shrink)
 
-        self._filter.ssm.p_apply(f, transformed=True)
+        self.filter.ssm.p_apply(f, transformed=True)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
-        self._w_rec += self._filter.s_ll[-1]
+        self._w_rec += self.filter.s_ll[-1]
 
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
         if self._ess < self._th * self._w_rec.shape[0]:
             indices = self._resampler(self._w_rec)
-            self._filter = self.filter.resample(indices, entire_history=False)
+            self.filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec *= 0.
 
