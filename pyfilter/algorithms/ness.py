@@ -167,19 +167,6 @@ class NESS(SequentialAlgorithm):
         return self
 
     def _update(self, y):
-        # ===== Jitter ===== #
-        if self.kernel is disc_jitter:
-            i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
-            f = lambda x: self.kernel(x, i, normalize(self._w_rec), self._ess, self._shrink)
-        else:
-            f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, self._ess, self._shrink)
-
-        self.filter.ssm.p_apply(f, transformed=True)
-
-        # ===== Propagate filter ===== #
-        self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
-
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
@@ -188,5 +175,23 @@ class NESS(SequentialAlgorithm):
             self.filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec *= 0.
+
+        # ===== Jitter ===== #
+        glob_ess = self._ess
+        if isinstance(self.filter, ParticleFilter):
+            # TODO: Not too sure about this, but think it's correct
+            glob_ess = get_ess((self._w_rec[:, None] + self.filter._w_old).view(-1))
+
+        if self.kernel is disc_jitter:
+            i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
+            f = lambda x: self.kernel(x, i, normalize(self._w_rec), glob_ess, self._shrink)
+        else:
+            f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, glob_ess, self._shrink)
+
+        self.filter.ssm.p_apply(f, transformed=True)
+
+        # ===== Propagate filter ===== #
+        self.filter.filter(y)
+        self._w_rec += self.filter.s_ll[-1]
 
         return self
