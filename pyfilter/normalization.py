@@ -34,7 +34,7 @@ def _matrix(w):
 
     reweighed = torch.exp(w - w.max(-1)[0][..., None])
     normalized = reweighed / reweighed.sum(-1)[..., None]
-    normalized[normalized.sum(1) == 0.] = 1 / normalized.shape[-1]
+    normalized[torch.isnan(normalized.sum(1))] = 1 / normalized.shape[-1]
 
     return normalized
 
