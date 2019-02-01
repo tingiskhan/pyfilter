@@ -3,6 +3,7 @@ from .ness import NESS
 from .smc2 import SMC2
 from tqdm import tqdm
 from ..resampling import systematic
+from ..utils import get_ess
 
 
 class NESSMC2(SequentialAlgorithm):
@@ -42,6 +43,10 @@ class NESSMC2(SequentialAlgorithm):
 
         if not self._switched:
             self._switched = True
+
+            if get_ess(self._smc2._w_rec) < self._ness._th * self._smc2._w_rec.shape[0]:
+                self._smc2._rejuvenate()
+
             self._ness._w_rec = self._smc2._w_rec
             self.filter = self._ness.filter = self._smc2.filter
 
