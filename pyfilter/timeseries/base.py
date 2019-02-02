@@ -228,14 +228,9 @@ class AffineModel(object):
         """
         loc, scale = self.mean(x), self.scale(x)
 
-        rescaled = (y - loc) / scale
+        dist = TransformedDistribution(self.noise, AffineTransform(loc, scale))
 
-        if self.ndim > 1:
-            log_scale = scale.abs().log().sum(-1)
-        else:
-            log_scale = scale.log()
-
-        return self.noise.log_prob(rescaled) - log_scale
+        return dist.log_prob(y)
 
     def i_sample(self, shape=None, as_dist=False):
         """
@@ -250,7 +245,7 @@ class AffineModel(object):
 
         loc, scale = self.i_mean(), self.i_scale()
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([1])
-        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
+        dist = TransformedDistribution(self.noise0.expand(shape), self._transform(loc, scale))
 
         if as_dist:
             return dist
