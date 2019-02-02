@@ -7,11 +7,8 @@ class Bootstrap(Proposal):
     """
 
     def construct(self, y, x):
-        self._kernel = lambda: self._model.hidden.propagate(x)
+        self._kernel = self._model.hidden.propagate(x, as_dist=True)
         return self
-
-    def draw(self):
-        return self._kernel()
 
     def weight(self, y, xn, xo):
         return self._model.weight(y, xn)
