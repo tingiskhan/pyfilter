@@ -184,7 +184,7 @@ class NESS(SequentialAlgorithm):
 
         if self.kernel is disc_jitter:
             i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
-            f = lambda x: self.kernel(x, i, normalize(self._w_rec), glob_ess, self._shrink)
+            f = lambda x: self.kernel(x, i, normalize(self._w_rec), self._p, glob_ess, self._shrink)
         else:
             f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, glob_ess, self._shrink)
 
