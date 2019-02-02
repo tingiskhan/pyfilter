@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import BaseModel, EulerMaruyma
+from pyfilter.timeseries import AffineModel, EulerMaruyma
 import scipy.stats as stats
 import numpy as np
 import torch
@@ -25,7 +25,7 @@ def g0(alpha, sigma):
 class Tests(unittest.TestCase):
     norm = Normal(0., 1.)
 
-    linear = BaseModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
 
     def test_TimeseriesCreate_1D(self):
 
@@ -39,7 +39,7 @@ class Tests(unittest.TestCase):
     def test_Timeseries3DState2DParam(self):
         alpha = 0.5 * torch.ones((500, 1))
         x = torch.randn(size=(500, 200))
-        linear = BaseModel((f0, g0), (f, g), (alpha, 1.), (Normal(0., 1.), Normal(0., 1.)))
+        linear = AffineModel((f0, g0), (f, g), (alpha, 1.), (Normal(0., 1.), Normal(0., 1.)))
 
         assert np.allclose(linear.mean(x), f(x, alpha, 1.))
 

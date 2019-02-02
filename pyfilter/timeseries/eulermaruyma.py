@@ -1,9 +1,9 @@
-from .base import BaseModel
+from .base import AffineModel
 import torch
 from torch.distributions import Normal, Independent
 
 
-class EulerMaruyma(BaseModel):
+class EulerMaruyma(AffineModel):
     def __init__(self, initial, funcs, theta, dt=1., ndim=1):
         """
         Implements the Euler-Maruyama scheme.

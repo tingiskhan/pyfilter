@@ -1,4 +1,4 @@
-from .timeseries import StateSpaceModel, BaseModel
+from .timeseries import StateSpaceModel, AffineModel
 import numpy as np
 import torch
 from math import sqrt
@@ -14,7 +14,7 @@ def _propagate_sps(spx, spn, process):
     :param spn: The noise Sigma points
     :type spn: torch.Tensor
     :param process: The process
-    :type process: BaseModel
+    :type process: AffineModel
     :return: Translated and scaled sigma points
     :rtype: torch.Tensor
     """

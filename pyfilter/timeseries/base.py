@@ -1,4 +1,4 @@
-from torch.distributions import Distribution
+from torch.distributions import Distribution, AffineTransform, TransformedDistribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter
@@ -57,7 +57,7 @@ def init_caster(func):
     return wrapper
 
 
-class BaseModel(object):
+class AffineModel(object):
     def __init__(self, initial, funcs, theta, noise):
         """
         This object is to serve as a base class for the timeseries models.
@@ -74,6 +74,8 @@ class BaseModel(object):
         self.f0, self.g0 = initial
         self.f, self.g = funcs
         self._theta = tuple(Parameter(th) for th in theta)
+
+        self._transform = AffineTransform
 
         cases = (
             all(isinstance(n, Distribution) for n in noise),
@@ -235,26 +237,33 @@ class BaseModel(object):
 
         return self.noise.log_prob(rescaled) - log_scale
 
-    def i_sample(self, shape=None):
+    def i_sample(self, shape=None, as_dist=False):
         """
         Samples from the initial distribution.
         :param shape: The number of samples
         :type shape: int|tuple[int]
+        :param as_dist: Whether to return the new value as a distribution
+        :type as_dist: bool
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
 
         loc, scale = self.i_mean(), self.i_scale()
-        rndshape = ((shape,) if isinstance(shape, int) else shape) or torch.Size()
-        eps = self.noise0.sample(rndshape)
+        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([1])
+        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
 
-        return loc + scale * eps
+        if as_dist:
+            return dist
 
-    def propagate(self, x):
+        return dist.sample()
+
+    def propagate(self, x, as_dist=False):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
         :type x: torch.Tensor|float
+        :param as_dist: Whether to return the new value as a distribution
+        :type as_dist: bool
         :return: Samples from the model
         :rtype: torch.Tensor|float
         """
@@ -266,9 +275,12 @@ class BaseModel(object):
         else:
             shape = _get_shape(x, self.ndim)
 
-        eps = self.noise.sample(shape)
+        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
 
-        return loc + scale * eps
+        if as_dist:
+            return dist
+
+        return dist.sample()
 
     def sample(self, steps, samples=None):
         """
@@ -286,16 +298,13 @@ class BaseModel(object):
         else:
             shape = steps, *((samples,) if not isinstance(samples, (list, tuple)) else samples), self.ndim
 
-        if self.ndim < 2:
-            shape = shape[:-1]
-
         out = torch.zeros(shape)
-        out[0] = self.i_sample(shape=samples)
+        out[0] = self.i_sample(shape=shape[1:])
 
         for i in range(1, steps):
             out[i] = self.propagate(out[i-1])
 
-        return out if self.ndim > 1 else out.unsqueeze(-1)
+        return out
 
     def p_apply(self, func, transformed=False):
         """
@@ -305,7 +314,7 @@ class BaseModel(object):
         :param transformed: Whether or not results from applied function are transformed variables
         :type transformed: bool
         :return: Instance of self
-        :rtype: BaseModel
+        :rtype: AffineModel
         """
 
         for p in self.theta_dists:
@@ -356,7 +365,7 @@ class BaseModel(object):
         return out
 
 
-class Observable(BaseModel):
+class Observable(AffineModel):
     def __init__(self, funcs, theta, noise):
         """
         Object for defining the observable part of an HMM.
