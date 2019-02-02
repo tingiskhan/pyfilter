@@ -6,7 +6,7 @@ from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import AffineModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
-from pyfilter.proposals import Unscented, Linearized
+from pyfilter.proposals import Unscented
 
 
 def f(x, alpha, sigma):
@@ -147,15 +147,15 @@ class Tests(unittest.TestCase):
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
-        for trumod, model in [(self.model, oned)]: #, (self.mvnmodel, twod)]:
+        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
             x, y = trumod.sample(550)
 
             algs = [
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200), 'p': 1, 'continuous': False}),
-                # (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
+                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200), 'p': 1, 'continuous': False}),
+                (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
             ]
 
             for alg, props in algs:
@@ -165,10 +165,10 @@ class Tests(unittest.TestCase):
 
                 parameter = alg.filter.ssm.hidden.theta[-1]
 
-                # kde = parameter.get_kde(transformed=False)
-                #
-                # tru_val = trumod.hidden.theta_vals[-1]
-                # densval = kde.score_samples(tru_val.numpy().reshape(-1, 1))
-                # priorval = parameter.dist.log_prob(tru_val)
-                #
-                # assert bool(densval > priorval.numpy())
+                kde = parameter.get_kde(transformed=False)
+
+                tru_val = trumod.hidden.theta_vals[-1]
+                densval = kde.score_samples(tru_val.numpy().reshape(-1, 1))
+                priorval = parameter.dist.log_prob(tru_val)
+
+                assert bool(densval > priorval.numpy())
