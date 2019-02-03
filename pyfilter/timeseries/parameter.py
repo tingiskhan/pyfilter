@@ -1,9 +1,8 @@
 from torch import Tensor, distributions as dist, Size
-from sklearn.neighbors import KernelDensity
-from sklearn.model_selection import GridSearchCV
 import numpy as np
 import torch
 from functools import lru_cache
+from scipy.stats import gaussian_kde
 
 
 class Parameter(object):
@@ -130,19 +129,15 @@ class Parameter(object):
         return self._trainable
 
     # TODO: This is very slow
-    def get_kde(self, cv=4, weights=None, kernel='gaussian', transformed=True):
+    def get_kde(self, weights=None, transformed=True):
         """
         Constructs KDE of the discrete representation on the transformed space.
-        :param cv: The number of cross-validations to use
-        :type cv: int
         :param weights: The weights to use
         :type weights: torch.Tensor
-        :param kernel: Which kernel to se
-        :type kernel: str
         :param transformed: Whether to perform on transformed or actual values
         :type transformed: bool
         :return: KDE object
-        :rtype: KernelDensity
+        :rtype: gaussian_kde
         """
         if transformed:
             array = self.t_values.numpy()
@@ -151,13 +146,10 @@ class Parameter(object):
 
         weights = weights.numpy() if weights is not None else weights
 
-        if array.ndim < 2:
-            array = array[..., None]
+        if array.ndim > 1:
+            array = array[..., 0]
 
-        grid = GridSearchCV(KernelDensity(kernel=kernel), {'bandwidth': np.linspace(1e-6, 1, 50)}, cv=cv)
-        grid = grid.fit(array, sample_weight=weights)
-
-        return KernelDensity(kernel=kernel, **grid.best_params_).fit(array, sample_weight=weights)
+        return gaussian_kde(array, weights=weights)
 
     def get_plottable(self, num=100, **kwargs):
         """
@@ -175,12 +167,12 @@ class Parameter(object):
         low = self.t_values.min()
         high = self.t_values.max()
 
-        while kde.score_samples(low.numpy().reshape(-1, 1)) > np.log(1e-3):
+        while kde.logpdf(low.numpy()) > np.log(1e-3):
             low -= 1e-2
 
-        while kde.score_samples(high.numpy().reshape(-1, 1)) > np.log(1e-3):
+        while kde.logpdf(high.numpy()) > np.log(1e-3):
             high += 1e-2
 
-        xrange_ = torch.linspace(low, high, num).reshape(-1, 1)
+        xrange_ = torch.linspace(low, high, num)
 
-        return self.bijection(xrange_).numpy(), np.exp(kde.score_samples(xrange_.numpy()))
+        return self.bijection(xrange_).numpy(), np.exp(kde.logpdf(xrange_.numpy()))
