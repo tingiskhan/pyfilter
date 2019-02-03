@@ -128,7 +128,6 @@ class Parameter(object):
 
         return self._trainable
 
-    # TODO: This is very slow
     def get_kde(self, weights=None, transformed=True):
         """
         Constructs KDE of the discrete representation on the transformed space.
