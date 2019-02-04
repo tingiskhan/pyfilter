@@ -161,15 +161,14 @@ class Parameter(object):
         kde = self.get_kde(transformed=True, **kwargs)
 
         # ===== Gets the range to plot ===== #
-        # TODO: This would optimally be done using the inverse of the CDF. However, scikit-learn does not have that and
-        # scipy 1.2.0 is not currently on anaconda on it seems
-        low = self.t_values.min()
-        high = self.t_values.max()
+        vals = self.t_values.cpu().numpy()
+        low = vals.min()
+        high = vals.max()
 
-        while kde.logpdf(low.numpy()) > np.log(1e-3):
+        while kde.logpdf(low) > np.log(1e-3):
             low -= 1e-2
 
-        while kde.logpdf(high.numpy()) > np.log(1e-3):
+        while kde.logpdf(high) > np.log(1e-3):
             high += 1e-2
 
         xrange_ = torch.linspace(low, high, num)
