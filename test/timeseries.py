@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineModel, EulerMaruyma
+from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck
 import scipy.stats as stats
 import numpy as np
 import torch
@@ -88,5 +88,12 @@ class Tests(unittest.TestCase):
         samples = mod.sample(30)
 
         assert samples.shape == (30, 1)
+
+    def test_OrnsteinUhlenbeck(self):
+        mod = OrnsteinUhlenbeck(0.05, 1, 0.15)
+
+        x = mod.sample(300)
+
+        assert x.shape == (300, 1)
 
 
