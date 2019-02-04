@@ -139,9 +139,9 @@ class Parameter(object):
         :rtype: gaussian_kde
         """
         if transformed:
-            array = self.t_values.numpy()
+            array = self.t_values.cpu().numpy()
         else:
-            array = self.values.numpy()
+            array = self.values.cpu().numpy()
 
         weights = weights.numpy() if weights is not None else weights
 
