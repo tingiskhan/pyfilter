@@ -143,7 +143,7 @@ class Parameter(object):
         else:
             array = self.values.cpu().numpy()
 
-        weights = weights.numpy() if weights is not None else weights
+        weights = weights.cpu().numpy() if weights is not None else weights
 
         if array.ndim > 1:
             array = array[..., 0]
