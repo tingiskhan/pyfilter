@@ -1,5 +1,5 @@
 from .base import SequentialAlgorithm
-from ..filters.base import ParticleFilter
+from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess, normalize, loglikelihood
 from ..timeseries.parameter import Parameter
 import torch
@@ -127,6 +127,8 @@ class NESS(SequentialAlgorithm):
         for `shrink=False`. When `shrink=True`, `p` controls the amount of shrinkage applied. The smaller the value the
         more shrinkage is applied. Note that `p=1` is recommended when using `continuous=False`.
         """
+
+        cudawarning(resampling)
 
         super().__init__(filter_)
 

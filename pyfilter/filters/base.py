@@ -270,6 +270,18 @@ def _construct_empty(shape):
     return temp * torch.ones(shape, dtype=temp.dtype)
 
 
+def cudawarning(resampling):
+    """
+    Raises an error if you're using CUDA and have `systematic` enabled.
+    :return: Nothing
+    :rtype: None
+    """
+
+    if 'cuda' == torch.tensor(1.).device.type and resampling is systematic:
+        msg = '`systematic` relies on `numpy`, you must use `multinomial` instead as CUDA is enabled.'
+        raise ValueError(msg)
+
+
 class ParticleFilter(BaseFilter):
     def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9):
         """
@@ -283,6 +295,8 @@ class ParticleFilter(BaseFilter):
         :param ess: At which level to resample
         :type ess: float
         """
+
+        cudawarning(resampling)
 
         super().__init__(model)
 
