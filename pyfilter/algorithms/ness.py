@@ -1,11 +1,38 @@
 from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter, cudawarning
-from ..utils import get_ess, normalize, loglikelihood
+from ..utils import get_ess, normalize
 from ..timeseries.parameter import Parameter
 import torch
 from ..resampling import systematic
-from scipy.stats import normaltest
+from scipy.stats import chi2
 from math import sqrt
+
+
+def normal_test(x, alpha=0.05):
+    """
+    Implements a basic Jarque-Bera test for normality.
+    :param x: The data
+    :type x: torch.Tensor
+    :param alpha: The level of confidence
+    :type alpha: float
+    :return: Whether a normal distribution or not
+    :rtype: bool
+    """
+    mean = x.mean()
+    var = ((x - mean) ** 2).mean()
+
+    # ===== Skew ===== #
+    skew = ((x - mean) ** 3).mean() / var ** 1.5
+
+    # ===== Kurtosis ===== #
+    kurt = ((x - mean) ** 4).mean() / var ** 2
+
+    jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
+
+    if chi2(2).ppf(1 - alpha) < jb:
+        return False
+
+    return True
 
 
 def jitter(values, scale):
@@ -95,7 +122,7 @@ def shrink_(values, w, p, ess):
 
     # ===== Calculate STD ===== #
     # TODO: Convert function to torch
-    if normaltest(values)[-1] < 0.05:
+    if not normal_test(values):
         sort, _ = values.sort(0)
         std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
 
