@@ -173,4 +173,4 @@ class Parameter(object):
 
         xrange_ = torch.linspace(low, high, num)
 
-        return self.bijection(xrange_).numpy(), np.exp(kde.logpdf(xrange_.numpy()))
+        return self.bijection(xrange_).cpu().numpy(), np.exp(kde.logpdf(xrange_.cpu().numpy()))
