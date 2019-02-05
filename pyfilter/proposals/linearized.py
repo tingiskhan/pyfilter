@@ -176,6 +176,7 @@ class ModeFinding(Linearized):
                 logl.backward(torch.ones_like(logl))
 
                 grad = xo.grad
+                xo.requires_grad = False
 
             grads += (grad,)
 
