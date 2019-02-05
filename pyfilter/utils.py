@@ -121,7 +121,7 @@ def concater(x):
     if not isinstance(x, tuple):
         return x
 
-    return torch.cat(tuple(tx.unsqueeze(-1) for tx in torch.broadcast_tensors(*x)), dim=-1)
+    return torch.stack(torch.broadcast_tensors(*x), dim=-1)
 
 
 def construct_diag(x):
