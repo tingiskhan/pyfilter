@@ -121,7 +121,6 @@ def shrink_(values, w, p, ess):
     mean = (w * values).sum(0)
 
     # ===== Calculate STD ===== #
-    # TODO: Convert function to torch
     if not normal_test(values):
         sort, _ = values.sort(0)
         std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
