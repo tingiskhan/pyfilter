@@ -116,6 +116,7 @@ class Linearized(Proposal):
             logl.backward(torch.ones_like(logl))
 
             grad = xo.grad
+            xo.requires_grad = False
 
         # ===== Get some necessary stuff ===== #
         ax = self._model.observable.mean(xo)
