@@ -4,6 +4,7 @@ from .smc2 import SMC2
 from tqdm import tqdm
 from ..resampling import systematic
 from ..utils import get_ess
+import torch
 
 
 class NESSMC2(SequentialAlgorithm):
@@ -24,6 +25,10 @@ class NESSMC2(SequentialAlgorithm):
         # ===== Set some key-worded arguments ===== #
         self._smc2 = SMC2(self.filter, particles, resampling=resampling, threshold=smc2_threshold)
         self._ness = NESS(self._smc2.filter, particles, resampling=resampling, **nesskwargs)
+
+    @property
+    def logged_ess(self):
+        return torch.stack(self._smc2._logged_ess + self._ness._logged_ess, dim=0)
 
     def initialize(self):
         self._smc2.initialize()
