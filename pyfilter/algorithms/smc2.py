@@ -92,6 +92,7 @@ class SMC2(NESS):
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
+        self._logged_ess += (ess,)
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._th * self._w_rec.shape[0]:

@@ -161,13 +161,18 @@ class NESS(SequentialAlgorithm):
 
         self._filter.set_nparallel(particles)
 
+        # ===== Weights ===== #
         self._w_rec = torch.zeros(particles)
-        self._th = threshold
 
+        # ===== Algorithm specific ===== #
+        self._th = threshold
         self._resampler = resampling
-        self._ess = particles
         self._p = p
         self._shrink = shrink
+
+        # ===== ESS related ===== #
+        self._ess = particles
+        self._logged_ess = tuple()
 
         if isinstance(filter_, ParticleFilter):
             self._shape = particles, 1
@@ -195,6 +200,15 @@ class NESS(SequentialAlgorithm):
 
         return self
 
+    @property
+    def logged_ess(self):
+        """
+        Returns the logged ESS.
+        :rtype: torch.Tensor
+        """
+
+        return torch.tensor(self._logged_ess)
+
     def _update(self, y):
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
@@ -204,6 +218,9 @@ class NESS(SequentialAlgorithm):
             self.filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec *= 0.
+
+        # ===== Log ESS ===== #
+        self._logged_ess += (self._ess,)
 
         # ===== Jitter ===== #
         glob_ess = self._ess
