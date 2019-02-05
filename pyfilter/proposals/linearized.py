@@ -86,7 +86,7 @@ class Linearized(Proposal):
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
         :param order: The order of accuracy to use for gradient estimation
-        :type order: int
+        :type order: int|None
         :param h: The discretization step
         :type h: float
         """
