@@ -27,6 +27,7 @@ def normal_test(x, alpha=0.05):
     # ===== Kurtosis ===== #
     kurt = ((x - mean) ** 4).mean() / var ** 2
 
+    # ===== Statistic ===== #
     jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
 
     if chi2(2).ppf(1 - alpha) < jb:
