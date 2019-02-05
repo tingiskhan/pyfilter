@@ -38,6 +38,28 @@ class BaseFilter(object):
         self.s_mx = tuple()
 
     @property
+    def s_loglikelihood(self):
+        """
+        Returns the saved loglikelihood.
+        :rtype: torch.Tensor
+        """
+
+        return torch.stack(self.s_ll, dim=0)
+
+    @s_loglikelihood.setter
+    def s_loglikelihood(self, x):
+        """
+        Sets the loglikelihood.
+        :param x: The new loglikelihood
+        :type x: torch.Tensor
+        """
+
+        if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
+
+        self.s_ll = tuple(x)
+
+    @property
     def loglikelihood(self):
         """
         Returns the total loglikelihood
@@ -132,13 +154,27 @@ class BaseFilter(object):
 
         return copy.deepcopy(self)
 
+    @property
     def filtermeans(self):
         """
         Calculates the filter means and returns a timeseries.
         :return:
         """
 
-        return self.s_mx
+        return torch.stack(self.s_mx, dim=0)
+
+    @filtermeans.setter
+    def filtermeans(self, x):
+        """
+        Sets the filter means.
+        :param x: The new filter means
+        :type x: torch.Tensor
+        """
+
+        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
+
+        self.s_mx = tuple(x)
 
     def predict(self, steps):
         """
@@ -160,14 +196,8 @@ class BaseFilter(object):
         :rtype: BaseFilter
         """
         if entire_history:
-            length = len(self.s_mx)
-
-            ll_shape = (length, -1)
-            x_shape = (length, -1, self._model.hidden_ndim) if self._model.hidden_ndim > 1 else ll_shape
-
-            for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
-                tmp = torch.cat(obj).reshape(*shape)
-                setattr(self, name, tuple(tmp[:, inds]))
+            for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
+                setattr(self, name, obj[:, inds])
 
         # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: choose(u.values, inds))
@@ -222,18 +252,10 @@ class BaseFilter(object):
 
         self._model.exchange(inds, filter_.ssm)
 
-        length = len(self.s_mx)
+        for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
+            obj[:, inds] = getattr(filter_, name)[:, inds]
 
-        ll_shape = (length, -1)
-        x_shape = (length, -1, self._model.hidden_ndim) if self._model.hidden_ndim > 1 else ll_shape
-
-        for obj, name, shape in [(self.s_mx, 's_mx', x_shape), (self.s_ll, 's_ll', ll_shape)]:
-            tmp = torch.cat(obj).reshape(*shape)
-            new_tmp = torch.cat(getattr(filter_, name)).reshape(*shape)
-
-            tmp[:, inds] = new_tmp[:, inds]
-
-            setattr(self, name, tuple(tmp))
+            setattr(self, name, obj)
 
         self._exchange(filter_, inds)
 
