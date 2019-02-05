@@ -11,11 +11,11 @@ def _define_pdf(params, weights):
     """
     Helper function for creating the PDF.
     :param params: The parameters to use for defining the distribution
-    :type params: tuple of tuple of Distribution
+    :type params: tuple[Distribution]
     :param weights: The weights to use
-    :type weights: np.ndarray
-    :return: A truncated normal distribution
-    :rtype: stats.truncnorm
+    :type weights: torch.Tensor
+    :return: A multivariate normal distribution
+    :rtype: MultivariateNormal
     """
 
     asarray = torch.stack([p.t_values for p in params], dim=-1)
@@ -34,11 +34,11 @@ def _mcmc_move(params, dist):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: tuple of Distribution
+    :type params: tuple[Distribution]
     :param dist: The distribution to use for sampling
-    :type dist: stats.multivariate_normal
-    :return: Samples from a truncated normal distribution
-    :rtype: np.ndarray
+    :type dist: MultivariateNormal
+    :return: Samples from a multivariate normal distribution
+    :rtype: torch.Tensor
     """
     shape = next(p.t_values.shape for p in params)
     if len(shape) > 1:
@@ -56,9 +56,9 @@ def _eval_kernel(params, dist, n_params):
     """
     Evaluates the kernel used for performing the MCMC move.
     :param params: The current parameters
-    :type params: tuple of Distribution
+    :type params: tuple[Distribution]
     :param dist: The distribution to use for evaluating the prior
-    :type dist: Distribution
+    :type dist: MultivariateNormal
     :param n_params: The new parameters to evaluate against
     :type n_params: tuple of Distribution
     :return: The log difference in priors
