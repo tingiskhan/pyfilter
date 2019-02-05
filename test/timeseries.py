@@ -29,12 +29,12 @@ class Tests(unittest.TestCase):
 
     def test_TimeseriesCreate_1D(self):
 
-        assert self.linear.mean(1.) == 1. and self.linear.scale(1.) == 1.
+        assert self.linear.mean(torch.tensor(1.)) == 1. and self.linear.scale(torch.tensor(1.)) == 1.
 
     def test_Timeseries2DState(self):
         x = np.random.normal(size=500)
 
-        assert np.allclose(self.linear.mean(x), f(x, 1, 1))
+        assert np.allclose(self.linear.mean(torch.tensor(x)), f(x, 1, 1))
 
     def test_Timeseries3DState2DParam(self):
         alpha = 0.5 * torch.ones((500, 1))
@@ -71,9 +71,9 @@ class Tests(unittest.TestCase):
     def test_Weight1D(self):
         sample = self.linear.i_sample()
 
-        obs = 0
+        obs = 0.
 
-        assert self.linear.weight(obs, sample) == stats.norm.logpdf(obs, loc=sample, scale=1)
+        assert np.allclose(self.linear.weight(obs, sample).numpy(), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_Weight2D(self):
         sample = self.linear.i_sample(shape=(500, 200))
