@@ -41,8 +41,8 @@ def parameter_caster(ndim, *args):
     for a in args:
         vals = a.values
 
-        if a.trainable and vals.dim() > 0:
-            diff = ndim - vals.dim()
+        diff = ndim - vals.dim()
+        if a.trainable and vals.dim() > 0 and diff != 0:
             vals = vals.view(*vals.shape, *(diff * (1,)))
 
         targs += (vals,)
@@ -98,6 +98,7 @@ class AffineModel(object):
         return self._theta
 
     @property
+    @lru_cache()
     def theta_dists(self):
         """
         Returns the indices for parameter are distributions.
@@ -105,15 +106,6 @@ class AffineModel(object):
         """
 
         return tuple(p for p in self.theta if p.trainable)
-
-    @property
-    def theta_vals(self):
-        """
-        Returns the values of the parameters
-        :rtype: tuple[float|torch.Tensor]
-        """
-
-        return tuple(th.values for th in self.theta)
 
     @property
     @lru_cache()
@@ -137,7 +129,7 @@ class AffineModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.f0(*self.theta_vals)
+        return self.f0(*self.theta)
 
     @init_caster
     def i_scale(self):
@@ -147,7 +139,7 @@ class AffineModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.g0(*self.theta_vals)
+        return self.g0(*self.theta)
 
     def i_weight(self, x):
         """
@@ -242,9 +234,10 @@ class AffineModel(object):
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
-
-        loc, scale = self.i_mean(), self.i_scale()
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([1])
+
+        loc = self.f0(*parameter_caster(len(shape), *self.theta))
+        scale = self.g0(*parameter_caster(len(shape), *self.theta))
         dist = TransformedDistribution(self.noise0.expand(shape), self._transform(loc, scale))
 
         if as_dist:

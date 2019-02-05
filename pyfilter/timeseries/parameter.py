@@ -5,17 +5,29 @@ from functools import lru_cache
 from scipy.stats import gaussian_kde
 
 
-class Parameter(object):
-    def __init__(self, p):
-        """
-        The parameter class. Serves as the base for parameters.
-        :param p: The value of the parameter. Can either be numerical or distribution
-        :type p: float|Tensor|dist.Distribution
-        """
+class Parameter(torch.nn.Parameter):
+    def __new__(cls, data=None, requires_grad=False):
+        if isinstance(data, torch.Tensor):
+            _data = data
+        elif not isinstance(data, dist.Distribution):
+            _data = torch.tensor(data)
+        else:
+            _data = torch.Tensor()
 
-        self._p = p if isinstance(p, (torch.Tensor, dist.Distribution)) else torch.tensor(p)
-        self._trainable = isinstance(self._p, dist.Distribution)
-        self._values = None if self._trainable else self._p
+        out = torch.Tensor._make_subclass(cls, _data, requires_grad)
+        out._p = data
+
+        return out
+
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+
+        result = type(self)(self.data.clone(), self.requires_grad)
+        result._p = self._p
+
+        memo[id(self)] = result
+        return result
 
     @property
     @lru_cache()
@@ -49,7 +61,7 @@ class Parameter(object):
         :rtype: float|Tensor
         """
 
-        return self._values
+        return self.data
 
     @values.setter
     def values(self, x):
@@ -61,7 +73,7 @@ class Parameter(object):
         if not isinstance(x, type(self.values)) and self.values is not None:
             raise ValueError('Is not the same type!')
         elif not self.trainable:
-            self._values = x
+            self.data = x
             return
 
         support = self._p.support.check(x)
@@ -69,7 +81,7 @@ class Parameter(object):
         if (~support).any():
             raise ValueError('Found values outside bounds!')
 
-        self._values = x
+        self.data = x
 
     @property
     def t_values(self):
@@ -115,7 +127,7 @@ class Parameter(object):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        self.values = self._p.sample(((shape,) if isinstance(shape, int) else shape) or Size())
+        self.data = self._p.sample(((shape,) if isinstance(shape, int) else shape) or Size())
 
         return self
 
@@ -126,7 +138,7 @@ class Parameter(object):
         :rtype: bool
         """
 
-        return self._trainable
+        return isinstance(self._p, dist.Distribution)
 
     def get_kde(self, weights=None, transformed=True):
         """
@@ -157,7 +169,7 @@ class Parameter(object):
         :rtype: tuple[np.ndarray]
         """
 
-        transformd = kwargs.pop('transformed', None)
+        transformed = kwargs.pop('transformed', None)
         kde = self.get_kde(transformed=True, **kwargs)
 
         # ===== Gets the range to plot ===== #

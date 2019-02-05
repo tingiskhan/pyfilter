@@ -54,7 +54,7 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = 1 / self._model.hidden.scale(x) ** 2
 
         # ===== Observable ===== #
-        c = self._model.observable.theta_vals[0]
+        c = self._model.observable.theta[0]
         o_var_inv = 1 / self._model.observable.scale(x) ** 2
 
         if self._model.hidden_ndim < 2:
@@ -65,7 +65,7 @@ class LinearGaussianObservations(Proposal):
         return self
 
     def weight(self, y, xn, xo):
-        c = self._model.observable.theta_vals[0]
+        c = self._model.observable.theta[0]
         fx = self._model.hidden.mean(xo)
 
         m = self._model.observable.mean(fx)

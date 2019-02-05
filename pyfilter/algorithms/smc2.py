@@ -18,7 +18,7 @@ def _define_pdf(params, weights):
     :rtype: stats.truncnorm
     """
 
-    asarray = torch.cat([p.t_values for p in params], 1)
+    asarray = torch.stack([p.t_values for p in params], dim=-1)
 
     if asarray.dim() > 2:
         asarray = asarray[..., 0]
@@ -65,8 +65,8 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals = torch.cat([p.t_values for p in params], 1)
-    n_p_vals = torch.cat([p.t_values for p in n_params], 1)
+    p_vals = torch.stack([p.t_values for p in params], dim=-1)
+    n_p_vals = torch.stack([p.t_values for p in n_params], dim=-1)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 

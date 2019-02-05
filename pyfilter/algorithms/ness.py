@@ -174,10 +174,7 @@ class NESS(SequentialAlgorithm):
         self._ess = particles
         self._logged_ess = tuple()
 
-        if isinstance(filter_, ParticleFilter):
-            self._shape = particles, 1
-        else:
-            self._shape = particles
+        self._shape = particles
 
         # ====== Select proposal kernel ===== #
         # TODO: Need to figure out why kernels aren't working too good...
