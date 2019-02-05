@@ -93,11 +93,12 @@ class Linearized(Proposal):
 
         super().__init__()
 
-        if not (1 <= order <= 2):
-            raise ValueError('Only 1st or 2nd order accuracy available!')
+        if order is not None:
+            if not (1 <= order <= 2):
+                raise ValueError('Only 1st or 2nd order accuracy available!')
 
         self._meanexpr = get_mean_expr()
-        self._order = order
+        self._ord = order
         self._h = h
 
     def construct(self, y, x):
@@ -106,7 +107,15 @@ class Linearized(Proposal):
 
         # ===== Evaluate gradient ===== #
         xo = self._model.hidden.mean(x)
-        grad = approx_fprime(f, xo.unsqueeze(-1) if self._model.hidden.ndim < 2 else xo, order=self._order, h=self._h)
+
+        if self._ord is not None:
+            grad = approx_fprime(f, xo.unsqueeze(-1) if self._model.hidden.ndim < 2 else xo, order=self._ord, h=self._h)
+        else:
+            xo.requires_grad = True
+            logl = f(xo)
+            logl.backward(torch.ones_like(logl))
+
+            grad = xo.grad
 
         # ===== Get some necessary stuff ===== #
         ax = self._model.observable.mean(xo)
@@ -151,14 +160,23 @@ class ModeFinding(Linearized):
         xn = xo = self._model.hidden.mean(x)
 
         # TODO: Completely arbitrary starting, might not be optimal
-        gamma = 1.
+        gamma = 0.1
         grads = tuple()
         for i in range(self._iters):
-            grads += (approx_fprime(
-                f, xn.unsqueeze(-1) if self._model.hidden.ndim < 2 else xn,
-                order=self._order,
-                h=self._h
-            ),)
+            if self._ord is not None:
+                grad = approx_fprime(
+                    f, xn.unsqueeze(-1) if self._model.hidden.ndim < 2 else xn,
+                    order=self._ord,
+                    h=self._h
+                )
+            else:
+                xo.requires_grad = True
+                logl = f(xo)
+                logl.backward(torch.ones_like(logl))
+
+                grad = xo.grad
+
+            grads += (grad,)
 
             # ===== Calculate step size ===== #
             if len(grads) > 1:
