@@ -177,7 +177,6 @@ class NESS(SequentialAlgorithm):
         self._shape = particles
 
         # ====== Select proposal kernel ===== #
-        # TODO: Need to figure out why kernels aren't working too good...
         if continuous:
             self.kernel = continuous_jitter
         else:
