@@ -355,9 +355,9 @@ class AffineModel(object):
             prop1 = 'dist'
             prop2 = 'values'
 
-        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2)), default=torch.zeros(1)))
+        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2))))
 
-    def p_map(self, func, default=None):
+    def p_map(self, func):
         """
         Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
         that are distributions.
@@ -370,11 +370,8 @@ class AffineModel(object):
         """
 
         out = tuple()
-        for p in self.theta:
-            if p.trainable:
-                out += (func(p),)
-            else:
-                out += (default if default is not None else p,)
+        for p in self.theta_dists:
+            out += (func(p),)
 
         return out
 
