@@ -81,7 +81,7 @@ class SMC2(NESS):
         :type threshold: float
         """
 
-        if not isinstance(filter_, KalmanFilter):
+        if isinstance(filter_, KalmanFilter):
             raise ValueError('`filter_` must be of instance `{:s}!'.format(ParticleFilter.__name__))
 
         super().__init__(filter_, particles, resampling=resampling)
