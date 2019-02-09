@@ -91,6 +91,9 @@ class AffineModel(object):
         # ===== Check if distributions contain parameters ===== #
         self._dist_theta = dict()
         for n in [self.noise0, self.noise]:
+            if n is None:
+                continue
+
             for k, v in n.__dict__.items():
                 if k.startswith('_'):
                     continue
@@ -126,7 +129,9 @@ class AffineModel(object):
         Returns the indices for parameter are distributions.
         :rtype: tuple[Parameter]
         """
-        return tuple(p for p in self.theta if p.trainable) + tuple(p for p in self._dist_theta.values() if p.trainable)
+
+        distparams = tuple(p for p in self._dist_theta.values() if isinstance(p, Parameter))
+        return tuple(p for p in self.theta if p.trainable) + distparams
 
     @property
     @lru_cache()
