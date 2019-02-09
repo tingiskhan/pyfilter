@@ -141,7 +141,7 @@ def shrink_(values, w, p, ess):
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, continuous=True, resampling=systematic, shrink=True, p=1.):
+    def __init__(self, filter_, particles, threshold=0.5, continuous=True, resampling=systematic, shrink=True, p=1.):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
