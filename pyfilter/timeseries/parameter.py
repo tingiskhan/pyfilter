@@ -12,7 +12,8 @@ class Parameter(torch.nn.Parameter):
         elif not isinstance(data, dist.Distribution):
             _data = torch.tensor(data)
         else:
-            _data = torch.Tensor()
+            # This is just a place holder
+            _data = torch.Tensor([float('inf')])
 
         out = torch.Tensor._make_subclass(cls, _data, requires_grad)
         out._p = data

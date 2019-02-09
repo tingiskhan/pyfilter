@@ -174,7 +174,7 @@ class NESS(SequentialAlgorithm):
         self._ess = particles
         self._logged_ess = tuple()
 
-        self._shape = particles
+        self._shape = (particles, 1) if isinstance(filter_, ParticleFilter) else particles
 
         # ====== Select proposal kernel ===== #
         if continuous:
@@ -189,8 +189,14 @@ class NESS(SequentialAlgorithm):
         :rtype: NESS
         """
 
+        # ===== Initialize parameters ===== #
         for th in self._filter.ssm.flat_theta_dists:
             th.initialize(self._shape)
+
+        # ===== Re-initialize distributions ===== #
+        for mod in [self.filter.ssm.hidden, self.filter.ssm.observable]:
+            if len(mod.distributional_theta) > 0:
+                mod.noise.__init__(**mod.distributional_theta)
 
         self._filter.initialize()
 

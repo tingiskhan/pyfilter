@@ -1,7 +1,7 @@
 from .ness import NESS
 import torch
 from ..utils import get_ess, add_dimensions, normalize
-from ..filters.base import KalmanFilter
+from ..filters.base import KalmanFilter, ParticleFilter
 from torch.distributions import MultivariateNormal
 from time import sleep
 from ..resampling import systematic
@@ -18,7 +18,7 @@ def _define_pdf(params, weights):
     :rtype: MultivariateNormal
     """
 
-    asarray = torch.stack([p.t_values for p in params], dim=-1)
+    asarray = torch.cat([p.t_values for p in params], dim=-1)
 
     if asarray.dim() > 2:
         asarray = asarray[..., 0]
@@ -65,8 +65,8 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals = torch.stack([p.t_values for p in params], dim=-1)
-    n_p_vals = torch.stack([p.t_values for p in n_params], dim=-1)
+    p_vals = torch.cat([p.t_values for p in params], dim=-1)
+    n_p_vals = torch.cat([p.t_values for p in n_params], dim=-1)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
@@ -80,6 +80,10 @@ class SMC2(NESS):
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :type threshold: float
         """
+
+        if not isinstance(filter_, KalmanFilter):
+            raise ValueError('`filter_` must be of instance `{:s}!'.format(ParticleFilter.__name__))
+
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
@@ -158,9 +162,6 @@ class SMC2(NESS):
         :return: Self
         :rtype: SMC2
         """
-
-        if isinstance(self.filter, KalmanFilter):
-            return self
 
         # ===== Create new filter with double the state particles ===== #
         t_filt = self.filter.copy().reset()

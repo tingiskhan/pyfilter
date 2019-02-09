@@ -88,6 +88,28 @@ class AffineModel(object):
         self.noise0, self.noise = noise
         self._inputdim = self.ndim
 
+        # ===== Check if distributions contain parameters ===== #
+        self._dist_theta = dict()
+        for n in [self.noise0, self.noise]:
+            for k, v in n.__dict__.items():
+                if k.startswith('_'):
+                    continue
+
+                if isinstance(v, (Parameter, torch.Tensor)) and n is self.noise:
+                    self._dist_theta[k] = v
+                elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
+                    raise ValueError('You cannot have distributional parameters in the initial distribution!')
+
+    @property
+    def distributional_theta(self):
+        """
+        Returns the parameters of the distribution to re-initialize the distribution with. Mainly a helper for when
+        the user passes distributions parameterized by priors.
+        :rtype: dict[str, Parameter]
+        """
+
+        return self._dist_theta
+
     @property
     def theta(self):
         """
@@ -104,8 +126,7 @@ class AffineModel(object):
         Returns the indices for parameter are distributions.
         :rtype: tuple[Parameter]
         """
-
-        return tuple(p for p in self.theta if p.trainable)
+        return tuple(p for p in self.theta if p.trainable) + tuple(p for p in self._dist_theta.values() if p.trainable)
 
     @property
     @lru_cache()
