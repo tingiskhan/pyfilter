@@ -1,7 +1,7 @@
 # pyfilter
 `pyfilter` is a package designed for joint parameter and state inference in (mainly) non-linear state space models using
 Sequential Monte Carlo methods. It is similar to `pomp`, but implemented in `Python` leveraging some aspects of
-`pytorch`. The interface is heavily inspired by `pymc3`.
+[`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
 
 ## Installation
 Install the package by typing the following in a `git shell` or similar
@@ -27,7 +27,7 @@ For filters 1. and 2. there exist different proposals, s.a.
 ### Algorithms
 The currently implemented algorithms are
 1. [NESS](https://arxiv.org/abs/1308.1883)
-2. [SMC2](https://arxiv.org/abs/1101.1528)
+2. [SMC2](https://arxiv.org/abs/1101.1528) (see [here](https://github.com/nchopin/particles) for one of the original authors' implementation)
 3. A preliminary version of Iterated Filter (IF2) by Ionides et al.
 
 ## Caveats
