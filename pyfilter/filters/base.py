@@ -1,77 +1,72 @@
 import pandas as pd
-import numpy as np
 import copy
-from ..utils.utils import choose, dot, expanddims
-from ..utils.resampling import multinomial, systematic
+from ..proposals import LinearGaussianObservations
+from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import Base, StateSpaceModel
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
+import torch
+from ..utils import get_ess, choose
 
 
-def _numparticles(parts):
-    """
-    Returns the correct number of particles to use
-    :param parts:
-    :return:
-    """
+def enforce_tensor(func):
+    def wrapper(obj, y, **kwargs):
+        if not isinstance(y, torch.Tensor):
+            y = torch.tensor(y)
 
-    return parts if (not isinstance(parts, tuple) or (len(parts) < 2)) else (parts[0], 1)
+        return func(obj, y, **kwargs)
 
-
-def _overwriteparams(ts, particles):
-    """
-    Helper function for overwriting the parameters of the model.
-    :param ts: The timeseries
-    :type ts: pyfilter.timeseries.Base
-    :param particles: The number of particles
-    :type particles: tuple of int|int
-    :return:
-    """
-
-    for j, p in enumerate(ts.theta_dists):
-        p.sample(size=particles)
-
-    return True
+    return wrapper
 
 
 class BaseFilter(object):
-    def __init__(self, model, particles, *args, saveall=False, resampling=systematic, proposal=Bootstrap(), **kwargs):
+    def __init__(self, model):
         """
-        Implements the base functionality of a particle filter.
-        :param model: The state-space model to filter
+        The basis for filters. Take as input a model and specific attributes.
+        :param model: The model
         :type model: StateSpaceModel
-        :param resampling: Which resampling method to use
-        :type resampling: callable
-        :param proposal: Which proposal to use
-        :type proposal: Proposal
-        :param args:
-        :param kwargs:
         """
+
+        if not isinstance(model, StateSpaceModel):
+            raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
+
         self._model = model
-        self._copy = self._model.copy()
+        self._n_parallel = None
 
-        self._particles = particles
-        self._p_particles = _numparticles(self._particles)
+        # ===== Some helpers ===== #
+        self.s_ll = tuple()
+        self.s_mx = tuple()
 
-        self._old_x = None
-        self._anc_x = None
-        self._cur_x = None
-        self._inds = None
-        self._old_w = 0
+    @property
+    def s_loglikelihood(self):
+        """
+        Returns the saved loglikelihood.
+        :rtype: torch.Tensor
+        """
 
-        self._resamp = resampling
+        return torch.stack(self.s_ll, dim=0)
 
-        self.saveall = saveall
-        self._td = None
-        self._proposal = proposal.set_model(self._model, isinstance(particles, tuple))
+    @s_loglikelihood.setter
+    def s_loglikelihood(self, x):
+        """
+        Sets the loglikelihood.
+        :param x: The new loglikelihood
+        :type x: torch.Tensor
+        """
 
-        if saveall:
-            self.s_x = list()
-            self.s_w = list()
+        if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_l = list()
-        self.s_mx = list()
-        self.s_n = list()
+        self.s_ll = tuple(x)
+
+    @property
+    def loglikelihood(self):
+        """
+        Returns the total loglikelihood
+        :rtype: torch.Tensor
+        """
+
+        return sum(self.s_ll)
 
     @property
     def ssm(self):
@@ -81,135 +76,74 @@ class BaseFilter(object):
         """
         return self._model
 
-    def _initialize_parameters(self):
+    def set_nparallel(self, n):
         """
-        Initializes the parameters by drawing from the prior distributions.
-        :return:
+        Sets the number of parallel filters to use
+        :param n: The number of parallel filters
+        :type n: int
+        :rtype: BaseFilter
         """
 
-        # ===== HIDDEN ===== #
-
-        _overwriteparams(self._model.hidden, self._p_particles)
-        _overwriteparams(self._model.observable, self._p_particles)
-
-        return self
+        raise ValueError()
 
     def initialize(self):
         """
         Initializes the filter.
-        :return:
-        """
-        self._initialize_parameters()
-        self._old_x = self._model.initialize(self._particles)
-
-        return self
-
-    def filter(self, y):
-        """
-        Filters the model for the observation `y`.
-        :param y: The observation to filter on.
-        :type y: float|np.ndarray
-        :return:
-        """
-
-        raise NotImplementedError()
-
-    def _calc_noise(self, y, x):
-        """
-        Calculates the residual given the observation `y` and state `x`.
-        :param y: The observation
-        :type y: np.ndarray
-        :param x: The state
-        :type y: np.ndarray
-        :return: The residual
-        :rtype: np.ndarray
-        """
-
-        mean = self._model.observable.mean(x)
-        scale = self._model.observable.scale(x)
-
-        if self._model.obs_ndim < 2:
-            return (y - mean) / scale
-
-        return dot(np.linalg.inv(scale.T).T, (expanddims(y, mean.ndim) - mean))
-
-    def _save_mean_and_noise(self, y, x, normalized):
-        """
-        Saves the residual given the observation `y` and state `x`.
-        :param y: The observation
-        :type y: np.ndarray
-        :param x: The state
-        :type y: np.ndarray
-        :param normalized: The normalized weights for weighting
-        :type normalized: np.ndarray
         :return: Self
         :rtype: BaseFilter
         """
 
-        rescaled = self._calc_noise(y, x)
+        return self
 
-        self.s_n.append(np.sum(rescaled * normalized, axis=-1))
-        self.s_mx.append(np.sum(x * normalized, axis=-1))
+    @enforce_tensor
+    def filter(self, y):
+        """
+        Performs a filtering the model for the observation `y`.
+        :param y: The observation
+        :type y: float|torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        xm, ll = self._filter(y)
+
+        self.s_mx += (xm,)
+        self.s_ll += (ll,)
 
         return self
 
-    def longfilter(self, data, bar=True):
+    def _filter(self, y):
         """
-        Filters the data for the entire data set.
-        :param data: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type data: pd.DataFrame|np.ndarray
+        The actual filtering procedure. Overwrite this.
+        :param y: The observation
+        :type y: float|torch.Tensor
+        :return: Mean of state, likelihood
+        :rtype: torch.Tensor, torch.Tensor
+        """
+
+        raise NotImplementedError()
+
+    def longfilter(self, y, bar=True):
+        """
+        Filters the entire data set `y`.
+        :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
+        :type y: pd.DataFrame|torch.Tensor
         :param bar: Whether to print a progressbar
         :type bar: bool
         :return: Self
         :rtype: BaseFilter
         """
 
-        if isinstance(data, pd.DataFrame):
-            data = data.values
-        elif isinstance(data, list):
-            data = np.array(data)
-
-        # ===== SMC2 needs the entire dataset ==== #
-        self._td = data
-
+        astuple = tuple(y)
         if bar:
-            iterator = tqdm(range(data.shape[0]), desc=str(self.__class__.__name__))
+            iterator = tqdm(astuple, desc=str(self.__class__.__name__))
         else:
-            iterator = range(data.shape[0])
+            iterator = astuple
 
-        for i in iterator:
-            self.filter(data[i])
-
-        self._td = None
+        for yt in iterator:
+            self.filter(yt)
 
         return self
-
-    def filtermeans(self):
-        """
-        Calculates the filter means and returns a timeseries.
-        :return:
-        """
-
-        return self.s_mx
-
-    def noisemeans(self):
-        """
-        Calculates the means for the noise and returns a timeseries.
-        :return:
-        """
-
-        return self.s_n
-
-    def predict(self, steps):
-        """
-        Predicts `steps` ahead using the latest available information.
-        :param steps: The number of steps forward to predict
-        :type steps: int
-        :return: np.arrays
-        """
-        x, y = self._model.sample(steps+1, x_s=self._old_x)
-
-        return x[1:], y[1:]
 
     def copy(self):
         """
@@ -220,121 +154,288 @@ class BaseFilter(object):
 
         return copy.deepcopy(self)
 
-    def resample(self, indices, entire_history=True):
+    @property
+    def filtermeans(self):
         """
-        Resamples the particles along the first axis.
-        :param indices: The indices to choose
-        :type indices: np.ndarray
+        Calculates the filter means and returns a timeseries.
+        :return:
+        """
+
+        return torch.stack(self.s_mx, dim=0)
+
+    @filtermeans.setter
+    def filtermeans(self, x):
+        """
+        Sets the filter means.
+        :param x: The new filter means
+        :type x: torch.Tensor
+        """
+
+        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
+
+        self.s_mx = tuple(x)
+
+    def predict(self, steps):
+        """
+        Predicts `steps` ahead using the latest available information.
+        :param steps: The number of steps forward to predict
+        :type steps: int
+        :rtype: tuple[torch.Tensor]
+        """
+        raise NotImplementedError()
+
+    def resample(self, inds, entire_history=False):
+        """
+        Resamples the filter, used in cases where we use nested filters.
+        :param inds: The indices
+        :type inds: torch.Tensor
         :param entire_history: Whether to resample entire history
         :type entire_history: bool
         :return: Self
         :rtype: BaseFilter
         """
-
-        self._old_x = choose(self._old_x, indices)
-        self._model.p_apply(lambda x: choose(x.values, indices))
-        self._old_w = choose(self._old_w, indices)
-
-        self._proposal = self._proposal.resample(indices)
         if entire_history:
-            self.s_l = list(np.array(self.s_l)[..., indices])
-            self.s_mx = list(np.array(self.s_mx)[..., indices])
+            for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
+                setattr(self, name, obj[:, inds])
+
+        # ===== Resample the parameters of the model ====== #
+        self.ssm.p_apply(lambda u: choose(u.values, inds))
+        self._resample(inds)
 
         return self
 
-    def reset(self, particles=None):
+    def _resample(self, inds):
         """
-        Resets the filter.
-        :param particles: Size of filter to reset.
+        Implements resampling unique for the filter.
+        :param inds: The indices
+        :type inds: torch.Tensor
         :return: Self
         :rtype: BaseFilter
         """
 
-        self._particles = particles if particles is not None else self._particles
-
-        self._old_x = self._model.initialize(self._particles)
-        self._old_w = 0
-
-        if self.saveall:
-            self.s_x = list()
-            self.s_w = list()
-
-        self.s_l = list()
-        self.s_mx = list()
-        self.s_n = list()
-
         return self
 
-    def exchange(self, indices, newfilter):
+    def reset(self):
         """
-        Exchanges particles of `self` with `indices` of `newfilter`.
-        :param indices: The indices to exchange
-        :type indices: np.ndarray
-        :param newfilter: The new filter to exchange with.
-        :type newfilter: BaseFilter
+        Resets the filter by nullifying the filter specific attributes.
         :return: Self
         :rtype: BaseFilter
         """
 
-        # ===== Exchange parameters ===== #
+        self.s_mx = tuple()
+        self.s_ll = tuple()
 
-        self._model.exchange(indices, newfilter._model)
-
-        # ===== Exchange old likelihoods and weights ===== #
-
-        for prop in ['s_l', 's_mx']:
-            ots = np.array(getattr(self, prop))
-            nts = np.array(getattr(newfilter, prop))
-
-            ots[..., indices] = nts[..., indices]
-            setattr(self, prop, list(ots))
-
-        self._old_w[indices] = newfilter._old_w[indices]
-
-        # ===== Exchange old states ===== #
-
-        if newfilter._old_x.ndim > self._old_w.ndim:
-            self._old_x[:, indices] = newfilter._old_x[:, indices]
-        else:
-            self._old_x[indices] = newfilter._old_x[indices]
-
-        # ===== Exchange particle history ===== #
-
-        if self.saveall:
-            for t, (x, w) in enumerate(zip(newfilter.s_x, newfilter.s_w)):
-                if x.ndim > w.ndim:
-                    self.s_x[t][:, indices] = x[:, indices]
-                else:
-                    self.s_x[t][indices] = x[indices]
-
-                self.s_w[t][indices] = w[indices]
+        self._reset()
 
         return self
+
+    def _reset(self):
+        """
+        Any filter specific resets.
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        return self
+
+    def exchange(self, filter_, inds):
+        """
+        Exchanges the filters.
+        :param filter_: The new filter
+        :type filter_: BaseFilter
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        self._model.exchange(inds, filter_.ssm)
+
+        for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
+            obj[:, inds] = getattr(filter_, name)[:, inds]
+
+            setattr(self, name, obj)
+
+        self._exchange(filter_, inds)
+
+        return self
+
+    def _exchange(self, filter_, inds):
+        """
+        Filter specific exchanges.
+        :param filter_: The new filter
+        :type filter_: BaseFilter
+        :param inds: The indices
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        return self
+
+
+_PROPOSAL_MAPPING = {
+    LGO: LinearGaussianObservations
+}
+
+
+def _construct_empty(shape):
+    """
+    Constructs an empty array based on the shape.
+    :param shape: The shape
+    :type shape: tuple
+    :rtype: torch.Tensor
+    """
+
+    temp = torch.arange(shape[-1])
+    return temp * torch.ones(shape, dtype=temp.dtype)
+
+
+def cudawarning(resampling):
+    """
+    Raises an error if you're using CUDA and have `systematic` enabled.
+    :return: Nothing
+    :rtype: None
+    """
+
+    if 'cuda' == torch.tensor(1.).device.type and resampling is systematic:
+        msg = '`systematic` relies on `numpy`, you must use `multinomial` instead as CUDA is enabled.'
+        raise ValueError(msg)
 
 
 class ParticleFilter(BaseFilter):
-    pass
+    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9):
+        """
+        Implements the base functionality of a particle filter.
+        :param particles: How many particles to use
+        :type particles: int
+        :param resampling: Which resampling method to use
+        :type resampling: callable
+        :param proposal: Which proposal to use, set to `auto` to let algorithm decide
+        :type proposal: Proposal|str
+        :param ess: At which level to resample
+        :type ess: float
+        """
 
+        cudawarning(resampling)
 
-class KalmanFilter(BaseFilter):
-    def exchange(self, indices, newfilter):
-        # ===== Exchange parameters ===== #
-        self._model.exchange(indices, newfilter._model)
+        super().__init__(model)
 
-        for prop in ['s_l', 's_mx']:
-            ots = np.array(getattr(self, prop))
-            nts = np.array(getattr(newfilter, prop))
+        self._x_cur = None                          # type: torch.Tensor
+        self._inds = None                           # type: torch.Tensor
+        self._particles = particles
+        self._w_old = None                          # type: torch.Tensor
+        self._ess = ess
+        self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
 
-            ots[..., indices] = nts[..., indices]
-            setattr(self, prop, list(ots))
+        self._resampler = resampling
+
+        if proposal == 'auto':
+            try:
+                proposal = _PROPOSAL_MAPPING[type(self._model)]()
+            except KeyError:
+                proposal = Bootstrap()
+
+        self._proposal = proposal.set_model(self._model)    # type: Proposal
+
+    @property
+    def proposal(self):
+        """
+        Returns the proposal.
+        :rtype: Proposal
+        """
+
+        return self._proposal
+
+    @proposal.setter
+    def proposal(self, x):
+        """
+        Sets the proposal
+        :param x: The new proposal
+        :type x: Proposal
+        """
+
+        if not isinstance(x, Proposal):
+            raise ValueError('`x` must be {:s}!'.format(Proposal.__name__))
+
+        self._proposal = x
+
+    @property
+    def particles(self):
+        """
+        Returns the particles
+        :rtype: int|tuple[int]
+        """
+
+        return self._particles
+
+    def _resample_state(self, weights):
+        """
+        Resamples the state in accordance with the weigths.
+        :param weights: The weights
+        :type weights: torch.Tensor
+        :return: The indices and mask
+        :rtype: tuple[torch.Tensor]
+        """
+
+        # ===== Get the ones requiring resampling ====== #
+        ess = get_ess(weights) / weights.shape[-1]
+        mask = ess < self._ess
+
+        # ===== Create a default array for resampling ===== #
+        out = _construct_empty(weights.shape)
+
+        # ===== Return based on if it's nested or not ===== #
+        if not mask.any():
+            return out, mask
+        elif not isinstance(self._particles, tuple):
+            return self._resampler(weights), mask
+
+        out[mask] = self._resampler(weights[mask])
+
+        return out, mask
+
+    def set_nparallel(self, n):
+        self._n_parallel = n
+
+        temp = self._particles[-1] if isinstance(self._particles, (tuple, list)) else self._particles
+        if n is not None:
+            self._particles = self._n_parallel, temp
+        else:
+            self._particles = temp
+
+        if self._x_cur is not None:
+            return self.initialize()
 
         return self
 
-    def resample(self, indices, entire_history=True):
-        self._model.p_apply(lambda x: choose(x.values, indices))
-        self._proposal = self._proposal.resample(indices)
+    def initialize(self):
+        self._x_cur = self._model.initialize(self._particles)
+        self._w_old = torch.zeros(self._particles)
 
-        if entire_history:
-            self.s_l = list(np.array(self.s_l)[:, indices])
+        return self
+
+    def predict(self, steps):
+        x, y = self._model.sample(steps+1, x_s=self._x_cur)
+
+        return x[1:], y[1:]
+
+    def _resample(self, inds):
+        self._x_cur = self._x_cur[inds]
+        self._w_old = self._w_old[inds]
+
+        return self
+
+    def _exchange(self, filter_, inds):
+        self._x_cur[inds] = filter_._x_cur[inds]
+        self._w_old[inds] = filter_._w_old[inds]
+
+        return self
+
+
+class KalmanFilter(BaseFilter):
+    def set_nparallel(self, n):
+        self._n_parallel = n
 
         return self

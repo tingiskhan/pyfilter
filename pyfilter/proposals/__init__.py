@@ -1,3 +1,5 @@
 from .bootstrap import Bootstrap
-from .linearized import Linearized
-from .unscented import Unscented, GlobalUnscented
+from .linear import LinearGaussianObservations
+from .unscented import Unscented
+from .base import Proposal
+from .linearized import Linearized, ModeFinding

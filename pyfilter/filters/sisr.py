@@ -1,29 +1,33 @@
 from .base import ParticleFilter
-from ..utils.utils import loglikelihood, choose
-from ..utils.normalization import normalize
+from ..utils import loglikelihood, choose
+from ..normalization import normalize
+import torch
 
 
 class SISR(ParticleFilter):
     """
     Implements the SISR filter by Gordon et al.
     """
-    def filter(self, y):
-        t_x = self._proposal.draw(y, self._old_x, size=self._particles)
-        weights = self._proposal.weight(y, t_x, self._old_x)
 
-        resampled_indices = self._resamp(weights)
+    def _filter(self, y):
+        # ===== Resample among old ===== #
+        # TODO: Not optimal as we normalize in several other functions, fix this
+        old_normw = normalize(self._w_old)
 
-        self._proposal = self._proposal.resample(resampled_indices)
-        self._cur_x = t_x
-        self._inds = resampled_indices
-        self._anc_x = self._old_x.copy()
-        self._old_x = choose(t_x, resampled_indices)
-        self._old_w = weights
+        inds, mask = self._resample_state(self._w_old)
+        to_prop = choose(self._x_cur, inds)
+        self._proposal = self.proposal.resample(inds)
 
-        self.s_l.append(loglikelihood(weights))
+        # ===== Propagate ===== #
+        self._x_cur = self.proposal.construct(y, to_prop).draw()
+        weights = self.proposal.weight(y, self._x_cur, to_prop)
 
-        if self.saveall:
-            self.s_x.append(t_x)
-            self.s_w.append(weights)
+        # ===== Update weights ===== #
+        tw = torch.zeros(weights.shape)
+        tw[~mask] = self._w_old[~mask]
 
-        return self._save_mean_and_noise(y, t_x, normalize(weights))
+        self._w_old = weights + tw
+
+        normw = normalize(self._w_old) if weights.dim() == self._x_cur.dim() else normalize(self._w_old).unsqueeze(-1)
+
+        return (normw * self._x_cur).sum(self._sumaxis), loglikelihood(weights, old_normw)

@@ -1,41 +1,36 @@
-# Documentation
+# pyfilter
+`pyfilter` is a package designed for joint parameter and state inference in (mainly) non-linear state space models using
+Sequential Monte Carlo methods. It is similar to `pomp`, but implemented in `Python` leveraging some aspects of
+[`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
 
-## Purpose
-This package aims at providing a simple interface for users to define and perform inference in non-linear timeseries
-models. It does not aim at being a replacement for any existing package. User interface is heavily inspired by [PyMC3](https://docs.pymc.io/).
-
-This library is just a hobby of mine to keep me up to date with some of the modern filtering techniques as well as a
-fun exercise in coding.
-
-Note that I am not affiliated with or the author of any of the algorithms contained in the package. As such, there
-might be errors in the implementation. Bug reporting and feedback is very welcome!
-
-## Installing the package
+## Installation
 Install the package by typing the following in a `git shell` or similar
 ```
 pip install git+https://github.com/tingiskhan/pyfilter.git
 ```
 
-## Implemented algorithms
-The current implementation supports:
-1. Particle filter
-    1. Bootstrap proposal
-    2. Linearized proposal
-    3. Unscented proposal
-2. Auxiliary Particle filter
-3. Unscented Kalman filter
-4. Kalman-Laplace filter
-5. Nested particle filters for online parameter estimation in discrete-time state-space Markov models (NESS)
-6. SMC2: an efficient algorithm for sequential analysis of state space models (SMC2)
-7. Liu-West filter
+## Implementations
+Below is a list of implemented algorithms/filters.
 
-## Future implementations
-Some future functionality to be implemented might be:
-1. Quasi Monte Carlo 
-2. Dual/Joint Unscented Kalman Filter (or Kalman-Laplace)
-3. Improved jittering kernel in NESS
+### Filters
+The currently implemented filters are
+1. SISR
+2. APF
+3. UKF
 
-## Using the package
-For examples on how to define models and performing inference please see
-[`examples`](https://github.com/tingiskhan/pyfilter/tree/master/examples), it should be rather straightforward from there.
+For filters 1. and 2. there exist different proposals, s.a.
+1. Optimal proposal when observations are linear combinations of states, and normally distributed.
+2. Locally linearized observation density, mainly used for models having log-concave observation density.
+3. A mode finding proposal. Similar to 2. but performs gradient ascent in order to find mode of joint distribution.
+4. Unscented proposal of van der Merwe et al.
+
+### Algorithms
+The currently implemented algorithms are
+1. [NESS](https://arxiv.org/abs/1308.1883)
+2. [SMC2](https://arxiv.org/abs/1101.1528) (see [here](https://github.com/nchopin/particles) for one of the original authors' implementation)
+3. A preliminary version of Iterated Filter (IF2) by Ionides et al.
+
+## Caveats
+Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
+sub-optimal performance. You are more than welcome to report bugs should you try out the library.
 

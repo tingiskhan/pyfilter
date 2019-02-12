@@ -1,47 +1,33 @@
 from .base import ParticleFilter
-from ..utils.utils import loglikelihood, choose
-from ..utils.normalization import normalize
-import numpy as np
+from ..utils import loglikelihood, choose
+from ..normalization import normalize
+import torch
 
 
 class APF(ParticleFilter):
     """
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
-    def filter(self, y):
-        # ===== Perform "auxiliary sampling ===== #
+    def _filter(self, y):
+        # ===== Perform auxiliary sampling ===== #
+        pre_weights = self.proposal.pre_weight(y, self._x_cur)
 
-        t_x = self._model.propagate_apf(self._old_x)
-        t_weights = self._model.weight(y, t_x)
-
-        if not isinstance(self._old_w, int):
-            resamp_w = t_weights + self._old_w
-            normalized = normalize(self._old_w)
-        else:
-            resamp_w = t_weights
-            normalized = 1 / t_weights.shape[-1]
+        resamp_w = pre_weights + self._w_old
+        normalized = normalize(self._w_old)
 
         # ===== Resample and propagate ===== #
+        resampled_indices = self._resampler(resamp_w)
+        resampled_x = choose(self._x_cur, resampled_indices)
 
-        resampled_indices = self._resamp(resamp_w)
-        resampled_x = choose(self._old_x, resampled_indices)
+        self.proposal = self.proposal.resample(resampled_indices)
 
-        t_x = self._proposal.draw(y, resampled_x)
-        weights = self._proposal.weight(y, t_x, resampled_x)
+        self._x_cur = self.proposal.construct(y, resampled_x).draw()
+        weights = self.proposal.weight(y, self._x_cur, resampled_x)
 
-        self._cur_x = t_x
-        self._inds = resampled_indices
-        self._anc_x = self._old_x.copy()
-        self._old_x = t_x
-        self._old_w = weights - choose(t_weights, resampled_indices)
+        self._w_old = weights - choose(pre_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
+        ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
+        normw = normalize(self._w_old) if weights.dim() == self._x_cur.dim() else normalize(self._w_old).unsqueeze(-1)
 
-        with np.errstate(divide='ignore'):
-            self.s_l.append(loglikelihood(self._old_w) + np.log((normalized * np.exp(t_weights)).sum(axis=-1)))
-
-        if self.saveall:
-            self.s_x.append(t_x)
-            self.s_w.append(self._old_w)
-
-        return self._save_mean_and_noise(y, t_x, normalize(self._old_w))
+        return (normw * self._x_cur).sum(self._sumaxis), ll

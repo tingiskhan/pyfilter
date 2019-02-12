@@ -5,8 +5,10 @@ class Bootstrap(Proposal):
     """
     Implements the Bootstrap proposal. I.e. sampling from the prior distribution.
     """
-    def draw(self, y, x, size=None, *args, **kwargs):
-        return self._model.propagate(x)
 
-    def weight(self, y, xn, xo, *args, **kwargs):
+    def construct(self, y, x):
+        self._kernel = self._model.hidden.propagate(x, as_dist=True)
+        return self
+
+    def weight(self, y, xn, xo):
         return self._model.weight(y, xn)

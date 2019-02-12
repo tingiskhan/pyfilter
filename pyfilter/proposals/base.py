@@ -1,71 +1,83 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils.stategradient import NumericalStateGradient
 
 
 class Proposal(object):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
-        :param args: Any arguments passed to the proposal
-        :param kwargs: Any kwargs passed to the proposal
         """
-
-        self._model = None
+        self._model = None      # type: StateSpaceModel
         self._kernel = None
-        self._nested = None
 
-        self._meaner = lambda x: x
-        self._sg = None
-
-    def set_model(self, model, nested=False):
+    def set_model(self, model):
         """
         Sets the model and all required attributes.
         :param model: The model to ues
         :type model: StateSpaceModel
-        :param nested: A boolean for specifying if the algorithm is running nested PFs
-        :type nested: bool
         :return: Self
         :rtype: Proposal
         """
 
         self._model = model
-        self._nested = nested
-        self._sg = NumericalStateGradient(self._model)
 
         return self
 
-    def draw(self, y, x, size=None, *args, **kwargs):
+    def construct(self, y, x):
+        """
+        Constructs the kernel used in `draw` and `weight`.
+        :param y: The observation
+        :type y: torch.Tensor
+        :param x: The old state
+        :type x: torch.Tensor
+        :return: Self
+        :rtype: Proposal
+        """
+
+        return self
+
+    def draw(self):
         """
         Defines the method for drawing proposals.
-        :param y: The current observation
-        :param x: The previous hidden states
-        :param size: The size which to draw
-        :param args: Additional arguments
-        :param kwargs: Additional kwargs
-        :return:
+        :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self._kernel.sample()
 
-    def weight(self, y, xn, xo, *args, **kwargs):
+    def weight(self, y, xn, xo):
         """
         Defines the method for weighting observations.
         :param y: The current observation
+        :type y: torch.Tensor
         :param xn: The new state
+        :type xn: torch.Tensor
         :param xo: The old state
-        :param args: Additional arguments
-        :param kwargs: Additional kwargs
-        :return:
+        :type xo: torch.Tensor
+        :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
 
     def resample(self, inds):
         """
         For proposals where some of the data is stored locally. As this is only necessary for a few of the proposals,
         it need not be implemented for all.
-        :param inds: The indicies to resample.
-        :return:
+        :param inds: The indicies to resample
+        :type inds: torch.Tensor
+        :return: Self
+        :rtype: Proposal
         """
 
         return self
+
+    def pre_weight(self, y, x):
+        """
+        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the time-series model.
+        :param y: The observation
+        :type y: torch.Tensor|float
+        :param x: The old sample
+        :type x: torch.Tensor
+        :return: The weight
+        :rtype: torch.Tensor
+        """
+
+        return self._model.weight(y, self._model.hidden.mean(x))

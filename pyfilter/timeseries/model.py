@@ -1,19 +1,8 @@
 import copy
-from ..distributions.continuous import Distribution
 import numpy as np
-from ..utils.utils import flatten
-
-
-def _get_params(parameters):
-    """
-    Returns the indices of the tunable parameters of `process`.
-    :param parameters: The parameters
-    :type parameters: tuple of Distribution
-    :return: The indices
-    :rtype: tuple of int
-    """
-
-    return list(i for i, p in enumerate(parameters) if isinstance(p, Distribution))
+from ..utils import flatten
+import torch
+from .parameter import Parameter
 
 
 class StateSpaceModel(object):
@@ -21,20 +10,21 @@ class StateSpaceModel(object):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: pyfilter.timeseries.meta.Base
+        :type hidden: pyfilter.timeseries.base.AffineModel
         :param observable: The observable process(es) constituting the SSM
-        :type observable: pyfilter.timeseries.meta.Base
+        :type observable: pyfilter.timeseries.base.AffineModel
         """
 
         self.hidden = hidden
         self.observable = observable
+        self.observable._inputdim = self.hidden_ndim
 
     @property
     def theta_dists(self):
         """
         Returns the tuple of parameters for both hidden and observable.
         :return: (hidden parameters, observable parameters)
-        :rtype: tuple of tuple of Distribution
+        :rtype: tuple[tuple[Parameter]]
         """
 
         return self.hidden.theta_dists, self.observable.theta_dists
@@ -44,7 +34,7 @@ class StateSpaceModel(object):
         """
         Returns the flattened tuple of parameters for both hidden and observable.
         :return: Parameters
-        :rtype: tuple of Distribution
+        :rtype: tuple[Parameter]
         """
 
         return flatten(self.theta_dists)
@@ -69,96 +59,92 @@ class StateSpaceModel(object):
 
         return self.observable.ndim
 
-    def initialize(self, size=None, **kwargs):
+    def initialize(self, size=None):
         """
         Initializes the algorithm and samples from the hidden densities.
         :param size: The number of samples to for estimation of the hidden state
         :type size: int|tuple of int
         :return: An array of sampled values according to the hidden process' distribution
-        :rtype: np.ndarray|float|int
+        :rtype: torch.Tensor
         """
 
-        return self.hidden.i_sample(size, **kwargs)
+        return self.hidden.i_sample(size)
 
     def propagate(self, x):
         """
         Propagates the state conditional on the previous state, and parameters.
         :param x: Previous state
-        :type x: np.ndarray|float|int
+        :type x: torch.Tensor
         :return: Next sampled state
-        :rtype: np.ndarray|float|int
+        :rtype: torch.Tensor
         """
 
         return self.hidden.propagate(x)
 
-    def weight(self, y, x, params=None):
+    def weight(self, y, x):
         """
         Weights the model using the current observation `y` and the current state `x`.
         :param y: The current observation
-        :type y: np.ndarray|float|int
+        :type y: torch.Tensor|float
         :param x: The current state
-        :type x: np.ndarray|float|int
-        :param params: Whether to override the current set of parameters
-        :type params: tuple of np.ndarray|tuple of float|tuple of int
+        :type x: torch.Tensor
         :return: The corresponding log-weights
-        :rtype: np.ndarray|float|int
+        :rtype: torch.Tensor
         """
 
-        return self.observable.weight(y, x, params)
+        return self.observable.weight(y, x)
 
-    def h_weight(self, y, x, params=None):
+    def h_weight(self, y, x):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
         :param y: The current hidden state
-        :type y: np.ndarray|float|int
+        :type y: torch.Tensor
         :param x: The previous hidden state
-        :type x: np.ndarray|float|int
-        :param params: Whether to override the current set of parameters
-        :type params: tuple of np.ndarray|tuple of float|tuple of int
+        :type x: torch.Tensor
         :return: The corresponding log-weights
         :rtype: np.ndarray|float|int
         """
 
-        return self.hidden.weight(y, x, params)
+        return self.hidden.weight(y, x)
 
-    def sample(self, steps, x_s=None):
+    def sample(self, steps, x_s=None, samples=None):
         """
         Constructs a sample trajectory for both the observable and the hidden process.
         :param steps: The number of steps
         :type steps: int
         :param x_s: The starting value
-        :type x_s: np.ndarray|float|int
+        :type x_s: torch.Tensor|float
+        :param samples: How many samples
+        :type samples: tuple[int]|int
         :return: Sampled trajectories
-        :rtype: tuple of list
+        :rtype: tuple[torch.Tensor]
         """
 
-        hidden, obs = list(), list()
+        x_shape = steps, self.hidden.ndim
+        y_shape = steps, self.observable.ndim
 
-        x = x_s if x_s is not None else self.initialize()
+        if samples is not None:
+            tmp = (*((samples,) if not isinstance(samples, (list, tuple)) else samples),)
+            x_shape += tmp
+            y_shape += tmp
+
+        hidden = torch.zeros(x_shape)
+        obs = torch.zeros(y_shape)
+
+        x = x_s if x_s is not None else self.initialize(size=samples)
         y = self.observable.propagate(x)
 
-        hidden.append(x)
-        obs.append(y)
+        hidden[0] = x
+        obs[0] = y
 
         for i in range(1, steps):
             x = self.propagate(x)
             y = self.observable.propagate(x)
 
-            hidden.append(x)
-            obs.append(y)
+            hidden[i] = x
+            obs[i] = y
 
-        return np.array(hidden), np.array(obs)
-
-    def propagate_apf(self, x):
-        """
-        Propagates one step ahead using the mean of the hidden timeseries distribution - used in the APF.
-        :param x: Previous states
-        :type x: np.ndarray|float|int
-        :return: The mean of the next sample
-        :rtype: np.ndarray|float|int
-        """
-
-        return self.hidden.mean(x)
+        return hidden, obs
 
     def copy(self):
         """
@@ -186,14 +172,16 @@ class StateSpaceModel(object):
 
         return self
 
-    def p_prior(self):
+    def p_prior(self, transformed=True):
         """
         Calculates the prior likelihood of current values of parameters.
+        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
+        :type transformed: bool
         :return: The prior evaluated at current parameter values
-        :rtype: np.ndarray|float
+        :rtype: torch.Tensor|float
         """
 
-        return self.hidden.p_prior() + self.observable.p_prior()
+        return self.hidden.p_prior(transformed) + self.observable.p_prior(transformed)
 
     def p_map(self, func, **kwargs):
         """
@@ -201,27 +189,10 @@ class StateSpaceModel(object):
         :param func: Function to apply, must of structure func(params).
         :type func: callable
         :param kwargs: Additional key-worded arguments passed to `p_map` of hidden/observable
-        :rtype: tuple of tuple of np.ndarray|float
+        :rtype: tuple[tuple[Parameter]]
         """
 
         return self.hidden.p_map(func, **kwargs), self.observable.p_map(func, **kwargs)
-
-    def p_grad(self, y, x, xo, h=1e-3):
-        """
-        Calculates the gradient of the parameters at the current values.
-        :param y: The current observation
-        :type y: np.ndarray|float|int
-        :param x: The current state
-        :type x: np.ndarray|float|int
-        :param xo: The previous state
-        :type xo: np.ndarray|float|int
-        :param h: The finite difference approximation to use.
-        :type h: float
-        :return: Tuple of gradient estimates for each parameter of the hidden/observable
-        :rtype: tuple of tuple of np.ndarray|float
-        """
-
-        return self.hidden.p_grad(x, xo, h=h), self.observable.p_grad(y, x, h=h)
 
     def exchange(self, indices, newmodel):
         """
@@ -234,16 +205,13 @@ class StateSpaceModel(object):
         :rtype: StateSpaceModel
         """
 
-        # ===== Exchange hidden parameters ===== #
+        procs = (
+            (newmodel.hidden.theta_dists, self.hidden.theta_dists),
+            (newmodel.observable.theta_dists, self.observable.theta_dists)
+        )
 
-        for newp, oldp in zip(newmodel.hidden.theta, self.hidden.theta):
-            if isinstance(newp, Distribution):
-                oldp.values[indices] = newp.values[indices]
-
-        # ===== Exchange observable parameters ====== #
-
-        for newp, oldp in zip(newmodel.observable.theta, self.observable.theta):
-            if isinstance(newp, Distribution):
+        for proc in procs:
+            for newp, oldp in zip(*proc):
                 oldp.values[indices] = newp.values[indices]
 
         return self

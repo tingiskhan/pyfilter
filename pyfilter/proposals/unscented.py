@@ -1,53 +1,36 @@
-from ..proposals import Linearized
-import numpy as np
-from ..utils.utils import choose, customcholesky
-from ..utils.unscentedtransform import UnscentedTransform
-from ..distributions.continuous import MultivariateNormal, Normal
+from .base import Proposal
+from ..unscentedtransform import UnscentedTransform
+from ..utils import choose
 
 
-class Unscented(Linearized):
-    """
-    Implements the Unscented proposal developed in "The Unscented Particle Filter" by van der Merwe et al.
-    """
-    def __init__(self, **utkwargs):
+class Unscented(Proposal):
+    def __init__(self):
+        """
+        Implements the unscented proposal by van der Merwe et al.
+        """
         super().__init__()
-        self.ut = None     # type: UnscentedTransform
-        self._ut_settings = utkwargs
+        self._ut = None
 
-    def set_model(self, model, nested=False):
+    def set_model(self, model):
         self._model = model
-        self._nested = nested
-        self.ut = UnscentedTransform(model, **self._ut_settings)
+        self._ut = UnscentedTransform(self._model)
 
         return self
 
-    def draw(self, y, x, size=None, *args, **kwargs):
-        mean, cov = self.ut.construct(y)
+    def construct(self, y, x):
+        if not self._ut.initialized:
+            self._ut.initialize(x)
 
-        if self._model.hidden_ndim > 1:
-            self._kernel = MultivariateNormal(mean, customcholesky(cov))
-        else:
-            self._kernel = Normal(mean[0], np.sqrt(cov[0, 0]))
-
-        return self._kernel.rvs(size=size)
-
-    def resample(self, inds):
-        self.ut._mean = choose(self.ut._mean, inds)
-        self.ut._cov = choose(self.ut._cov, inds)
+        self._ut = self._ut.construct(y)
+        self._kernel = self._ut.x_dist
 
         return self
 
-
-class GlobalUnscented(Unscented):
-    def draw(self, y, x, size=None, *args, **kwargs):
-        mean, cov = self.ut.globalconstruct(y, x)
-
-        if self._model.hidden_ndim > 1:
-            self._kernel = MultivariateNormal(mean, customcholesky(cov))
-        else:
-            self._kernel = Normal(mean[0], np.sqrt(cov[0, 0]))
-
-        return self._kernel.rvs(size=size)
-
     def resample(self, inds):
+        if not self._ut.initialized:
+            return self
+
+        self._ut.xmean = choose(self._ut.xmean, inds)
+        self._ut.xcov = choose(self._ut.xcov, inds)
+
         return self
