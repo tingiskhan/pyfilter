@@ -204,7 +204,7 @@ class SMC2(NESS):
         return self
 
 
-class SMC2DW(SMC2):
+class GPSMC2(SMC2):
     def __init__(self, filter_, particles, window=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
         """
         Implements an algorithm similar to that of ...
