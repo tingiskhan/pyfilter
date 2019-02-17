@@ -145,8 +145,8 @@ class SMC2(NESS):
             filt_logl = sum(self.filter.s_ll[-self._lastrejuv:])
             gpr = self._gpr.fit(params.cpu(), filt_logl.reshape(-1, 1).cpu())
 
-            # TODO: Handling nans badly? The rationale is that samples outside "bounds" increase diversification and
-            # that should be rewarded
+            # TODO: How to handle nans?
+            # TODO: Use gpytorch
 
             pred_logl = torch.tensor(
                 gpr.predict(torch.cat([p.t_values for p in t_filt.ssm.flat_theta_dists], dim=-1).cpu()).astype(float32)
