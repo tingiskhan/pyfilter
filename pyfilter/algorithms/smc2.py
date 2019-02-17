@@ -152,7 +152,7 @@ class SMC2(NESS):
                 gpr.predict(torch.cat([p.t_values for p in t_filt.ssm.flat_theta_dists], dim=-1).cpu()).astype(float32)
             )[:, 0]
 
-            pred_logl[torch.isnan(pred_logl)] = float("inf")
+            pred_logl[torch.isnan(pred_logl)] = float("-inf")
             quotient = pred_logl - filt_logl
 
         # ===== Calculate acceptance ratio ===== #
