@@ -176,7 +176,7 @@ class SMC2(NESS):
         self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
-        if accepted < 0.2 and len(self._y) < self._switch:
+        if accepted < 0.2:
             self._increase_states()
 
         return self
