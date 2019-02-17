@@ -5,6 +5,8 @@ from ..filters.base import KalmanFilter, ParticleFilter
 from torch.distributions import MultivariateNormal
 from time import sleep
 from ..resampling import systematic
+from sklearn.gaussian_process import GaussianProcessRegressor
+from numpy import float32
 
 
 def _define_pdf(params, weights):
@@ -87,6 +89,10 @@ class SMC2(NESS):
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
+        self._window = float("inf")
+
+        self._gpr = None    # type: GaussianProcessRegressor
+        self._lastrejuv = 0
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
@@ -102,6 +108,8 @@ class SMC2(NESS):
         if ess < self._th * self._w_rec.shape[0]:
             self._rejuvenate()
             self._iterator.set_description(desc=str(self))
+
+            self._lastrejuv = len(self._y)
 
         return self
 
@@ -123,14 +131,31 @@ class SMC2(NESS):
         self.filter.resample(inds, entire_history=True)
 
         # ===== Define new filters and move via MCMC ===== #
-        t_filt = self.filter.copy().reset().initialize()
+        t_filt = self.filter.copy()
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        t_filt.longfilter(self._y, bar=False)
+        if len(self._y) < self._window:
+            t_filt.reset().initialize().longfilter(self._y, bar=False)
+
+            quotient = t_filt.loglikelihood - self.filter.loglikelihood
+        else:
+            params = torch.cat([p.t_values for p in self.filter.ssm.flat_theta_dists], dim=-1)
+
+            filt_logl = sum(self.filter.s_ll[-self._lastrejuv:])
+            gpr = self._gpr.fit(params.cpu(), filt_logl.reshape(-1, 1).cpu())
+
+            # TODO: Handling nans badly? The rationale is that samples outside "bounds" increase diversification and
+            # that should be rewarded
+
+            pred_logl = torch.tensor(
+                gpr.predict(torch.cat([p.t_values for p in t_filt.ssm.flat_theta_dists], dim=-1).cpu()).astype(float32)
+            )[:, 0]
+
+            pred_logl[torch.isnan(pred_logl)] = float("inf")
+            quotient = pred_logl - filt_logl
 
         # ===== Calculate acceptance ratio ===== #
-        quotient = t_filt.loglikelihood - self.filter.loglikelihood
         plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
         kernel = _eval_kernel(self.filter.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
 
@@ -151,7 +176,7 @@ class SMC2(NESS):
         self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
-        if accepted < 0.2:
+        if accepted < 0.2 and len(self._y) < self._window:
             self._increase_states()
 
         return self
@@ -177,3 +202,15 @@ class SMC2(NESS):
         self.filter = t_filt
 
         return self
+
+
+class SMC2DW(SMC2):
+    def __init__(self, filter_, particles, window=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
+        """
+        Implements an algorithm similar to that of ...
+        :param window: The window at which to switch to "dynamic" proposals
+        :type window: int
+        """
+        super().__init__(filter_, particles, **kwargs)
+        self._window = window
+        self._gpr = gpr
