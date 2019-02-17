@@ -89,7 +89,7 @@ class SMC2(NESS):
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
-        self._window = float("inf")
+        self._switch = float("inf")
 
         self._gpr = None    # type: GaussianProcessRegressor
         self._lastrejuv = 0
@@ -135,7 +135,7 @@ class SMC2(NESS):
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        if len(self._y) < self._window:
+        if len(self._y) < self._switch:
             t_filt.reset().initialize().longfilter(self._y, bar=False)
 
             quotient = t_filt.loglikelihood - self.filter.loglikelihood
@@ -176,7 +176,7 @@ class SMC2(NESS):
         self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
-        if accepted < 0.2 and len(self._y) < self._window:
+        if accepted < 0.2 and len(self._y) < self._switch:
             self._increase_states()
 
         return self
