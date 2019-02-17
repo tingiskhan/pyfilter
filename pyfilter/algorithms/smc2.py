@@ -205,12 +205,12 @@ class SMC2(NESS):
 
 
 class GPSMC2(SMC2):
-    def __init__(self, filter_, particles, window=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
+    def __init__(self, filter_, particles, switch=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
         """
         Implements an algorithm similar to that of ...
-        :param window: The window at which to switch to "dynamic" proposals
-        :type window: int
+        :param switch: The point at which to switch to "dynamic" proposals
+        :type switch: int
         """
         super().__init__(filter_, particles, **kwargs)
-        self._window = window
+        self._window = switch
         self._gpr = gpr
