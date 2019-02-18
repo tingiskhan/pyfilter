@@ -212,5 +212,5 @@ class GPSMC2(SMC2):
         :type switch: int
         """
         super().__init__(filter_, particles, **kwargs)
-        self._window = switch
+        self._switch = switch
         self._gpr = gpr
