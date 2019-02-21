@@ -89,7 +89,7 @@ class SMC2(NESS):
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
-        self._switch = float("inf")
+        self._window = float("inf")
 
         self._gpr = None    # type: GaussianProcessRegressor
         self._lastrejuv = 0
@@ -105,7 +105,9 @@ class SMC2(NESS):
         self._logged_ess += (ess,)
 
         # ===== Rejuvenate if there are too few samples ===== #
-        if ess < self._th * self._w_rec.shape[0]:
+        cond1 = (ess < self._th * self._w_rec.shape[0]) * (len(self._y) < self._window)
+        cond2 = (len(self._y) % self._window == 0) or (ess < 0.1 * self._w_rec.shape[0])
+        if bool(cond1) or cond2:
             self._rejuvenate()
             self._iterator.set_description(desc=str(self))
 
@@ -128,14 +130,14 @@ class SMC2(NESS):
 
         # ===== Resample among parameters ===== #
         inds = self._resampler(self._w_rec)
-        self.filter.resample(inds, entire_history=True)
+        self.filter.resample(inds, entire_history=len(self._y) < self._window)
 
         # ===== Define new filters and move via MCMC ===== #
         t_filt = self.filter.copy()
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        if len(self._y) < self._switch:
+        if len(self._y) < self._window:
             t_filt.reset().initialize().longfilter(self._y, bar=False)
 
             quotient = t_filt.loglikelihood - self.filter.loglikelihood
@@ -205,12 +207,12 @@ class SMC2(NESS):
 
 
 class GPSMC2(SMC2):
-    def __init__(self, filter_, particles, switch=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
+    def __init__(self, filter_, particles, window=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
         """
         Implements an algorithm similar to that of ...
-        :param switch: The point at which to switch to "dynamic" proposals
-        :type switch: int
+        :param window: The point at which to switch to "dynamic" proposals
+        :type window: int
         """
         super().__init__(filter_, particles, **kwargs)
-        self._switch = switch
+        self._window = window
         self._gpr = gpr
