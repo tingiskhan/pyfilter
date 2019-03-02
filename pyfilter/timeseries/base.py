@@ -246,7 +246,8 @@ class AffineModel(object):
         """
         loc, scale = self.mean(x), self.scale(x)
 
-        dist = TransformedDistribution(self.noise, AffineTransform(loc, scale))
+        # TODO: Expand noise
+        dist = TransformedDistribution(self.noise, self._transform(loc, scale))
 
         return dist.log_prob(y)
 
