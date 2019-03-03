@@ -110,9 +110,7 @@ class SMC2(NESS):
             self._use_gp = (len(self._y) - self._lastrejuv) >= self._window
 
         # ===== Rejuvenate if there are too few samples ===== #
-        cond1 = ess < self._th * self._w_rec.shape[0]
-        cond2 = (len(self._y) % self._window == 0) or (ess < 0.1 * self._w_rec.shape[0])
-        if (bool(cond1) and not self._use_gp) or (cond2 and self._use_gp):
+        if ess < self._th * self._w_rec.shape[0]:
             self._rejuvenate()
             self._iterator.set_description(desc=str(self))
 
@@ -136,7 +134,7 @@ class SMC2(NESS):
         # ===== Set up training ===== #
         if self._use_gp:
             train_x = torch.cat([p.t_values for p in self.filter.ssm.flat_theta_dists], dim=-1)
-            train_y = sum(self.filter.s_ll[-self._lastrejuv:])
+            train_y = sum(self.filter.s_ll[-(len(self._y) - self._lastrejuv):])
 
         # ===== Resample among parameters ===== #
         inds = self._resampler(self._w_rec)
