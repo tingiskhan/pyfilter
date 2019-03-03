@@ -1,4 +1,5 @@
 from .ness import NESS
+from .base import experimental
 import torch
 from ..utils import get_ess, add_dimensions, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
@@ -93,6 +94,7 @@ class SMC2(NESS):
 
         self._gpr = None    # type: GaussianProcessRegressor
         self._lastrejuv = 0
+        self._use_gp = False
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
@@ -104,10 +106,13 @@ class SMC2(NESS):
         ess = get_ess(self._w_rec)
         self._logged_ess += (ess,)
 
+        if not self._use_gp:
+            self._use_gp = (len(self._y) - self._lastrejuv) >= self._window
+
         # ===== Rejuvenate if there are too few samples ===== #
-        cond1 = (ess < self._th * self._w_rec.shape[0]) * (len(self._y) < self._window)
+        cond1 = ess < self._th * self._w_rec.shape[0]
         cond2 = (len(self._y) % self._window == 0) or (ess < 0.1 * self._w_rec.shape[0])
-        if bool(cond1) or cond2:
+        if (bool(cond1) and not self._use_gp) or (cond2 and self._use_gp):
             self._rejuvenate()
             self._iterator.set_description(desc=str(self))
 
@@ -128,34 +133,35 @@ class SMC2(NESS):
         # ===== Construct distribution ===== #
         dist = _define_pdf(self.filter.ssm.flat_theta_dists, normalize(self._w_rec))
 
+        # ===== Set up training ===== #
+        if self._use_gp:
+            train_x = torch.cat([p.t_values for p in self.filter.ssm.flat_theta_dists], dim=-1)
+            train_y = sum(self.filter.s_ll[-self._lastrejuv:])
+
         # ===== Resample among parameters ===== #
         inds = self._resampler(self._w_rec)
-        self.filter.resample(inds, entire_history=len(self._y) < self._window)
+        self.filter.resample(inds, entire_history=not self._use_gp)
 
         # ===== Define new filters and move via MCMC ===== #
         t_filt = self.filter.copy()
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        if len(self._y) < self._window:
+        if not self._use_gp:
             t_filt.reset().initialize().longfilter(self._y, bar=False)
 
             quotient = t_filt.loglikelihood - self.filter.loglikelihood
         else:
-            params = torch.cat([p.t_values for p in self.filter.ssm.flat_theta_dists], dim=-1)
-
-            filt_logl = sum(self.filter.s_ll[-self._lastrejuv:])
-            gpr = self._gpr.fit(params.cpu(), filt_logl.reshape(-1, 1).cpu())
+            gpr = self._gpr.fit(train_x.cpu(), train_y.reshape(-1, 1).cpu())
 
             # TODO: How to handle nans?
             # TODO: Use gpytorch
-
             pred_logl = torch.tensor(
                 gpr.predict(torch.cat([p.t_values for p in t_filt.ssm.flat_theta_dists], dim=-1).cpu()).astype(float32)
             )[:, 0]
 
             pred_logl[torch.isnan(pred_logl)] = float("-inf")
-            quotient = pred_logl - filt_logl
+            quotient = pred_logl - train_y[inds]
 
         # ===== Calculate acceptance ratio ===== #
         plogquot = t_filt.ssm.p_prior() - self.filter.ssm.p_prior()
@@ -207,7 +213,8 @@ class SMC2(NESS):
 
 
 class GPSMC2(SMC2):
-    def __init__(self, filter_, particles, window=250, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
+    @experimental
+    def __init__(self, filter_, particles, window=100, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
         """
         Implements an algorithm similar to that of ...
         :param window: The point at which to switch to "dynamic" proposals
