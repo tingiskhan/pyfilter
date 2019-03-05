@@ -136,7 +136,7 @@ class SMC2(NESS):
         # ===== Set up training ===== #
         if self._use_gp:
             train_x = torch.cat([p.t_values for p in self.filter.ssm.flat_theta_dists], dim=-1)
-            train_y = sum(self.filter.s_ll[-self._window:])
+            train_y = sum(self.filter.s_ll[-(len(self._y) - self._lastrejuv):])
 
         # ===== Resample among parameters ===== #
         inds = self._resampler(self._w_rec)
