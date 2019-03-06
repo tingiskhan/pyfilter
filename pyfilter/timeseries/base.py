@@ -145,7 +145,10 @@ class AffineModel(object):
         if len(shape) < 1:
             return 1
 
-        return shape
+        if len(shape) > 1:
+            raise Exception('Timeseries model can at most be 1 dimensional (i.e. vector)!')
+
+        return tuple(shape)[-1]
 
     @init_caster
     def i_mean(self):
