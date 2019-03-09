@@ -195,7 +195,7 @@ class NESS(SequentialAlgorithm):
 
             # Nested filters require parameters to have an extra dimension
             if isinstance(self.filter, ParticleFilter):
-                th.view_(-1)
+                th.view_(1)
 
         # ===== Re-initialize distributions ===== #
         for mod in [self.filter.ssm.hidden, self.filter.ssm.observable]:
