@@ -118,9 +118,9 @@ class Parameter(torch.nn.Parameter):
 
         raise ValueError('Does not have a distribution!')
 
-    def initialize(self, shape=None):
+    def sample_(self, shape=None):
         """
-        Initializes the variable.
+        Samples the variable from prior distribution in place.
         :param shape: The shape to use
         :type shape: int|tuple[int]|torch.Size
         :rtype: Parameter
@@ -129,6 +129,18 @@ class Parameter(torch.nn.Parameter):
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
         self.data = self._p.sample(((shape,) if isinstance(shape, int) else shape) or Size())
+
+        return self
+
+    def view_(self, shape):
+        """
+        In place version of `torch.view`.
+        :param shape: The shape
+        :type shape: int|tuple[int]|torch.Size
+        :rtype: Parameter
+        """
+
+        self.data = self.data.view(*self.data.shape, *((shape,) if isinstance(shape, int) else shape))
 
         return self
 
