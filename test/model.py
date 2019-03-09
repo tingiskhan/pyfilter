@@ -108,7 +108,7 @@ class Tests(unittest.TestCase):
         assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
 
     def test_Parameter(self):
-        param = Parameter(Beta(1, 3)).initialize()
+        param = Parameter(Beta(1, 3)).sample_()
 
         assert param.values.shape == torch.Size([])
 
