@@ -134,7 +134,7 @@ class Parameter(torch.nn.Parameter):
 
     def view_(self, shape):
         """
-        In place version of `torch.view`.
+        In place version of `torch.view` but assumes that `shape` is to be appended.
         :param shape: The shape
         :type shape: int|tuple[int]|torch.Size
         :rtype: Parameter
