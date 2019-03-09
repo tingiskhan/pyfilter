@@ -229,11 +229,12 @@ class NESS(SequentialAlgorithm):
         self._logged_ess += (self._ess,)
 
         # ===== Jitter ===== #
+        normalized = normalize(self._w_rec)
         if self.kernel is disc_jitter:
             i = torch.empty(self._particles).bernoulli_(1 / self._ess ** (self._p / 2))
-            f = lambda x: self.kernel(x, i, normalize(self._w_rec), self._p, self._ess, self._shrink)
+            f = lambda x: self.kernel(x, i, normalized, self._p, self._ess, self._shrink)
         else:
-            f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, self._ess, self._shrink)
+            f = lambda x: self.kernel(x, normalized, self._p, self._ess, self._shrink)
 
         self.filter.ssm.p_apply(f, transformed=True)
 
