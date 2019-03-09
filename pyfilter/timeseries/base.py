@@ -249,7 +249,7 @@ class AffineModel(object):
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
-        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([1])
+        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
         loc = self.f0(*parameter_caster(len(shape), *self.theta))
         scale = self.g0(*parameter_caster(len(shape), *self.theta))
