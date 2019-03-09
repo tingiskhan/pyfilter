@@ -217,7 +217,7 @@ class GPSMC2(SMC2):
     def __init__(self, filter_, particles, window=100, gpr=GaussianProcessRegressor(normalize_y=True), **kwargs):
         """
         Implements an algorithm similar to that of ...
-        :param window: The point at which to switch to "dynamic" proposals
+        :param window: The size of the window to use for evaluating the GP
         :type window: int
         """
         super().__init__(filter_, particles, **kwargs)
