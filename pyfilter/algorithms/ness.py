@@ -117,7 +117,7 @@ def shrink_(values, w, p, ess):
     """
     # ===== Calculate mean ===== #
     if values.dim() > w.dim():
-        w = w.unsqueeze_(-1)
+        w = w.unsqueeze(-1)
 
     mean = (w * values).sum(0)
 
@@ -219,7 +219,7 @@ class NESS(SequentialAlgorithm):
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
-        if self._ess < self._th * self._w_rec.shape[0]:
+        if self._ess < self._th * self._particles:
             indices = self._resampler(self._w_rec)
             self.filter = self.filter.resample(indices, entire_history=False)
 
@@ -232,6 +232,10 @@ class NESS(SequentialAlgorithm):
         normalized = normalize(self._w_rec)
         if self.kernel is disc_jitter:
             i = torch.empty(self._particles).bernoulli_(1 / self._ess ** (self._p / 2))
+
+            if isinstance(self.filter, ParticleFilter):
+                i = i.view(self._particles, 1)
+
             f = lambda x: self.kernel(x, i, normalized, self._p, self._ess, self._shrink)
         else:
             f = lambda x: self.kernel(x, normalized, self._p, self._ess, self._shrink)
