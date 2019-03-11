@@ -12,7 +12,7 @@ def finite_decorator(func):
 
         mask = torch.isfinite(out)
 
-        if mask.all():
+        if (~mask).all():
             raise ValueError('All weights seem to be `nan`, adjust your model')
 
         out[~mask] = float('-inf')
