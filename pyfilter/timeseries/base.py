@@ -9,7 +9,13 @@ from .statevariable import tensor_caster
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)
-        out[~torch.isfinite(out)] = float('-inf')
+
+        mask = torch.isfinite(out)
+
+        if mask.all():
+            raise ValueError('All weights seem to be `nan`, adjust your model')
+
+        out[~mask] = float('-inf')
 
         return out
 
