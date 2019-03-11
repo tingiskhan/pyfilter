@@ -5,6 +5,12 @@ from functools import lru_cache
 from scipy.stats import gaussian_kde
 
 
+def batch_shaper(param, shape):
+    param._prior._batch_shape = shape
+
+    return param
+
+
 class Parameter(torch.nn.Parameter):
     def __new__(cls, parameter=None, requires_grad=False):
         if isinstance(parameter, torch.Tensor):
@@ -128,9 +134,10 @@ class Parameter(torch.nn.Parameter):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        self.data = self._prior.sample(((shape,) if isinstance(shape, int) else shape) or Size())
+        shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
+        self.data = self._prior.sample(shape)
 
-        return self
+        return batch_shaper(self, self.data.shape)
 
     def view_(self, shape):
         """
@@ -142,7 +149,7 @@ class Parameter(torch.nn.Parameter):
 
         self.data = self.data.view(*self.data.shape, *((shape,) if isinstance(shape, int) else shape))
 
-        return self
+        return batch_shaper(self, self.data.shape)
 
     @property
     def trainable(self):
