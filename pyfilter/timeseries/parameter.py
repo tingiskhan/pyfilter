@@ -5,12 +5,6 @@ from functools import lru_cache
 from scipy.stats import gaussian_kde
 
 
-def batch_shaper(param, shape):
-    param._prior._batch_shape = shape
-
-    return param
-
-
 class Parameter(torch.nn.Parameter):
     def __new__(cls, parameter=None, requires_grad=False):
         if isinstance(parameter, torch.Tensor):
@@ -137,7 +131,7 @@ class Parameter(torch.nn.Parameter):
         shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
         self.data = self._prior.sample(shape)
 
-        return batch_shaper(self, self.data.shape)
+        return self
 
     def view_(self, shape):
         """
@@ -149,7 +143,7 @@ class Parameter(torch.nn.Parameter):
 
         self.data = self.data.view(*self.data.shape, *((shape,) if isinstance(shape, int) else shape))
 
-        return batch_shaper(self, self.data.shape)
+        return self
 
     @property
     def trainable(self):
