@@ -6,17 +6,17 @@ from scipy.stats import gaussian_kde
 
 
 class Parameter(torch.nn.Parameter):
-    def __new__(cls, data=None, requires_grad=False):
-        if isinstance(data, torch.Tensor):
-            _data = data
-        elif not isinstance(data, dist.Distribution):
-            _data = torch.tensor(data)
+    def __new__(cls, parameter=None, requires_grad=False):
+        if isinstance(parameter, torch.Tensor):
+            _data = parameter
+        elif not isinstance(parameter, dist.Distribution):
+            _data = torch.tensor(parameter)
         else:
             # This is just a place holder
             _data = torch.Tensor([float('inf')])
 
         out = torch.Tensor._make_subclass(cls, _data, requires_grad)
-        out._p = data
+        out._prior = parameter
 
         return out
 
@@ -25,7 +25,7 @@ class Parameter(torch.nn.Parameter):
             return memo[id(self)]
 
         result = type(self)(self.data.clone(), self.requires_grad)
-        result._p = self._p
+        result._prior = self._prior
 
         memo[id(self)] = result
         return result
@@ -42,7 +42,7 @@ class Parameter(torch.nn.Parameter):
         if not self.trainable:
             raise ValueError('Is not of `Distribution` instance!')
 
-        return dist.TransformedDistribution(self._p, [self.bijection.inv])
+        return dist.TransformedDistribution(self._prior, [self.bijection.inv])
 
     @property
     def bijection(self):
@@ -53,7 +53,7 @@ class Parameter(torch.nn.Parameter):
         if not self.trainable:
             raise ValueError('Is not of `Distribution` instance!')
 
-        return dist.biject_to(self._p.support)
+        return dist.biject_to(self._prior.support)
 
     @property
     def values(self):
@@ -77,7 +77,7 @@ class Parameter(torch.nn.Parameter):
             self.data = x
             return
 
-        support = self._p.support.check(x)
+        support = self._prior.support.check(x)
 
         if (~support).any():
             raise ValueError('Found values outside bounds!')
@@ -114,13 +114,13 @@ class Parameter(torch.nn.Parameter):
         """
 
         if self.trainable:
-            return self._p
+            return self._prior
 
         raise ValueError('Does not have a distribution!')
 
-    def initialize(self, shape=None):
+    def sample_(self, shape=None):
         """
-        Initializes the variable.
+        Samples the variable from prior distribution in place.
         :param shape: The shape to use
         :type shape: int|tuple[int]|torch.Size
         :rtype: Parameter
@@ -128,7 +128,20 @@ class Parameter(torch.nn.Parameter):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        self.data = self._p.sample(((shape,) if isinstance(shape, int) else shape) or Size())
+        shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
+        self.data = self._prior.sample(shape)
+
+        return self
+
+    def view_(self, shape):
+        """
+        In place version of `torch.view` but assumes that `shape` is to be appended.
+        :param shape: The shape
+        :type shape: int|tuple[int]|torch.Size
+        :rtype: Parameter
+        """
+
+        self.data = self.data.view(*self.data.shape, *((shape,) if isinstance(shape, int) else shape))
 
         return self
 
@@ -139,7 +152,7 @@ class Parameter(torch.nn.Parameter):
         :rtype: bool
         """
 
-        return isinstance(self._p, dist.Distribution)
+        return isinstance(self._prior, dist.Distribution)
 
     def get_kde(self, weights=None, transformed=True):
         """

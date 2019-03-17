@@ -9,7 +9,13 @@ from .statevariable import tensor_caster
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)
-        out[~torch.isfinite(out)] = float('-inf')
+
+        mask = torch.isfinite(out)
+
+        if (~mask).all():
+            raise ValueError('All weights seem to be `nan`, adjust your model')
+
+        out[~mask] = float('-inf')
 
         return out
 
@@ -98,7 +104,7 @@ class AffineModel(object):
                 if k.startswith('_'):
                     continue
 
-                if isinstance(v, (Parameter, torch.Tensor)) and n is self.noise:
+                if isinstance(v, Parameter) and n is self.noise:
                     self._dist_theta[k] = v
                 elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
                     raise ValueError('You cannot have distributional parameters in the initial distribution!')
@@ -141,11 +147,14 @@ class AffineModel(object):
         :return: Dimension of process
         :rtype: int
         """
-        shape = self.noise.mean.shape
+        shape = self.noise.event_shape
         if len(shape) < 1:
             return 1
 
-        return shape[0]
+        if len(shape) > 1:
+            raise Exception('Timeseries model can at most be 1 dimensional (i.e. vector)!')
+
+        return tuple(shape)[-1]
 
     @init_caster
     def i_mean(self):
@@ -166,25 +175,6 @@ class AffineModel(object):
         """
 
         return self.g0(*self.theta)
-
-    def i_weight(self, x):
-        """
-        Weights the process of the initial state.
-        :param x: The state at `x_0`.
-        :type x: torch.Tensor
-        :return: The log-weights
-        :rtype: torch.Tensor
-        """
-
-        loc, scale = self.i_mean(), self.i_scale()
-
-        if self.ndim < 2:
-            rescaled = (x - loc) / scale
-        else:
-            # TODO: Might not work
-            rescaled = scale.inverse().dot(x - loc)
-
-        return self.noise0.log_prob(rescaled)
 
     @tensor_caster
     def f_val(self, x):
@@ -246,7 +236,12 @@ class AffineModel(object):
         """
         loc, scale = self.mean(x), self.scale(x)
 
-        dist = TransformedDistribution(self.noise, AffineTransform(loc, scale))
+        if isinstance(self, Observable):
+            shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)
+        else:
+            shape = _get_shape(x, self.ndim)
+
+        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
 
         return dist.log_prob(y)
 
@@ -260,10 +255,11 @@ class AffineModel(object):
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
-        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([1])
+        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
-        loc = self.f0(*parameter_caster(len(shape), *self.theta))
-        scale = self.g0(*parameter_caster(len(shape), *self.theta))
+        loc = concater(self.f0(*parameter_caster(len(shape), *self.theta)))
+        scale = concater(self.g0(*parameter_caster(len(shape), *self.theta)))
+
         dist = TransformedDistribution(self.noise0.expand(shape), self._transform(loc, scale))
 
         if as_dist:
@@ -285,7 +281,7 @@ class AffineModel(object):
         loc, scale = self.mean(x), self.scale(x)
 
         if isinstance(self, Observable):
-            shape = _get_shape(loc, self.ndim)
+            shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)
         else:
             shape = _get_shape(x, self.ndim)
 
@@ -363,8 +359,6 @@ class AffineModel(object):
         that are distributions.
         :param func: The function to apply to parameters.
         :type func: callable
-        :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
-        :type default: None|torch.Tensor
         :return: Returns tuple of values
         :rtype: tuple[Parameter]
         """

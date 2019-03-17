@@ -80,22 +80,20 @@ class Tests(unittest.TestCase):
 
                 assert len(filt.s_mx) > 0
 
-                filtmeans = filt.filtermeans()
+                filtmeans = filt.filtermeans.numpy()
 
                 # ===== Run Kalman ===== #
                 if model is self.model:
                     kf = pykalman.KalmanFilter(transition_matrices=1., observation_matrices=1.)
-                    estimates = np.array(filtmeans)
                 else:
                     kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1.]], observation_matrices=[1, 2])
-                    estimates = torch.cat(filtmeans, 0).numpy().reshape(-1, 2)
 
                 filterestimates = kf.filter(y.numpy())
 
-                if estimates.ndim < 2:
-                    estimates = estimates[:, None]
+                if filtmeans.ndim < 2:
+                    filtmeans = filtmeans[:, None]
 
-                rel_error = np.median(np.abs((estimates - filterestimates[0]) / filterestimates[0]))
+                rel_error = np.median(np.abs((filtmeans - filterestimates[0]) / filterestimates[0]))
 
                 ll = kf.loglikelihood(y.numpy())
 
@@ -167,8 +165,8 @@ class Tests(unittest.TestCase):
 
                 kde = parameter.get_kde(transformed=False)
 
-                tru_val = trumod.hidden.theta_vals[-1]
-                densval = kde.score_samples(tru_val.numpy().reshape(-1, 1))
+                tru_val = trumod.hidden.theta[-1]
+                densval = kde.logpdf(tru_val.numpy().reshape(-1, 1))
                 priorval = parameter.dist.log_prob(tru_val)
 
                 assert bool(densval > priorval.numpy())

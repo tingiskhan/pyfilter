@@ -33,7 +33,7 @@ class LinearGaussianObservations(StateSpaceModel):
         """
 
         if isinstance(a, float) or a.dim() < 2:
-            noise = dists.Normal(torch.zeros(1), 1)
+            noise = dists.Normal(0., 1.)
         else:
             noise = dists.Independent(dists.Normal(torch.zeros(a.dim()), torch.ones(a.dim())), 1)
 

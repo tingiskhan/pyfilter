@@ -56,7 +56,7 @@ class IteratedFilteringV2(BatchAlgorithm):
 
     def initialize(self):
         for th in self._filter.ssm.flat_theta_dists:
-            th.initialize(self._particles)
+            th.sample_(self._particles)
 
         return self
 

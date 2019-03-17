@@ -38,11 +38,19 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return torch.einsum('ij,j...->i...', (a, x))
+    return torch.matmul(a, x)
 
 
 def f0mvn(a, sigma):
     return torch.zeros(2)
+
+
+def g0mvn(a, sigma):
+    return sigma * torch.ones(2)
+
+
+def gmvn(x, a, sigma):
+    return g0mvn(a, sigma)
 
 
 def fomvn(x, sigma):
@@ -65,7 +73,7 @@ class Tests(unittest.TestCase):
     scale = torch.diag(mat)
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-    mvnlinear = AffineModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
+    mvnlinear = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
     mvnoblinear = Observable((fomvn, gomvn), (1.,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
@@ -108,7 +116,7 @@ class Tests(unittest.TestCase):
         assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
 
     def test_Parameter(self):
-        param = Parameter(Beta(1, 3)).initialize()
+        param = Parameter(Beta(1, 3)).sample_()
 
         assert param.values.shape == torch.Size([])
 

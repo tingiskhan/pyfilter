@@ -117,7 +117,7 @@ def shrink_(values, w, p, ess):
     """
     # ===== Calculate mean ===== #
     if values.dim() > w.dim():
-        w = w.unsqueeze_(-1)
+        w = w.unsqueeze(-1)
 
     mean = (w * values).sum(0)
 
@@ -174,7 +174,7 @@ class NESS(SequentialAlgorithm):
         self._ess = particles
         self._logged_ess = tuple()
 
-        self._shape = (particles, 1) if isinstance(filter_, ParticleFilter) else particles
+        self._particles = particles
 
         # ====== Select proposal kernel ===== #
         if continuous:
@@ -191,7 +191,11 @@ class NESS(SequentialAlgorithm):
 
         # ===== Initialize parameters ===== #
         for th in self._filter.ssm.flat_theta_dists:
-            th.initialize(self._shape)
+            th.sample_(self._particles)
+
+            # Nested filters require parameters to have an extra dimension
+            if isinstance(self.filter, ParticleFilter):
+                th.view_(1)
 
         # ===== Re-initialize distributions ===== #
         for mod in [self.filter.ssm.hidden, self.filter.ssm.observable]:
@@ -215,7 +219,7 @@ class NESS(SequentialAlgorithm):
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
-        if self._ess < self._th * self._w_rec.shape[0]:
+        if self._ess < self._th * self._particles:
             indices = self._resampler(self._w_rec)
             self.filter = self.filter.resample(indices, entire_history=False)
 
@@ -225,11 +229,16 @@ class NESS(SequentialAlgorithm):
         self._logged_ess += (self._ess,)
 
         # ===== Jitter ===== #
+        normalized = normalize(self._w_rec)
         if self.kernel is disc_jitter:
-            i = torch.empty(self._shape).bernoulli_(1 / self._ess ** (self._p / 2))
-            f = lambda x: self.kernel(x, i, normalize(self._w_rec), self._p, self._ess, self._shrink)
+            i = torch.empty(self._particles).bernoulli_(1 / self._ess ** (self._p / 2))
+
+            if isinstance(self.filter, ParticleFilter):
+                i = i.view(self._particles, 1)
+
+            f = lambda x: self.kernel(x, i, normalized, self._p, self._ess, self._shrink)
         else:
-            f = lambda x: self.kernel(x, normalize(self._w_rec), self._p, self._ess, self._shrink)
+            f = lambda x: self.kernel(x, normalized, self._p, self._ess, self._shrink)
 
         self.filter.ssm.p_apply(f, transformed=True)
 

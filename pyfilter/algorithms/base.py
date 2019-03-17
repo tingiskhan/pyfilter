@@ -1,5 +1,6 @@
 from ..filters.base import BaseFilter, enforce_tensor
 from tqdm import tqdm
+import warnings
 
 
 class BaseAlgorithm(object):
@@ -120,3 +121,12 @@ class BatchAlgorithm(BaseAlgorithm):
         self.initialize()._fit(y)
 
         return self
+
+
+def experimental(func):
+    def wrapper(obj, *args, **kwargs):
+        warnings.warn('{:s} is an experimental algorithm, use at own risk'.format(str(obj)))
+
+        return func(obj, *args, **kwargs)
+
+    return wrapper
