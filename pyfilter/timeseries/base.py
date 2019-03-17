@@ -257,8 +257,9 @@ class AffineModel(object):
         """
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
-        loc = self.f0(*parameter_caster(len(shape), *self.theta))
-        scale = self.g0(*parameter_caster(len(shape), *self.theta))
+        loc = concater(self.f0(*parameter_caster(len(shape), *self.theta)))
+        scale = concater(self.g0(*parameter_caster(len(shape), *self.theta)))
+
         dist = TransformedDistribution(self.noise0.expand(shape), self._transform(loc, scale))
 
         if as_dist:
@@ -358,8 +359,6 @@ class AffineModel(object):
         that are distributions.
         :param func: The function to apply to parameters.
         :type func: callable
-        :param default: What to set those parameters that aren't distributions to. If `None`, sets to the current value
-        :type default: None|torch.Tensor
         :return: Returns tuple of values
         :rtype: tuple[Parameter]
         """
