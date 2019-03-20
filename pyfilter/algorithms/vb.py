@@ -6,6 +6,23 @@ import tqdm
 from ..proposals.linearized import eps
 
 
+class VBResultSet(object):
+    def __init__(self, final_elbo, mean, logstd):
+        """
+        Naive results from VariationalBayes.
+        :param final_elbo: The final elbo
+        :type final_elbo: float
+        :param mean: The mean vector of the state
+        :type mean: torch.Tensor
+        :param logstd: The log std vector of the state
+        :type logstd: torch.Tensor
+        """
+
+        self.final_elbo = final_elbo
+        self.mean = mean
+        self.logstd = logstd
+
+
 class VariationalBayes(BatchAlgorithm):
     def __init__(self, model, num_samples=16, fullrank=False, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
         """
@@ -33,6 +50,16 @@ class VariationalBayes(BatchAlgorithm):
         self._optimizer = optimizer
         self._maxiters = int(maxiters)
         self.optkwargs = optkwargs or dict()
+        self._resultset = None
+
+    @property
+    def result_set(self):
+        """
+        Returns the result set of the fitting procedure
+        :rtype: VBResultSet
+        """
+
+        return self._resultset
 
     def loss(self, y, eta, mean, logstd):
         """
@@ -86,5 +113,8 @@ class VariationalBayes(BatchAlgorithm):
 
             it += 1
             bar.update(1)
+
+        # ===== Define result set ===== #
+        self._resultset = VBResultSet(elbo.detach().numpy()[-1], mean.detach(), logstd.detach())
 
         return self
