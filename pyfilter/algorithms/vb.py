@@ -87,6 +87,4 @@ class VariationalBayes(BatchAlgorithm):
             it += 1
             bar.update(1)
 
-        print('Final ELBO: {:.2f}'.format(elbo.detach().numpy()))
-
         return self
