@@ -31,7 +31,7 @@ class VariationalBayes(BatchAlgorithm):
 
         self._weightmat = torch.ones((self._numsamples, self._model.hidden_ndim))
         self._optimizer = optimizer
-        self._maxiters = maxiters
+        self._maxiters = int(maxiters)
         self.optkwargs = optkwargs or dict()
 
     def loss(self, y, eta, mean, logstd):
