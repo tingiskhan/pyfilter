@@ -80,9 +80,10 @@ class VariationalBayes(BatchAlgorithm):
         x_tm1 = transformed[:, :-1]
 
         # ===== Loss function ===== #
-        logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
+        var_diff = eta.log_prob(samples)[..., None].sum(1)
+        logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1) - var_diff
 
-        return -logl
+        return -logl.mean(0)
 
     def fit(self, y):
         # ===== Get shape of state vectors ====== #
