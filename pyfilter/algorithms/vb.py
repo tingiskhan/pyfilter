@@ -116,7 +116,7 @@ class VariationalBayes(BatchAlgorithm):
 
             it += 1
             bar.update(1)
-            bar.set_description('{:s} - ELBO: {:.2f}'.format(str(self), -elbo.detach().numpy()[-1]))
+            bar.set_description('{:s} - ELBO: {:.2f}'.format(str(self), -elbo[-1]))
 
         # ===== Define result set ===== #
         self._resultset = VBResultSet(elbo.detach().numpy()[-1], mean.detach(), logstd.detach())
