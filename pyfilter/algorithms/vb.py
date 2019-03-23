@@ -36,7 +36,7 @@ class VariationalBayes(BatchAlgorithm):
         :param optimizer: The optimizer
         :type optimizer: optim.Optimizer
         :param maxiters: The maximum number of iterations
-        :type maxiters: int
+        :type maxiters: int|float
         :param optkwargs: Any optimizer specific kwargs
         :type optkwargs: dict
         """
@@ -68,10 +68,13 @@ class VariationalBayes(BatchAlgorithm):
         """
 
         # ===== Sample ===== #
-        samples = eta.sample((4,))
+        samples = eta.sample((self._numsamples,))
 
         if not self._fullrank:
-            transformed = mean + logstd.exp() * samples
+            scale = logstd.exp()
+            transformed = mean + scale * samples
+
+            entropydist = dists.Independent(dists.Normal(mean, scale), 2)
         else:
             raise NotImplementedError('Full-rank is currently not implemented!')
 
@@ -80,10 +83,9 @@ class VariationalBayes(BatchAlgorithm):
         x_tm1 = transformed[:, :-1]
 
         # ===== Loss function ===== #
-        var_diff = eta.log_prob(samples)[..., None].sum(1)
-        logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1) - var_diff
+        logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
 
-        return -logl.mean(0)
+        return -(logl + entropydist.entropy())
 
     def fit(self, y):
         # ===== Get shape of state vectors ====== #
@@ -95,7 +97,7 @@ class VariationalBayes(BatchAlgorithm):
             raise NotImplementedError('Full-rank is currently not implemented!')
 
         # ===== Start optimization ===== #
-        eta = dists.Independent(dists.Normal(torch.zeros_like(mean), torch.ones_like(logstd)), 1)
+        eta = dists.Independent(dists.Normal(torch.zeros_like(mean), torch.ones_like(logstd)), 2)
 
         optimizer = self._optimizer([mean, logstd], **self.optkwargs)
         elbo_old = torch.tensor(1e6)
@@ -114,7 +116,7 @@ class VariationalBayes(BatchAlgorithm):
 
             it += 1
             bar.update(1)
-            bar.set_description('{:s} - ELBO: {:.2f}'.format(str(self), elbo.detach().numpy()[-1]))
+            bar.set_description('{:s} - ELBO: {:.2f}'.format(str(self), -elbo.detach().numpy()[-1]))
 
         # ===== Define result set ===== #
         self._resultset = VBResultSet(elbo.detach().numpy()[-1], mean.detach(), logstd.detach())
