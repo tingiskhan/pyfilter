@@ -24,7 +24,7 @@ class VBResultSet(object):
 
 
 class VariationalBayes(BatchAlgorithm):
-    def __init__(self, model, num_samples=16, fullrank=False, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
+    def __init__(self, model, num_samples=4, fullrank=False, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
         """
         Implements Variational Bayes.
         :param model: The model
