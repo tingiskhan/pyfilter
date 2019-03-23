@@ -87,7 +87,7 @@ class VariationalBayes(BatchAlgorithm):
 
         return -(logl + entropydist.entropy())
 
-    def fit(self, y):
+    def _fit(self, y):
         # ===== Get shape of state vectors ====== #
         mean = torch.zeros((y.shape[0] + 1, self._model.hidden_ndim), requires_grad=True)
 
