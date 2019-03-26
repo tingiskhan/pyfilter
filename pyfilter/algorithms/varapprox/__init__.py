@@ -1,1 +1,2 @@
-from .meanfield import MeanField, BaseApproximation
+from .meanfield import MeanField, ParameterApproximation
+from .base import BaseApproximation

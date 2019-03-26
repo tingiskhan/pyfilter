@@ -30,4 +30,19 @@ class MeanField(BaseApproximation):
         return [self._mean, self._logstd]
 
     def sample(self, num_samples):
-        return self._mean + self._logstd.exp() * self._sampledist.sample((num_samples,))
+        samples = (num_samples,) if isinstance(num_samples, int) else num_samples
+        return self._mean + self._logstd.exp() * self._sampledist.sample(samples)
+
+
+# TODO: Only supports 1D parameters currently
+class ParameterApproximation(MeanField):
+    def initialize(self, parameters, *args):
+        self._mean = torch.zeros(len(parameters), requires_grad=True)
+        self._logstd = torch.zeros_like(self._mean, requires_grad=True)
+
+        self._sampledist = Independent(Normal(torch.zeros_like(self._mean), torch.ones_like(self._logstd)), 1)
+
+        return self
+
+    def entropy(self):
+        return Independent(Normal(self._mean, self._logstd.exp()), 1).entropy()
