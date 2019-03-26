@@ -1,0 +1,1 @@
+from .meanfield import MeanField, BaseApproximation
