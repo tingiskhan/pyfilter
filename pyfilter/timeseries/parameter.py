@@ -5,30 +5,21 @@ from functools import lru_cache
 from scipy.stats import gaussian_kde
 
 
-class Parameter(torch.nn.Parameter):
-    def __new__(cls, parameter=None, requires_grad=False):
-        if isinstance(parameter, torch.Tensor):
-            _data = parameter
-        elif not isinstance(parameter, dist.Distribution):
-            _data = torch.tensor(parameter)
+class Parameter(object):
+    def __init__(self, param):
+        """
+        The base parameter class.
+        :param param: The parameter. Can be either values or a distribution object
+        :type param: torch.Tensor|Distribution
+        """
+
+        self._prior = None
+        self._values = None
+
+        if isinstance(param, dist.Distribution):
+            self._prior = param
         else:
-            # This is just a place holder
-            _data = torch.Tensor([float('inf')])
-
-        out = torch.Tensor._make_subclass(cls, _data, requires_grad)
-        out._prior = parameter
-
-        return out
-
-    def __deepcopy__(self, memo):
-        if id(self) in memo:
-            return memo[id(self)]
-
-        result = type(self)(self.data.clone(), self.requires_grad)
-        result._prior = self._prior
-
-        memo[id(self)] = result
-        return result
+            self._values = torch.tensor(param)
 
     @property
     @lru_cache()
@@ -62,7 +53,7 @@ class Parameter(torch.nn.Parameter):
         :rtype: float|Tensor
         """
 
-        return self.data
+        return self._values
 
     @values.setter
     def values(self, x):
@@ -74,7 +65,7 @@ class Parameter(torch.nn.Parameter):
         if not isinstance(x, type(self.values)) and self.values is not None:
             raise ValueError('Is not the same type!')
         elif not self.trainable:
-            self.data = x
+            self._values = x
             return
 
         support = self._prior.support.check(x)
@@ -82,7 +73,7 @@ class Parameter(torch.nn.Parameter):
         if (~support).any():
             raise ValueError('Found values outside bounds!')
 
-        self.data = x
+        self._values = x
 
     @property
     def t_values(self):
@@ -129,7 +120,7 @@ class Parameter(torch.nn.Parameter):
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
         shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
-        self.data = self._prior.sample(shape)
+        self._values = self._prior.sample(shape)
 
         return self
 
@@ -141,7 +132,7 @@ class Parameter(torch.nn.Parameter):
         :rtype: Parameter
         """
 
-        self.data = self.data.view(*self.data.shape, *((shape,) if isinstance(shape, int) else shape))
+        self._values = self._values.view(*self._values.shape, *((shape,) if isinstance(shape, int) else shape))
 
         return self
 

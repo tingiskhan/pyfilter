@@ -3,7 +3,7 @@ import torch
 from torch import optim
 import tqdm
 from ..proposals.linearized import eps
-from .varapprox import MeanField, BaseApproximation
+from .varapprox import MeanField, BaseApproximation, ParameterApproximation
 
 
 class VariationalBayes(BatchAlgorithm):
@@ -27,7 +27,9 @@ class VariationalBayes(BatchAlgorithm):
         super().__init__(None)
         self._model = model
         self._numsamples = num_samples
+
         self._approximation = approx
+        self._p_approx = None   # type: ParameterApproximation
 
         self._optimizer = optimizer
         self._maxiters = int(maxiters)
@@ -44,12 +46,18 @@ class VariationalBayes(BatchAlgorithm):
 
     def loss(self, y):
         """
-        The loss function, i.e. loglikelihood/ELBO
+        The loss function, i.e. ELBO
         :rtype: torch.Tensor
         """
 
-        # ===== Sample ===== #
+        # ===== Sample states ===== #
         transformed = self._approximation.sample(self._numsamples)
+
+        # TODO: Clean this up and make it work for matrices
+        # ===== Sample parameters ===== #
+        params = self._p_approx.sample((self._numsamples, 1))
+        for i, p in enumerate(self._model.flat_theta_dists):
+            p.t_values = params[..., i]
 
         # ===== Helpers ===== #
         x_t = transformed[:, 1:]
@@ -57,15 +65,20 @@ class VariationalBayes(BatchAlgorithm):
 
         # ===== Loss function ===== #
         logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
+        entropy = self._approximation.entropy() + self._p_approx.entropy()
 
-        return -(logl + self._approximation.entropy())
+        return -(logl + self._model.p_prior(transformed=True).mean(0) + entropy)
 
     def _fit(self, y):
-        # ===== Initialize the approximation ===== #
+        # ===== Initialize the state approximation ===== #
         self._approximation.initialize(y, self._model.hidden_ndim)
 
+        # ===== Setup the parameter approximation ===== #
+        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
+
         # ===== Define the optimizer ===== #
-        optimizer = self._optimizer(self._approximation.get_parameters(), **self.optkwargs)
+        parameters = [*self._approximation.get_parameters(), *self._p_approx.get_parameters()]
+        optimizer = self._optimizer(parameters, **self.optkwargs)
 
         elbo_old = -torch.tensor(float('inf'))
         elbo = -elbo_old

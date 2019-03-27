@@ -129,6 +129,15 @@ class AffineModel(object):
         return self._theta
 
     @property
+    def _theta_vals(self):
+        """
+        Returns the values of the parameters
+        :return: tuple[torch.Tensor]
+        """
+
+        return tuple(th.values for th in self._theta)
+
+    @property
     @lru_cache()
     def theta_dists(self):
         """
@@ -164,7 +173,7 @@ class AffineModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.f0(*self.theta)
+        return self.f0(*self._theta_vals)
 
     @init_caster
     def i_scale(self):
@@ -174,7 +183,7 @@ class AffineModel(object):
         :rtype: torch.Tensor
         """
 
-        return self.g0(*self.theta)
+        return self.g0(*self._theta_vals)
 
     @tensor_caster
     def f_val(self, x):
