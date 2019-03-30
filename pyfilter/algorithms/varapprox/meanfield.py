@@ -37,8 +37,15 @@ class MeanField(BaseApproximation):
 # TODO: Only supports 1D parameters currently
 class ParameterApproximation(MeanField):
     def initialize(self, parameters, *args):
-        self._mean = torch.zeros(len(parameters), requires_grad=True)
-        self._logstd = torch.zeros_like(self._mean, requires_grad=True)
+        self._mean = torch.zeros(len(parameters))
+        self._logstd = torch.zeros_like(self._mean)
+
+        for i, p in enumerate(parameters):
+            self._mean[i] = p.bijection.inv(p.dist.mean)
+            self._logstd[i] = p.dist.stddev.log()
+
+        self._mean.requires_grad = True
+        self._logstd.requires_grad = True
 
         self._sampledist = Independent(Normal(torch.zeros_like(self._mean), torch.ones_like(self._logstd)), 1)
 
