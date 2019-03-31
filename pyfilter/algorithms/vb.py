@@ -55,7 +55,7 @@ class VariationalBayes(BatchAlgorithm):
 
         # TODO: Clean this up and make it work for matrices
         # ===== Sample parameters ===== #
-        params = self._p_approx.sample((self._numsamples, 1))
+        params = self._p_approx.sample(self._numsamples)
         for i, p in enumerate(self._model.flat_theta_dists):
             p.t_values = params[..., i]
 
@@ -67,7 +67,7 @@ class VariationalBayes(BatchAlgorithm):
         logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
         entropy = self._approximation.entropy() + self._p_approx.entropy()
 
-        return -(logl + self._model.p_prior(transformed=True).mean(0) + entropy)
+        return -(logl + self._model.p_prior(transformed=True).mean() + entropy)
 
     def _fit(self, y):
         # ===== Initialize the state approximation ===== #
