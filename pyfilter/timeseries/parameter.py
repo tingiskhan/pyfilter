@@ -5,21 +5,31 @@ from functools import lru_cache
 from scipy.stats import gaussian_kde
 
 
-class Parameter(object):
-    def __init__(self, param):
-        """
-        The base parameter class.
-        :param param: The parameter. Can be either values or a distribution object
-        :type param: torch.Tensor|Distribution
-        """
-
-        self._prior = None
-        self._values = None
-
-        if isinstance(param, dist.Distribution):
-            self._prior = param
+class Parameter(torch.nn.Parameter):
+    def __new__(cls, parameter=None, requires_grad=False):
+        if isinstance(parameter, torch.Tensor):
+            _data = parameter
+        elif not isinstance(parameter, dist.Distribution):
+            _data = torch.tensor(parameter)
         else:
-            self._values = torch.tensor(param)
+            # This is just a place holder
+            _data = torch.Tensor([float('inf')])
+
+        out = torch.Tensor._make_subclass(cls, _data, requires_grad)
+        out._prior = parameter
+        out._values = _data
+
+        return out
+
+    def __deepcopy__(self, memo):
+        if id(self) in memo:
+            return memo[id(self)]
+
+        result = type(self)(self.data.clone(), self.requires_grad)
+        result._prior = self._prior
+
+        memo[id(self)] = result
+        return result
 
     @property
     @lru_cache()
@@ -74,6 +84,7 @@ class Parameter(object):
             raise ValueError('Found values outside bounds!')
 
         self._values = x
+        self.data = self._values
 
     @property
     def t_values(self):
@@ -120,7 +131,7 @@ class Parameter(object):
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
         shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
-        self._values = self._prior.sample(shape)
+        self.values = self._prior.sample(shape)
 
         return self
 
@@ -132,7 +143,7 @@ class Parameter(object):
         :rtype: Parameter
         """
 
-        self._values = self._values.view(*self._values.shape, *((shape,) if isinstance(shape, int) else shape))
+        self.values = self.values.view(*self.values.shape, *((shape,) if isinstance(shape, int) else shape))
 
         return self
 
