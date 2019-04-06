@@ -102,7 +102,7 @@ class StateSpaceModel(object):
         :param x: The previous hidden state
         :type x: torch.Tensor
         :return: The corresponding log-weights
-        :rtype: np.ndarray|float|int
+        :rtype: torch.Tensor
         """
 
         return self.hidden.weight(y, x)
