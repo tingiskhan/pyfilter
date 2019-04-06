@@ -35,6 +35,9 @@ class VariationalBayes(BatchAlgorithm):
         self._maxiters = int(maxiters)
         self.optkwargs = optkwargs or dict()
 
+        self._runavg = 0
+        self._decay = 0.975
+
     @property
     def approximation(self):
         """
@@ -96,6 +99,7 @@ class VariationalBayes(BatchAlgorithm):
 
             it += 1
             bar.update(1)
-            bar.set_description('{:s} - ELBO: {:.2f}'.format(str(self), -elbo[-1]))
+            self._runavg = self._runavg * self._decay - elbo[-1] * (1 - self._decay)
+            bar.set_description('{:s} - Avg. ELBO: {:.2f}'.format(str(self), self._runavg))
 
         return self
