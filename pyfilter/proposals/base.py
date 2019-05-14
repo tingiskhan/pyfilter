@@ -1,4 +1,6 @@
 from ..timeseries.model import StateSpaceModel
+from ..utils import choose
+from torch.distributions import MultivariateNormal, Distribution
 
 
 class Proposal(object):
@@ -7,7 +9,16 @@ class Proposal(object):
         Defines a proposal object for how to draw the particles.
         """
         self._model = None      # type: StateSpaceModel
-        self._kernel = None
+        self._kernel = None     # type: Distribution
+
+    @property
+    def kernel(self):
+        """
+        Returns the latest kernel
+        :rtype: Distribution
+        """
+
+        return self._kernel
 
     def set_model(self, model):
         """
@@ -67,11 +78,20 @@ class Proposal(object):
         :rtype: Proposal
         """
 
+        # TODO: Only works for location-scale families currently
+        self._kernel.loc = choose(self._kernel.loc, inds)
+
+        if isinstance(self._kernel, MultivariateNormal):
+            self._kernel.scale_tril = choose(self._kernel.scale_tril, inds)
+        else:
+            self._kernel.scale = choose(self._kernel.scale, inds)
+
         return self
 
-    def pre_weight(self, y, x):
+    def pre_weight(self, y):
         """
-        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the time-series model.
+        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the constructed proposal.
+        Note that you should call `construct` prior to this function.
         :param y: The observation
         :type y: torch.Tensor|float
         :param x: The old sample
@@ -80,4 +100,4 @@ class Proposal(object):
         :rtype: torch.Tensor
         """
 
-        return self._model.weight(y, self._model.hidden.mean(x))
+        return self._model.weight(y, self._kernel.loc)

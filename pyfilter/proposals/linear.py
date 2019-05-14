@@ -87,6 +87,3 @@ class LinearGaussianObservations(Proposal):
             return MultivariateNormal(m, scale_tril=torch.cholesky(cov)).log_prob(y)
 
         return Normal(m, cov[..., 0, 0].sqrt()).log_prob(y)
-
-    def pre_weight(self, y, x):
-        return self.weight(y, None, x)
