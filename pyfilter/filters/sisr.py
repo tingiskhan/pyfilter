@@ -16,11 +16,13 @@ class SISR(ParticleFilter):
 
         inds, mask = self._resample_state(self._w_old)
         to_prop = choose(self._x_cur, inds)
-        self._proposal = self.proposal.construct(y, to_prop).resample(inds)
+        self._proposal = self.proposal.construct(y, to_prop)
 
         # ===== Propagate ===== #
         self._x_cur = self.proposal.draw()
         weights = self.proposal.weight(y, self._x_cur, to_prop)
+
+        self.proposal.resample(inds)
 
         # ===== Update weights ===== #
         tw = torch.zeros(weights.shape)
