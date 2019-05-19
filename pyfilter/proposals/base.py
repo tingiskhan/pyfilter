@@ -1,6 +1,6 @@
 from ..timeseries.model import StateSpaceModel
 from ..utils import choose
-from torch.distributions import MultivariateNormal, Distribution
+from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform
 
 
 class Proposal(object):
@@ -79,8 +79,19 @@ class Proposal(object):
         """
 
         # TODO: Only works for location-scale families currently
-        self._kernel.loc = choose(self._kernel.loc, inds)
 
+        # ===== If transformed distribution we resample everything ===== #
+        if isinstance(self._kernel, TransformedDistribution):
+            for at in (k for k in self._kernel.transforms if isinstance(k, AffineTransform)):
+                at.loc = choose(at.loc, inds)
+
+                if at.scale.shape == inds.shape:
+                    at.scale = choose(at.scale, inds)
+
+            return self
+
+        # ===== Else, we just resample ===== #
+        self._kernel.loc = choose(self._kernel.loc, inds)
         if isinstance(self._kernel, MultivariateNormal):
             self._kernel.scale_tril = choose(self._kernel.scale_tril, inds)
         else:
@@ -100,4 +111,9 @@ class Proposal(object):
         :rtype: torch.Tensor
         """
 
-        return self._model.weight(y, self._kernel.loc)
+        if not isinstance(self._kernel, TransformedDistribution):
+            return self._model.weight(y, self._kernel.loc)
+
+        at = next(k for k in self._kernel.transforms if isinstance(k, AffineTransform))
+
+        return self._model.weight(y, at.loc)
