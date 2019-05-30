@@ -14,9 +14,6 @@ class NESS(SequentialAlgorithm):
         :type particles: int
         :param threshold: The threshold for when to resample the parameters
         :type threshold: float
-        :param p: For controlling the variance of the jittering kernel. The greater the value, the higher the variance
-        for `shrink=False`. When `shrink=True`, `p` controls the amount of shrinkage applied. The smaller the value the
-        more shrinkage is applied. Note that `p=1` is recommended when using `continuous=False`.
         """
 
         cudawarning(resampling)
