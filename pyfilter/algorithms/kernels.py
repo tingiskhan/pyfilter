@@ -136,7 +136,8 @@ class AdaptiveShrinkageKernel(BaseKernel):
         Implements the adaptive shrinkage kernel of ..
         :param p: The parameter p controlling the jittering variance.
         :type p: float
-        :param vthresh_scale: The scaling of the V threshold
+        :param vthresh_scale: The scaling of the threshold of the variance
+        :type vthresh_scale: float
         """
 
         self._vn = vthresh_scale
