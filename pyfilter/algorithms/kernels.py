@@ -130,6 +130,25 @@ def _shrink(values, w, ess):
     return mean + beta * (values - mean), bw
 
 
+class ShrinkageKernel(BaseKernel):
+    """
+    An improved regular shrinkage kernel, from the paper ..
+    """
+    def update(self, parameters, filter_, weights):
+        normalized = normalize(weights)
+        ess = get_ess(normalized, normalized=True)
+
+        # ===== Perform shrinkage ===== #
+        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, normalized, ess))
+        meanscales = ms_hid + ms_obs
+
+        # ===== Mutate parameters ===== #
+        for p, (m, s) in zip(parameters, meanscales):
+            p.t_values = _jitter(m, s)
+
+        return self
+
+
 class AdaptiveShrinkageKernel(BaseKernel):
     def __init__(self, p=4, vthresh_scale=1.):
         """
