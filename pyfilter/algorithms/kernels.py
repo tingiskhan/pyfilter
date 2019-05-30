@@ -160,7 +160,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
         """
 
         self._vn = vthresh_scale
-        self._vf = self._vn / 4
+        self._vf = self._vn
         self._p = p
         self._switched = False
 
