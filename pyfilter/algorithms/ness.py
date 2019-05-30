@@ -3,11 +3,11 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess
 import torch
 from ..resampling import systematic
-from .kernels import AdaptiveShrinkageKernel
+from .kernels import ShrinkageKernel
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.5, resampling=systematic, kernel=AdaptiveShrinkageKernel()):
+    def __init__(self, filter_, particles, threshold=0.5, resampling=systematic, kernel=ShrinkageKernel()):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
