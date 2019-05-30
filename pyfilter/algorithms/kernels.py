@@ -157,7 +157,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
         # TODO: This should be moved outside
         scale = sqrt(weights.numel() ** (-(self._p + 2) / self._p))
         if not self._switched:
-            self._switched = max(s for m, s in meanscales) < self._vn * scale
+            self._switched = min(s for m, s in meanscales) < self._vn * scale
 
         # ===== Mutate parameters ===== #
         for p, (m, s) in zip(parameters, meanscales):
