@@ -366,7 +366,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
     def define_pdf(self, parameters, weights):
         """
-        The function to override for the user
+        The method to be overriden by the user for defining the kernel to propagate the parameters.
         :return: A distribution
         :rtype: MultivariateNormal|Independent
         """
