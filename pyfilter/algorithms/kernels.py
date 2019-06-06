@@ -8,6 +8,26 @@ from torch.distributions import MultivariateNormal, Independent
 
 
 class BaseKernel(object):
+    def __init__(self, record_stats=True):
+        self._record_stats = record_stats
+
+        self._recorded_stats = tuple()
+
+    def _update(self, parameters, filter_, weights):
+        """
+        Defines the function for updating the parameters for the user to override.
+        :param parameters: The parameters of the model to update
+        :type parameters: tuple[Parameter]
+        :param filter_: The filter
+        :type filter_: BaseFilter
+        :param weights: The weights to be passed
+        :type weights: torch.Tensor
+        :return: Self
+        :rtype: BaseKernel
+        """
+
+        raise NotImplementedError()
+
     def update(self, parameters, filter_, weights):
         """
         Defines the function for updating the parameters.
@@ -21,7 +41,62 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
 
-        raise NotImplementedError()
+        w = normalize(weights)
+
+        if self._record_stats:
+            self.record_stats(parameters, w)
+
+        self._update(parameters, filter_, w)
+
+        return self
+
+    def record_stats(self, parameters, weights):
+        """
+        Records the stats of the parameters.
+        :param parameters: The parameters of the model to update
+        :type parameters: tuple[Parameter]
+        :param weights: The weights to be passed
+        :type weights: torch.Tensor
+        :return: Self
+        :rtype: BaseKernel
+        """
+
+        res = tuple()
+        for p in parameters:
+            weights = add_dimensions(weights, p.dim())
+            vals = p.t_values
+
+            mean = (vals * weights).sum(0)
+            scale = ((vals - mean) ** 2 * weights).sum(0).sqrt()
+
+            res += ({
+                'mean': mean[0],
+                'scale': scale[0]
+            },)
+
+        self._recorded_stats += (
+            res,
+        )
+
+        return self
+
+    def get_as_numpy(self):
+        """
+        Returns the stats a numpy arrays instead of torch tensor.
+        :rtype: tuple[tuple[dict[str, numpy.array]]
+        """
+        res = tuple()
+        for pt in self._recorded_stats:
+            temp = tuple()
+            for p in pt:
+                tempdict = dict()
+                for k, v in p.items():
+                    tempdict[k] = v.numpy()
+
+                temp += (tempdict,)
+            res += (temp,)
+
+        return res
 
 
 def _normal_test(x, alpha=0.05):
@@ -135,12 +210,12 @@ class ShrinkageKernel(BaseKernel):
     """
     An improved regular shrinkage kernel, from the paper ..
     """
-    def update(self, parameters, filter_, weights):
-        normalized = normalize(weights)
-        ess = get_ess(normalized, normalized=True)
+
+    def _update(self, parameters, filter_, weights):
+        ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, normalized, ess))
+        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, weights, ess))
         meanscales = ms_hid + ms_obs
 
         # ===== Mutate parameters ===== #
@@ -151,7 +226,7 @@ class ShrinkageKernel(BaseKernel):
 
 
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, p=4, vthresh_scale=1.):
+    def __init__(self, p=4, vthresh_scale=1., **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param p: The parameter p controlling the jittering variance.
@@ -160,17 +235,17 @@ class AdaptiveShrinkageKernel(BaseKernel):
         :type vthresh_scale: float
         """
 
+        super().__init__(**kwargs)
         self._vn = vthresh_scale
         self._vf = self._vn
         self._p = p
         self._switched = False
 
-    def update(self, parameters, filter_, weights):
-        normalized = normalize(weights)
-        ess = get_ess(normalized, normalized=True)
+    def _update(self, parameters, filter_, weights):
+        ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, normalized, ess))
+        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, weights, ess))
         meanscales = ms_hid + ms_obs
 
         # ===== Check if to switch ===== #
@@ -256,7 +331,9 @@ def _eval_kernel(params, dist, n_params):
 
 
 class ParticleMetropolisHastings(BaseKernel):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
         self._resampler = None
         self._y = None
         self.accepted = None
@@ -278,7 +355,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
     def update(self, parameters, filter_, weights):
         # ===== Construct distribution ===== #
-        dist = self.define_pdf(parameters, normalize(weights))
+        dist = self.define_pdf(parameters, weights)
 
         # ===== Resample among parameters ===== #
         inds = self._resampler(weights)
