@@ -6,7 +6,7 @@ from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import AffineModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
-from pyfilter.proposals import Unscented, Linearized
+from pyfilter.proposals import Unscented
 
 
 def f(x, alpha, sigma):
