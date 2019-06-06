@@ -149,8 +149,8 @@ class Tests(unittest.TestCase):
             x, y = trumod.sample(550)
 
             algs = [
-                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200), 'p': 1, 'continuous': False}),
+                # (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                # (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200), 'p': 1, 'continuous': False}),
                 (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
                 (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
                 (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
