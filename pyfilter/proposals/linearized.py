@@ -111,12 +111,11 @@ class Linearized(Proposal):
         if self._ord is not None:
             grad = approx_fprime(f, xo.unsqueeze(-1) if self._model.hidden.ndim < 2 else xo, order=self._ord, h=self._h)
         else:
-            xo.requires_grad = True
-            logl = f(xo)
-            logl.backward(torch.ones_like(logl))
+            with torch.set_grad_enabled(xo.requires_grad):
+                logl = f(xo)
+                logl.backward(torch.ones_like(logl), retain_graph=True)
 
-            grad = xo.grad
-            xo.requires_grad = False
+                grad = xo.grad
 
         # ===== Get some necessary stuff ===== #
         ax = self._model.observable.mean(xo)
@@ -171,12 +170,11 @@ class ModeFinding(Linearized):
                     h=self._h
                 )
             else:
-                xo.requires_grad = True
-                logl = f(xo)
-                logl.backward(torch.ones_like(logl))
+                with torch.set_grad_enabled(xo.requires_grad):
+                    logl = f(xo)
+                    logl.backward(torch.ones_like(logl), retain_graph=True)
 
-                grad = xo.grad
-                xo.requires_grad = False
+                    grad = xo.grad
 
             grads += (grad,)
 
