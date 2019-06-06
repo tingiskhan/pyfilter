@@ -82,7 +82,7 @@ class BaseKernel(object):
 
     def get_as_numpy(self):
         """
-        Returns the stats a numpy arrays instead of torch tensor.
+        Returns the stats numpy arrays instead of torch tensor.
         :rtype: tuple[tuple[dict[str, numpy.array]]
         """
         res = tuple()
