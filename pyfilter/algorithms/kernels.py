@@ -8,10 +8,18 @@ from torch.distributions import MultivariateNormal, Independent
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=True):
+    def __init__(self, record_stats=True, length=None):
+        """
+        The base kernel used for propagating parameters.
+        :param record_stats: Whether to record the statistics
+        :type record_stats: bool
+        :param length: How many to record. If `None` records everything
+        :type length: int
+        """
         self._record_stats = record_stats
 
         self._recorded_stats = tuple()
+        self._length = length
 
     def _update(self, parameters, filter_, weights):
         """
@@ -78,6 +86,9 @@ class BaseKernel(object):
             res,
         )
 
+        if self._length is not None:
+            self._recorded_stats = self._recorded_stats[-self._length:]
+
         return self
 
     def get_as_numpy(self):
@@ -95,6 +106,23 @@ class BaseKernel(object):
 
                 temp += (tempdict,)
             res += (temp,)
+
+        return res
+
+    def get_diff(self):
+        """
+        Get the difference between the two latest scales.
+        :rtype: tuple[torch.Tensor]
+        """
+
+        if self._length is not None and self._length < 2:
+            raise ValueError('Length must be bigger than 1!')
+        elif len(self._recorded_stats) < 2:
+            return tuple(p['scale'] for p in self._recorded_stats[-1])
+
+        res = tuple()
+        for pt, ptm1 in zip(self._recorded_stats[-1], self._recorded_stats[-2]):
+            res += (pt['scale'] - ptm1['scale'],)
 
         return res
 
@@ -226,19 +254,15 @@ class ShrinkageKernel(BaseKernel):
 
 
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, p=4, vthresh_scale=1., **kwargs):
+    def __init__(self, eps=1e-4, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
-        :param p: The parameter p controlling the jittering variance.
-        :type p: float
-        :param vthresh_scale: The scaling of the threshold of the variance
-        :type vthresh_scale: float
+        :param eps: The tolerance for when to stop shrinking
+        :type eps: float
         """
 
         super().__init__(**kwargs)
-        self._vn = vthresh_scale
-        self._vf = self._vn
-        self._p = p
+        self._eps = eps
         self._switched = False
 
     def _update(self, parameters, filter_, weights):
@@ -248,17 +272,13 @@ class AdaptiveShrinkageKernel(BaseKernel):
         ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, weights, ess))
         meanscales = ms_hid + ms_obs
 
-        # ===== Check if to switch ===== #
-        # TODO: This should be moved outside
-        scale = sqrt(weights.numel() ** (-(self._p + 2) / self._p))
-        if not self._switched:
-            self._switched = min(s for m, s in meanscales) < self._vn * scale
-
         # ===== Mutate parameters ===== #
-        for p, (m, s) in zip(parameters, meanscales):
+        for p, (m, s), delta in zip(parameters, meanscales, self.get_diff()):
+            switched = delta.abs() < self._eps
+
             p.t_values = _jitter(
-                m if not self._switched else p.t_values,
-                s if not self._switched else min(max(s, self._vf * scale), self._vn * scale)
+                m if not switched else p.t_values,
+                s
             )
 
         return self
