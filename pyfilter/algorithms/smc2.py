@@ -3,11 +3,11 @@ from .kernels import ParticleMetropolisHastings, SymmetricMH
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
-from ..resampling import systematic
+from ..resampling import systematic, residual
 
 
 class SMC2(NESS):
-    def __init__(self, filter_, particles, threshold=0.2, resampling=systematic, kernel=SymmetricMH()):
+    def __init__(self, filter_, particles, threshold=0.2, resampling=residual, kernel=SymmetricMH()):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param particles: The amount of particles
