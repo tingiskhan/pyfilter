@@ -183,16 +183,15 @@ class StateSpaceModel(object):
 
         return self.hidden.p_prior(transformed) + self.observable.p_prior(transformed)
 
-    def p_map(self, func, **kwargs):
+    def p_map(self, func):
         """
         Applies func to each of the parameters of the model and returns result as tuple.
         :param func: Function to apply, must of structure func(params).
         :type func: callable
-        :param kwargs: Additional key-worded arguments passed to `p_map` of hidden/observable
         :rtype: tuple[tuple[Parameter]]
         """
 
-        return self.hidden.p_map(func, **kwargs), self.observable.p_map(func, **kwargs)
+        return self.hidden.p_map(func), self.observable.p_map(func)
 
     def exchange(self, indices, newmodel):
         """

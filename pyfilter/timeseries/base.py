@@ -2,7 +2,7 @@ from torch.distributions import Distribution, AffineTransform, TransformedDistri
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils import concater
+from ..utils import concater, add_dimensions
 from .statevariable import tensor_caster
 
 
@@ -49,7 +49,7 @@ def parameter_caster(ndim, *args):
 
         diff = ndim - vals.dim()
         if a.trainable and vals.dim() > 0 and diff != 0:
-            vals = vals.view(*vals.shape, *(diff * (1,)))
+            vals = add_dimensions(vals, ndim)
 
         targs += (vals,)
 

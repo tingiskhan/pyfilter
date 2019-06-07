@@ -2,24 +2,8 @@ from .base import BatchAlgorithm
 from ..filters.base import BaseFilter, KalmanFilter, ParticleFilter
 from ..resampling import systematic
 from tqdm import tqdm
-from ..timeseries import Parameter
-import torch
+from .kernels import _jitter as jittering
 from math import log, exp
-
-
-def jittering(parameter, scale):
-    """
-    Jitters the parameter.
-    :param parameter: The parameter
-    :type parameter: Parameter
-    :param scale: The scale to use when jittering parameters
-    :type scale: float
-    :return: Jittered parameters
-    :rtype: torch.Tensor
-    """
-    values = parameter.t_values
-
-    return values + scale * torch.empty(values.shape).normal_()
 
 
 class IteratedFilteringV2(BatchAlgorithm):

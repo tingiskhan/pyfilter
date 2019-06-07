@@ -370,6 +370,16 @@ class ParticleFilter(BaseFilter):
 
         return self._particles
 
+    @particles.setter
+    def particles(self, x):
+        """
+        Sets the particles
+        :param x: The new number of particles
+        :type x: int
+        """
+
+        self._particles = x
+
     def _resample_state(self, weights):
         """
         Resamples the state in accordance with the weigths.

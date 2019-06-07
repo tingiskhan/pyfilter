@@ -68,3 +68,31 @@ def multinomial(w):
     """
 
     return torch.multinomial(normalize(w), w.shape[-1], replacement=True)
+
+
+def residual(w):
+    """
+    Performs residual resampling on a 1D array. Inspired by solution provided by the package "particles" on GitHub
+    authored by the user "nchopin".
+    :param w: The weights to use for resampling
+    :type w: torch.Tensor
+    :return: Resampled indices
+    :rtype: torch.Tensor
+    """
+
+    w = normalize(w)
+
+    if w.dim() > 1:
+        raise NotImplementedError('Currently only 1-dimensional arrays supported!')
+
+    floored = (w * w.shape[0]).floor().long()
+    inds = torch.ones_like(w, dtype=floored.dtype)
+
+    repeated = (torch.arange(w.shape[0], dtype=inds.dtype) * inds).repeat_interleave(floored)
+
+    numtosample = w.shape[0] - floored.sum(0)
+
+    inds[:-numtosample] = repeated
+    inds[-numtosample:] = multinomial(torch.zeros(numtosample))
+
+    return inds

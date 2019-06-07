@@ -1,4 +1,4 @@
-from pyfilter.resampling import systematic
+from pyfilter.resampling import systematic, residual
 from pyfilter.normalization import normalize
 from unittest import TestCase
 import numpy as np
@@ -41,4 +41,9 @@ class ResamplingTests(TestCase):
         for i in range(weights.shape[0]):
             filterpy_inds = filterpy_systematic_resample(normalize(weights[i]), u[i, 0])
             assert (pyfilter_inds[i].numpy() == filterpy_inds).all()
+
+    def test_Residual(self):
+        weights = torch.tensor(np.random.normal(size=1000))
+
+        resinds = residual(weights)
 
