@@ -122,7 +122,7 @@ class BaseKernel(object):
 
         res = tuple()
         for pt, ptm1 in zip(self._recorded_stats[-1], self._recorded_stats[-2]):
-            res += (pt['scale'] - ptm1['scale'],)
+            res += (pt['scale'].log() - ptm1['scale'].log(),)
 
         return res
 
