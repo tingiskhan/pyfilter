@@ -78,8 +78,8 @@ class BaseKernel(object):
             scale = ((vals - mean) ** 2 * weights).sum(0).sqrt()
 
             res += ({
-                'mean': mean[0],
-                'scale': scale[0]
+                'mean': mean,
+                'scale': scale
             },)
 
         self._recorded_stats += (
