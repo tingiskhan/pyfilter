@@ -64,7 +64,7 @@ class SMC2(NESS):
         self._iterator.set_description(desc='{:s} - Accepted particles is {:.1%}'.format(str(self), accepted))
         sleep(1)
 
-        # ===== Replace old filters with newly accepted ===== #
+        # ===== Update recursive weights ===== #
         self._w_rec *= 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
