@@ -91,10 +91,7 @@ def add_dimensions(x, ndim):
     if not isinstance(x, torch.Tensor):
         return x
 
-    for i in range(ndim - x.dim()):
-        x = x.unsqueeze(-1)
-
-    return x
+    return x.view(-1, *((ndim - x.dim()) * (1,)))
 
 
 def isfinite(x):
