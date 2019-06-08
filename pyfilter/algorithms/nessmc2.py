@@ -44,6 +44,8 @@ class NESSMC2(SequentialAlgorithm):
         for yt in self._iterator:
             self.update(yt)
 
+        self._iterator = None
+
         return self
 
     def update(self, y):
