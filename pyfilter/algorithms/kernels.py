@@ -8,7 +8,7 @@ from torch.distributions import MultivariateNormal, Independent
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=True, length=None):
+    def __init__(self, record_stats=True, length=2):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
