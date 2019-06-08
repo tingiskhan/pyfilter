@@ -92,6 +92,9 @@ def residual(w):
 
     numtosample = w.shape[0] - floored.sum(0)
 
+    if numtosample == 0:
+        return repeated
+
     inds[:-numtosample] = repeated
     inds[-numtosample:] = multinomial(torch.zeros(numtosample))
 
