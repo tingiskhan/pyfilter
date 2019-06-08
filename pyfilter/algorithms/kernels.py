@@ -373,7 +373,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights):
         # ===== Construct distribution ===== #
         dist = self.define_pdf(parameters, weights)
 
