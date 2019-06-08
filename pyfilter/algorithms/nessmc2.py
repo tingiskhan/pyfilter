@@ -28,7 +28,7 @@ class NESSMC2(SequentialAlgorithm):
 
         # ===== Set some key-worded arguments ===== #
         self._smc2 = SMC2(self.filter, particles, resampling=resampling, threshold=smc2_threshold)
-        self._ness = NESS(self._smc2.filter, particles, resampling=resampling, **nesskwargs)
+        self._ness = NESS(self.filter, particles, resampling=resampling, **nesskwargs)
 
     @property
     def logged_ess(self):
