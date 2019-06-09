@@ -7,7 +7,7 @@ from ..resampling import systematic, residual
 
 
 class SMC2(NESS):
-    def __init__(self, filter_, particles, threshold=0.2, resampling=residual, kernel=SymmetricMH()):
+    def __init__(self, filter_, particles, threshold=0.2, resampling=residual, kernel=None):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param particles: The amount of particles
@@ -24,7 +24,7 @@ class SMC2(NESS):
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
-        self._kernel = kernel
+        self._kernel = kernel or SymmetricMH()
         self._kernel.set_resampler(self._resampler)
 
     def _update(self, y):
