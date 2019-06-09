@@ -210,8 +210,7 @@ def _shrink(values, w, ess):
     :rtype: torch.Tensor, torch.Tensor
     """
     # ===== Calculate mean ===== #
-    if values.dim() > w.dim():
-        w = w.unsqueeze(-1)
+    w = add_dimensions(w, values.dim())
 
     mean = (w * values).sum(0)
 
@@ -274,7 +273,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         for p, (m, s), delta in zip(parameters, meanscales, self.get_diff()):
-            switched = delta.abs() < self._eps
+            switched = (delta.abs() < self._eps).all()
 
             p.t_values = _jitter(
                 m if not switched else p.t_values,
