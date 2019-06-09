@@ -5,7 +5,6 @@ import torch
 from scipy.stats import chi2
 from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
-from ..proposals.linearized import eps
 
 
 class BaseKernel(object):
@@ -254,7 +253,7 @@ class ShrinkageKernel(BaseKernel):
 
 
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=eps, **kwargs):
+    def __init__(self, eps=1e-4, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
