@@ -3,6 +3,20 @@ import numpy as np
 import torch
 from functools import lru_cache
 from scipy.stats import gaussian_kde
+from collections import OrderedDict
+
+
+# NB: This is basically the same as original, but we include the prior as well
+def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
+    param = Parameter(data, requires_grad)
+    # NB: This line exists only for backwards compatibility; the
+    # general expectation is that backward_hooks is an empty
+    # OrderedDict.  See Note [Don't serialize hooks]
+    param._backward_hooks = backward_hooks
+    param._prior = prior
+    param._values = data
+
+    return param
 
 
 class Parameter(torch.nn.Parameter):
@@ -202,3 +216,9 @@ class Parameter(torch.nn.Parameter):
         xrange_ = torch.linspace(low, high, num)
 
         return self.bijection(xrange_).cpu().numpy(), np.exp(kde.logpdf(xrange_.cpu().numpy()))
+
+    def __reduce_ex__(self, protocol):
+        return (
+            _rebuild_parameter,
+            (self.data, self.requires_grad, self._prior, OrderedDict())
+        )

@@ -8,7 +8,7 @@ from torch.distributions import MultivariateNormal, Independent
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=True, length=None):
+    def __init__(self, record_stats=True, length=2):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
@@ -210,8 +210,7 @@ def _shrink(values, w, ess):
     :rtype: torch.Tensor, torch.Tensor
     """
     # ===== Calculate mean ===== #
-    if values.dim() > w.dim():
-        w = w.unsqueeze(-1)
+    w = add_dimensions(w, values.dim())
 
     mean = (w * values).sum(0)
 
@@ -274,7 +273,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         for p, (m, s), delta in zip(parameters, meanscales, self.get_diff()):
-            switched = delta.abs() < self._eps
+            switched = (delta.abs() < self._eps).all()
 
             p.t_values = _jitter(
                 m if not switched else p.t_values,
@@ -373,7 +372,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights):
         # ===== Construct distribution ===== #
         dist = self.define_pdf(parameters, weights)
 
