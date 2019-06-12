@@ -103,6 +103,6 @@ def residual(w):
     out = out.view(-1)
 
     out[~bools] = modded
-    out[bools] = multinomial(torch.zeros(bools.sum()))
+    out[bools] = torch.randint(w.shape[-1], size=(bools.sum(),))
 
     return out.reshape(w.shape)
