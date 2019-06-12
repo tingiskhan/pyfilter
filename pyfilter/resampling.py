@@ -72,7 +72,7 @@ def multinomial(w):
 
 def residual(w):
     """
-    Performs residual resampling on a 1D array. Inspired by solution provided by the package "particles" on GitHub
+    Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
     :param w: The weights to use for resampling
     :type w: torch.Tensor
