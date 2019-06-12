@@ -80,22 +80,29 @@ def residual(w):
     :rtype: torch.Tensor
     """
 
+    if w.dim() == 1:
+        return residual(w[None])[0]
+
     w = normalize(w)
 
-    if w.dim() > 1:
-        raise NotImplementedError('Currently only 1-dimensional arrays supported!')
+    # ===== Calculate the number of deterministic to get ===== #
+    intpart = (w.shape[-1] * w).floor().long()
 
-    floored = (w * w.shape[0]).floor().long()
-    inds = torch.ones_like(w, dtype=floored.dtype)
+    # ===== Make flat ===== #
+    out = torch.ones_like(w, dtype=intpart.dtype)
 
-    repeated = (torch.arange(w.shape[0], dtype=inds.dtype) * inds).repeat_interleave(floored)
+    # ===== Get the indexes of those to sample ===== #
+    numelems = intpart.sum(-1)
+    ranged = torch.arange(w.shape[-1], dtype=intpart.dtype) * out
+    bools = (ranged >= numelems[:, None]).view(-1)
 
-    numtosample = w.shape[0] - floored.sum(0)
+    # ===== Repeat the integers and transform to correct ===== #
+    modded = ranged.view(-1).repeat_interleave(intpart.view(-1))
 
-    if numtosample == 0:
-        return repeated
+    # ===== Set out ===== #
+    out = out.view(-1)
 
-    inds[:-numtosample] = repeated
-    inds[-numtosample:] = multinomial(torch.zeros(numtosample))
+    out[~bools] = modded
+    out[bools] = multinomial(torch.zeros(bools.sum()))
 
-    return inds
+    return out.reshape(w.shape)
