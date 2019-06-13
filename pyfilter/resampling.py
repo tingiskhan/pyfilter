@@ -58,16 +58,18 @@ def systematic(w, u=None):
     return _vector(w, u)
 
 
-def multinomial(w):
+def multinomial(w, normalized=False):
     """
     Performs multinomial sampling.
     :param w: The weights to use for resampling
     :type w: torch.Tensor
+    :param w: Whether the data is normalized
+    :type w: bool
     :return: Resampled indices
     :rtype: torch.Tensor
     """
 
-    return torch.multinomial(normalize(w), w.shape[-1], replacement=True)
+    return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
 
 
 def residual(w):
@@ -79,6 +81,7 @@ def residual(w):
     :return: Resampled indices
     :rtype: torch.Tensor
     """
+    raise NotImplementedError("THis doesn't work, to be fixed!")
 
     if w.dim() == 1:
         return residual(w[None])[0]
@@ -86,15 +89,21 @@ def residual(w):
     w = normalize(w)
 
     # ===== Calculate the number of deterministic to get ===== #
-    intpart = (w.shape[-1] * w).floor().long()
+    mw = (w.shape[-1] * w)
+    floored = mw.floor()
+    res = mw - floored
 
     # ===== Make flat ===== #
-    out = torch.ones_like(w, dtype=intpart.dtype)
+    out = torch.ones_like(w, dtype=torch.long)
 
     # ===== Get the indexes of those to sample ===== #
-    numelems = intpart.sum(-1)
+    numelems = floored.sum(-1)
+    res /= numelems[:, None]
+
+    intpart = floored.long()
+
     ranged = torch.arange(w.shape[-1], dtype=intpart.dtype) * out
-    bools = (ranged >= numelems[:, None]).view(-1)
+    bools = (ranged >= numelems[:, None].long())
 
     # ===== Repeat the integers and transform to correct ===== #
     modded = ranged.view(-1).repeat_interleave(intpart.view(-1))
@@ -102,7 +111,8 @@ def residual(w):
     # ===== Set out ===== #
     out = out.view(-1)
 
-    out[~bools] = modded
-    out[bools] = torch.randint(w.shape[-1], size=(bools.sum(),))
+    out[~bools.view(-1)] = modded
+    out = out.reshape(w.shape)
+    out[bools] = multinomial(res)[bools]
 
-    return out.reshape(w.shape)
+    return out
