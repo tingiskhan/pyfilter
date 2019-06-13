@@ -56,7 +56,7 @@ class SMC2(NESS):
         # ===== Update the description ===== #
         self._iterator.set_description(desc='{:s} - Rejuvenating particles'.format(str(self)))
         self._kernel.set_data(self._y)
-        self._kernel.update(self.filter.ssm.flat_theta_dists, self.filter, normalize(self._w_rec))
+        self._kernel.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
 
         # ===== Update the description ===== #
         accepted = self._kernel.accepted
