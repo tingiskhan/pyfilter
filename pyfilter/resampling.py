@@ -38,11 +38,13 @@ def _vector(weights, u):
     return np.searchsorted(cumsum, probs)
 
 
-def systematic(w, u=None):
+def systematic(w, normalized=False, u=None):
     """
     Performs systematic resampling on either a 1D or 2D array.
     :param w: The weights to use for resampling
     :type w: torch.Tensor
+    :param normalized: Whether the data is normalized
+    :type normalized: bool
     :param u: Parameter for overriding the sampled index, for testing
     :type u: float|torch.Tensor
     :return: Resampled indices
@@ -50,7 +52,7 @@ def systematic(w, u=None):
     """
 
     u = u if u is not None else (torch.empty(1) if w.dim() < 2 else torch.empty((w.shape[0], 1))).uniform_()
-    w = normalize(w)
+    w = normalize(w) if not normalized else w
 
     if w.dim() > 1:
         return _matrix(w, u)
@@ -63,8 +65,8 @@ def multinomial(w, normalized=False):
     Performs multinomial sampling.
     :param w: The weights to use for resampling
     :type w: torch.Tensor
-    :param w: Whether the data is normalized
-    :type w: bool
+    :param normalized: Whether the data is normalized
+    :type normalized: bool
     :return: Resampled indices
     :rtype: torch.Tensor
     """
@@ -72,21 +74,22 @@ def multinomial(w, normalized=False):
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
 
 
-def residual(w):
+def residual(w, normalized=False):
     """
     Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
     :param w: The weights to use for resampling
     :type w: torch.Tensor
+    :param normalized: Whether the data is normalized
+    :type normalized: bool
     :return: Resampled indices
     :rtype: torch.Tensor
     """
-    raise NotImplementedError("THis doesn't work, to be fixed!")
 
-    if w.dim() == 1:
-        return residual(w[None])[0]
+    if w.dim() > 1:
+        raise NotImplementedError('Not implemented for multidimensional arrays!')
 
-    w = normalize(w)
+    w = normalize(w) if not normalized else w
 
     # ===== Calculate the number of deterministic to get ===== #
     mw = (w.shape[-1] * w)
@@ -98,21 +101,20 @@ def residual(w):
 
     # ===== Get the indexes of those to sample ===== #
     numelems = floored.sum(-1)
-    res /= numelems[:, None]
+    res /= numelems
 
     intpart = floored.long()
-
     ranged = torch.arange(w.shape[-1], dtype=intpart.dtype) * out
-    bools = (ranged >= numelems[:, None].long())
 
     # ===== Repeat the integers and transform to correct ===== #
-    modded = ranged.view(-1).repeat_interleave(intpart.view(-1))
+    modded = ranged.repeat_interleave(intpart)
+    aslong = numelems.long()
 
-    # ===== Set out ===== #
-    out = out.view(-1)
+    out[:aslong] = modded
 
-    out[~bools.view(-1)] = modded
-    out = out.reshape(w.shape)
-    out[bools] = multinomial(res)[bools]
+    if numelems == w.shape[-1]:
+        return out
+
+    out[aslong:] = torch.multinomial(res, w.shape[-1] - aslong, replacement=True)
 
     return out
