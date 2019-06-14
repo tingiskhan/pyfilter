@@ -2,13 +2,13 @@ from .base import SequentialAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 from tqdm import tqdm
-from ..resampling import systematic
+from ..resampling import systematic, residual
 from ..utils import get_ess
 import torch
 
 
 class NESSMC2(SequentialAlgorithm):
-    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.5, resampling=systematic,
+    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.5, resampling=residual,
                  update_on_handshake=False, **nesskwargs):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
