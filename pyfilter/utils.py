@@ -161,3 +161,18 @@ def flatten(iterable):
 
     return out
 
+
+class MoveToHelper(object):
+    def to(self, device):
+        """
+        Moves the current object to the specified device.
+        :param device: The device to move to
+        :type device: str
+        """
+
+        for a in dir(self):
+            attr = getattr(self, a)
+            if hasattr(attr, 'to') and a != '__class__':
+                attr.to(device)
+
+        return None

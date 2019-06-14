@@ -6,7 +6,7 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose
+from ..utils import get_ess, choose, MoveToHelper
 
 
 def enforce_tensor(func):
@@ -19,13 +19,15 @@ def enforce_tensor(func):
     return wrapper
 
 
-class BaseFilter(object):
+class BaseFilter(MoveToHelper):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
         :type model: StateSpaceModel
         """
+
+        super().__init__()
 
         if not isinstance(model, StateSpaceModel):
             raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
@@ -44,7 +46,10 @@ class BaseFilter(object):
         :rtype: torch.Tensor
         """
 
-        return torch.stack(self.s_ll, dim=0)
+        if len(self.s_ll) > 0:
+            return torch.stack(self.s_ll, dim=0)
+
+        return torch.empty((1,))
 
     @s_loglikelihood.setter
     def s_loglikelihood(self, x):
@@ -161,7 +166,10 @@ class BaseFilter(object):
         :return:
         """
 
-        return torch.stack(self.s_mx, dim=0)
+        if len(self.s_mx) > 0:
+            return torch.stack(self.s_mx, dim=0)
+
+        return torch.empty((1,))
 
     @filtermeans.setter
     def filtermeans(self, x):

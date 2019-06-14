@@ -1,13 +1,16 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils import choose
+from ..utils import choose, MoveToHelper
 from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform
 
 
-class Proposal(object):
+class Proposal(MoveToHelper):
     def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
         """
+
+        super().__init__()
+
         self._model = None      # type: StateSpaceModel
         self._kernel = None     # type: Distribution
 

@@ -2,7 +2,7 @@ from torch.distributions import Distribution, AffineTransform, TransformedDistri
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils import concater, add_dimensions
+from ..utils import concater, add_dimensions, MoveToHelper
 from .statevariable import tensor_caster
 
 
@@ -63,7 +63,7 @@ def init_caster(func):
     return wrapper
 
 
-class AffineModel(object):
+class AffineModel(MoveToHelper):
     def __init__(self, initial, funcs, theta, noise):
         """
         This object is to serve as a base class for the timeseries models.
@@ -76,6 +76,8 @@ class AffineModel(object):
         :param noise: The noise governing the noise process
         :type noise: tuple[Distribution]
         """
+
+        super().__init__()
 
         self.f0, self.g0 = initial
         self.f, self.g = funcs
