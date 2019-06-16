@@ -48,7 +48,7 @@ class NESSMC2(SequentialAlgorithm):
 
         return self
 
-    def update(self, y):
+    def _update(self, y):
         if len(self._smc2._y) < self._hs:
             return self._smc2.update(y)
 

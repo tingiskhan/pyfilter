@@ -2,6 +2,8 @@ import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
+from torch.distributions import Distribution
+from .timeseries.parameter import Parameter
 
 
 def get_ess(w, normalized=False):
@@ -163,16 +165,50 @@ def flatten(iterable):
 
 
 class MoveToHelper(object):
-    def to(self, device):
+    _device = torch.empty([0]).device
+
+    def _helper(self, device, attr):
+        if isinstance(attr, Parameter):
+            attr.values = attr.values.to(device)
+        elif hasattr(attr, 'to_'):
+            attr.to_(device)
+        elif isinstance(attr, torch.Tensor) and attr.device != device:
+            attr.data = attr.data.to(device)
+            return self
+        elif isinstance(attr, (tuple, list)):
+            for i in range(len(attr)):
+                self._helper(device, attr[i])
+        elif isinstance(attr, Distribution):
+            for a in (d for d in dir(attr) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
+                try:
+                    if isinstance(getattr(type(attr), a), property):
+                        continue
+                except AttributeError:
+                    "Not an attribute, continue"
+
+                self._helper(device, getattr(attr, a))
+
+        return self
+
+    def to_(self, device):
         """
         Moves the current object to the specified device.
         :param device: The device to move to
         :type device: str
+        :return: Self
+        :rtype: MoveToHelper
         """
 
-        for a in dir(self):
-            attr = getattr(self, a)
-            if hasattr(attr, 'to') and a != '__class__':
-                attr.to(device)
+        self._device = torch.device(device)
 
-        return None
+        for a in (d for d in dir(self) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
+            try:
+                if isinstance(getattr(type(self), a), property):
+                    continue
+            except AttributeError:
+                "Not an attribute, continue"
+
+            attr = getattr(self, a)
+            self._helper(device, attr)
+
+        return self

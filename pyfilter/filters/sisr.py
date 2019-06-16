@@ -25,7 +25,7 @@ class SISR(ParticleFilter):
         self.proposal.resample(inds)
 
         # ===== Update weights ===== #
-        tw = torch.zeros(weights.shape)
+        tw = torch.zeros(weights.shape, device=self._device)
         tw[~mask] = self._w_old[~mask]
 
         self._w_old = weights + tw

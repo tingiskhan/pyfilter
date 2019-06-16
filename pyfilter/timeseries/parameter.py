@@ -4,7 +4,6 @@ import torch
 from functools import lru_cache
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
-from ..utils import MoveToHelper
 
 
 # NB: This is basically the same as original, but we include the prior as well
@@ -20,7 +19,7 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
     return param
 
 
-class Parameter(torch.nn.Parameter, MoveToHelper):
+class Parameter(torch.nn.Parameter):
     def __new__(cls, parameter=None, requires_grad=False):
         if isinstance(parameter, torch.Tensor):
             _data = parameter

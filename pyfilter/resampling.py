@@ -104,7 +104,7 @@ def residual(w, normalized=False):
     res /= numelems
 
     intpart = floored.long()
-    ranged = torch.arange(w.shape[-1], dtype=intpart.dtype) * out
+    ranged = torch.arange(w.shape[-1], dtype=intpart.dtype, device=w.device) * out
 
     # ===== Repeat the integers and transform to correct ===== #
     modded = ranged.repeat_interleave(intpart)
