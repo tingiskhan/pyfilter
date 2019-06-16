@@ -164,6 +164,15 @@ def flatten(iterable):
     return out
 
 
+def _yield_helper(obj):
+    for a in (d for d in dir(obj) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
+        try:
+            if isinstance(getattr(type(obj), a), property):
+                continue
+        except AttributeError:
+            yield a
+
+
 class MoveToHelper(object):
     _device = torch.empty([0]).device
 
@@ -179,13 +188,7 @@ class MoveToHelper(object):
             for i in range(len(attr)):
                 self._helper(device, attr[i])
         elif isinstance(attr, Distribution):
-            for a in (d for d in dir(attr) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
-                try:
-                    if isinstance(getattr(type(attr), a), property):
-                        continue
-                except AttributeError:
-                    "Not an attribute, continue"
-
+            for a in _yield_helper(attr):
                 self._helper(device, getattr(attr, a))
 
         return self
@@ -201,13 +204,7 @@ class MoveToHelper(object):
 
         self._device = torch.device(device)
 
-        for a in (d for d in dir(self) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
-            try:
-                if isinstance(getattr(type(self), a), property):
-                    continue
-            except AttributeError:
-                "Not an attribute, continue"
-
+        for a in _yield_helper(self):
             attr = getattr(self, a)
             self._helper(device, attr)
 
