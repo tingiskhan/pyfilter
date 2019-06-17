@@ -55,7 +55,7 @@ def choose(array, indices):
     if indices.dim() < 2:
         return array[indices]
 
-    return array[torch.arange(array.shape[0])[:, None], indices]
+    return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
 
 
 def loglikelihood(w, weights=None):
@@ -140,7 +140,7 @@ def construct_diag(x):
     elif x.dim() < 2:
         return torch.diag(x)
 
-    b = torch.eye(x.size(-1))
+    b = torch.eye(x.size(-1), device=x.device)
     c = x.unsqueeze(-1).expand(*x.size(), x.size(-1))
 
     return c * b
