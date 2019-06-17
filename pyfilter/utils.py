@@ -178,6 +178,9 @@ class MoveToHelper(object):
 
     def _helper(self, device, attr):
         if isinstance(attr, Parameter):
+            for a in _yield_helper(attr._prior):
+                self._helper(device, getattr(attr._prior, a))
+
             attr.values = attr.values.to(device)
         elif hasattr(attr, 'to_'):
             attr.to_(device)

@@ -8,6 +8,9 @@ class StateVariable(torch.Tensor):
     compatibility with pytorch functionality.
     """
 
+    def __new__(cls, data):
+        return torch.Tensor._make_subclass(cls, data)
+
     def __getitem__(self, item):
         return self.data[..., item]
 
