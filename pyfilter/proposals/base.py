@@ -104,7 +104,7 @@ class Proposal(MoveToHelper):
 
     def pre_weight(self, y):
         """
-        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the constructed proposal.
+        Pre-weights the old sample x. Used in the APF. Defaults to using the mean of the constructed proposal.
         Note that you should call `construct` prior to this function.
         :param y: The observation
         :type y: torch.Tensor|float
