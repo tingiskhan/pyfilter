@@ -117,6 +117,7 @@ class Proposal(MoveToHelper):
         if not isinstance(self._kernel, TransformedDistribution):
             return self._model.weight(y, self._kernel.loc)
 
+        # TODO: Not entirely sure about this, but think this is the case
         at = next(k for k in self._kernel.transforms if isinstance(k, AffineTransform))
 
         return self._model.weight(y, at.loc)
