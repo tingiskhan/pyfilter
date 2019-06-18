@@ -432,7 +432,7 @@ class ParticleFilter(BaseFilter):
 
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
-        self._w_old = torch.zeros(self._particles)
+        self._w_old = torch.zeros(self._particles, device=self._device)
 
         return self
 
