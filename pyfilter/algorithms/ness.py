@@ -7,7 +7,7 @@ from .kernels import AdaptiveShrinkageKernel, ShrinkageKernel
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.5, resampling=residual, kernel=None):
+    def __init__(self, filter_, particles, threshold=0.9, resampling=residual, kernel=None):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -24,7 +24,7 @@ class NESS(SequentialAlgorithm):
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
-        self._w_rec = torch.zeros(particles)
+        self._w_rec = torch.zeros(particles, device=self._device)
 
         # ===== Algorithm specific ===== #
         self._th = threshold

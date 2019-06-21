@@ -11,7 +11,7 @@ class EulerMaruyma(AffineModel):
         :param ndim: The number of dimensions
         :type ndim: int
         :param dt: The step-size to use in the approximation. If `dt=1`, is basically AR process
-        :type dt: float
+        :type dt: float|torch.Tensor
         """
 
         if ndim > 1:

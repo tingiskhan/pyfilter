@@ -1,13 +1,16 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils import choose
+from ..utils import choose, MoveToHelper
 from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform
 
 
-class Proposal(object):
+class Proposal(MoveToHelper):
     def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
         """
+
+        super().__init__()
+
         self._model = None      # type: StateSpaceModel
         self._kernel = None     # type: Distribution
 
@@ -101,7 +104,7 @@ class Proposal(object):
 
     def pre_weight(self, y):
         """
-        Pre-weights the sample old sample x. Used in the APF. Defaults to using the mean of the constructed proposal.
+        Pre-weights the old sample x. Used in the APF. Defaults to using the mean of the constructed proposal.
         Note that you should call `construct` prior to this function.
         :param y: The observation
         :type y: torch.Tensor|float
@@ -114,6 +117,7 @@ class Proposal(object):
         if not isinstance(self._kernel, TransformedDistribution):
             return self._model.weight(y, self._kernel.loc)
 
+        # TODO: Not entirely sure about this, but think this is the case
         at = next(k for k in self._kernel.transforms if isinstance(k, AffineTransform))
 
         return self._model.weight(y, at.loc)

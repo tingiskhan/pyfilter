@@ -2,6 +2,8 @@ import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
+from torch.distributions import Distribution
+from .timeseries.parameter import Parameter
 
 
 def get_ess(w, normalized=False):
@@ -53,7 +55,7 @@ def choose(array, indices):
     if indices.dim() < 2:
         return array[indices]
 
-    return array[torch.arange(array.shape[0])[:, None], indices]
+    return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
 
 
 def loglikelihood(w, weights=None):
@@ -138,7 +140,7 @@ def construct_diag(x):
     elif x.dim() < 2:
         return torch.diag(x)
 
-    b = torch.eye(x.size(-1))
+    b = torch.eye(x.size(-1), device=x.device)
     c = x.unsqueeze(-1).expand(*x.size(), x.size(-1))
 
     return c * b
@@ -161,3 +163,52 @@ def flatten(iterable):
 
     return out
 
+
+def _yield_helper(obj):
+    for a in (d for d in dir(obj) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
+        try:
+            if isinstance(getattr(type(obj), a), property):
+                continue
+        except AttributeError:
+            yield a
+
+
+class MoveToHelper(object):
+    _device = torch.empty([0]).device
+
+    def _helper(self, device, attr):
+        if isinstance(attr, Parameter):
+            for a in _yield_helper(attr._prior):
+                self._helper(device, getattr(attr._prior, a))
+
+            attr.values = attr.values.to(device)
+        elif hasattr(attr, 'to_'):
+            attr.to_(device)
+        elif isinstance(attr, torch.Tensor) and attr.device != device:
+            attr.data = attr.data.to(device)
+            return self
+        elif isinstance(attr, (tuple, list)):
+            for i in range(len(attr)):
+                self._helper(device, attr[i])
+        elif isinstance(attr, Distribution):
+            for a in _yield_helper(attr):
+                self._helper(device, getattr(attr, a))
+
+        return self
+
+    def to_(self, device):
+        """
+        Moves the current object to the specified device.
+        :param device: The device to move to
+        :type device: str
+        :return: Self
+        :rtype: MoveToHelper
+        """
+
+        self._device = torch.device(device)
+
+        for a in _yield_helper(self):
+            attr = getattr(self, a)
+            self._helper(device, attr)
+
+        return self

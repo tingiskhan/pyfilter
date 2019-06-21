@@ -1,15 +1,18 @@
 from ..filters.base import BaseFilter, enforce_tensor
 from tqdm import tqdm
 import warnings
+from ..utils import MoveToHelper
 
 
-class BaseAlgorithm(object):
+class BaseAlgorithm(MoveToHelper):
     def __init__(self, filter_):
         """
         Implements a base class for algorithms, i.e. algorithms for inferring parameters.
         :param filter_: The filter
         :type filter_: BaseFilter
         """
+
+        super().__init__()
 
         self._filter = filter_      # type: BaseFilter
         self._y = tuple()           # type: tuple[torch.Tensor]

@@ -1,31 +1,35 @@
 import pandas as pd
 import copy
 from ..proposals import LinearGaussianObservations
-from ..resampling import systematic, residual
+from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose
+from ..utils import get_ess, choose, MoveToHelper
 
 
 def enforce_tensor(func):
     def wrapper(obj, y, **kwargs):
         if not isinstance(y, torch.Tensor):
-            y = torch.tensor(y)
+            y = torch.tensor(y, device=obj._device)
+        elif y.device != obj._device:
+            y = y.to(obj._device)
 
         return func(obj, y, **kwargs)
 
     return wrapper
 
 
-class BaseFilter(object):
+class BaseFilter(MoveToHelper):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
         :type model: StateSpaceModel
         """
+
+        super().__init__()
 
         if not isinstance(model, StateSpaceModel):
             raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
@@ -44,7 +48,10 @@ class BaseFilter(object):
         :rtype: torch.Tensor
         """
 
-        return torch.stack(self.s_ll, dim=0)
+        if len(self.s_ll) > 0:
+            return torch.stack(self.s_ll, dim=0)
+
+        return torch.empty((1,))
 
     @s_loglikelihood.setter
     def s_loglikelihood(self, x):
@@ -161,7 +168,10 @@ class BaseFilter(object):
         :return:
         """
 
-        return torch.stack(self.s_mx, dim=0)
+        if len(self.s_mx) > 0:
+            return torch.stack(self.s_mx, dim=0)
+
+        return torch.empty((1,))
 
     @filtermeans.setter
     def filtermeans(self, x):
@@ -280,16 +290,16 @@ _PROPOSAL_MAPPING = {
 }
 
 
-def _construct_empty(shape):
+def _construct_empty(array):
     """
     Constructs an empty array based on the shape.
-    :param shape: The shape
-    :type shape: tuple
+    :param array: The array to reshape after
+    :type array: torch.Tensor
     :rtype: torch.Tensor
     """
 
-    temp = torch.arange(shape[-1])
-    return temp * torch.ones(shape, dtype=temp.dtype)
+    temp = torch.arange(array.shape[-1], device=array.device)
+    return temp * torch.ones_like(array, dtype=temp.dtype)
 
 
 def cudawarning(resampling):
@@ -394,7 +404,7 @@ class ParticleFilter(BaseFilter):
         mask = ess < self._ess
 
         # ===== Create a default array for resampling ===== #
-        out = _construct_empty(weights.shape)
+        out = _construct_empty(weights)
 
         # ===== Return based on if it's nested or not ===== #
         if not mask.any():
@@ -422,7 +432,7 @@ class ParticleFilter(BaseFilter):
 
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
-        self._w_old = torch.zeros(self._particles)
+        self._w_old = torch.zeros(self._particles, device=self._device)
 
         return self
 

@@ -1,11 +1,11 @@
 import copy
 import numpy as np
-from ..utils import flatten
+from ..utils import flatten, MoveToHelper
 import torch
 from .parameter import Parameter
 
 
-class StateSpaceModel(object):
+class StateSpaceModel(MoveToHelper):
     def __init__(self, hidden, observable):
         """
         Combines a hidden and observable processes to constitute a state-space model.
@@ -159,7 +159,7 @@ class StateSpaceModel(object):
         """
         Applies `func` to each of the parameters of the model "inplace", i.e. manipulates `self.theta` of hidden and
         observable process.
-        :param func: Function to apply, must be of the structure func(param), and must return a `numpy.ndarray`
+        :param func: Function to apply, must be of the structure func(param), and must return a `torch.Tensor`
         :type func: callable
         :param transformed: Whether or not results from applied function are transformed variables
         :type transformed: bool
@@ -197,7 +197,7 @@ class StateSpaceModel(object):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
         :param indices: The indices to exchange
-        :type indices: np.ndarray
+        :type indices: torch.Tensor
         :param newmodel: The model which to exchange with
         :type newmodel: StateSpaceModel
         :return: Self

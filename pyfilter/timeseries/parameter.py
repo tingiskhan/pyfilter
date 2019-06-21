@@ -4,6 +4,7 @@ import torch
 from functools import lru_cache
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
+from copy import deepcopy
 
 
 # NB: This is basically the same as original, but we include the prior as well
@@ -40,7 +41,7 @@ class Parameter(torch.nn.Parameter):
             return memo[id(self)]
 
         result = type(self)(self.data.clone(), self.requires_grad)
-        result._prior = self._prior
+        result._prior = deepcopy(self._prior)
 
         memo[id(self)] = result
         return result

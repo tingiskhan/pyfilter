@@ -385,7 +385,7 @@ class ParticleMetropolisHastings(BaseKernel):
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        t_filt.reset().initialize().longfilter(self._y, bar=False)
+        t_filt.reset().initialize().to_(filter_._device).longfilter(self._y, bar=False)
 
         quotient = t_filt.loglikelihood - filter_.loglikelihood
 
@@ -394,7 +394,7 @@ class ParticleMetropolisHastings(BaseKernel):
         kernel = _eval_kernel(filter_.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
 
         # ===== Check which to accept ===== #
-        u = torch.empty(quotient.shape).uniform_().log()
+        u = torch.empty_like(quotient).uniform_().log()
         if plogquot.dim() > 1:
             toaccept = u < quotient + plogquot[:, 0] + kernel
         else:

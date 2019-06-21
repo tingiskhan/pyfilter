@@ -90,7 +90,7 @@ class SMC2(NESS):
         msg = '{:s} - Increasing number of state particles from {:d} -> {:d}'
         self._iterator.set_description(desc=msg.format(str(self), oldparts, self.filter.particles))
 
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
+        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().to_(self._device).longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = self.filter.loglikelihood - oldlogl
