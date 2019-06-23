@@ -9,7 +9,9 @@ class StateVariable(torch.Tensor):
     """
 
     def __new__(cls, data):
-        return torch.Tensor._make_subclass(cls, data)
+        out = torch.Tensor._make_subclass(cls, data)
+        out.requires_grad = data.requires_grad
+        return out
 
     def __getitem__(self, item):
         return self.data[..., item]
