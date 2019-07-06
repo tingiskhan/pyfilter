@@ -114,10 +114,9 @@ class Linearized(Proposal):
         dlogl = approx_fprime(f, mu, order=1)
 
         if self._model.hidden_ndim < 2:
-            temp = dobsx ** 2
-            var = 1 / (1 / self._model.hidden.scale(x) ** 2 + temp / self._model.observable.scale(mu) ** 2)
-
+            var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
             mean = x + var * dlogl
+
             self._kernel = Normal(mean, var.sqrt())
 
             return self
