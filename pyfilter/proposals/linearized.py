@@ -115,7 +115,7 @@ class Linearized(Proposal):
 
         if self._model.hidden_ndim < 2:
             var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
-            mean = x + var * dlogl
+            mean = mu + var * dlogl
 
             self._kernel = Normal(mean, var.sqrt())
 
