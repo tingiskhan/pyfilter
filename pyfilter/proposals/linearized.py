@@ -121,11 +121,11 @@ class Linearized(Proposal):
 
             return self
 
-        hscale = construct_diag(1 / self._model.hidden.scale(x) ** 2)
-        oscale = 1 / self._model.observable.scale(mu) ** 2
+        h_inv_var = construct_diag(1 / self._model.hidden.scale(x) ** 2)
+        o_inv_var = 1 / self._model.observable.scale(mu) ** 2
 
-        temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) / oscale
-        var = (hscale + temp).inverse()
+        temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) * o_inv_var
+        var = (h_inv_var + temp).inverse()
 
         mean = mu + torch.matmul(var, dlogl.unsqueeze(-1))[..., 0]
         self._kernel = MultivariateNormal(mean, scale_tril=torch.cholesky(var))
