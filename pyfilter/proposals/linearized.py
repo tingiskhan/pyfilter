@@ -110,8 +110,9 @@ class Linearized(Proposal):
         # ===== Evaluate gradient ===== #
         mu = self._model.hidden.mean(x)
 
-        dobsx = approx_fprime(self._model.observable.mean, mu, order=1)
-        dlogl = approx_fprime(f, mu, order=1)
+        # TODO: Allow for using autograd
+        dobsx = approx_fprime(self._model.observable.mean, mu, order=self._ord)
+        dlogl = approx_fprime(f, mu, order=self._ord)
 
         if self._model.hidden_ndim < 2:
             var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
