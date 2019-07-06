@@ -2,7 +2,9 @@ from .base import Proposal
 from sympy import symbols, Function, lambdify
 import torch
 from math import sqrt
-from torch.distributions import Normal, Independent
+from torch.distributions import Normal, MultivariateNormal
+from ..utils import construct_diag
+
 
 # TODO: Not sure if optimal, but same as `numpy`
 eps = sqrt(torch.finfo(torch.float32).eps)
@@ -105,21 +107,29 @@ class Linearized(Proposal):
         # ===== Define function ===== #
         f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
 
-        # TODO: Still not working properly, but I think it's coming together
         # ===== Evaluate gradient ===== #
         mu = self._model.hidden.mean(x)
 
-        dobsx = approx_fprime(self._model.observable.mean, mu, order=2)
-        dlogl = approx_fprime(f, mu, order=2)
+        dobsx = approx_fprime(self._model.observable.mean, mu, order=1)
+        dlogl = approx_fprime(f, mu, order=1)
 
-        var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
-        mean = mu + var * dlogl
+        if self._model.hidden_ndim < 2:
+            temp = dobsx ** 2
+            var = 1 / (1 / self._model.hidden.scale(x) ** 2 + temp / self._model.observable.scale(mu) ** 2)
 
-        dist = Normal(mean, var.sqrt())
-        if self._model.hidden.ndim < 2:
-            self._kernel = dist
-        else:
-            self._kernel = Independent(dist, 1)
+            mean = x + var * dlogl
+            self._kernel = Normal(mean, var.sqrt())
+
+            return self
+
+        hscale = construct_diag(1 / self._model.hidden.scale(x) ** 2)
+        oscale = 1 / self._model.observable.scale(mu) ** 2
+
+        temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) / oscale
+        var = (hscale + temp).inverse()
+
+        mean = mu + torch.matmul(var, dlogl.unsqueeze(-1))[..., 0]
+        self._kernel = MultivariateNormal(mean, scale_tril=torch.cholesky(var))
 
         return self
 
