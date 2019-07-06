@@ -2,6 +2,7 @@ import torch
 from ..utils import concater
 
 
+# TODO: Don't know if good, but works
 class StateVariable(torch.Tensor):
     """
     Implements a custom state variable for easier usage when performing indexing in functions, while still retaining
@@ -10,14 +11,21 @@ class StateVariable(torch.Tensor):
 
     def __new__(cls, data):
         out = torch.Tensor._make_subclass(cls, data)
-        out.requires_grad = data.requires_grad
+
+        out.requires_grad_(data.requires_grad)
+        out._tempdata = data
+
         return out
 
+    @property
+    def data(self):
+        return self._tempdata
+
     def __getitem__(self, item):
-        return self.data[..., item]
+        return self._tempdata[..., item]
 
     def __setitem__(self, key, value):
-        self.data[..., key] = value
+        self._tempdata[..., key] = value
 
 
 def tensor_caster(func):

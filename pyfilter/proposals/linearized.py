@@ -105,31 +105,17 @@ class Linearized(Proposal):
         # ===== Define function ===== #
         f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
 
+        # TODO: Still not working properly, but I think it's coming together
         # ===== Evaluate gradient ===== #
-        xo = self._model.hidden.mean(x)
+        mu = self._model.hidden.mean(x)
 
-        if self._ord is not None:
-            grad = approx_fprime(f, xo.unsqueeze(-1) if self._model.hidden.ndim < 2 else xo, order=self._ord, h=self._h)
-        else:
-            req_grad = xo.requires_grad
+        dobsx = approx_fprime(self._model.observable.mean, mu, order=2)
+        dlogl = approx_fprime(f, mu, order=2)
 
-            xo.requires_grad_(True)
-            logl = f(xo)
-            logl.backward(torch.ones_like(logl), retain_graph=True)
+        var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
+        mean = mu + var * dlogl
 
-            grad = xo.grad
-            xo.requires_grad_(req_grad)
-
-        # ===== Get some necessary stuff ===== #
-        ax = self._model.observable.mean(xo)
-        bx = self._model.observable.scale(xo)
-
-        gx = self._model.hidden.scale(x)
-
-        # ===== Get mean ===== #
-        mean = self._meanexpr(y, x, ax, bx, xo, gx, grad)
-
-        dist = Normal(mean, gx)
+        dist = Normal(mean, var.sqrt())
         if self._model.hidden.ndim < 2:
             self._kernel = dist
         else:
