@@ -11,6 +11,14 @@ class LinearGaussianObservations(Proposal):
     density. Note that in order for this to work for multi-dimensional models you must use matrices to form the
     combination.
     """
+
+    def __init__(self):
+        super().__init__()
+        self._mat = None
+
+    def _get_mat_and_fix_y(self, x, y):
+        return self._model.observable.theta[0].values, y
+
     def set_model(self, model):
         if not isinstance(model, LGO):
             raise ValueError('Model must be of instance {}'.format(LGO.__name__))
@@ -29,7 +37,7 @@ class LinearGaussianObservations(Proposal):
         return kernel
 
     def _kernel_2d(self, y, loc, h_var_inv, o_var_inv, c):
-        tc = c if c.dim() > 1 else c.unsqueeze(-2)
+        tc = c if self._model.obs_ndim > 1 else c.unsqueeze(-2)
 
         # ===== Define covariance ===== #
         ttc = tc.transpose(-2, -1)
@@ -54,7 +62,7 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = 1 / self._model.hidden.scale(x) ** 2
 
         # ===== Observable ===== #
-        c = self._model.observable.theta[0].values
+        c, y = self._get_mat_and_fix_y(x, y)
         o_var_inv = 1 / self._model.observable.scale(x) ** 2
 
         if self._model.hidden_ndim < 2:
@@ -65,7 +73,7 @@ class LinearGaussianObservations(Proposal):
         return self
 
     def weight(self, y, xn, xo):
-        c = self._model.observable.theta[0].values
+        c, y = self._get_mat_and_fix_y(xo, y)
         fx = self._model.hidden.mean(xo)
 
         m = self._model.observable.mean(fx)

@@ -2,6 +2,7 @@ from .base import Proposal
 import torch
 from torch.distributions import Normal, MultivariateNormal, Independent
 from ..utils import construct_diag
+from .linear import LinearGaussianObservations
 
 
 # TODO: Check if we can speed up
@@ -58,6 +59,45 @@ class Linearized(Proposal):
         self._kernel = MultivariateNormal(mean, scale_tril=torch.cholesky(var))
 
         return self
+
+
+class LocalLinearization(LinearGaussianObservations):
+    def __init__(self):
+        """
+        Locally linearizes the observation mean function.
+        """
+
+        super().__init__()
+
+    def set_model(self, model):
+        self._model = model
+        return self
+
+    def _get_mat_and_fix_y(self, x, y):
+        mu = self._model.hidden.mean(x)
+        mu.requires_grad_(True)
+
+        obs = self._model.observable.mean(mu)
+        obs.backward(torch.ones_like(obs))
+
+        mu.detach_()
+        obs.detach_()
+        obsdx = mu.grad
+
+        if self._model.hidden_ndim < 2:
+            ny = y - obs + obsdx * mu
+        else:
+            temp = torch.matmul(obsdx.unsqueeze(-2), mu.unsqueeze(-1))[..., 0]
+
+            if self._model.obs_ndim < 2:
+                temp = temp[..., 0]
+
+            ny = y - obs + temp
+
+        return obsdx, ny
+
+    def weight(self, y, xn, xo):
+        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
 
 
 class ModeFinding(Proposal):
