@@ -81,6 +81,7 @@ class Linearized(Proposal):
         dlogl = mu.grad.clone()
 
         mu.detach_()
+        oscale.detach_()
 
         if self._model.hidden_ndim < 2:
             var = 1 / (1 / hscale ** 2 + (dobsx / oscale) ** 2)
