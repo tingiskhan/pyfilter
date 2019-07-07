@@ -4,45 +4,10 @@ import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from ..utils import construct_diag
-from ..timeseries.statevariable import StateVariable
 
 
 # TODO: Not sure if optimal, but same as `numpy`
 eps = sqrt(torch.finfo(torch.float32).eps)
-
-
-def get_mean_expr():
-    """
-    Gets the expression of the mean as a function of the parameters.
-    :return: Returns the function of the mean as an expression of (y, xo, a(xo), b(xo), d(xo), g(xo), gradient)
-    :rtype: callable
-    """
-
-    # ===== Define symbols and functions ====== #
-    y, x, xo, grad = symbols('y x x_o grad')
-
-    a = Function('a')
-    b = Function('b')
-
-    d = Function('d')
-    g = Function('g')
-
-    # ===== Currently only supports normal ====== #
-    t1 = -(y - a(xo)) ** 2 / 2 / b(xo) ** 2
-    t2 = -(x - d(xo)) ** 2 / 2 / g(xo) ** 2
-
-    # ===== Define the linearized distribution ====== #
-    args = y, xo, a(xo), b(xo), d(xo), g(xo), grad
-
-    linearized = t1 + grad * (x - xo) + t2
-    simplified = linearized.expand().collect(x)
-
-    # ===== Get the factor prior to `x` and `x ** 2` ====== #
-    fac = simplified.coeff(x, 1)
-    fac2 = simplified.coeff(x, 2)
-
-    # ===== Define the function ====== #
-    return lambdify(args, -fac / fac2 / 2)
 
 
 def approx_fprime(f, x, order=2, h=eps):
