@@ -1,50 +1,7 @@
 from .base import Proposal
-from sympy import symbols, Function, lambdify
 import torch
-from math import sqrt
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, Independent
 from ..utils import construct_diag
-
-
-# TODO: Not sure if optimal, but same as `numpy`
-eps = sqrt(torch.finfo(torch.float32).eps)
-
-
-def approx_fprime(f, x, order=2, h=eps):
-    """
-    Approximates the derivative of `f` at `x`
-    :param f: The function to differentiate
-    :type f: callable
-    :param x: The point at which to evaluate the derivative
-    :type x: torch.Tensor
-    :param order: The order of accuracy
-    :type order: int
-    :param h: The step size
-    :type h: float
-    :return: Approximation of derivative of `f` at `x`
-    :rtype: torch.Tensor
-    """
-
-    if order == 1:
-        f0 = f(x[..., 0] if x.shape[-1] < 2 else x)
-        diff = lambda u, v: (f(u + v) - f0) / h
-    elif order == 2:
-        diff = lambda u, v: (f(u + v) - f(u - v)) / 2 / h
-    else:
-        raise ValueError('Only 1st and 2nd order precision available!')
-
-    if x.shape[-1] < 2:
-        return diff(x[..., 0], h)
-
-    grad = torch.zeros_like(x)
-    ei = torch.zeros(x.shape[-1])
-    for k in range(x.shape[-1]):
-        ei[k] = h
-
-        grad[..., k] = diff(x, ei)
-        ei[k] = 0.
-
-    return grad
 
 
 # TODO: Check if we can speed up
@@ -103,8 +60,8 @@ class Linearized(Proposal):
         return self
 
 
-class ModeFinding(Linearized):
-    def __init__(self, iterations=5, tol=1e-3, **kwargs):
+class ModeFinding(Proposal):
+    def __init__(self, iterations=5, tol=1e-3):
         """
         Tries to find the mode of the distribution p(x_t |y_t, x_{t-1}) and then approximate the distribution using a
         normal distribution. Note that this proposal should be used in the same setting as `Linearized`, i.e. when
@@ -113,17 +70,13 @@ class ModeFinding(Linearized):
         :type iterations: int
         :param tol: The tolerance of gradient to quit iterating
         :type tol: float
-        :param kwargs: Any key-worded arguments passed to `Linearized`
         """
 
-        super().__init__(**kwargs)
+        super().__init__()
         self._iters = iterations
         self._tol = tol
 
     def construct(self, y, x):
-        # ===== Define function ===== #
-        f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
-
         # ===== Initialize gradient ===== #
         xn = xo = self._model.hidden.mean(x)
 
@@ -131,21 +84,14 @@ class ModeFinding(Linearized):
         gamma = 0.1
         grads = tuple()
         for i in range(self._iters):
-            if self._ord is not None:
-                grad = approx_fprime(
-                    f, xn.unsqueeze(-1) if self._model.hidden.ndim < 2 else xn,
-                    order=self._ord,
-                    h=self._h
-                )
-            else:
-                req_grad = xo.requires_grad
+            req_grad = xo.requires_grad
 
-                xo.requires_grad_(True)
-                logl = f(xo)
-                logl.backward(torch.ones_like(logl), retain_graph=True)
+            xo.requires_grad_(True)
+            logl = self._model.weight(y, xo) + self._model.h_weight(xo, x)
+            logl.backward(torch.ones_like(logl), retain_graph=True)
 
-                grad = xo.grad
-                xo.requires_grad_(req_grad)
+            grad = xo.grad
+            xo.requires_grad_(req_grad)
 
             grads += (grad,)
 
