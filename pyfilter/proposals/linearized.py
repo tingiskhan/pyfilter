@@ -4,6 +4,7 @@ import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from ..utils import construct_diag
+from ..timeseries.statevariable import StateVariable
 
 
 # TODO: Not sure if optimal, but same as `numpy`
@@ -83,47 +84,49 @@ def approx_fprime(f, x, order=2, h=eps):
 
 # TODO: Check if we can speed up
 class Linearized(Proposal):
-    def __init__(self, order=2, h=eps):
+    def __init__(self):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
-        :param order: The order of accuracy to use for gradient estimation
-        :type order: int|None
-        :param h: The discretization step
-        :type h: float
         """
 
         super().__init__()
 
-        if order is not None:
-            if not (1 <= order <= 2):
-                raise ValueError('Only 1st or 2nd order accuracy available!')
-
-        self._meanexpr = get_mean_expr()
-        self._ord = order
-        self._h = h
-
     def construct(self, y, x):
-        # ===== Define function ===== #
-        f = lambda u: self._model.weight(y, u) + self._model.h_weight(u, x)
-
-        # ===== Evaluate gradient ===== #
+        # ===== Define helpers ===== #
         mu = self._model.hidden.mean(x)
+        mu.requires_grad_(True)
 
-        # TODO: Allow for using autograd
-        dobsx = approx_fprime(self._model.observable.mean, mu, order=self._ord)
-        dlogl = approx_fprime(f, mu, order=self._ord)
+        oloc = self._model.observable.mean(mu)
+        oscale = self._model.observable.scale(mu)
+
+        hscale = self._model.hidden.scale(x)
+
+        # ===== Calculate the log-likelihood ===== #
+        obs_logl = self._model.observable.predefined_weight(y, x, oloc, oscale)
+        hid_logl = self._model.hidden.predefined_weight(mu, x, mu, hscale)
+
+        logl = obs_logl + hid_logl
+
+        # ===== Do backward-pass ===== #
+        oloc.backward(torch.ones_like(oloc), retain_graph=True)
+        dobsx = mu.grad.clone()
+
+        logl.backward(torch.ones_like(logl))
+        dlogl = mu.grad.clone()
+
+        mu.detach_()
 
         if self._model.hidden_ndim < 2:
-            var = 1 / (1 / self._model.hidden.scale(x) ** 2 + (dobsx / self._model.observable.scale(mu)) ** 2)
+            var = 1 / (1 / hscale ** 2 + (dobsx / oscale) ** 2)
             mean = mu + var * dlogl
 
             self._kernel = Normal(mean, var.sqrt())
 
             return self
 
-        h_inv_var = construct_diag(1 / self._model.hidden.scale(x) ** 2)
-        o_inv_var = 1 / self._model.observable.scale(mu) ** 2
+        h_inv_var = construct_diag(1 / hscale ** 2)
+        o_inv_var = 1 / oscale ** 2
 
         temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) * o_inv_var
         var = (h_inv_var + temp).inverse()

@@ -37,9 +37,14 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        if obj._inputdim > 1:
+        if obj._inputdim > 1 and not isinstance(x, StateVariable):
             x = StateVariable(x)
 
-        return concater(func(obj, x))
+        res = concater(func(obj, x))
+
+        if obj.ndim > 1:
+            return StateVariable(res)
+
+        return res
 
     return wrapper

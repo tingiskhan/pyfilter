@@ -247,6 +247,24 @@ class AffineModel(MoveToHelper):
         """
         loc, scale = self.mean(x), self.scale(x)
 
+        return self.predefined_weight(y, x, loc, scale)
+
+    @finite_decorator
+    def predefined_weight(self, y, x, loc, scale):
+        """
+        Helper method for weighting with loc and scale.
+        :param y: The value at x_t
+        :type y: torch.Tensor|float
+        :param x: The value at x_{t-1}
+        :type x: torch.Tensor|float
+        :param loc: The mean
+        :type loc: torch.Tensor
+        :param scale: The scale
+        :type scale: torch.Tensor
+        :return: The log-weights
+        :rtype: torch.Tensor
+        """
+
         if isinstance(self, Observable):
             shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)
         else:
