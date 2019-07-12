@@ -96,20 +96,6 @@ def add_dimensions(x, ndim):
     return x.view(*x.shape, *((ndim - x.dim()) * (1,)))
 
 
-def isfinite(x):
-    """
-    Returns mask for finite values. Solution: https://gist.github.com/wassname/df8bc03e60f81ff081e1895aabe1f519 .
-    :param x: The array
-    :type x: torch.Tensor
-    :return: All those that do not satisfy
-    :rtype: torch.Tensor
-    """
-
-    not_inf = (x + 1) != x
-    not_nan = x == x
-    return not_inf & not_nan
-
-
 def concater(x):
     """
     Concatenates output.
