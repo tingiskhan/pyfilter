@@ -38,8 +38,8 @@ class Linearized(Proposal):
         logl.backward(torch.ones_like(logl))
         dlogl = mu.grad.clone()
 
-        mu.detach_()
-        oscale.detach_()
+        mu = mu.detach()
+        oscale = oscale.detach()
 
         if self._model.hidden_ndim < 2:
             var = 1 / (1 / hscale ** 2 + (dobsx / oscale) ** 2)

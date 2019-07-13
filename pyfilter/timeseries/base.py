@@ -3,7 +3,29 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter
 from ..utils import concater, add_dimensions, MoveToHelper
-from .statevariable import tensor_caster
+from .statevariable import StateVariable
+
+
+def tensor_caster(func):
+    """
+    Function for helping out when it comes to multivariate models. Returns a torch.Tensor
+    :param func: The function to pass
+    :type func: callable
+    :rtype: torch.Tensor
+    """
+
+    def wrapper(obj, x):
+        if obj._inputdim > 1 and not isinstance(x, StateVariable):
+            x = StateVariable(x)
+
+        res = concater(func(obj, x))
+
+        if not isinstance(obj, Observable) and obj._inputdim > 1:
+            return StateVariable(res)
+
+        return res
+
+    return wrapper
 
 
 def finite_decorator(func):
