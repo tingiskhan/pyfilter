@@ -72,26 +72,3 @@ class LinearGaussianObservations(Proposal):
 
         return self
 
-    def weight__(self, y, xn, xo):
-        c, y = self._get_mat_and_fix_y(xo, y)
-        fx = self._model.hidden.mean(xo)
-
-        m = self._model.observable.mean(fx)
-
-        h_var = self._model.hidden.scale(xo) ** 2
-        o_var = self._model.observable.scale(xo) ** 2
-
-        if self._model.hidden_ndim < 2:
-            std = (h_var + c ** 2 * o_var).sqrt()
-
-            return Normal(m, std).log_prob(y)
-
-        tc = c if c.dim() > 1 else c.unsqueeze(-2)
-
-        temp = torch.matmul(tc, torch.matmul(construct_diag(h_var), tc.transpose(-2, -1)))
-        cov = construct_diag(o_var.unsqueeze(-1) if self._model.observable.ndim < 2 else o_var) + temp
-
-        if self._model.obs_ndim > 1:
-            return MultivariateNormal(m, scale_tril=torch.cholesky(cov)).log_prob(y)
-
-        return Normal(m, cov[..., 0, 0].sqrt()).log_prob(y)
