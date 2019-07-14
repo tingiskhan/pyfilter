@@ -2,8 +2,11 @@ from .base import BatchAlgorithm
 import torch
 from torch import optim
 import tqdm
-from ..proposals.linearized import eps
+from math import sqrt
 from .varapprox import MeanField, BaseApproximation, ParameterApproximation
+
+
+eps = sqrt(torch.finfo(torch.float32).eps)
 
 
 class VariationalBayes(BatchAlgorithm):

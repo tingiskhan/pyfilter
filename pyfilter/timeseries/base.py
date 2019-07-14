@@ -3,7 +3,29 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter
 from ..utils import concater, add_dimensions, MoveToHelper
-from .statevariable import tensor_caster
+from .statevariable import StateVariable
+
+
+def tensor_caster(func):
+    """
+    Function for helping out when it comes to multivariate models. Returns a torch.Tensor
+    :param func: The function to pass
+    :type func: callable
+    :rtype: torch.Tensor
+    """
+
+    def wrapper(obj, x):
+        if obj._inputdim > 1 and not isinstance(x, StateVariable):
+            x = StateVariable(x)
+
+        res = concater(func(obj, x))
+
+        if not isinstance(obj, Observable) and obj._inputdim > 1:
+            return StateVariable(res)
+
+        return res
+
+    return wrapper
 
 
 def finite_decorator(func):
@@ -246,6 +268,24 @@ class AffineModel(MoveToHelper):
         :rtype: torch.Tensor|float
         """
         loc, scale = self.mean(x), self.scale(x)
+
+        return self.predefined_weight(y, x, loc, scale)
+
+    @finite_decorator
+    def predefined_weight(self, y, x, loc, scale):
+        """
+        Helper method for weighting with loc and scale.
+        :param y: The value at x_t
+        :type y: torch.Tensor|float
+        :param x: The value at x_{t-1}
+        :type x: torch.Tensor|float
+        :param loc: The mean
+        :type loc: torch.Tensor
+        :param scale: The scale
+        :type scale: torch.Tensor
+        :return: The log-weights
+        :rtype: torch.Tensor
+        """
 
         if isinstance(self, Observable):
             shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)

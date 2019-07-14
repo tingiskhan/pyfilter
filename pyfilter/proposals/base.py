@@ -1,6 +1,6 @@
 from ..timeseries.model import StateSpaceModel
 from ..utils import choose, MoveToHelper
-from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform
+from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform, Independent
 
 
 class Proposal(MoveToHelper):
@@ -81,7 +81,7 @@ class Proposal(MoveToHelper):
         :rtype: Proposal
         """
 
-        # TODO: Only works for location-scale families currently
+        # TODO: FIX THIS
 
         # ===== If transformed distribution we resample everything ===== #
         if isinstance(self._kernel, TransformedDistribution):
@@ -94,10 +94,14 @@ class Proposal(MoveToHelper):
             return self
 
         # ===== Else, we just resample ===== #
-        self._kernel.loc = choose(self._kernel.loc, inds)
-        if isinstance(self._kernel, MultivariateNormal):
+        if isinstance(self._kernel, Independent):
+            self._kernel.base_dist.loc = choose(self._kernel.base_dist.loc, inds)
+            self._kernel.base_dist.scale = choose(self._kernel.base_dist.scale, inds)
+        elif isinstance(self._kernel, MultivariateNormal):
+            self._kernel.loc = choose(self._kernel.loc, inds)
             self._kernel.scale_tril = choose(self._kernel.scale_tril, inds)
         else:
+            self._kernel.loc = choose(self._kernel.loc, inds)
             self._kernel.scale = choose(self._kernel.scale, inds)
 
         return self
@@ -108,14 +112,14 @@ class Proposal(MoveToHelper):
         Note that you should call `construct` prior to this function.
         :param y: The observation
         :type y: torch.Tensor|float
-        :param x: The old sample
-        :type x: torch.Tensor
         :return: The weight
         :rtype: torch.Tensor
         """
 
-        if not isinstance(self._kernel, TransformedDistribution):
+        if not isinstance(self._kernel, (TransformedDistribution, Independent)):
             return self._model.weight(y, self._kernel.loc)
+        elif isinstance(self._kernel, Independent):
+            return self._model.weight(y, self._kernel.base_dist.loc)
 
         # TODO: Not entirely sure about this, but think this is the case
         at = next(k for k in self._kernel.transforms if isinstance(k, AffineTransform))
