@@ -9,9 +9,9 @@ class StateVariable(torch.Tensor):
     """
 
     def __new__(cls, data, *args, **kwargs):
-        return super().__new__(cls, data, *args, **kwargs)
+        return torch.Tensor._make_subclass(cls, data, *args, **kwargs)
 
-    def __init__(self, x):
+    def __init__(self, x, *args, **kwargs):
         self._tempdata = x
 
     def __getitem__(self, item):
