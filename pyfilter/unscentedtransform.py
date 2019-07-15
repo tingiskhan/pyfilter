@@ -18,15 +18,11 @@ def _propagate_sps(spx, spn, process):
     :return: Translated and scaled sigma points
     :rtype: torch.Tensor
     """
+
     mean = process.mean(spx)
     scale = process.scale(spx)
 
-    if process.ndim < 2:
-        if 0 < mean.dim() < spn.dim():
-            mean.unsqueeze_(-1)
-
-        if 0 < scale.dim() < spn.dim():
-            scale.unsqueeze_(-1)
+    mean, scale = torch.broadcast_tensors(mean, scale)
 
     return mean + scale * spn
 
