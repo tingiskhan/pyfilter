@@ -15,12 +15,11 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
     # OrderedDict.  See Note [Don't serialize hooks]
     param._backward_hooks = backward_hooks
     param._prior = prior
-    param._values = data
 
     return param
 
 
-class Parameter(torch.nn.Parameter):
+class Parameter(torch.Tensor):
     def __new__(cls, parameter=None, requires_grad=False):
         if isinstance(parameter, torch.Tensor):
             _data = parameter
@@ -30,11 +29,14 @@ class Parameter(torch.nn.Parameter):
             # This is just a place holder
             _data = torch.Tensor([float('inf')])
 
-        out = torch.Tensor._make_subclass(cls, _data, requires_grad)
-        out._prior = parameter
-        out._values = _data
+        return torch.Tensor._make_subclass(cls, _data, requires_grad)
 
-        return out
+    def __init__(self, parameter=None, requires_grad=False):
+        """
+        The parameter class.
+        :param parameter: The parameter value.
+        """
+        self._prior = parameter if isinstance(parameter, dist.Distribution) else None
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
@@ -78,7 +80,7 @@ class Parameter(torch.nn.Parameter):
         :rtype: float|Tensor
         """
 
-        return self._values
+        return self.data
 
     @values.setter
     def values(self, x):
@@ -87,10 +89,10 @@ class Parameter(torch.nn.Parameter):
         :param x: The values
         :type x: Tensor
         """
-        if not isinstance(x, type(self.values)) and self.values is not None:
+        if not isinstance(x, torch.Tensor) and self.data is not None:
             raise ValueError('Is not the same type!')
         elif not self.trainable:
-            self._values = x
+            self.data[:] = x
             return
 
         support = self._prior.support.check(x)
@@ -98,8 +100,7 @@ class Parameter(torch.nn.Parameter):
         if (~support).any():
             raise ValueError('Found values outside bounds!')
 
-        self._values = x
-        self.data = self._values
+        self.data[:] = x
 
     @property
     def t_values(self):
@@ -111,7 +112,7 @@ class Parameter(torch.nn.Parameter):
         if not self.trainable:
             raise ValueError('Cannot transform parameter not of instance `Distribution`!')
 
-        return self.bijection.inv(self.values)
+        return self.bijection.inv(self.data)
 
     @t_values.setter
     def t_values(self, x):
@@ -124,7 +125,7 @@ class Parameter(torch.nn.Parameter):
         self.values = self.bijection(x)
 
     @property
-    def dist(self):
+    def distr(self):
         """
         Returns the distribution.
         :rtype: torch.distributions.Distribution
@@ -146,19 +147,7 @@ class Parameter(torch.nn.Parameter):
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
         shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
-        self.values = self._prior.sample(shape)
-
-        return self
-
-    def view_(self, shape):
-        """
-        In place version of `torch.view` but assumes that `shape` is to be appended.
-        :param shape: The shape
-        :type shape: int|tuple[int]|torch.Size
-        :rtype: Parameter
-        """
-
-        self.values = self.values.view(*self.values.shape, *((shape,) if isinstance(shape, int) else shape))
+        self.data = self._prior.sample(shape)
 
         return self
 
