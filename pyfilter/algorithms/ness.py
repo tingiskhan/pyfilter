@@ -63,15 +63,19 @@ class NESS(SequentialAlgorithm):
             mod._theta_vals = params
 
             # ===== Distributional parameters ===== #
+            # TODO: Not working yet, but soon
             pdict = dict()
-            for k, v in mod.distributional_theta:
+            for k, v in mod.distributional_theta.items():
+                v.sample_(self._particles)
+
                 shape = v.shape[1:]
                 if isinstance(self.filter, ParticleFilter):
                     shape = 1, *shape
 
                 pdict[k] = v.view(self._particles, *shape)
 
-            mod.noise.__init__(**pdict)
+            if len(pdict) > 0:
+                mod.noise.__init__(**pdict)
 
         self._filter.initialize()
 
