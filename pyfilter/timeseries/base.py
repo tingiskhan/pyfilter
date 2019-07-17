@@ -60,24 +60,6 @@ def _get_shape(x, ndim):
     return x.shape if ndim < 2 else x.shape[:-1]
 
 
-def parameter_caster(ndim, *args):
-    """
-    Wrapper for re-casting parameters to correct sizes.
-    :rtype: torch.Tensor
-    """
-    targs = tuple()
-    for a in args:
-        vals = a.values
-
-        diff = ndim - vals.dim()
-        if a.trainable and vals.dim() > 0 and diff != 0:
-            vals = add_dimensions(vals, ndim)
-
-        targs += (vals,)
-
-    return targs
-
-
 def init_caster(func):
     def wrapper(obj):
         return concater(func(obj))
@@ -103,7 +85,9 @@ class AffineModel(MoveToHelper):
 
         self.f0, self.g0 = initial
         self.f, self.g = funcs
+
         self._theta = tuple(Parameter(th) for th in theta)
+        self._theta_vals = self.theta
 
         self._transform = AffineTransform
 
@@ -151,15 +135,6 @@ class AffineModel(MoveToHelper):
         """
 
         return self._theta
-
-    @property
-    def _theta_vals(self):
-        """
-        Returns the values of the parameters
-        :return: tuple[torch.Tensor]
-        """
-
-        return tuple(th.values for th in self._theta)
 
     @property
     @lru_cache()
@@ -219,7 +194,7 @@ class AffineModel(MoveToHelper):
         :rtype: torch.Tensor|float
         """
 
-        return self.f(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
+        return self.f(x, *self._theta_vals)
 
     @tensor_caster
     def g_val(self, x):
@@ -231,7 +206,7 @@ class AffineModel(MoveToHelper):
         :rtype: torch.Tensor|float
         """
 
-        return self.g(x, *parameter_caster(x.dim() - bool(self._inputdim > 1), *self.theta))
+        return self.g(x, *self._theta_vals)
 
     def mean(self, x):
         """
@@ -308,10 +283,7 @@ class AffineModel(MoveToHelper):
         """
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
-        loc = concater(self.f0(*parameter_caster(len(shape), *self.theta)))
-        scale = concater(self.g0(*parameter_caster(len(shape), *self.theta)))
-
-        dist = TransformedDistribution(self.noise0.expand(shape), self._transform(loc, scale))
+        dist = TransformedDistribution(self.noise0.expand(shape), self._transform(self.i_mean(), self.i_scale()))
 
         if as_dist:
             return dist
