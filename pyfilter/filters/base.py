@@ -159,6 +159,7 @@ class BaseFilter(MoveToHelper):
         :rtype: BaseFilter
         """
 
+        # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
 
     @property
