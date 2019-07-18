@@ -70,12 +70,13 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == (1000,)
 
     def test_Filters(self):
-        for model in [self.mvnmodel]:
+        for model in [self.model, self.mvnmodel]:
             x, y = model.sample(500)
 
             for filter_, props in [
-                (SISR, {'particles': 500, 'proposal': Linearized()}),
-                (APF, {'particles': 500, 'proposal': Linearized()})
+                (SISR, {'particles': 500}),
+                (APF, {'particles': 500}),
+                (UKF,)
             ]:
                 filt = filter_(model, **props).initialize()
 
@@ -148,14 +149,14 @@ class Tests(unittest.TestCase):
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
-        for trumod, model in [(self.mvnmodel, twod)]:
+        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
             x, y = trumod.sample(550)
 
             algs = [
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                # (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
+                (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
             ]
 
             for alg, props in algs:
