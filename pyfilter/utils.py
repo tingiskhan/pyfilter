@@ -167,7 +167,7 @@ class MoveToHelper(object):
             for a in _yield_helper(attr._prior):
                 self._helper(device, getattr(attr._prior, a))
 
-            attr.values = attr.values.to(device)
+            attr.data = attr.data.to(device)
         elif hasattr(attr, 'to_'):
             attr.to_(device)
         elif isinstance(attr, torch.Tensor) and attr.device != device:
