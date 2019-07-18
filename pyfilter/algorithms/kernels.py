@@ -343,8 +343,8 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals = torch.cat([p.t_values for p in params], dim=-1)
-    n_p_vals = torch.cat([p.t_values for p in n_params], dim=-1)
+    p_vals = torch.stack([p.t_values for p in params], dim=-1)
+    n_p_vals = torch.stack([p.t_values for p in n_params], dim=-1)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
@@ -395,10 +395,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
         # ===== Check which to accept ===== #
         u = torch.empty_like(quotient).uniform_().log()
-        if plogquot.dim() > 1:
-            toaccept = u < quotient + plogquot[:, 0] + kernel
-        else:
-            toaccept = u < quotient + plogquot + kernel
+        toaccept = u < quotient + plogquot + kernel
 
         # ===== Update the description ===== #
         self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
@@ -409,12 +406,12 @@ class ParticleMetropolisHastings(BaseKernel):
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, parameters, weights):
-        asarray = torch.cat([p.t_values for p in parameters], dim=-1)
+        asarray = torch.stack([p.t_values for p in parameters], dim=-1)
 
         if asarray.dim() > 2:
             asarray = asarray[..., 0]
 
-        mean = (asarray * weights[:, None]).sum(0)
+        mean = (asarray * weights.unsqueeze(-1)).sum(0)
         centralized = asarray - mean
         cov = torch.matmul(weights * centralized.t(), centralized)
 
