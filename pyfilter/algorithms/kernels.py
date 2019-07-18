@@ -325,7 +325,7 @@ def _mcmc_move(params, dist):
     rvs = dist.sample(shape)
 
     for p, vals in zip(params, rvs.t()):
-        p.t_values = add_dimensions(vals, p.t_values.dim())
+        p.t_values = vals
 
     return True
 

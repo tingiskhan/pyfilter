@@ -1,12 +1,12 @@
 import unittest
 import numpy as np
 import pykalman
-from torch.distributions import Normal, Exponential, Independent
+from torch.distributions import Normal, Exponential, Independent, StudentT
 from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import AffineModel, LinearGaussianObservations
+from pyfilter.timeseries import AffineModel, LinearGaussianObservations, Parameter
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
-from pyfilter.proposals import Unscented
+from pyfilter.proposals import Unscented, Linearized
 
 
 def f(x, alpha, sigma):
@@ -70,10 +70,13 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == (1000,)
 
     def test_Filters(self):
-        for model in [self.model, self.mvnmodel]:
+        for model in [self.mvnmodel]:
             x, y = model.sample(500)
 
-            for filter_, props in [(SISR, {'particles': 500}), (APF, {'particles': 500}), (UKF, {})]:
+            for filter_, props in [
+                (SISR, {'particles': 500, 'proposal': Linearized()}),
+                (APF, {'particles': 500, 'proposal': Linearized()})
+            ]:
                 filt = filter_(model, **props).initialize()
 
                 filt = filt.longfilter(y)
@@ -139,20 +142,20 @@ class Tests(unittest.TestCase):
         priors = Exponential(2.), Exponential(2.)
         # ===== Test for multiple models ===== #
         hidden1d = AffineModel((f0, g0), (f, g), priors, (self.linear.noise0, self.linear.noise))
-        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
+        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1))
 
         hidden2d = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), priors, (self.mvn.noise0, self.mvn.noise))
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
-        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
+        for trumod, model in [(self.mvnmodel, twod)]:
             x, y = trumod.sample(550)
 
             algs = [
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
+                # (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                # (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
+                # (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
             ]
 
             for alg, props in algs:
@@ -166,6 +169,6 @@ class Tests(unittest.TestCase):
 
                 tru_val = trumod.hidden.theta[-1]
                 densval = kde.logpdf(tru_val.numpy().reshape(-1, 1))
-                priorval = parameter.dist.log_prob(tru_val)
+                priorval = parameter.distr.log_prob(tru_val)
 
                 assert bool(densval > priorval.numpy())
