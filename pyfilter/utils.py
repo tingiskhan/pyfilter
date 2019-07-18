@@ -198,3 +198,31 @@ class MoveToHelper(object):
             self._helper(device, attr)
 
         return self
+
+
+class TempOverride(object):
+    def __init__(self, obj, attr, new_vals):
+        """
+        Implements a temporary override of attribute of an object.
+        :param obj: An object
+        :type obj: object
+        :param attr: The attribute to override
+        :type attr: str
+        :param new_vals: The new values
+        :type new_vals: object
+        """
+        self._obj = obj
+        self._attr = attr
+        self._new_vals = new_vals
+        self._old_vals = None
+
+    def __enter__(self):
+        self._old_vals = getattr(self._obj, self._attr)
+        setattr(self._obj, self._attr, self._new_vals)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        setattr(self._obj, self._attr, self._old_vals)
+
+        return self
