@@ -230,7 +230,6 @@ class AffineModel(MoveToHelper):
 
         return self.g_val(x)
 
-    @finite_decorator
     def weight(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
