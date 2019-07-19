@@ -26,8 +26,8 @@ class Linearized(Proposal):
         hscale = self._model.hidden.scale(x)
 
         # ===== Calculate the log-likelihood ===== #
-        obs_logl = self._model.observable.predefined_weight(y, x, oloc, oscale)
-        hid_logl = self._model.hidden.predefined_weight(mu, x, mu, hscale)
+        obs_logl = self._model.observable.predefined_weight(y, oloc, oscale)
+        hid_logl = self._model.hidden.predefined_weight(mu, mu, hscale)
 
         logl = obs_logl + hid_logl
 

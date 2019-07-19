@@ -89,8 +89,6 @@ class AffineModel(MoveToHelper):
         self._theta = tuple(Parameter(th) for th in theta)
         self._theta_vals = self.theta
 
-        self._transform = AffineTransform
-
         cases = (
             all(isinstance(n, Distribution) for n in noise),
             (isinstance(noise[-1], Distribution) and noise[0] is None)
@@ -163,6 +161,19 @@ class AffineModel(MoveToHelper):
             raise Exception('Timeseries model can at most be 1 dimensional (i.e. vector)!')
 
         return tuple(shape)[-1]
+
+    def sample_params(self, shape=None):
+        """
+        Samples the parameters of the model in place.
+        :param shape: The shape to use
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        for param in self.theta_dists:
+            param.sample_(shape)
+
+        return self
 
     @init_caster
     def i_mean(self):
@@ -243,10 +254,10 @@ class AffineModel(MoveToHelper):
         """
         loc, scale = self.mean(x), self.scale(x)
 
-        return self.predefined_weight(y, x, loc, scale)
+        return self.predefined_weight(y, loc, scale)
 
     @finite_decorator
-    def predefined_weight(self, y, x, loc, scale):
+    def predefined_weight(self, y, loc, scale):
         """
         Helper method for weighting with loc and scale.
         :param y: The value at x_t
@@ -261,14 +272,26 @@ class AffineModel(MoveToHelper):
         :rtype: torch.Tensor
         """
 
-        if isinstance(self, Observable):
-            shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)
-        else:
-            shape = _get_shape(x, self.ndim)
-
-        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
+        dist = self._define_transdist(loc, scale)
 
         return dist.log_prob(y)
+
+    def _define_transdist(self, loc, scale):
+        """
+        Helper method for defining the transition density
+        :param loc: The mean
+        :type loc: torch.Tensor
+        :param scale: The scale
+        :type scale: torch.Tensor
+        :return: Distribution
+        :rtype: Distribution
+        """
+
+        loc, scale = torch.broadcast_tensors(loc, scale)
+
+        shape = _get_shape(loc, self.ndim)
+
+        return TransformedDistribution(self.noise.expand(shape), AffineTransform(loc, scale, event_dim=self.ndim - 1))
 
     def i_sample(self, shape=None, as_dist=False):
         """
@@ -282,7 +305,9 @@ class AffineModel(MoveToHelper):
         """
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
-        dist = TransformedDistribution(self.noise0.expand(shape), self._transform(self.i_mean(), self.i_scale()))
+        dist = TransformedDistribution(
+            self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self.ndim - 1)
+        )
 
         if as_dist:
             return dist
@@ -300,14 +325,7 @@ class AffineModel(MoveToHelper):
         :rtype: torch.Tensor|float
         """
 
-        loc, scale = self.mean(x), self.scale(x)
-
-        if isinstance(self, Observable):
-            shape = _get_shape(loc if loc.dim() > scale.dim() else scale, self.ndim)
-        else:
-            shape = _get_shape(x, self.ndim)
-
-        dist = TransformedDistribution(self.noise.expand(shape), self._transform(loc, scale))
+        dist = self._define_transdist(self.mean(x), self.scale(x))
 
         if as_dist:
             return dist
