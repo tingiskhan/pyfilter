@@ -137,22 +137,19 @@ def _normal_test(x, alpha=0.05):
     :return: Whether a normal distribution or not
     :rtype: bool
     """
-    mean = x.mean()
-    var = ((x - mean) ** 2).mean()
+    mean = x.mean(0)
+    var = ((x - mean) ** 2).mean(0)
 
     # ===== Skew ===== #
-    skew = ((x - mean) ** 3).mean() / var ** 1.5
+    skew = ((x - mean) ** 3).mean(0) / var ** 1.5
 
     # ===== Kurtosis ===== #
-    kurt = ((x - mean) ** 4).mean() / var ** 2
+    kurt = ((x - mean) ** 4).mean(0) / var ** 2
 
     # ===== Statistic ===== #
     jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
 
-    if chi2(2).ppf(1 - alpha) < jb:
-        return False
-
-    return True
+    return chi2(2).ppf(1 - alpha) >= jb
 
 
 def _jitter(values, scale):
@@ -215,14 +212,23 @@ def _shrink(values, w, ess):
     mean = (w * values).sum(0)
 
     # ===== Calculate STD ===== #
-    if not _normal_test(values):
-        sort, _ = values.sort(0)
-        std = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+    norm_test = _normal_test(values)
 
-        var = std ** 2
-    else:
-        var = (w * (values - mean) ** 2).sum(0)
-        std = var.sqrt()
+    std = torch.empty_like(values)
+    var = torch.empty_like(values)
+
+    # ===== For those not normally distributed ===== #
+    t_mask = ~norm_test
+    if t_mask.any():
+        sort, _ = values[:, t_mask].sort(0)
+        std[:, t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+
+        var[:, t_mask] = std[:, t_mask] ** 2
+
+    # ===== Those normally distributed ===== #
+    if norm_test.any():
+        var[:, norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0)
+        std[:, norm_test] = var[:, norm_test].sqrt()
 
     # ===== Calculate bandwidth ===== #
     bw = 1.59 * std * ess ** (-1 / 3)
@@ -242,11 +248,12 @@ class ShrinkageKernel(BaseKernel):
         ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, weights, ess))
-        meanscales = ms_hid + ms_obs
+        means, scales = _shrink(torch.stack(tuple(p.t_values for p in parameters), -1), weights, ess)
 
         # ===== Mutate parameters ===== #
-        for p, (m, s) in zip(parameters, meanscales):
+        for i, p in enumerate(parameters):
+            m, s = means[:, i], scales[:, i]
+
             p.t_values = _jitter(m, s)
 
         return self
@@ -268,11 +275,11 @@ class AdaptiveShrinkageKernel(BaseKernel):
         ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        ms_hid, ms_obs = filter_.ssm.p_map(lambda u: _shrink(u.t_values, weights, ess))
-        meanscales = ms_hid + ms_obs
+        means, scales = _shrink(torch.stack(tuple(p.t_values for p in parameters), -1), weights, ess)
 
         # ===== Mutate parameters ===== #
-        for p, (m, s), delta in zip(parameters, meanscales, self.get_diff()):
+        for i, (p, delta) in enumerate(zip(parameters, self.get_diff())):
+            m, s = means[:, i], scales[:, i]
             switched = (delta.abs() < self._eps).all()
 
             p.t_values = _jitter(
