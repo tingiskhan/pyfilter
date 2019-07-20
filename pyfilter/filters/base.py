@@ -83,6 +83,39 @@ class BaseFilter(MoveToHelper):
         """
         return self._model
 
+    def viewify_params(self, shape):
+        """
+        Defines views to be used as parameters instead
+        :param shape: The shape to use. Please note that
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        for mod in [self.ssm.hidden, self.ssm.observable]:
+            # ===== Regular parameters ===== #
+            params = tuple()
+            for param in mod.theta:
+                if param.trainable:
+                    var = param.view(*shape, *param._prior.event_shape)
+                else:
+                    var = param
+
+                params += (var,)
+
+            mod._theta_vals = params
+
+            # ===== Distributional parameters ===== #
+            # TODO: Not working yet, but soon
+            pdict = dict()
+            for k, v in mod.distributional_theta.items():
+                pdict[k] = v.view(*shape, *v._prior.event_shape)
+
+            if len(pdict) > 0:
+                mod.noise.__init__(**pdict)
+
+        return self
+
     def set_nparallel(self, n):
         """
         Sets the number of parallel filters to use

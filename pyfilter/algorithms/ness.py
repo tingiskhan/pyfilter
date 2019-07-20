@@ -43,38 +43,10 @@ class NESS(SequentialAlgorithm):
         :rtype: NESS
         """
 
-        for mod in [self.filter.ssm.hidden, self.filter.ssm.observable]:
-            # ===== Regular parameters ===== #
-            mod.sample_params(self._particles)
-            params = tuple()
-            for param in mod.theta:
-                if param.trainable:
-                    shape = param.shape[1:]
-                    if isinstance(self.filter, ParticleFilter):
-                        shape = 1, *shape
+        self.filter.ssm.sample_params(self._particles)
 
-                    var = param.view(self._particles, *shape)
-                else:
-                    var = param
-
-                params += (var,)
-
-            mod._theta_vals = params
-
-            # ===== Distributional parameters ===== #
-            # TODO: Not working yet, but soon
-            pdict = dict()
-            for k, v in mod.distributional_theta.items():
-                shape = v.shape[1:]
-                if isinstance(self.filter, ParticleFilter):
-                    shape = 1, *shape
-
-                pdict[k] = v.view(self._particles, *shape)
-
-            if len(pdict) > 0:
-                mod.noise.__init__(**pdict)
-
-        self._filter.initialize()
+        shape = self._particles, 1 if isinstance(self.filter, ParticleFilter) else self._particles
+        self.filter.viewify_params(shape).initialize()
 
         return self
 

@@ -59,6 +59,20 @@ class StateSpaceModel(MoveToHelper):
 
         return self.observable.ndim
 
+    def sample_params(self, shape=None):
+        """
+        Samples the parameters of the model in place.
+        :param shape: The shape to use
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        for mod in [self.hidden, self.observable]:
+            for param in mod.theta_dists:
+                param.sample_(shape)
+
+        return self
+
     def initialize(self, size=None):
         """
         Initializes the algorithm and samples from the hidden densities.
