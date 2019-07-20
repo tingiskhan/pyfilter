@@ -4,6 +4,7 @@ from torch.distributions import Normal, Independent
 from .parameter import Parameter
 
 
+# TODO: Add integration step as well
 class EulerMaruyma(AffineModel):
     def __init__(self, initial, funcs, theta, dt=1., ndim=1):
         """
@@ -26,7 +27,7 @@ class EulerMaruyma(AffineModel):
     def mean(self, x):
         return x + self.f_val(x) * self.dt
 
-    def scale(self, x, params=None):
+    def scale(self, x):
         return self.g_val(x) * self._sqdt
 
 
@@ -51,8 +52,14 @@ class OrnsteinUhlenbeck(EulerMaruyma):
         """
         super().__init__((_fh0, _gh0), (self._f, self._g), (kappa, gamma, sigma), dt=dt, ndim=ndim)
 
+    def mean(self, x):
+        return self.f_val(x)
+
+    def scale(self, x):
+        return self.g_val(x)
+
     def _f(self, x, reversion, level, std):
-        return level + (x - level) * torch.exp(-reversion * self.dt) - x
+        return level + (x - level) * torch.exp(-reversion * self.dt)
 
     def _g(self, x, reversion, level, std):
         return std / (2 * reversion).sqrt() * (1 - torch.exp(-2 * reversion * self.dt)).sqrt()
