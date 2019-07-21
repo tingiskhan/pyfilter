@@ -4,6 +4,7 @@ from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
 from ..resampling import systematic, residual
+import torch
 
 
 class SMC2(NESS):
@@ -38,7 +39,7 @@ class SMC2(NESS):
         self._logged_ess += (ess,)
 
         # ===== Rejuvenate if there are too few samples ===== #
-        if ess < self._th * self._w_rec.shape[0]:
+        if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():
             self.rejuvenate()
             self._iterator.set_description(desc=str(self))
 

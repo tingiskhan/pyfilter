@@ -63,7 +63,7 @@ class NESS(SequentialAlgorithm):
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
-        if self._ess < self._th * self._particles:
+        if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
             indices = self._resampler(self._w_rec)
             self.filter = self.filter.resample(indices, entire_history=False)
 
