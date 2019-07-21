@@ -30,7 +30,6 @@ class SMC2(NESS):
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
-        self._y += (y,)
         self.filter.filter(y)
         self._w_rec += self.filter.s_ll[-1]
 
