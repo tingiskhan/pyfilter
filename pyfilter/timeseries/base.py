@@ -263,8 +263,6 @@ class AffineModel(MoveToHelper):
         Helper method for weighting with loc and scale.
         :param y: The value at x_t
         :type y: torch.Tensor|float
-        :param x: The value at x_{t-1}
-        :type x: torch.Tensor|float
         :param loc: The mean
         :type loc: torch.Tensor
         :param scale: The scale
