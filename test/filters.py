@@ -76,7 +76,7 @@ class Tests(unittest.TestCase):
             for filter_, props in [
                 (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
-                (UKF,)
+                (UKF, {})
             ]:
                 filt = filter_(model, **props).initialize()
 
