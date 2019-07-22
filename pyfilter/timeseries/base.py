@@ -99,6 +99,7 @@ class AffineModel(MoveToHelper):
 
         self.noise0, self.noise = noise
         self._inputdim = self.ndim
+        self._event_dim = 0 if self.ndim < 2 else 1
 
         # ===== Check if distributions contain parameters ===== #
         self._dist_theta = dict()
@@ -291,7 +292,7 @@ class AffineModel(MoveToHelper):
 
         shape = _get_shape(loc, self.ndim)
 
-        return TransformedDistribution(self.noise.expand(shape), AffineTransform(loc, scale, event_dim=self.ndim - 1))
+        return TransformedDistribution(self.noise.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim))
 
     def i_sample(self, shape=None, as_dist=False):
         """
@@ -306,7 +307,7 @@ class AffineModel(MoveToHelper):
         shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
 
         dist = TransformedDistribution(
-            self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self.ndim - 1)
+            self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
         )
 
         if as_dist:
