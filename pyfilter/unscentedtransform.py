@@ -23,9 +23,9 @@ def _propagate_sps(spx, spn, process, temp_params):
         scale = process.scale(spx)
 
     mean, scale = torch.broadcast_tensors(mean, scale)
-    if process.ndim < 2:
-        mean.unsqueeze_(-1)
-        scale.unsqueeze_(-1)
+
+    if process._inputdim != process.ndim and process.ndim == 1:
+        return (mean + scale * spn[..., 0]).unsqueeze(-1)
 
     return mean + scale * spn
 
