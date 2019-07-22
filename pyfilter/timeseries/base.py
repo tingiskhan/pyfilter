@@ -6,6 +6,7 @@ from ..utils import concater, add_dimensions, MoveToHelper
 from .statevariable import StateVariable
 
 
+# TODO: Fix this one...
 def tensor_caster(func):
     """
     Function for helping out when it comes to multivariate models. Returns a torch.Tensor
