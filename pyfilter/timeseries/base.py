@@ -6,7 +6,8 @@ from ..utils import concater, add_dimensions, MoveToHelper
 from .statevariable import StateVariable
 
 
-# TODO: Fix this one...
+# TODO: Fix this one... Error comes from the fact that we're incosistent in the use of StateVariable. Euler-Maruyama
+# e.g. returns a tensor, wheras AffineModel returns StateVariable. Needs to be resolved
 def tensor_caster(func):
     """
     Function for helping out when it comes to multivariate models. Returns a torch.Tensor
