@@ -1,5 +1,6 @@
 import unittest
 from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck
+from pyfilter.timeseries.statevariable import StateVariable
 import scipy.stats as stats
 import numpy as np
 import torch
@@ -95,5 +96,19 @@ class Tests(unittest.TestCase):
         x = mod.sample(300)
 
         assert x.shape == (300, 1)
+
+    def test_StateVariable(self):
+        # ===== Emulate last value ===== #
+        rands = torch.empty((300, 3)).normal_()
+        rands.requires_grad_(True)
+
+        # ===== Pass through function ===== #
+        sv = StateVariable(rands)
+        agg = sv.sum(-1)
+
+        # ===== Get gradient ===== #
+        agg.backward(torch.ones_like(agg))
+
+        assert rands.grad is not None
 
 

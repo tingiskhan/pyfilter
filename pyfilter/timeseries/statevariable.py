@@ -9,14 +9,19 @@ class StateVariable(torch.Tensor):
     """
 
     def __new__(cls, data, *args, **kwargs):
-        return torch.Tensor._make_subclass(cls, data, *args, **kwargs)
+        res = torch.Tensor._make_subclass(cls, data, *args, **kwargs)
+        res.requires_grad = data.requires_grad
 
-    def __init__(self, x, *args, **kwargs):
-        self._tempdata = x
+        return res
+
+    def __init__(self, data, *args, **kwargs):
+        self._helper = data
+
+        if self.requires_grad:
+            self.register_hook(self._grad_writer)
+
+    def _grad_writer(self, grad):
+        self._helper.grad = grad[:]
 
     def __getitem__(self, item):
-        return self._tempdata[..., item]
-
-    def __setitem__(self, key, value):
-        self._tempdata[..., key] = value
-        self.data[key] = value
+        return self._helper[..., item]
