@@ -80,9 +80,11 @@ class AffineModel(MoveToHelper):
         self.f0, self.g0 = initial
         self.f, self.g = funcs
 
+        # ===== Register parameters ===== #
         self._theta = tuple(Parameter(th) for th in theta)
         self._theta_vals = self.theta
 
+        # ===== Check distributions ===== #
         cases = (
             all(isinstance(n, Distribution) for n in noise),
             (isinstance(noise[-1], Distribution) and noise[0] is None)
@@ -92,8 +94,11 @@ class AffineModel(MoveToHelper):
             raise ValueError('All must be of instance `torch.distributions.Distribution`!')
 
         self.noise0, self.noise = noise
+
         self._inputdim = self.ndim
         self._event_dim = 0 if self.ndim < 2 else 1
+
+        self._verify_dimensions()
 
         # ===== Check if distributions contain parameters ===== #
         self._dist_theta = dict()
@@ -109,6 +114,15 @@ class AffineModel(MoveToHelper):
                     self._dist_theta[k] = v
                 elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
                     raise ValueError('You cannot have distributional parameters in the initial distribution!')
+
+    def _verify_dimensions(self):
+        """
+        Helper method for verifying that all return values are congruent.
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        # TODO: Implement this
 
     @property
     def distributional_theta(self):
