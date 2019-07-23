@@ -1,6 +1,6 @@
 from .base import Proposal
 import torch
-from torch.distributions import Normal, MultivariateNormal, Independent
+from torch.distributions import Normal, MultivariateNormal
 from ..utils import construct_diag
 from .linear import LinearGaussianObservations
 
@@ -50,8 +50,9 @@ class Linearized(Proposal):
             return self
 
         h_inv_var = construct_diag(1 / hscale ** 2)
-        o_inv_var = 1 / oscale ** 2
+        o_inv_var = construct_diag(1 / oscale ** 2)
 
+        # TODO: Not working for multi dimensional output. Line 35 must be altered to handle Jacobian...
         temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) * o_inv_var
         var = (h_inv_var + temp).inverse()
 
@@ -87,6 +88,7 @@ class LocalLinearization(LinearGaussianObservations):
         if self._model.hidden_ndim < 2:
             ny = y - obs + obsdx * mu
         else:
+            # TODO: See TODO above
             temp = torch.matmul(obsdx.unsqueeze(-2), mu.unsqueeze(-1))[..., 0]
 
             if self._model.obs_ndim < 2:
