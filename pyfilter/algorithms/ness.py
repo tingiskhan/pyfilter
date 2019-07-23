@@ -45,7 +45,7 @@ class NESS(SequentialAlgorithm):
 
         self.filter.ssm.sample_params(self._particles)
 
-        shape = self._particles, 1 if isinstance(self.filter, ParticleFilter) else self._particles
+        shape = (self._particles, 1) if isinstance(self.filter, ParticleFilter) else (self._particles,)
         self.filter.viewify_params(shape).initialize()
 
         return self
