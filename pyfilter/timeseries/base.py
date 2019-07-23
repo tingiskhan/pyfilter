@@ -6,6 +6,7 @@ from ..utils import concater, MoveToHelper
 from .statevariable import StateVariable
 
 
+# TODO: Need to prevent `tx` from being collected by the GC...
 def tensor_caster(func):
     """
     Function for helping out when it comes to multivariate models. Returns a torch.Tensor
