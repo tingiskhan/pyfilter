@@ -16,7 +16,15 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        return concater(func(obj, StateVariable(x) if obj._inputdim > 1 else x))
+        if obj._inputdim > 1:
+            tx = StateVariable(x)
+        else:
+            tx = x
+
+        res = concater(func(obj, tx))
+        res.__sv = tx
+
+        return res
 
     return wrapper
 
