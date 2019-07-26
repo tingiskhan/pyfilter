@@ -108,6 +108,20 @@ class StateSpaceModel(MoveToHelper):
 
         return self.observable.weight(y, x)
 
+    def viewify_params(self, shape):
+        """
+        Defines views to be used as parameters instead
+        :param shape: The shape to use. Please note that
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: StateSpaceModel
+        """
+
+        for mod in [self.hidden, self.observable]:
+            mod.viewify_params(shape)
+
+        return self
+
     def h_weight(self, y, x):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.

@@ -178,6 +178,36 @@ class AffineModel(MoveToHelper):
 
         return tuple(shape)[-1]
 
+    def viewify_params(self, shape):
+        """
+        Defines views to be used as parameters instead
+        :param shape: The shape to use. Please note that
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: AffineModel
+        """
+        # ===== Regular parameters ===== #
+        params = tuple()
+        for param in self.theta:
+            if param.trainable:
+                var = param.view(*shape, *param._prior.event_shape)
+            else:
+                var = param
+
+            params += (var,)
+
+        self._theta_vals = params
+
+        # ===== Distributional parameters ===== #
+        pdict = dict()
+        for k, v in self.distributional_theta.items():
+            pdict[k] = v.view(*shape, *v._prior.event_shape)
+
+        if len(pdict) > 0:
+            self.noise.__init__(**pdict)
+
+        return self
+
     def sample_params(self, shape=None):
         """
         Samples the parameters of the model in place.

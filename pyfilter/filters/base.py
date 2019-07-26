@@ -92,27 +92,7 @@ class BaseFilter(MoveToHelper):
         :rtype: BaseFilter
         """
 
-        for mod in [self.ssm.hidden, self.ssm.observable]:
-            # ===== Regular parameters ===== #
-            params = tuple()
-            for param in mod.theta:
-                if param.trainable:
-                    var = param.view(*shape, *param._prior.event_shape)
-                else:
-                    var = param
-
-                params += (var,)
-
-            mod._theta_vals = params
-
-            # ===== Distributional parameters ===== #
-            # TODO: Not working yet, but soon
-            pdict = dict()
-            for k, v in mod.distributional_theta.items():
-                pdict[k] = v.view(*shape, *v._prior.event_shape)
-
-            if len(pdict) > 0:
-                mod.noise.__init__(**pdict)
+        self.ssm.viewify_params(shape)
 
         return self
 
