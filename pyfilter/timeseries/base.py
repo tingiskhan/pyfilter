@@ -436,3 +436,6 @@ class Observable(AffineModel):
         :type noise: Distribution
         """
         super().__init__((None, None), funcs, theta, (None, noise))
+
+    def sample(self, steps, samples=None):
+        raise NotImplementedError("Cannot sample from Observable only!")
