@@ -27,7 +27,7 @@ class Parameter(torch.Tensor):
             _data = torch.tensor(parameter)
         else:
             # This is just a place holder
-            _data = torch.Tensor([float('inf')])
+            _data = torch.empty(parameter.event_shape)
 
         return torch.Tensor._make_subclass(cls, _data, requires_grad)
 
