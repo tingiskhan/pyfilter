@@ -129,7 +129,17 @@ class AffineModel(MoveToHelper):
         :rtype: AffineModel
         """
 
-        # TODO: Implement this
+        if isinstance(self, Observable):
+            return self
+
+        i_m, i_s = self.i_mean(), self.i_scale()
+        m, s = self.mean(i_m), self.scale(i_m)
+
+        shape = i_m.shape
+        for t in (i_s, m, s):
+            assert t.shape == shape
+
+        return self
 
     @property
     def distributional_theta(self):
