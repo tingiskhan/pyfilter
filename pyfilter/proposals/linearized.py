@@ -48,11 +48,15 @@ class Linearized(Proposal):
             self._kernel = Normal(mean, var.sqrt())
 
             return self
-        elif self._model.observable.ndim > 1:
-            raise NotImplementedError()
+
+        o_inv_var = 1 / oscale ** 2
+
+        if self._model.observable.ndim > 1:
+            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+        else:
+            o_inv_var = construct_diag(o_inv_var.unsqueeze(-1))
 
         h_inv_var = construct_diag(1 / hscale ** 2)
-        o_inv_var = construct_diag(1 / oscale.unsqueeze(-1) ** 2)
 
         # TODO: Not working for multi dimensional output. Line 35 must be altered to handle Jacobian...
         temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) * o_inv_var
