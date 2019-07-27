@@ -78,6 +78,10 @@ class LocalLinearization(LinearGaussianObservations):
 
     def set_model(self, model):
         self._model = model
+
+        if self._model.obs_ndim > 1:
+            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+
         return self
 
     def _get_mat_and_fix_y(self, x, y):
