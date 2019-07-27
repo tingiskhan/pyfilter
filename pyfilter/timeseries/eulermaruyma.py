@@ -15,14 +15,15 @@ class EulerMaruyma(AffineModel):
         :type dt: float|torch.Tensor
         """
 
+        self.dt = torch.tensor(float(dt)) if not isinstance(dt, torch.Tensor) else dt
+        self._sqdt = self.dt.sqrt()
+
         if ndim > 1:
             dist = Independent(Normal(torch.zeros(ndim), torch.ones(ndim)), 1)
         else:
             dist = Normal(0., 1)
 
         super().__init__(initial, funcs, theta, (dist, dist))
-        self.dt = torch.tensor(float(dt)) if not isinstance(dt, torch.Tensor) else dt
-        self._sqdt = self.dt.sqrt()
 
     def mean(self, x):
         return x + self.f_val(x) * self.dt
