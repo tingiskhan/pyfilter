@@ -14,7 +14,10 @@ def f(x, a, scale):
     return torch.matmul(a, x.unsqueeze(-1))[..., 0]
 
 
-def g(x, a, scale):
+def g(x, a, *scale):
+    if len(scale) == 1:
+        return scale[-1]
+
     return scale
 
 
@@ -37,6 +40,7 @@ class LinearGaussianObservations(StateSpaceModel):
         else:
             noise = dists.Independent(dists.Normal(torch.zeros(a.dim()), torch.ones(a.dim())), 1)
 
-        observable = Observable((f, g), (a, scale), noise)
+        scale = (scale,) if not isinstance(scale, (tuple, list)) else scale
+        observable = Observable((f, g), (a, *scale), noise)
 
         super().__init__(hidden, observable)
