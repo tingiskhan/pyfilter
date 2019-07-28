@@ -129,9 +129,6 @@ class AffineModel(MoveToHelper):
         :rtype: AffineModel
         """
 
-        if isinstance(self, Observable):
-            return self
-
         i_m, i_s = self.i_mean(), self.i_scale()
         m, s = self.mean(i_m), self.scale(i_m)
 
@@ -479,3 +476,7 @@ class Observable(AffineModel):
 
     def sample(self, steps, samples=None):
         raise NotImplementedError("Cannot sample from Observable only!")
+
+    def _verify_dimensions(self):
+        # TODO: Implement this
+        return self
