@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck
+from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck, Parameter
 from pyfilter.timeseries.statevariable import StateVariable
 import scipy.stats as stats
 import numpy as np
@@ -26,7 +26,7 @@ def g0(alpha, sigma):
 class Tests(unittest.TestCase):
     norm = Normal(0., 1.)
 
-    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    # linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
 
     def test_TimeseriesCreate_1D(self):
 
@@ -111,4 +111,31 @@ class Tests(unittest.TestCase):
 
         assert rands.grad is not None
 
+    def test_Parameter(self):
+        # ===== Start stuff ===== #
+        param = Parameter(Normal(0., 1.))
+        param.sample_(1000)
 
+        assert param.shape == torch.Size([1000])
+
+        # ===== Construct view ===== #
+        view = param.view(1000, 1)
+
+        # ===== Change values ===== #
+        param.values = torch.empty_like(param).normal_()
+
+        assert (view[:, 0] == param).all()
+
+        # ===== Have in tuple ===== #
+        vals = (param.view(1000, 1, 1),)
+
+        param.values = torch.empty_like(param).normal_()
+
+        assert (vals[0][:, 0, 0] == param).all()
+
+        # ===== Set t_values ===== #
+        view = param.view(1000, 1)
+
+        param.t_values = torch.empty_like(param).normal_()
+
+        assert (view[:, 0] == param.t_values).all()

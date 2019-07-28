@@ -70,11 +70,11 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == (1000,)
 
     def test_Filters(self):
-        for model in [self.model, self.mvnmodel]:
+        for model in [self.mvnmodel]:
             x, y = model.sample(500)
 
             for filter_, props in [
-                (SISR, {'particles': 500}),
+                (SISR, {'particles': 500, 'proposal': Linearized()}),
                 (APF, {'particles': 500}),
                 (UKF, {})
             ]:
@@ -149,7 +149,7 @@ class Tests(unittest.TestCase):
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
-        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
+        for trumod, model in [(self.mvnmodel, twod)]:
             x, y = trumod.sample(550)
 
             algs = [
