@@ -384,7 +384,7 @@ class ParticleMetropolisHastings(BaseKernel):
         dist = self.define_pdf(parameters, weights)
 
         # ===== Resample among parameters ===== #
-        inds = self._resampler(weights)
+        inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=True)
 
         # ===== Define new filters and move via MCMC ===== #
