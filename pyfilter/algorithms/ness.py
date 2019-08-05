@@ -23,9 +23,6 @@ class NESS(SequentialAlgorithm):
         super().__init__(filter_)
 
         self._kernel = kernel or AdaptiveShrinkageKernel()
-        self._regularizer = RegularizedKernel()
-        self._regularizer.set_resampler(self._resampler)
-
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
@@ -34,6 +31,9 @@ class NESS(SequentialAlgorithm):
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
+
+        self._regularizer = RegularizedKernel()
+        self._regularizer.set_resampler(self._resampler)
 
         # ===== ESS related ===== #
         self._ess = particles
