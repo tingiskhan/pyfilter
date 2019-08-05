@@ -14,6 +14,10 @@ class NESS(SequentialAlgorithm):
         :type particles: int
         :param threshold: The threshold for when to resample the parameters
         :type threshold: float
+        :param kernel: The kernel to use when propagating the parameter particles
+        :type kernel: pyfilter.algorithms.kernels.BaseKernel
+        :param lookback: The amount of lookback to use when performing a PMMH step
+        :type lookback: int
         """
 
         cudawarning(resampling)
