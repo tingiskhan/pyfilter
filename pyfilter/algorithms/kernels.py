@@ -7,6 +7,9 @@ from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
 
 
+_eps = sqrt(torch.finfo(torch.float32).eps)
+
+
 class BaseKernel(object):
     def __init__(self, record_stats=True, length=2):
         """
@@ -260,7 +263,7 @@ class ShrinkageKernel(BaseKernel):
 
 
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=1e-4, **kwargs):
+    def __init__(self, eps=_eps, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
