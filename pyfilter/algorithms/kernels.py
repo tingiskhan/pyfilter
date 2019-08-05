@@ -314,8 +314,8 @@ class RegularizedKernel(BaseKernel):
         n = var.shape[-1]
         h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
-        scale_tril = h * var.sqrt()
-        dist = Independent(Normal(torch.zeros_like(scale_tril), scale_tril), 1)
+        scale = h * var.sqrt()
+        dist = Independent(Normal(torch.zeros_like(scale), scale), 1)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
