@@ -4,7 +4,7 @@ from ..timeseries.parameter import Parameter
 import torch
 from scipy.stats import chi2
 from math import sqrt
-from torch.distributions import MultivariateNormal, Independent
+from torch.distributions import MultivariateNormal, Independent, Normal
 
 
 _eps = sqrt(torch.finfo(torch.float32).eps)
@@ -293,6 +293,42 @@ class AdaptiveShrinkageKernel(BaseKernel):
         return self
 
 
+class RegularizedKernel(BaseKernel):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._resampler = None
+
+    def set_resampler(self, resampler):
+        self._resampler = resampler
+
+    def _update(self, parameters, filter_, weights):
+        ess = get_ess(weights, normalized=True)
+        asarray = torch.stack([p.t_values for p in parameters], dim=-1)
+
+        # ===== Calculate covariance ===== #
+        w = weights.unsqueeze(-1)
+        mean = (asarray * w).sum(0)
+        var = (w * (asarray - mean) ** 2).sum(0)
+
+        # ===== Define "optimal" bw ===== #
+        n = var.shape[-1]
+        h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
+
+        scale_tril = h * var.sqrt()
+        dist = Independent(Normal(torch.zeros_like(scale_tril), scale_tril), 1)
+
+        # ===== Resample ===== #
+        inds = self._resampler(weights, normalized=True)
+        filter_.resample(inds, entire_history=False)
+
+        # ===== Sample params ===== #
+        samples = dist.sample((asarray.shape[0],))
+        for i, p in enumerate(parameters):
+            p.t_values = p.t_values + samples[:, i]
+
+        return self
+
+
 def _disc_jitter(parameter, i, w, p, ess, shrink):
     """
     Jitters the parameters using discrete propagation.
@@ -396,6 +432,7 @@ class ParticleMetropolisHastings(BaseKernel):
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
+        # TODO: Must we have "to_" here?
         t_filt.reset().initialize().to_(filter_._device).longfilter(self._y, bar=False)
 
         quotient = t_filt.loglikelihood - filter_.loglikelihood

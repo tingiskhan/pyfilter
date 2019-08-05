@@ -3,7 +3,7 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess
 import torch
 from ..resampling import residual
-from .kernels import AdaptiveShrinkageKernel, ShrinkageKernel
+from .kernels import AdaptiveShrinkageKernel, RegularizedKernel
 
 
 class NESS(SequentialAlgorithm):
@@ -23,6 +23,9 @@ class NESS(SequentialAlgorithm):
         super().__init__(filter_)
 
         self._kernel = kernel or AdaptiveShrinkageKernel()
+        self._regularizer = RegularizedKernel()
+        self._regularizer.set_resampler(self._resampler)
+
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
@@ -66,9 +69,11 @@ class NESS(SequentialAlgorithm):
         self._ess = get_ess(self._w_rec)
 
         if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
-            # TODO: If below some threshold (like 0.5?) use regularized particle filter
-            indices = self._resampler(self._w_rec)
-            self.filter = self.filter.resample(indices, entire_history=False)
+            if self._ess < 0.5 * self._particles:
+                self._regularizer.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
+            else:
+                indices = self._resampler(self._w_rec)
+                self.filter = self.filter.resample(indices, entire_history=False)
 
             self._w_rec *= 0.
 
