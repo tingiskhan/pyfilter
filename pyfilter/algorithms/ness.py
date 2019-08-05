@@ -2,12 +2,12 @@ from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess
 import torch
-from ..resampling import systematic, residual
-from .kernels import AdaptiveShrinkageKernel, ShrinkageKernel, SymmetricMH
+from ..resampling import residual
+from .kernels import AdaptiveShrinkageKernel, ShrinkageKernel
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, resampling=residual, kernel=None, lookback=None):
+    def __init__(self, filter_, particles, threshold=0.9, resampling=residual, kernel=None):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -16,8 +16,6 @@ class NESS(SequentialAlgorithm):
         :type threshold: float
         :param kernel: The kernel to use when propagating the parameter particles
         :type kernel: pyfilter.algorithms.kernels.BaseKernel
-        :param lookback: The amount of lookback to use when performing a PMMH step
-        :type lookback: int
         """
 
         cudawarning(resampling)
@@ -33,7 +31,6 @@ class NESS(SequentialAlgorithm):
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
-        self._lb = lookback
 
         # ===== ESS related ===== #
         self._ess = particles
@@ -69,15 +66,11 @@ class NESS(SequentialAlgorithm):
         self._ess = get_ess(self._w_rec)
 
         if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
-            if self._ess < 0.5 * self._particles and self._lb is not None and len(self._y) >= self._lb:
-                kernel = SymmetricMH()
-                kernel.set_data(self._y[-self._lb:])
-                kernel.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
-            else:
-                indices = self._resampler(self._w_rec)
-                self.filter = self.filter.resample(indices, entire_history=False)
+            # TODO: If below some threshold (like 0.5?) use regularized particle filter
+            indices = self._resampler(self._w_rec)
+            self.filter = self.filter.resample(indices, entire_history=False)
 
-                self._w_rec *= 0.
+            self._w_rec *= 0.
 
         # ===== Log ESS ===== #
         self._logged_ess += (self._ess,)
