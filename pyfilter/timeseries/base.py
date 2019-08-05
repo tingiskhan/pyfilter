@@ -188,7 +188,7 @@ class AffineModel(MoveToHelper):
     def viewify_params(self, shape):
         """
         Defines views to be used as parameters instead
-        :param shape: The shape to use. Please note that
+        :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
         :type shape: tuple|torch.Size
         :return: Self
         :rtype: AffineModel
