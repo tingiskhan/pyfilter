@@ -149,7 +149,7 @@ class Tests(unittest.TestCase):
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
-        for trumod, model in [(self.mvnmodel, twod)]:
+        for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
             x, y = trumod.sample(550)
 
             algs = [
