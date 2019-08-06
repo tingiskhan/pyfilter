@@ -26,7 +26,7 @@ def g0(alpha, sigma):
 class Tests(unittest.TestCase):
     norm = Normal(0., 1.)
 
-    # linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
 
     def test_TimeseriesCreate_1D(self):
 

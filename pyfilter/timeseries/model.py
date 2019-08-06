@@ -148,29 +148,22 @@ class StateSpaceModel(MoveToHelper):
         :rtype: tuple[torch.Tensor]
         """
 
-        if x_s is not None:
-            samples = x_s.shape[:-1] if self.hidden_ndim > 1 else x_s.shape
+        # TODO: Could be somewhat improved
+        x = x_s if x_s is not None else self.initialize(size=samples)
+        x_shape = steps, *x.shape
+        y_shape = (*x_shape[:-1], self.obs_ndim) if self.hidden_ndim > 1 else (*x_shape, self.obs_ndim)
 
-            x_shape = steps, *samples, self.hidden_ndim
-            y_shape = steps, *samples, self.obs_ndim
-        elif samples is None:
-            x_shape = steps, self.hidden_ndim
-            y_shape = steps, self.obs_ndim
-        else:
-            x_shape = steps, samples, self.hidden_ndim
-            y_shape = steps, samples, self.obs_ndim
+        if self.obs_ndim < 2:
+            y_shape = y_shape[:-1]
 
         hidden = torch.zeros(x_shape)
         obs = torch.zeros(y_shape)
 
-        x = x_s if x_s is not None else self.initialize(size=samples)
         y = self.observable.propagate(x)
 
-        tmp = lambda u, dim: u.unsqueeze(-1) if dim < 2 else u
-
         for i in range(steps):
-            hidden[i] = tmp(x, self.hidden_ndim)
-            obs[i] = tmp(y, self.obs_ndim)
+            hidden[i] = x
+            obs[i] = y
 
             x = self.propagate(x)
             y = self.observable.propagate(x)

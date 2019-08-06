@@ -38,7 +38,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return torch.matmul(a, x)
+    return x @ a
 
 
 def f0mvn(a, sigma):
@@ -98,7 +98,7 @@ class Tests(unittest.TestCase):
     def test_Sample(self):
         x, y = self.model.sample(50)
 
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 1)
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
 
     def test_SampleMultivariate(self):
         x, y = self.mvnmodel.sample(30)
@@ -109,11 +109,7 @@ class Tests(unittest.TestCase):
         shape = (100, 100)
         x, y = self.mvnmodel.sample(30, samples=shape)
 
-        assert x.shape == (30, 2, *shape) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
-        assert self.mvnmodel.h_weight(x[1], x[0]).shape == shape
-        if len(shape) > 1:
-            assert self.mvnmodel.h_weight(x[1, :, 0, 0], x[0]).shape == shape
-        assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
+        assert x.shape == (30, *shape, 2) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
 
     def test_Parameter(self):
         param = Parameter(Beta(1, 3)).sample_()
@@ -124,14 +120,15 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             param.values = Normal(0., 1.).sample(newshape)
 
-        newvals = Beta(1, 3).sample(newshape)
-        param.values = newvals
+        param = Parameter(Beta(1, 3)).sample_(newshape)
+        param.values = Beta(1, 3).sample(newshape)
 
         assert param.values.shape == newshape
 
-        param.t_values = Normal(0., 1.).sample(newshape)
+        newvals = Normal(0., 1.).sample(newshape)
+        param.t_values = newvals
 
-        assert (param.values != newvals).all()
+        assert (param.values == param.bijection(newvals)).all()
 
     def test_LinearGaussianObservations(self):
         linearmodel = LinearGaussianObservations(self.linear)
