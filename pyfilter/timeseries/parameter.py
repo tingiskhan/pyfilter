@@ -1,4 +1,4 @@
-from torch import Tensor, distributions as dist, Size
+from torch import Tensor, distributions as dist
 import numpy as np
 import torch
 from functools import lru_cache
@@ -94,6 +94,8 @@ class Parameter(torch.Tensor):
         elif not self.trainable:
             self.data[:] = x
             return
+        elif x.shape != self.data.shape:
+            raise ValueError('Not of same shape!')
 
         support = self._prior.support.check(x)
 
@@ -146,7 +148,7 @@ class Parameter(torch.Tensor):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        shape = torch.Size((shape,) if isinstance(shape, int) else shape) or Size()
+        shape = torch.Size([]) if shape is None else torch.Size(shape if isinstance(shape, (tuple, list)) else (shape,))
         self.data = self._prior.sample(shape)
 
         return self
