@@ -22,7 +22,21 @@ def tensor_caster(func):
             tx = x
 
         res = concater(func(obj, tx))
+        if not isinstance(res, torch.Tensor):
+            res = torch.ones_like(x) * res
+
         res.__sv = tx
+
+        return res
+
+    return wrapper
+
+
+def init_caster(func):
+    def wrapper(obj):
+        res = concater(func(obj))
+        if not isinstance(res, torch.Tensor):
+            res = torch.tensor(res, device=obj._device)
 
         return res
 
@@ -59,13 +73,6 @@ def _get_shape(x, ndim):
         return ()
 
     return x.shape if ndim < 2 else x.shape[:-1]
-
-
-def init_caster(func):
-    def wrapper(obj):
-        return concater(func(obj))
-
-    return wrapper
 
 
 class AffineModel(MoveToHelper):
@@ -129,13 +136,7 @@ class AffineModel(MoveToHelper):
         :rtype: AffineModel
         """
 
-        i_m, i_s = self.i_mean(), self.i_scale()
-        m, s = self.mean(i_m), self.scale(i_m)
-
-        shape = i_m.shape
-        for t in (i_s, m, s):
-            assert t.shape == shape
-
+        # TODO: Implement
         return self
 
     @property
