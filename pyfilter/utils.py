@@ -227,9 +227,19 @@ def _recursion_helper(a, f):
 
     if isinstance(a, Parameter):
         _recursion_helper(a._prior, f)
-        a.data[:] = f(a)
+        a.data[:] = f(a.data)
+
+        if a._grad is not None:
+            a._grad.data[:] = f(a._grad.data)
+
     elif isinstance(a, torch.Tensor):
-        a.data[:] = f(a)
+        if a._base is not None:
+            return a
+
+        a.data[:] = f(a.data)
+        if a._grad is not None:
+            a._grad.data[:] = f(a._grad.data)
+
     elif isinstance(a, HelperMixin):
         a.apply(f)
     elif isinstance(a, Iterable):
@@ -279,7 +289,7 @@ class HelperMixin(object):
         self._device = torch.device(device)
 
         def to(u):
-            return u.data.to(self._device)
+            return u.to(self._device)
 
         self.apply(to)
 
