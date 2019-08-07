@@ -111,25 +111,6 @@ class Tests(unittest.TestCase):
 
         assert x.shape == (30, *shape, 2) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
 
-    def test_Parameter(self):
-        param = Parameter(Beta(1, 3)).sample_()
-
-        assert param.values.shape == torch.Size([])
-
-        newshape = (3000, 1000)
-        with self.assertRaises(ValueError):
-            param.values = Normal(0., 1.).sample(newshape)
-
-        param = Parameter(Beta(1, 3)).sample_(newshape)
-        param.values = Beta(1, 3).sample(newshape)
-
-        assert param.values.shape == newshape
-
-        newvals = Normal(0., 1.).sample(newshape)
-        param.t_values = newvals
-
-        assert (param.values == param.bijection(newvals)).all()
-
     def test_LinearGaussianObservations(self):
         linearmodel = LinearGaussianObservations(self.linear)
 

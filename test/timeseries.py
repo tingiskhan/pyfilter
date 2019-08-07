@@ -4,7 +4,7 @@ from pyfilter.timeseries.statevariable import StateVariable
 import scipy.stats as stats
 import numpy as np
 import torch
-from torch.distributions import Normal
+from torch.distributions import Normal, Exponential
 
 
 def f(x, alpha, sigma):
@@ -139,3 +139,20 @@ class Tests(unittest.TestCase):
         param.t_values = torch.empty_like(param).normal_()
 
         assert (view[:, 0] == param.t_values).all()
+
+        # ===== Check we cannot set different shape ===== #
+        with self.assertRaises(ValueError):
+            param.values = torch.empty(1).normal_()
+
+        # ===== Check that we cannot set out of bounds values for parameter ===== #
+        positive = Parameter(Exponential(1.))
+        positive.sample_(1)
+
+        with self.assertRaises(ValueError):
+            positive.values = -torch.empty_like(positive).normal_().abs()
+
+        # ===== Check that we can set transformed values ===== #
+        values = torch.empty_like(positive).normal_()
+        positive.t_values = values
+
+        assert (positive == positive.bijection(values)).all()
