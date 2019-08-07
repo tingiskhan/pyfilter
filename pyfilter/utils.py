@@ -200,6 +200,48 @@ class MoveToHelper(object):
         return self
 
 
+def _yield_objs(obj):
+    """
+    Yields all of objects of specific type in object.
+    :param obj: The object
+    :type obj: class
+    """
+
+    for a in (d for d in dir(obj) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
+        try:
+            if isinstance(getattr(type(obj), a), property):
+                continue
+        except AttributeError:
+            yield getattr(obj, a)
+
+
+def _recursion_helper(a, f):
+    """
+    Helper for performing recursions.
+    :param a: The object
+    :type a: class
+    :param f: The callable
+    :type f: callable
+    :rtype: object
+    """
+
+    if isinstance(a, Parameter):
+        _recursion_helper(a._prior, f)
+        a.data[:] = f(a)
+    elif isinstance(a, torch.Tensor):
+        a.data[:] = f(a)
+    elif isinstance(a, HelperMixin):
+        a.apply(f)
+    elif isinstance(a, Iterable):
+        for item in a:
+            _recursion_helper(item, f)
+    elif isinstance(a, Distribution):
+        for at in _yield_objs(a):
+            _recursion_helper(at, f)
+
+    return a
+
+
 class HelperMixin(object):
     _device = torch.empty([0]).device
 
@@ -212,7 +254,7 @@ class HelperMixin(object):
 
         return self._device
 
-    def _apply(self, f):
+    def apply(self, f):
         """
         Applies the function `f` to all objects derived from Tensor class.
         :param f: The function to apply on each tensor
@@ -220,8 +262,11 @@ class HelperMixin(object):
         :return: Self
         :rtype: Helper
         """
-        # TODO: Implement this s.t. it recursively checks all items of self and applies `f` to all tensors, or items
-        # containing tensors
+
+        for a in _yield_objs(self):
+            _recursion_helper(a, f)
+
+        return self
 
     def to_(self, device):
         """
@@ -236,7 +281,7 @@ class HelperMixin(object):
         def to(u):
             return u.data.to(self._device)
 
-        self._apply(to)
+        self.apply(to)
 
         return self
 
