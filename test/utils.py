@@ -3,6 +3,13 @@ from pyfilter.timeseries import AffineModel, Observable, StateSpaceModel
 from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
+from pyfilter.utils import HelperMixin
+
+
+class Help(HelperMixin):
+    def __init__(self, *params):
+        self._params = params
+        self._views = tuple(p.view(-1) for p in params)
 
 
 def f(x, alpha, sigma):
@@ -87,3 +94,15 @@ class Tests(unittest.TestCase):
 
         assert isinstance(ut.x_dist, MultivariateNormal) and isinstance(ut.y_dist, Normal)
         assert isinstance(ut.x_dist_indep, Independent)
+
+    def test_HelperMixin(self):
+        obj = Help(torch.empty(3000).normal_())
+
+        # ===== Verify that we don't break views when changing device ===== #
+        obj.to_('cpu:0')
+
+        temp = obj._params[0]
+        temp += 1
+
+        for p, v in zip(obj._params, obj._views):
+            assert (p == v).all()
