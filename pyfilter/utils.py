@@ -200,6 +200,66 @@ class MoveToHelper(object):
         return self
 
 
+class HelperMixin(object):
+    _device = torch.empty([0]).device
+
+    @property
+    def device(self):
+        """
+        Returns the device of the module
+        :rtype: torch.device
+        """
+
+        return self._device
+
+    def _apply(self, f):
+        """
+        Applies the function `f` to all objects derived from Tensor class.
+        :param f: The function to apply on each tensor
+        :type f: callable
+        :return: Self
+        :rtype: Helper
+        """
+        # TODO: Implement this s.t. it recursively checks all items of self and applies `f` to all tensors, or items
+        # containing tensors
+
+    def to_(self, device):
+        """
+        Moves the current object to the specified device.
+        :param device: The device to move to
+        :type device: str
+        :return: Self
+        :rtype: Helper
+        """
+        self._device = torch.device(device)
+
+        def to(u):
+            return u.data.to(self._device)
+
+        self._apply(to)
+
+        return self
+
+    def state_dict(self):
+        """
+        Gets the state dictionary of all the serializable items in the module
+        :rtype: dict
+        """
+        # TODO: Implement this. Will need to recursively check all attributes and see if tensor (or collection of).
+        # TODO: Will also need to figure out how to point items to correct levels
+
+    def load_state_dict(self, state):
+        """
+        Loads the state dictionary
+        :param state: The state dictionary
+        :type state: dict
+        :return: Self
+        :rtype: HelperMixin
+        """
+
+        # TODO: Implement this
+
+
 class TempOverride(object):
     def __init__(self, obj, attr, new_vals):
         """
