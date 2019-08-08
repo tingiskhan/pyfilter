@@ -2,7 +2,7 @@ from torch.distributions import Distribution, AffineTransform, TransformedDistri
 import torch
 from functools import lru_cache
 from .parameter import Parameter
-from ..utils import concater, MoveToHelper
+from ..utils import concater, HelperMixin
 from .statevariable import StateVariable
 
 
@@ -75,7 +75,7 @@ def _get_shape(x, ndim):
     return x.shape if ndim < 2 else x.shape[:-1]
 
 
-class AffineModel(MoveToHelper):
+class AffineModel(HelperMixin):
     def __init__(self, initial, funcs, theta, noise):
         """
         This object is to serve as a base class for the timeseries models.

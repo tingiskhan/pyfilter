@@ -6,7 +6,7 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose, MoveToHelper
+from ..utils import get_ess, choose, HelperMixin
 
 
 def enforce_tensor(func):
@@ -21,7 +21,7 @@ def enforce_tensor(func):
     return wrapper
 
 
-class BaseFilter(MoveToHelper):
+class BaseFilter(HelperMixin):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.

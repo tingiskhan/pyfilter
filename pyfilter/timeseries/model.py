@@ -1,11 +1,10 @@
 import copy
-import numpy as np
-from ..utils import flatten, MoveToHelper
+from ..utils import flatten, HelperMixin
 import torch
 from .parameter import Parameter
 
 
-class StateSpaceModel(MoveToHelper):
+class StateSpaceModel(HelperMixin):
     def __init__(self, hidden, observable):
         """
         Combines a hidden and observable processes to constitute a state-space model.

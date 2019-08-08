@@ -1,10 +1,10 @@
 from ..filters.base import BaseFilter, enforce_tensor
 from tqdm import tqdm
 import warnings
-from ..utils import MoveToHelper
+from ..utils import HelperMixin
 
 
-class BaseAlgorithm(MoveToHelper):
+class BaseAlgorithm(HelperMixin):
     def __init__(self, filter_):
         """
         Implements a base class for algorithms, i.e. algorithms for inferring parameters.
