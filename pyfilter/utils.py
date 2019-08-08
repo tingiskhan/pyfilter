@@ -4,6 +4,7 @@ from .normalization import normalize
 import torch
 from torch.distributions import Distribution
 from .timeseries.parameter import Parameter
+import numbers
 
 
 def get_ess(w, normalized=False):
@@ -250,7 +251,7 @@ class HelperMixin(object):
         Gets the state dictionary of all the serializable items in the module
         :rtype: dict
         """
-
+        # TODO: This might be improved (?)
         res = dict()
         for name, a in _yield_objs(self):
             if isinstance(a, torch.Tensor):
@@ -258,8 +259,12 @@ class HelperMixin(object):
             elif isinstance(a, Iterable):
                 if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
                     res[name] = a
+                elif all(isinstance(it, numbers.Number) for it in a):
+                    res[name] = a
             elif isinstance(a, HelperMixin):
                 res[name] = a.state_dict()
+            elif isinstance(a, numbers.Number):
+                res[name] = a
 
         return res
 
