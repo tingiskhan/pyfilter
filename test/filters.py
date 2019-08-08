@@ -1,12 +1,12 @@
 import unittest
 import numpy as np
 import pykalman
-from torch.distributions import Normal, Exponential, Independent, StudentT
+from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import AffineModel, LinearGaussianObservations, Parameter
+from pyfilter.timeseries import AffineModel, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
-from pyfilter.proposals import Unscented, Linearized
+from pyfilter.proposals import Unscented
 
 
 def f(x, alpha, sigma):
@@ -74,7 +74,7 @@ class Tests(unittest.TestCase):
             x, y = model.sample(500)
 
             for filter_, props in [
-                (SISR, {'particles': 500, 'proposal': Linearized()}),
+                (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
                 (UKF, {})
             ]:
