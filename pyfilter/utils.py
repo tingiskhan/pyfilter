@@ -212,7 +212,7 @@ def _yield_objs(obj):
             if isinstance(getattr(type(obj), a), property):
                 continue
         except AttributeError:
-            yield getattr(obj, a)
+            yield a, getattr(obj, a)
 
 
 def _recursion_helper(a, f):
@@ -246,7 +246,7 @@ def _recursion_helper(a, f):
         for item in a:
             _recursion_helper(item, f)
     elif isinstance(a, Distribution):
-        for at in _yield_objs(a):
+        for _, at in _yield_objs(a):
             _recursion_helper(at, f)
 
     return a
@@ -273,7 +273,7 @@ class HelperMixin(object):
         :rtype: Helper
         """
 
-        for a in _yield_objs(self):
+        for _, a in _yield_objs(self):
             _recursion_helper(a, f)
 
         return self
@@ -300,8 +300,18 @@ class HelperMixin(object):
         Gets the state dictionary of all the serializable items in the module
         :rtype: dict
         """
-        # TODO: Implement this. Will need to recursively check all attributes and see if tensor (or collection of).
-        # TODO: Will also need to figure out how to point items to correct levels
+
+        res = dict()
+        for name, a in _yield_objs(self):
+            if isinstance(a, torch.Tensor):
+                res[name] = a
+            elif isinstance(a, Iterable):
+                if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
+                    res[name] = a
+            elif isinstance(a, HelperMixin):
+                res[name] = a.state_dict()
+
+        return res
 
     def load_state_dict(self, state):
         """
