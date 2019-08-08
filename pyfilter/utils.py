@@ -273,6 +273,18 @@ class HelperMixin(object):
         """
 
         # TODO: Implement this
+        attrs = dir(self)
+        for k, v in state.items():
+            if k not in attrs:
+                continue
+
+            attr = getattr(self, k)
+            if isinstance(attr, HelperMixin):
+                attr.load_state_dict(v)
+            else:
+                setattr(self, k, v)
+
+        return self
 
 
 class TempOverride(object):

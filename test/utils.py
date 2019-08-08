@@ -106,3 +106,11 @@ class Tests(unittest.TestCase):
 
         for p, v in zip(obj._params, obj._views):
             assert (p == v).all()
+
+        # ===== Check state dict ===== #
+        sd = obj.state_dict()
+
+        newobj = Help(torch.empty(1))
+        newobj.load_state_dict(sd)
+
+        assert all((p1 == p2).all() for p1, p2 in zip(newobj._params, obj._params))
