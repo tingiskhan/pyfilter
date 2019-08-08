@@ -95,6 +95,7 @@ class AffineModel(HelperMixin):
         self.f, self.g = funcs
 
         # ===== Register parameters ===== #
+        # TODO: Perhaps have _theta_vals as views regardless? And have setter for _theta?
         self._theta = tuple(Parameter(th) for th in theta)
         self._theta_vals = self.theta
 
