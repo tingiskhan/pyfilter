@@ -248,6 +248,7 @@ class HelperMixin(object):
         :rtype: dict
         """
         # TODO: This might be improved (?)
+        # TODO: Implement serializing as native objects
         res = dict()
         for name, a in _yield_objs(self):
             if isinstance(a, torch.Tensor):
