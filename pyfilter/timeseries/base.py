@@ -91,13 +91,14 @@ class AffineModel(HelperMixin):
 
         super().__init__()
 
+        # ===== Dynamics ===== #
         self.f0, self.g0 = initial
         self.f, self.g = funcs
 
-        # ===== Register parameters ===== #
+        # ===== Some helpers ===== #
         # TODO: Perhaps have _theta_vals as views regardless? And have setter for _theta?
-        self._theta = tuple(Parameter(th) for th in theta)
-        self._theta_vals = self.theta
+        self._theta_vals = None
+        self._viewshape = None
 
         # ===== Check distributions ===== #
         cases = (
@@ -113,9 +114,7 @@ class AffineModel(HelperMixin):
         self._inputdim = self.ndim
         self._event_dim = 0 if self.ndim < 2 else 1
 
-        self._verify_dimensions()
-
-        # ===== Check if distributions contain parameters ===== #
+        # ===== Set parameters ===== #
         self._dist_theta = dict()
         for n in [self.noise0, self.noise]:
             if n is None:
@@ -129,6 +128,11 @@ class AffineModel(HelperMixin):
                     self._dist_theta[k] = v
                 elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
                     raise ValueError('You cannot have distributional parameters in the initial distribution!')
+
+            self._theta = tuple(Parameter(th) for th in theta)
+
+            # ===== Check dimensions ===== #
+            self._verify_dimensions()
 
     def _verify_dimensions(self):
         """
@@ -195,11 +199,13 @@ class AffineModel(HelperMixin):
         :return: Self
         :rtype: AffineModel
         """
+        self._viewshape = shape
+
         # ===== Regular parameters ===== #
         params = tuple()
         for param in self.theta:
             if param.trainable:
-                var = param.view(*shape, *param._prior.event_shape)
+                var = param.view(*shape, *param._prior.event_shape) if shape is not None else param.view(param.shape)
             else:
                 var = param
 
@@ -210,7 +216,7 @@ class AffineModel(HelperMixin):
         # ===== Distributional parameters ===== #
         pdict = dict()
         for k, v in self.distributional_theta.items():
-            pdict[k] = v.view(*shape, *v._prior.event_shape)
+            pdict[k] = v.view(*shape, *v._prior.event_shape) if shape is not None else v.view(v.shape)
 
         if len(pdict) > 0:
             self.noise.__init__(**pdict)
@@ -461,6 +467,13 @@ class AffineModel(HelperMixin):
             out += (func(p),)
 
         return out
+
+    # TODO: Might not be optimal, but think it will work
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+        if key == '_theta':
+            self.viewify_params(self._viewshape)
 
 
 class Observable(AffineModel):

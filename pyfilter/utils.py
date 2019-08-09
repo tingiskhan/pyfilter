@@ -178,7 +178,10 @@ def _recursion_helper(a, f):
 
     if isinstance(a, Parameter):
         _recursion_helper(a._prior, f)
-        a.data[:] = f(a.data)
+        if a.dim() > 0:
+            a.data[:] = f(a.data)
+        else:
+            a.data = f(a.data)
 
         if a._grad is not None:
             a._grad.data[:] = f(a._grad.data)
@@ -187,9 +190,13 @@ def _recursion_helper(a, f):
         if a._base is not None:
             return a
 
-        a.data[:] = f(a.data)
+        if a.dim() > 0:
+            a.data[:] = f(a.data)
+        else:
+            a.data = f(a.data)
+
         if a._grad is not None:
-            a._grad.data[:] = f(a._grad.data)
+            a._grad.data = f(a._grad.data)
 
     elif isinstance(a, HelperMixin):
         a.apply(f)
@@ -204,16 +211,6 @@ def _recursion_helper(a, f):
 
 
 class HelperMixin(object):
-    _device = torch.empty([0]).device
-
-    @property
-    def device(self):
-        """
-        Returns the device of the module
-        :rtype: torch.device
-        """
-
-        return self._device
 
     def apply(self, f):
         """
@@ -237,10 +234,9 @@ class HelperMixin(object):
         :return: Self
         :rtype: Helper
         """
-        self._device = torch.device(device)
 
         def to(u):
-            return u.to(self._device)
+            return u.to(device)
 
         self.apply(to)
 
@@ -259,11 +255,11 @@ class HelperMixin(object):
             elif isinstance(a, Iterable):
                 if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
                     res[name] = a
-                elif all(isinstance(it, numbers.Number) for it in a):
+                elif all(isinstance(it, (numbers.Number, str)) for it in a):
                     res[name] = a
             elif isinstance(a, HelperMixin):
                 res[name] = a.state_dict()
-            elif isinstance(a, numbers.Number):
+            elif isinstance(a, (numbers.Number, str)):
                 res[name] = a
 
         return res

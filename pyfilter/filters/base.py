@@ -12,9 +12,7 @@ from ..utils import get_ess, choose, HelperMixin
 def enforce_tensor(func):
     def wrapper(obj, y, **kwargs):
         if not isinstance(y, torch.Tensor):
-            y = torch.tensor(y, device=obj._device)
-        elif y.device != obj._device:
-            y = y.to(obj._device)
+            raise ValueError('The observation must be of type Tensor!')
 
         return func(obj, y, **kwargs)
 
@@ -446,7 +444,7 @@ class ParticleFilter(BaseFilter):
 
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
-        self._w_old = torch.zeros(self._particles, device=self._device)
+        self._w_old = torch.zeros(self._particles, device=self._x_cur.device)
 
         return self
 
