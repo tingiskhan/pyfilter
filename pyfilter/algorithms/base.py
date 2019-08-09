@@ -91,7 +91,7 @@ class SequentialAlgorithm(BaseAlgorithm):
         :return: Self
         :rtype: SequentialAlgorithm
         """
-        self._y += (y,)
+        self._y += (y.clone(),)
         return self._update(y)
 
     def fit(self, y, bar=True):
