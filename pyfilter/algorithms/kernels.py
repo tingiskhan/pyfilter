@@ -429,8 +429,7 @@ class ParticleMetropolisHastings(BaseKernel):
         _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
         # ===== Filter data ===== #
-        # TODO: Must we have "to_" here?
-        t_filt.reset().initialize().to_(filter_._device).longfilter(self._y, bar=False)
+        t_filt.reset().initialize().longfilter(self._y, bar=False)
 
         quotient = t_filt.loglikelihood - filter_.loglikelihood
 
