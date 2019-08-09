@@ -1,7 +1,7 @@
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution
 import torch
 from functools import lru_cache
-from .parameter import Parameter
+from .parameter import Parameter, size_getter
 from ..utils import concater, HelperMixin
 from .statevariable import StateVariable
 
@@ -199,13 +199,14 @@ class AffineModel(HelperMixin):
         :return: Self
         :rtype: AffineModel
         """
+        shape = size_getter(shape)
         self._viewshape = shape
 
         # ===== Regular parameters ===== #
         params = tuple()
         for param in self.theta:
             if param.trainable:
-                var = param.view(*shape, *param._prior.event_shape) if shape is not None else param.view(param.shape)
+                var = param.view(*shape, *param._prior.event_shape) if len(shape) > 0 else param.view(param.shape)
             else:
                 var = param
 
@@ -216,7 +217,7 @@ class AffineModel(HelperMixin):
         # ===== Distributional parameters ===== #
         pdict = dict()
         for k, v in self.distributional_theta.items():
-            pdict[k] = v.view(*shape, *v._prior.event_shape) if shape is not None else v.view(v.shape)
+            pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else param.view(param.shape)
 
         if len(pdict) > 0:
             self.noise.__init__(**pdict)
@@ -233,6 +234,8 @@ class AffineModel(HelperMixin):
 
         for param in self.theta_dists:
             param.sample_(shape)
+
+        self.viewify_params(shape)
 
         return self
 

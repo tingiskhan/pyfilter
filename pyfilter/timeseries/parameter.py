@@ -7,6 +7,18 @@ from collections import OrderedDict
 from copy import deepcopy
 
 
+def size_getter(shape):
+    """
+    Helper function for defining a size object.
+    :param shape: The shape
+    :type shape: int|tuple[int]
+    :return: Size object
+    :rtype: torch.Size
+    """
+
+    return torch.Size([]) if shape is None else torch.Size(shape if isinstance(shape, (tuple, list)) else (shape,))
+
+
 # NB: This is basically the same as original, but we include the prior as well
 def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
     param = Parameter(data, requires_grad)
@@ -148,8 +160,7 @@ class Parameter(torch.Tensor):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        shape = torch.Size([]) if shape is None else torch.Size(shape if isinstance(shape, (tuple, list)) else (shape,))
-        self.data = self._prior.sample(shape)
+        self.data = self._prior.sample(size_getter(shape))
 
         return self
 

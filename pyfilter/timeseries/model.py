@@ -67,8 +67,7 @@ class StateSpaceModel(HelperMixin):
         """
 
         for mod in [self.hidden, self.observable]:
-            for param in mod.theta_dists:
-                param.sample_(shape)
+            mod.sample_params(shape)
 
         return self
 
