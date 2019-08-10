@@ -277,7 +277,6 @@ class HelperMixin(object):
         :rtype: HelperMixin
         """
 
-        # TODO: Implement this
         attrs = dir(self)
         for k, v in state.items():
             if k not in attrs:
