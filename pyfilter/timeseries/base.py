@@ -164,7 +164,6 @@ class AffineModel(HelperMixin):
         return self._theta
 
     @property
-    @lru_cache()
     def theta_dists(self):
         """
         Returns the indices for parameter are distributions.
