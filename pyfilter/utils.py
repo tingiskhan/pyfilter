@@ -214,6 +214,7 @@ def _recursion_helper(a, f):
 
 
 class HelperMixin(object):
+    _OBJTYPENAME = 'objtype'
 
     def apply(self, f):
         """
@@ -253,6 +254,8 @@ class HelperMixin(object):
         # TODO: This might be improved (?)
         # TODO: Implement serializing as native objects. How to deserialize though?
         res = dict()
+        res[self._OBJTYPENAME] = self.__class__.__name__
+
         for name, a in _yield_objs(self):
             if isinstance(a, torch.Tensor):
                 res[name] = a
@@ -276,6 +279,9 @@ class HelperMixin(object):
         :return: Self
         :rtype: HelperMixin
         """
+
+        if state[self._OBJTYPENAME] != self.__class__.__name__:
+            raise ValueError('Cannot cast {} as {}!'.format(state[self._OBJTYPENAME], self.__class__.__name__))
 
         attrs = dir(self)
         for k, v in state.items():
