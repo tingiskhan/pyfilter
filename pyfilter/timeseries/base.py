@@ -75,6 +75,7 @@ def _get_shape(x, ndim):
     return x.shape if ndim < 2 else x.shape[:-1]
 
 
+# TODO: Create better base class for easier inheritance?
 class AffineModel(HelperMixin):
     def __init__(self, initial, funcs, theta, noise):
         """
