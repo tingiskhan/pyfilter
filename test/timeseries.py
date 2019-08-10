@@ -67,7 +67,7 @@ class Tests(unittest.TestCase):
     def test_SampleTrajectory2D(self):
         sample = self.linear.sample(500, 250)
 
-        assert sample.shape == (500, 250, 1)
+        assert sample.shape == (500, 250)
 
     def test_Weight1D(self):
         sample = self.linear.i_sample()

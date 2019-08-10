@@ -404,13 +404,9 @@ class AffineModel(HelperMixin):
         :rtype: torch.Tensor
         """
 
-        if samples is None:
-            shape = steps, self.ndim
-        else:
-            shape = steps, *size_getter(samples), self.ndim
-
-        out = torch.zeros(shape)
-        out[0] = self.i_sample(shape=shape[1:])
+        x_s = self.i_sample(samples)
+        out = torch.zeros(steps, *x_s.shape)
+        out[0] = x_s
 
         for i in range(1, steps):
             out[i] = self.propagate(out[i-1])
