@@ -47,7 +47,7 @@ class Proposal(HelperMixin):
         :rtype: Proposal
         """
 
-        return self
+        raise NotImplementedError()
 
     def draw(self):
         """
@@ -73,15 +73,14 @@ class Proposal(HelperMixin):
 
     def resample(self, inds):
         """
-        For proposals where some of the data is stored locally. As this is only necessary for a few of the proposals,
-        it need not be implemented for all.
-        :param inds: The indicies to resample
+        Resamples the proposal
+        :param inds: The indices to resample
         :type inds: torch.Tensor
         :return: Self
         :rtype: Proposal
         """
 
-        # TODO: FIX THIS
+        # TODO: IMPROVE THIS
 
         # ===== If transformed distribution we resample everything ===== #
         if isinstance(self._kernel, TransformedDistribution):
