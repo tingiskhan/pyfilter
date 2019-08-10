@@ -395,9 +395,9 @@ class AffineModel(TimeseriesBase):
         """
         Evaluates the drift part of the process.
         :param x: The state of the process.
-        :type x: torch.Tensor|float
+        :type x: torch.Tensor
         :return: The mean
-        :rtype: torch.Tensor|float
+        :rtype: torch.Tensor
         """
 
         return self.f(x, *self._theta_vals)
@@ -407,9 +407,9 @@ class AffineModel(TimeseriesBase):
         """
         Evaluates the diffusion part of the process.
         :param x: The state of the process.
-        :type x: torch.Tensor|float
+        :type x: torch.Tensor
         :return: The mean
-        :rtype: torch.Tensor|float
+        :rtype: torch.Tensor
         """
 
         return self.g(x, *self._theta_vals)
@@ -418,9 +418,9 @@ class AffineModel(TimeseriesBase):
         """
         Calculates the mean of the process conditional on the previous state and current parameters.
         :param x: The state of the process.
-        :type x: torch.Tensor|float
+        :type x: torch.Tensor
         :return: The mean
-        :rtype: torch.Tensor|float
+        :rtype: torch.Tensor
         """
 
         return self.f_val(x)
@@ -429,9 +429,9 @@ class AffineModel(TimeseriesBase):
         """
         Calculates the scale of the process conditional on the current state and parameters.
         :param x: The state of the process
-        :type x: torch.Tensor|float
+        :type x: torch.Tensor
         :return: The scale
-        :rtype: torch.Tensor|float
+        :rtype: torch.Tensor
         """
 
         return self.g_val(x)
@@ -446,7 +446,7 @@ class AffineModel(TimeseriesBase):
         """
         Helper method for weighting with loc and scale.
         :param y: The value at x_t
-        :type y: torch.Tensor|float
+        :type y: torch.Tensor
         :param loc: The mean
         :type loc: torch.Tensor
         :param scale: The scale
