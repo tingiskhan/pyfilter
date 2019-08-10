@@ -3,6 +3,7 @@ import torch
 from torch.distributions import Normal, MultivariateNormal
 from ..utils import construct_diag
 from .linear import LinearGaussianObservations
+from ..timeseries import AffineModel
 
 
 # TODO: Check if we can speed up
@@ -14,6 +15,16 @@ class Linearized(Proposal):
         """
 
         super().__init__()
+
+    def set_model(self, model):
+        if model.obs_ndim > 1:
+            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+        elif not (isinstance(model.observable, AffineModel) and isinstance(model.hidden, AffineModel)):
+            raise ValueError('Both observable and hidden must be of type {}!'.format(AffineModel.__class__.__name__))
+
+        self._model = model
+
+        return self
 
     def construct(self, y, x):
         # ===== Define helpers ===== #
@@ -52,7 +63,7 @@ class Linearized(Proposal):
         o_inv_var = 1 / oscale ** 2
 
         if self._model.observable.ndim > 1:
-            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+            ...
         else:
             o_inv_var = construct_diag(o_inv_var.unsqueeze(-1))
 
@@ -77,10 +88,12 @@ class LocalLinearization(LinearGaussianObservations):
         super().__init__()
 
     def set_model(self, model):
-        self._model = model
-
-        if self._model.obs_ndim > 1:
+        if model.obs_ndim > 1:
             raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+        elif not (isinstance(model.observable, AffineModel) and isinstance(model.hidden, AffineModel)):
+            raise ValueError('Both observable and hidden must be of type {}!'.format(AffineModel.__class__.__name__))
+
+        self._model = model
 
         return self
 

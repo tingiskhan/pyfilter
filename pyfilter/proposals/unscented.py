@@ -1,6 +1,7 @@
 from .base import Proposal
 from ..unscentedtransform import UnscentedTransform
 from ..utils import choose
+from ..timeseries import AffineModel
 
 
 class Unscented(Proposal):
@@ -12,6 +13,9 @@ class Unscented(Proposal):
         self._ut = None
 
     def set_model(self, model):
+        if not (isinstance(model.observable, AffineModel) and isinstance(model.hidden, AffineModel)):
+            raise ValueError('Both observable and hidden must be of type {}!'.format(AffineModel.__class__.__name__))
+
         self._model = model
         self._ut = UnscentedTransform(self._model)
 
