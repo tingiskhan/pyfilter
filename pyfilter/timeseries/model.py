@@ -139,7 +139,7 @@ class StateSpaceModel(HelperMixin):
         :param steps: The number of steps
         :type steps: int
         :param x_s: The starting value
-        :type x_s: torch.Tensor|float
+        :type x_s: torch.Tensor
         :param samples: How many samples
         :type samples: tuple[int]|int
         :return: Sampled trajectories
