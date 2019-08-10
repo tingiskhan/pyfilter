@@ -75,7 +75,7 @@ class NESS(SequentialAlgorithm):
                 indices = self._resampler(self._w_rec)
                 self.filter = self.filter.resample(indices, entire_history=False)
 
-            self._w_rec *= 0.
+            self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Log ESS ===== #
         self._logged_ess += (self._ess,)

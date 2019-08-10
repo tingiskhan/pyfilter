@@ -65,7 +65,7 @@ class SMC2(NESS):
         sleep(1)
 
         # ===== Update recursive weights ===== #
-        self._w_rec *= 0.
+        self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if accepted < 0.2 and isinstance(self.filter, ParticleFilter):
