@@ -1,5 +1,5 @@
 from .model import StateSpaceModel
-from .base import AffineModel, Observable
+from .base import AffineModel, AffineObservations
 import torch
 from torch import distributions as dists
 
@@ -41,6 +41,6 @@ class LinearGaussianObservations(StateSpaceModel):
             noise = dists.Independent(dists.Normal(torch.zeros(a.dim()), torch.ones(a.dim())), 1)
 
         scale = (scale,) if not isinstance(scale, (tuple, list)) else scale
-        observable = Observable((f, g), (a, *scale), noise)
+        observable = AffineObservations((f, g), (a, *scale), noise)
 
         super().__init__(hidden, observable)

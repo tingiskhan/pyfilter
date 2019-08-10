@@ -70,7 +70,7 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == (1000,)
 
     def test_Filters(self):
-        for model in [self.mvnmodel]:
+        for model in [self.model, self.mvnmodel]:
             x, y = model.sample(500)
 
             for filter_, props in [

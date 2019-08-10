@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pyfilter.timeseries import StateSpaceModel, Observable, AffineModel, Parameter, LinearGaussianObservations
+from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineModel, Parameter, LinearGaussianObservations
 from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
@@ -65,7 +65,7 @@ class Tests(unittest.TestCase):
     # ===== 1D model ===== #
     norm = Normal(0., 1.)
     linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
-    linearobs = Observable((fo, go), (1., 1.), norm)
+    linearobs = AffineObservations((fo, go), (1., 1.), norm)
     model = StateSpaceModel(linear, linearobs)
 
     # ===== 2D model ===== #
@@ -74,7 +74,7 @@ class Tests(unittest.TestCase):
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
     mvnlinear = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
-    mvnoblinear = Observable((fomvn, gomvn), (1.,), norm)
+    mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
