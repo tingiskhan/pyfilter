@@ -7,6 +7,9 @@ from .timeseries.parameter import Parameter
 import numbers
 
 
+_NATIVE = (bool, str, numbers.Number)
+
+
 def get_ess(w, normalized=False):
     """
     Calculates the ESS from an array of log weights.
@@ -248,7 +251,7 @@ class HelperMixin(object):
         :rtype: dict
         """
         # TODO: This might be improved (?)
-        # TODO: Implement serializing as native objects
+        # TODO: Implement serializing as native objects. How to deserialize though?
         res = dict()
         for name, a in _yield_objs(self):
             if isinstance(a, torch.Tensor):
@@ -256,11 +259,11 @@ class HelperMixin(object):
             elif isinstance(a, Iterable):
                 if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
                     res[name] = a
-                elif all(isinstance(it, (numbers.Number, str)) for it in a):
+                elif all(isinstance(it, _NATIVE) for it in a):
                     res[name] = a
             elif isinstance(a, HelperMixin):
                 res[name] = a.state_dict()
-            elif isinstance(a, (numbers.Number, str)):
+            elif isinstance(a, _NATIVE):
                 res[name] = a
 
         return res
