@@ -62,7 +62,32 @@ class BaseFilter(HelperMixin):
         if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_ll = tuple(x)
+        self.s_ll = tuple(xt.clone() for xt in x)
+
+    @property
+    def filtermeans(self):
+        """
+        Calculates the filter means and returns a timeseries.
+        :return:
+        """
+
+        if len(self.s_mx) > 0:
+            return torch.stack(self.s_mx, dim=0)
+
+        return torch.empty((1,))
+
+    @filtermeans.setter
+    def filtermeans(self, x):
+        """
+        Sets the filter means.
+        :param x: The new filter means
+        :type x: torch.Tensor
+        """
+
+        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
+
+        self.s_mx = tuple(xt.clone() for xt in x)
 
     @property
     def loglikelihood(self):
@@ -172,31 +197,6 @@ class BaseFilter(HelperMixin):
 
         # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
-
-    @property
-    def filtermeans(self):
-        """
-        Calculates the filter means and returns a timeseries.
-        :return:
-        """
-
-        if len(self.s_mx) > 0:
-            return torch.stack(self.s_mx, dim=0)
-
-        return torch.empty((1,))
-
-    @filtermeans.setter
-    def filtermeans(self, x):
-        """
-        Sets the filter means.
-        :param x: The new filter means
-        :type x: torch.Tensor
-        """
-
-        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
-            raise ValueError('Either wrong type or wrong dimensions!')
-
-        self.s_mx = tuple(x)
 
     def predict(self, steps):
         """
