@@ -68,7 +68,7 @@ class BaseFilter(HelperMixin):
     def filtermeans(self):
         """
         Calculates the filter means and returns a timeseries.
-        :return:
+        :rtype: torch.Tensor
         """
 
         if len(self.s_mx) > 0:
@@ -170,7 +170,7 @@ class BaseFilter(HelperMixin):
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type y: pd.DataFrame|torch.Tensor
+        :type y: torch.Tensor
         :param bar: Whether to print a progressbar
         :type bar: bool
         :return: Self
@@ -344,13 +344,18 @@ class ParticleFilter(BaseFilter):
 
         super().__init__(model)
 
+        self._particles = particles
+        self._th = ess
+
+        # ===== State variables ===== #
         self._x_cur = None                          # type: torch.Tensor
         self._inds = None                           # type: torch.Tensor
-        self._particles = particles
         self._w_old = None                          # type: torch.Tensor
-        self._ess = ess
+
+        # ===== Auxiliary variable ===== #
         self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
 
+        # ===== Resampling function ===== #
         self._resampler = resampling
 
         if proposal == 'auto':
@@ -413,7 +418,7 @@ class ParticleFilter(BaseFilter):
 
         # ===== Get the ones requiring resampling ====== #
         ess = get_ess(weights) / weights.shape[-1]
-        mask = ess < self._ess
+        mask = ess < self._th
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
