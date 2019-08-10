@@ -36,7 +36,7 @@ def init_caster(func):
     def wrapper(obj):
         res = concater(func(obj))
         if not isinstance(res, torch.Tensor):
-            res = torch.tensor(res, device=obj._device)
+            res = torch.tensor(res)
 
         return res
 
@@ -364,7 +364,7 @@ class AffineModel(HelperMixin):
         :return: Samples from the initial distribution
         :rtype: torch.Tensor|float
         """
-        shape = ((shape,) if isinstance(shape, int) else shape) or torch.Size([])
+        shape = size_getter(shape)
 
         dist = TransformedDistribution(
             self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
@@ -407,7 +407,7 @@ class AffineModel(HelperMixin):
         if samples is None:
             shape = steps, self.ndim
         else:
-            shape = steps, *((samples,) if not isinstance(samples, (list, tuple)) else samples), self.ndim
+            shape = steps, *size_getter(samples), self.ndim
 
         out = torch.zeros(shape)
         out[0] = self.i_sample(shape=shape[1:])
