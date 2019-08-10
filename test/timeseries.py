@@ -16,7 +16,7 @@ def g(x, alpha, sigma):
 
 
 def f0(alpha, sigma):
-    return 0.
+    return torch.zeros_like(alpha)
 
 
 def g0(alpha, sigma):
@@ -84,18 +84,21 @@ class Tests(unittest.TestCase):
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_EulerMaruyama(self):
-        mod = EulerMaruyma((lambda: 0., lambda: 1.), (lambda u: 0, lambda u: 1), (), ndim=1)
+        zero = torch.tensor(0.)
+        one = torch.tensor(1.)
+
+        mod = EulerMaruyma((lambda: zero, lambda: one), (lambda u: zero, lambda u: one), (), ndim=1)
 
         samples = mod.sample(30)
 
-        assert samples.shape == (30, 1)
+        assert samples.shape == (30,)
 
     def test_OrnsteinUhlenbeck(self):
         mod = OrnsteinUhlenbeck(0.05, 1, 0.15)
 
         x = mod.sample(300)
 
-        assert x.shape == (300, 1)
+        assert x.shape == (300,)
 
     def test_StateVariable(self):
         # ===== Emulate last value ===== #

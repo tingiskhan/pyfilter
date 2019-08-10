@@ -14,7 +14,7 @@ def g(x, alpha, sigma):
 
 
 def f0(alpha, sigma):
-    return 0
+    return torch.zeros_like(alpha)
 
 
 def g0(alpha, sigma):

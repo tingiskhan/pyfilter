@@ -36,7 +36,7 @@ def init_caster(func):
     def wrapper(obj):
         res = concater(func(obj))
         if not isinstance(res, torch.Tensor):
-            res = torch.tensor(res)
+            raise ValueError('The result must be of type `torch.Tensor`!')
 
         return res
 
