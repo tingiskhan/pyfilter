@@ -25,3 +25,12 @@ class StateVariable(torch.Tensor):
 
     def __getitem__(self, item):
         return self._helper[..., item]
+
+    def get_base(self):
+        """
+        Returns the underlying tensor
+        :rtype: torch.Tensor
+        """
+
+        return self._helper
+

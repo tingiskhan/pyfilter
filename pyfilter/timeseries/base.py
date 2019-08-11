@@ -16,7 +16,7 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        if obj._inputdim > 1 and not isinstance(x, StateVariable):
+        if obj._inputdim > 1:
             tx = StateVariable(x)
         else:
             tx = x
@@ -25,6 +25,7 @@ def tensor_caster(func):
         if not isinstance(res, torch.Tensor):
             res = torch.ones_like(x) * res
 
+        res = res if not isinstance(res, StateVariable) else res.get_base()
         res.__sv = tx
 
         return res
