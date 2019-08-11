@@ -207,7 +207,7 @@ class TimeseriesBase(HelperMixin):
         # ===== Distributional parameters ===== #
         pdict = dict()
         for k, v in self.distributional_theta.items():
-            pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else param.view(param.shape)
+            pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
 
         if len(pdict) > 0:
             self.noise.__init__(**pdict)
