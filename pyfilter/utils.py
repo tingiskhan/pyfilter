@@ -253,6 +253,7 @@ class HelperMixin(object):
         """
         # TODO: This might be improved (?)
         # TODO: Implement serializing as native objects. How to deserialize though?
+        # TODO: Only supports 1 level iterables currently, fix this
         res = dict()
         res[self._OBJTYPENAME] = self.__class__.__name__
 
