@@ -19,7 +19,7 @@ class SISR(ParticleFilter):
         self._proposal = self.proposal.construct(y, to_prop)
 
         # ===== Propagate ===== #
-        self._x_cur = self.proposal.draw()
+        self._x_cur = self.proposal.draw(self._rsample)
         weights = self.proposal.weight(y, self._x_cur, to_prop)
 
         self.proposal.resample(inds)

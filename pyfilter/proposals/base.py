@@ -49,13 +49,18 @@ class Proposal(HelperMixin):
 
         raise NotImplementedError()
 
-    def draw(self):
+    def draw(self, rsample=False):
         """
         Defines the method for drawing proposals.
+        :param rsample: Whether to use `rsample` instead
+        :type rsample: bool
         :rtype: torch.Tensor
         """
 
-        return self._kernel.sample()
+        if not rsample:
+            return self._kernel.sample()
+
+        return self._kernel.rsample()
 
     def weight(self, y, xn, xo):
         """
