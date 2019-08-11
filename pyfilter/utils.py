@@ -4,6 +4,10 @@ from .normalization import normalize
 import torch
 from torch.distributions import Distribution
 from .timeseries.parameter import Parameter
+import numbers
+
+
+_NATIVE = (bool, str, numbers.Number)
 
 
 def get_ess(w, normalized=False):
@@ -150,35 +154,79 @@ def flatten(iterable):
     return out
 
 
-def _yield_helper(obj):
+def _yield_objs(obj):
+    """
+    Yields all of objects of specific type in object.
+    :param obj: The object
+    :type obj: class
+    """
+
     for a in (d for d in dir(obj) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
         try:
             if isinstance(getattr(type(obj), a), property):
                 continue
         except AttributeError:
-            yield a
+            yield a, getattr(obj, a)
 
 
-class MoveToHelper(object):
-    _device = torch.empty([0]).device
+def _recursion_helper(a, f):
+    """
+    Helper for performing recursions.
+    :param a: The object
+    :type a: class
+    :param f: The callable
+    :type f: callable
+    :rtype: object
+    """
 
-    def _helper(self, device, attr):
-        if isinstance(attr, Parameter):
-            for a in _yield_helper(attr._prior):
-                self._helper(device, getattr(attr._prior, a))
+    if isinstance(a, Parameter):
+        _recursion_helper(a._prior, f)
+        if a.dim() > 0:
+            a.data[:] = f(a.data)
+        else:
+            a.data = f(a.data)
 
-            attr.values = attr.values.to(device)
-        elif hasattr(attr, 'to_'):
-            attr.to_(device)
-        elif isinstance(attr, torch.Tensor) and attr.device != device:
-            attr.data = attr.data.to(device)
-            return self
-        elif isinstance(attr, (tuple, list)):
-            for i in range(len(attr)):
-                self._helper(device, attr[i])
-        elif isinstance(attr, Distribution):
-            for a in _yield_helper(attr):
-                self._helper(device, getattr(attr, a))
+        if a._grad is not None:
+            a._grad.data[:] = f(a._grad.data)
+
+    elif isinstance(a, torch.Tensor):
+        if a._base is not None:
+            return a
+
+        if a.dim() > 0:
+            a.data[:] = f(a.data)
+        else:
+            a.data = f(a.data)
+
+        if a._grad is not None:
+            a._grad.data = f(a._grad.data)
+
+    elif isinstance(a, HelperMixin):
+        a.apply(f)
+    elif isinstance(a, Iterable):
+        for item in a:
+            _recursion_helper(item, f)
+    elif isinstance(a, Distribution):
+        for _, at in _yield_objs(a):
+            _recursion_helper(at, f)
+
+    return a
+
+
+class HelperMixin(object):
+    _OBJTYPENAME = 'objtype'
+
+    def apply(self, f):
+        """
+        Applies the function `f` to all objects derived from Tensor class.
+        :param f: The function to apply on each tensor
+        :type f: callable
+        :return: Self
+        :rtype: Helper
+        """
+
+        for _, a in _yield_objs(self):
+            _recursion_helper(a, f)
 
         return self
 
@@ -188,13 +236,91 @@ class MoveToHelper(object):
         :param device: The device to move to
         :type device: str
         :return: Self
-        :rtype: MoveToHelper
+        :rtype: Helper
         """
 
-        self._device = torch.device(device)
+        def to(u):
+            return u.to(device)
 
-        for a in _yield_helper(self):
-            attr = getattr(self, a)
-            self._helper(device, attr)
+        self.apply(to)
+
+        return self
+
+    def state_dict(self):
+        """
+        Gets the state dictionary of all the serializable items in the module
+        :rtype: dict
+        """
+        # TODO: This might be improved (?)
+        # TODO: Implement serializing as native objects. How to deserialize though?
+        # TODO: Only supports 1 level iterables currently, fix this
+        res = dict()
+        res[self._OBJTYPENAME] = self.__class__.__name__
+
+        for name, a in _yield_objs(self):
+            if isinstance(a, torch.Tensor):
+                res[name] = a
+            elif isinstance(a, Iterable):
+                if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
+                    res[name] = a
+                elif all(isinstance(it, _NATIVE) for it in a):
+                    res[name] = a
+            elif isinstance(a, HelperMixin):
+                res[name] = a.state_dict()
+            elif isinstance(a, _NATIVE):
+                res[name] = a
+
+        return res
+
+    def load_state_dict(self, state):
+        """
+        Loads the state dictionary
+        :param state: The state dictionary
+        :type state: dict
+        :return: Self
+        :rtype: HelperMixin
+        """
+
+        if state[self._OBJTYPENAME] != self.__class__.__name__:
+            raise ValueError('Cannot cast {} as {}!'.format(state[self._OBJTYPENAME], self.__class__.__name__))
+
+        attrs = dir(self)
+        for k, v in state.items():
+            if k not in attrs:
+                continue
+
+            attr = getattr(self, k)
+            if isinstance(attr, HelperMixin):
+                attr.load_state_dict(v)
+            else:
+                setattr(self, k, v)
+
+        return self
+
+
+class TempOverride(object):
+    def __init__(self, obj, attr, new_vals):
+        """
+        Implements a temporary override of attribute of an object.
+        :param obj: An object
+        :type obj: object
+        :param attr: The attribute to override
+        :type attr: str
+        :param new_vals: The new values
+        :type new_vals: object
+        """
+        self._obj = obj
+        self._attr = attr
+        self._new_vals = new_vals
+        self._old_vals = None
+
+    def __enter__(self):
+        self._old_vals = getattr(self._obj, self._attr)
+        setattr(self._obj, self._attr, self._new_vals)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        setattr(self._obj, self._attr, self._old_vals)
 
         return self

@@ -1,11 +1,10 @@
 import copy
-import numpy as np
-from ..utils import flatten, MoveToHelper
+from ..utils import flatten, HelperMixin
 import torch
 from .parameter import Parameter
 
 
-class StateSpaceModel(MoveToHelper):
+class StateSpaceModel(HelperMixin):
     def __init__(self, hidden, observable):
         """
         Combines a hidden and observable processes to constitute a state-space model.
@@ -59,6 +58,19 @@ class StateSpaceModel(MoveToHelper):
 
         return self.observable.ndim
 
+    def sample_params(self, shape=None):
+        """
+        Samples the parameters of the model in place.
+        :param shape: The shape to use
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        for mod in [self.hidden, self.observable]:
+            mod.sample_params(shape)
+
+        return self
+
     def initialize(self, size=None):
         """
         Initializes the algorithm and samples from the hidden densities.
@@ -94,6 +106,20 @@ class StateSpaceModel(MoveToHelper):
 
         return self.observable.weight(y, x)
 
+    def viewify_params(self, shape):
+        """
+        Defines views to be used as parameters instead
+        :param shape: The shape to use. Please note that
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: StateSpaceModel
+        """
+
+        for mod in [self.hidden, self.observable]:
+            mod.viewify_params(shape)
+
+        return self
+
     def h_weight(self, y, x):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
@@ -113,36 +139,29 @@ class StateSpaceModel(MoveToHelper):
         :param steps: The number of steps
         :type steps: int
         :param x_s: The starting value
-        :type x_s: torch.Tensor|float
+        :type x_s: torch.Tensor
         :param samples: How many samples
         :type samples: tuple[int]|int
         :return: Sampled trajectories
         :rtype: tuple[torch.Tensor]
         """
 
-        if x_s is not None:
-            samples = x_s.shape[:-1] if self.hidden_ndim > 1 else x_s.shape
+        # TODO: Could be somewhat improved
+        x = x_s if x_s is not None else self.initialize(size=samples)
+        x_shape = steps, *x.shape
+        y_shape = (*x_shape[:-1], self.obs_ndim) if self.hidden_ndim > 1 else (*x_shape, self.obs_ndim)
 
-            x_shape = steps, *samples, self.hidden_ndim
-            y_shape = steps, *samples, self.obs_ndim
-        elif samples is None:
-            x_shape = steps, self.hidden_ndim
-            y_shape = steps, self.obs_ndim
-        else:
-            x_shape = steps, samples, self.hidden_ndim
-            y_shape = steps, samples, self.obs_ndim
+        if self.obs_ndim < 2:
+            y_shape = y_shape[:-1]
 
         hidden = torch.zeros(x_shape)
         obs = torch.zeros(y_shape)
 
-        x = x_s if x_s is not None else self.initialize(size=samples)
         y = self.observable.propagate(x)
 
-        tmp = lambda u, dim: u.unsqueeze(-1) if dim < 2 else u
-
         for i in range(steps):
-            hidden[i] = tmp(x, self.hidden_ndim)
-            obs[i] = tmp(y, self.obs_ndim)
+            hidden[i] = x
+            obs[i] = y
 
             x = self.propagate(x)
             y = self.observable.propagate(x)

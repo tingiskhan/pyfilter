@@ -38,10 +38,10 @@ class NESSMC2(SequentialAlgorithm):
         self._smc2.initialize()
         return self
 
-    def fit(self, y):
+    def fit(self, y, bar=True):
         self._iterator = self._smc2._iterator = self._ness._iterator = tqdm(y, desc=str(self))
 
-        for yt in self._iterator:
+        for yt in self._iterator if bar else y:
             self.update(yt)
 
         self._iterator = self._smc2._iterator = self._ness._iterator = None

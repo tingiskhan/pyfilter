@@ -1,9 +1,9 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils import choose, MoveToHelper
+from ..utils import choose, HelperMixin
 from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform, Independent
 
 
-class Proposal(MoveToHelper):
+class Proposal(HelperMixin):
     def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
@@ -47,7 +47,7 @@ class Proposal(MoveToHelper):
         :rtype: Proposal
         """
 
-        return self
+        raise NotImplementedError()
 
     def draw(self):
         """
@@ -73,15 +73,14 @@ class Proposal(MoveToHelper):
 
     def resample(self, inds):
         """
-        For proposals where some of the data is stored locally. As this is only necessary for a few of the proposals,
-        it need not be implemented for all.
-        :param inds: The indicies to resample
+        Resamples the proposal
+        :param inds: The indices to resample
         :type inds: torch.Tensor
         :return: Self
         :rtype: Proposal
         """
 
-        # TODO: FIX THIS
+        # TODO: IMPROVE THIS
 
         # ===== If transformed distribution we resample everything ===== #
         if isinstance(self._kernel, TransformedDistribution):

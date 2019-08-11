@@ -2,8 +2,8 @@ from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess
 import torch
-from ..resampling import systematic, residual
-from .kernels import AdaptiveShrinkageKernel, ShrinkageKernel
+from ..resampling import residual
+from .kernels import AdaptiveShrinkageKernel, RegularizedKernel
 
 
 class NESS(SequentialAlgorithm):
@@ -14,6 +14,8 @@ class NESS(SequentialAlgorithm):
         :type particles: int
         :param threshold: The threshold for when to resample the parameters
         :type threshold: float
+        :param kernel: The kernel to use when propagating the parameter particles
+        :type kernel: pyfilter.algorithms.kernels.BaseKernel
         """
 
         cudawarning(resampling)
@@ -24,11 +26,14 @@ class NESS(SequentialAlgorithm):
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
-        self._w_rec = torch.zeros(particles, device=self._device)
+        self._w_rec = torch.zeros(particles)
 
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
+
+        self._regularizer = RegularizedKernel()
+        self._regularizer.set_resampler(self._resampler)
 
         # ===== ESS related ===== #
         self._ess = particles
@@ -43,20 +48,10 @@ class NESS(SequentialAlgorithm):
         :rtype: NESS
         """
 
-        # ===== Initialize parameters ===== #
-        for th in self._filter.ssm.flat_theta_dists:
-            th.sample_(self._particles)
+        self.filter.ssm.sample_params(self._particles)
 
-            # Nested filters require parameters to have an extra dimension
-            if isinstance(self.filter, ParticleFilter):
-                th.values = th.values.unsqueeze(1)
-
-        # ===== Re-initialize distributions ===== #
-        for mod in [self.filter.ssm.hidden, self.filter.ssm.observable]:
-            if len(mod.distributional_theta) > 0:
-                mod.noise.__init__(**mod.distributional_theta)
-
-        self._filter.initialize()
+        shape = (self._particles, 1) if isinstance(self.filter, ParticleFilter) else (self._particles,)
+        self.filter.viewify_params(shape).initialize()
 
         return self
 
@@ -73,11 +68,14 @@ class NESS(SequentialAlgorithm):
         # ===== Resample ===== #
         self._ess = get_ess(self._w_rec)
 
-        if self._ess < self._th * self._particles:
-            indices = self._resampler(self._w_rec)
-            self.filter = self.filter.resample(indices, entire_history=False)
+        if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
+            if self._ess < 0.5 * self._particles:
+                self._regularizer.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
+            else:
+                indices = self._resampler(self._w_rec)
+                self.filter = self.filter.resample(indices, entire_history=False)
 
-            self._w_rec *= 0.
+            self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Log ESS ===== #
         self._logged_ess += (self._ess,)

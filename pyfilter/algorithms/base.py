@@ -1,10 +1,10 @@
 from ..filters.base import BaseFilter, enforce_tensor
 from tqdm import tqdm
 import warnings
-from ..utils import MoveToHelper
+from ..utils import HelperMixin
 
 
-class BaseAlgorithm(MoveToHelper):
+class BaseAlgorithm(HelperMixin):
     def __init__(self, filter_):
         """
         Implements a base class for algorithms, i.e. algorithms for inferring parameters.
@@ -91,13 +91,13 @@ class SequentialAlgorithm(BaseAlgorithm):
         :return: Self
         :rtype: SequentialAlgorithm
         """
-
+        self._y += (y.clone(),)
         return self._update(y)
 
-    def fit(self, y):
+    def fit(self, y, bar=True):
         self._iterator = tqdm(y, desc=str(self))
 
-        for yt in self._iterator:
+        for yt in self._iterator if bar else y:
             self.update(yt)
 
         self._iterator = None

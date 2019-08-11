@@ -41,11 +41,11 @@ class ParameterApproximation(MeanField):
         self._logstd = torch.zeros_like(self._mean)
 
         for i, p in enumerate(parameters):
-            self._mean[i] = p.bijection.inv(p.dist.mean)
-            self._logstd[i] = p.dist.stddev.log()
+            self._mean[i] = p.bijection.inv(p.distr.mean)
+            self._logstd[i] = p.distr.stddev.log()
 
-        self._mean.requires_grad = True
-        self._logstd.requires_grad = True
+        self._mean.requires_grad_(True)
+        self._logstd.requires_grad_(True)
 
         self._sampledist = Independent(Normal(torch.zeros_like(self._mean), torch.ones_like(self._logstd)), 1)
 

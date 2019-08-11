@@ -63,19 +63,29 @@ class VariationalBayes(BatchAlgorithm):
         # ===== Sample parameters ===== #
         params = self._p_approx.sample(self._numsamples)
         for i, p in enumerate(self._model.flat_theta_dists):
-            p.t_values = params[..., i]
+            p.detach_()
+            p[:] = p.bijection(params[..., i])
+
+        self._model.viewify_params((self._numsamples, 1))
 
         # ===== Helpers ===== #
         x_t = transformed[:, 1:]
         x_tm1 = transformed[:, :-1]
 
+        if self._model.hidden_ndim < 2:
+            x_t.squeeze_(-1)
+            x_tm1.squeeze_(-1)
+
         # ===== Loss function ===== #
         logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
         entropy = self._approximation.entropy() + self._p_approx.entropy()
 
-        return -(logl + self._model.p_prior(transformed=True).mean() + entropy)
+        return -(logl + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
 
     def _fit(self, y):
+        # ===== Sample model in place for a primitive version of initialization ===== #
+        self._model.sample_params(self._numsamples)
+
         # ===== Initialize the state approximation ===== #
         self._approximation.initialize(y, self._model.hidden_ndim)
 
@@ -102,7 +112,7 @@ class VariationalBayes(BatchAlgorithm):
 
             it += 1
             bar.update(1)
-            self._runavg = self._runavg * self._decay - elbo[-1] * (1 - self._decay)
+            self._runavg = self._runavg * self._decay - elbo * (1 - self._decay)
             bar.set_description('{:s} - Avg. ELBO: {:.2f}'.format(str(self), self._runavg))
 
         return self

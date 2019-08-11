@@ -73,7 +73,11 @@ class Tests(unittest.TestCase):
         for model in [self.model, self.mvnmodel]:
             x, y = model.sample(500)
 
-            for filter_, props in [(SISR, {'particles': 500}), (APF, {'particles': 500}), (UKF, {})]:
+            for filter_, props in [
+                (SISR, {'particles': 500}),
+                (APF, {'particles': 500}),
+                (UKF, {})
+            ]:
                 filt = filter_(model, **props).initialize()
 
                 filt = filt.longfilter(y)
@@ -139,7 +143,7 @@ class Tests(unittest.TestCase):
         priors = Exponential(2.), Exponential(2.)
         # ===== Test for multiple models ===== #
         hidden1d = AffineModel((f0, g0), (f, g), priors, (self.linear.noise0, self.linear.noise))
-        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
+        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1))
 
         hidden2d = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), priors, (self.mvn.noise0, self.mvn.noise))
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
@@ -166,6 +170,6 @@ class Tests(unittest.TestCase):
 
                 tru_val = trumod.hidden.theta[-1]
                 densval = kde.logpdf(tru_val.numpy().reshape(-1, 1))
-                priorval = parameter.dist.log_prob(tru_val)
+                priorval = parameter.distr.log_prob(tru_val)
 
                 assert bool(densval > priorval.numpy())

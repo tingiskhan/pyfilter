@@ -1,9 +1,10 @@
 import unittest
-from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck
+from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck, Parameter
+from pyfilter.timeseries.statevariable import StateVariable
 import scipy.stats as stats
 import numpy as np
 import torch
-from torch.distributions import Normal
+from torch.distributions import Normal, Exponential
 
 
 def f(x, alpha, sigma):
@@ -15,7 +16,7 @@ def g(x, alpha, sigma):
 
 
 def f0(alpha, sigma):
-    return 0.
+    return torch.zeros_like(alpha)
 
 
 def g0(alpha, sigma):
@@ -66,7 +67,7 @@ class Tests(unittest.TestCase):
     def test_SampleTrajectory2D(self):
         sample = self.linear.sample(500, 250)
 
-        assert sample.shape == (500, 250, 1)
+        assert sample.shape == (500, 250)
 
     def test_Weight1D(self):
         sample = self.linear.i_sample()
@@ -83,17 +84,78 @@ class Tests(unittest.TestCase):
         assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_EulerMaruyama(self):
-        mod = EulerMaruyma((lambda: 0., lambda: 1.), (lambda u: 0, lambda u: 1), (), ndim=1)
+        zero = torch.tensor(0.)
+        one = torch.tensor(1.)
+
+        mod = EulerMaruyma((lambda: zero, lambda: one), (lambda u: zero, lambda u: one), (), ndim=1)
 
         samples = mod.sample(30)
 
-        assert samples.shape == (30, 1)
+        assert samples.shape == (30,)
 
     def test_OrnsteinUhlenbeck(self):
         mod = OrnsteinUhlenbeck(0.05, 1, 0.15)
 
         x = mod.sample(300)
 
-        assert x.shape == (300, 1)
+        assert x.shape == (300,)
 
+    def test_StateVariable(self):
+        # ===== Emulate last value ===== #
+        rands = torch.empty((300, 3)).normal_()
+        rands.requires_grad_(True)
 
+        # ===== Pass through function ===== #
+        sv = StateVariable(rands)
+        agg = sv.sum(-1)
+
+        # ===== Get gradient ===== #
+        agg.backward(torch.ones_like(agg))
+
+        assert rands.grad is not None
+
+    def test_Parameter(self):
+        # ===== Start stuff ===== #
+        param = Parameter(Normal(0., 1.))
+        param.sample_(1000)
+
+        assert param.shape == torch.Size([1000])
+
+        # ===== Construct view ===== #
+        view = param.view(1000, 1)
+
+        # ===== Change values ===== #
+        param.values = torch.empty_like(param).normal_()
+
+        assert (view[:, 0] == param).all()
+
+        # ===== Have in tuple ===== #
+        vals = (param.view(1000, 1, 1),)
+
+        param.values = torch.empty_like(param).normal_()
+
+        assert (vals[0][:, 0, 0] == param).all()
+
+        # ===== Set t_values ===== #
+        view = param.view(1000, 1)
+
+        param.t_values = torch.empty_like(param).normal_()
+
+        assert (view[:, 0] == param.t_values).all()
+
+        # ===== Check we cannot set different shape ===== #
+        with self.assertRaises(ValueError):
+            param.values = torch.empty(1).normal_()
+
+        # ===== Check that we cannot set out of bounds values for parameter ===== #
+        positive = Parameter(Exponential(1.))
+        positive.sample_(1)
+
+        with self.assertRaises(ValueError):
+            positive.values = -torch.empty_like(positive).normal_().abs()
+
+        # ===== Check that we can set transformed values ===== #
+        values = torch.empty_like(positive).normal_()
+        positive.t_values = values
+
+        assert (positive == positive.bijection(values)).all()
