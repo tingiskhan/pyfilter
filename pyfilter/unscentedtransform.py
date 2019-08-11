@@ -1,12 +1,11 @@
 from .timeseries import StateSpaceModel, AffineModel
-import numpy as np
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
-from .utils import construct_diag, MoveToHelper
+from .utils import construct_diag, HelperMixin, TempOverride
 
 
-def _propagate_sps(spx, spn, process):
+def _propagate_sps(spx, spn, process, temp_params):
     """
     Propagate the Sigma points through the given process.
     :param spx: The state Sigma points
@@ -18,15 +17,15 @@ def _propagate_sps(spx, spn, process):
     :return: Translated and scaled sigma points
     :rtype: torch.Tensor
     """
-    mean = process.mean(spx)
-    scale = process.scale(spx)
 
-    if process.ndim < 2:
-        if 0 < mean.dim() < spn.dim():
-            mean.unsqueeze_(-1)
+    with TempOverride(process, '_theta_vals', temp_params):
+        mean = process.mean(spx)
+        scale = process.scale(spx)
 
-        if 0 < scale.dim() < spn.dim():
-            scale.unsqueeze_(-1)
+    mean, scale = torch.broadcast_tensors(mean, scale)
+
+    if process._inputdim != process.ndim and process.ndim == 1:
+        return (mean + scale * spn[..., 0]).unsqueeze(-1)
 
     return mean + scale * spn
 
@@ -65,7 +64,7 @@ def _get_meancov(spxy, wm, wc):
     return x, _covcalc(centered, centered, wc)
 
 
-class UnscentedTransform(MoveToHelper):
+class UnscentedTransform(HelperMixin):
     def __init__(self, model, a=1, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.
@@ -86,6 +85,7 @@ class UnscentedTransform(MoveToHelper):
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
         self._ymean = None
         self._ycov = None
+        self._views = None
 
         self._initialized = False
         self._diaginds = range(model.hidden_ndim)
@@ -138,13 +138,26 @@ class UnscentedTransform(MoveToHelper):
 
         # ==== Define empty arrays ===== #
         if not isinstance(x, torch.Tensor):
-            x = np.array(x)
+            x = torch.tensor(x)
 
         parts = x.shape[:-1] if self._model.hidden_ndim > 1 else x.shape
 
         self._mean = torch.zeros((*parts, self._ndim))
         self._cov = torch.zeros((*parts, self._ndim, self._ndim))
         self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
+
+        self._views = tuple()
+        for model in [self._model.hidden, self._model.observable]:
+            params = tuple()
+            for p in model.theta:
+                if p.trainable:
+                    view = p.view(*parts, 1, *p.shape[1:])
+                else:
+                    view = p
+
+                params += (view,)
+
+            self._views += (params,)
 
         return self
 
@@ -200,11 +213,11 @@ class UnscentedTransform(MoveToHelper):
 
         sps = self.get_sps()
 
-        spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden)
+        spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
         if only_x:
             return spx
 
-        spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable)
+        spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._views[1])
 
         return spx, spy
 

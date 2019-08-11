@@ -4,6 +4,7 @@ from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
 from ..resampling import systematic, residual
+import torch
 
 
 class SMC2(NESS):
@@ -29,7 +30,6 @@ class SMC2(NESS):
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
-        self._y += (y,)
         self.filter.filter(y)
         self._w_rec += self.filter.s_ll[-1]
 
@@ -38,7 +38,7 @@ class SMC2(NESS):
         self._logged_ess += (ess,)
 
         # ===== Rejuvenate if there are too few samples ===== #
-        if ess < self._th * self._w_rec.shape[0]:
+        if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():
             self.rejuvenate()
             self._iterator.set_description(desc=str(self))
 
@@ -65,7 +65,7 @@ class SMC2(NESS):
         sleep(1)
 
         # ===== Update recursive weights ===== #
-        self._w_rec *= 0.
+        self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if accepted < 0.2 and isinstance(self.filter, ParticleFilter):
@@ -90,7 +90,7 @@ class SMC2(NESS):
         msg = '{:s} - Increasing number of state particles from {:d} -> {:d}'
         self._iterator.set_description(desc=msg.format(str(self), oldparts, self.filter.particles))
 
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().to_(self._device).longfilter(self._y, bar=False)
+        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = self.filter.loglikelihood - oldlogl

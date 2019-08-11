@@ -1,8 +1,15 @@
 import unittest
-from pyfilter.timeseries import AffineModel, Observable, StateSpaceModel
+from pyfilter.timeseries import AffineModel, AffineObservations, StateSpaceModel
 from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
+from pyfilter.utils import HelperMixin
+
+
+class Help(HelperMixin):
+    def __init__(self, *params):
+        self._params = params
+        self._views = tuple(p.view(-1) for p in params)
 
 
 def f(x, alpha, sigma):
@@ -58,7 +65,7 @@ class Tests(unittest.TestCase):
         # ===== 1D model ===== #
         norm = Normal(0., 1.)
         linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
-        linearobs = Observable((fo, go), (1., 1.), norm)
+        linearobs = AffineObservations((fo, go), (1., 1.), norm)
         model = StateSpaceModel(linear, linearobs)
 
         # ===== Perform unscented transform ===== #
@@ -76,7 +83,7 @@ class Tests(unittest.TestCase):
         norm = Normal(0., 1.)
         mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
         mvnlinear = AffineModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
-        mvnoblinear = Observable((fomvn, gomvn), (1.,), norm)
+        mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
@@ -87,3 +94,23 @@ class Tests(unittest.TestCase):
 
         assert isinstance(ut.x_dist, MultivariateNormal) and isinstance(ut.y_dist, Normal)
         assert isinstance(ut.x_dist_indep, Independent)
+
+    def test_HelperMixin(self):
+        obj = Help(torch.empty(3000).normal_())
+
+        # ===== Verify that we don't break views when changing device ===== #
+        obj.to_('cpu:0')
+
+        temp = obj._params[0]
+        temp += 1
+
+        for p, v in zip(obj._params, obj._views):
+            assert (p == v).all()
+
+        # ===== Check state dict ===== #
+        sd = obj.state_dict()
+
+        newobj = Help(torch.empty(1))
+        newobj.load_state_dict(sd)
+
+        assert all((p1 == p2).all() for p1, p2 in zip(newobj._params, obj._params))

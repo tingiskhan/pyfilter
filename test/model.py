@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pyfilter.timeseries import StateSpaceModel, Observable, AffineModel, Parameter, LinearGaussianObservations
+from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineModel, Parameter, LinearGaussianObservations
 from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
@@ -14,7 +14,7 @@ def g(x, alpha, sigma):
 
 
 def f0(alpha, sigma):
-    return 0
+    return torch.zeros_like(alpha)
 
 
 def g0(alpha, sigma):
@@ -38,7 +38,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return torch.matmul(a, x)
+    return x @ a
 
 
 def f0mvn(a, sigma):
@@ -65,7 +65,7 @@ class Tests(unittest.TestCase):
     # ===== 1D model ===== #
     norm = Normal(0., 1.)
     linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
-    linearobs = Observable((fo, go), (1., 1.), norm)
+    linearobs = AffineObservations((fo, go), (1., 1.), norm)
     model = StateSpaceModel(linear, linearobs)
 
     # ===== 2D model ===== #
@@ -74,7 +74,7 @@ class Tests(unittest.TestCase):
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
     mvnlinear = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
-    mvnoblinear = Observable((fomvn, gomvn), (1.,), norm)
+    mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
@@ -98,7 +98,7 @@ class Tests(unittest.TestCase):
     def test_Sample(self):
         x, y = self.model.sample(50)
 
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50, 1)
+        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
 
     def test_SampleMultivariate(self):
         x, y = self.mvnmodel.sample(30)
@@ -109,29 +109,7 @@ class Tests(unittest.TestCase):
         shape = (100, 100)
         x, y = self.mvnmodel.sample(30, samples=shape)
 
-        assert x.shape == (30, 2, *shape) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
-        assert self.mvnmodel.h_weight(x[1], x[0]).shape == shape
-        if len(shape) > 1:
-            assert self.mvnmodel.h_weight(x[1, :, 0, 0], x[0]).shape == shape
-        assert self.mvnmodel.weight(y[0, 0], x[0]).shape == shape
-
-    def test_Parameter(self):
-        param = Parameter(Beta(1, 3)).sample_()
-
-        assert param.values.shape == torch.Size([])
-
-        newshape = (3000, 1000)
-        with self.assertRaises(ValueError):
-            param.values = Normal(0., 1.).sample(newshape)
-
-        newvals = Beta(1, 3).sample(newshape)
-        param.values = newvals
-
-        assert param.values.shape == newshape
-
-        param.t_values = Normal(0., 1.).sample(newshape)
-
-        assert (param.values != newvals).all()
+        assert x.shape == (30, *shape, 2) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
 
     def test_LinearGaussianObservations(self):
         linearmodel = LinearGaussianObservations(self.linear)

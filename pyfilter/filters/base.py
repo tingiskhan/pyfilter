@@ -6,22 +6,20 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose, MoveToHelper
+from ..utils import get_ess, choose, HelperMixin
 
 
 def enforce_tensor(func):
     def wrapper(obj, y, **kwargs):
         if not isinstance(y, torch.Tensor):
-            y = torch.tensor(y, device=obj._device)
-        elif y.device != obj._device:
-            y = y.to(obj._device)
+            raise ValueError('The observation must be of type Tensor!')
 
         return func(obj, y, **kwargs)
 
     return wrapper
 
 
-class BaseFilter(MoveToHelper):
+class BaseFilter(HelperMixin):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.
@@ -64,7 +62,32 @@ class BaseFilter(MoveToHelper):
         if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_ll = tuple(x)
+        self.s_ll = tuple(xt.clone() for xt in x)
+
+    @property
+    def filtermeans(self):
+        """
+        Calculates the filter means and returns a timeseries.
+        :rtype: torch.Tensor
+        """
+
+        if len(self.s_mx) > 0:
+            return torch.stack(self.s_mx, dim=0)
+
+        return torch.empty((1,))
+
+    @filtermeans.setter
+    def filtermeans(self, x):
+        """
+        Sets the filter means.
+        :param x: The new filter means
+        :type x: torch.Tensor
+        """
+
+        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
+            raise ValueError('Either wrong type or wrong dimensions!')
+
+        self.s_mx = tuple(xt.clone() for xt in x)
 
     @property
     def loglikelihood(self):
@@ -82,6 +105,19 @@ class BaseFilter(MoveToHelper):
         :rtype: StateSpaceModel
         """
         return self._model
+
+    def viewify_params(self, shape):
+        """
+        Defines views to be used as parameters instead
+        :param shape: The shape to use. Please note that
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: BaseFilter
+        """
+
+        self.ssm.viewify_params(shape)
+
+        return self
 
     def set_nparallel(self, n):
         """
@@ -134,7 +170,7 @@ class BaseFilter(MoveToHelper):
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type y: pd.DataFrame|torch.Tensor
+        :type y: torch.Tensor
         :param bar: Whether to print a progressbar
         :type bar: bool
         :return: Self
@@ -159,32 +195,8 @@ class BaseFilter(MoveToHelper):
         :rtype: BaseFilter
         """
 
+        # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
-
-    @property
-    def filtermeans(self):
-        """
-        Calculates the filter means and returns a timeseries.
-        :return:
-        """
-
-        if len(self.s_mx) > 0:
-            return torch.stack(self.s_mx, dim=0)
-
-        return torch.empty((1,))
-
-    @filtermeans.setter
-    def filtermeans(self, x):
-        """
-        Sets the filter means.
-        :param x: The new filter means
-        :type x: torch.Tensor
-        """
-
-        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
-            raise ValueError('Either wrong type or wrong dimensions!')
-
-        self.s_mx = tuple(x)
 
     def predict(self, steps):
         """
@@ -332,13 +344,18 @@ class ParticleFilter(BaseFilter):
 
         super().__init__(model)
 
+        self._particles = particles
+        self._th = ess
+
+        # ===== State variables ===== #
         self._x_cur = None                          # type: torch.Tensor
         self._inds = None                           # type: torch.Tensor
-        self._particles = particles
         self._w_old = None                          # type: torch.Tensor
-        self._ess = ess
+
+        # ===== Auxiliary variable ===== #
         self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
 
+        # ===== Resampling function ===== #
         self._resampler = resampling
 
         if proposal == 'auto':
@@ -401,7 +418,7 @@ class ParticleFilter(BaseFilter):
 
         # ===== Get the ones requiring resampling ====== #
         ess = get_ess(weights) / weights.shape[-1]
-        mask = ess < self._ess
+        mask = ess < self._th
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
@@ -432,7 +449,7 @@ class ParticleFilter(BaseFilter):
 
     def initialize(self):
         self._x_cur = self._model.initialize(self._particles)
-        self._w_old = torch.zeros(self._particles, device=self._device)
+        self._w_old = torch.zeros(self._particles, device=self._x_cur.device)
 
         return self
 
