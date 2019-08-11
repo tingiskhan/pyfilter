@@ -16,7 +16,7 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        if obj._inputdim > 1:
+        if obj._inputdim > 1 and not isinstance(x, StateVariable):
             tx = StateVariable(x)
         else:
             tx = x
