@@ -4,6 +4,7 @@ from torch import optim
 import tqdm
 from math import sqrt
 from .varapprox import MeanField, BaseApproximation, ParameterApproximation
+from ..filters.base import BaseFilter
 
 
 eps = sqrt(torch.finfo(torch.float32).eps)
@@ -34,11 +35,11 @@ class VariationalBayes(BatchAlgorithm):
         self._approximation = approx
         self._p_approx = None   # type: ParameterApproximation
 
-        self._optimizer = optimizer
+        self._opt_type = optimizer
         self._maxiters = int(maxiters)
         self.optkwargs = optkwargs or dict()
 
-        self._runavg = 0
+        self._runavg = 0.
         self._decay = 0.975
 
     @property
@@ -50,23 +51,45 @@ class VariationalBayes(BatchAlgorithm):
 
         return self._approximation
 
-    def loss(self, y):
+    def sample_params(self):
         """
-        The loss function, i.e. ELBO
-        :rtype: torch.Tensor
+        Samples parameters from the variational approximation.
+        :return: Self
+        :rtype: VariationalBayes
         """
 
-        # ===== Sample states ===== #
-        transformed = self._approximation.sample(self._numsamples)
-
-        # TODO: Clean this up and make it work for matrices
-        # ===== Sample parameters ===== #
         params = self._p_approx.sample(self._numsamples)
         for i, p in enumerate(self._model.flat_theta_dists):
             p.detach_()
             p[:] = p.bijection(params[..., i])
 
         self._model.viewify_params((self._numsamples, 1))
+
+        return self
+
+    def _initialize(self, y):
+        # ===== Sample model in place for a primitive version of initialization ===== #
+        self._model.sample_params(self._numsamples)
+
+        # ===== Setup the parameter approximation ===== #
+        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
+
+        # ===== Initialize the state approximation ===== #
+        self._approximation.initialize(y, self._model.hidden_ndim)
+
+        return [*self._approximation.get_parameters(), *self._p_approx.get_parameters()]
+
+    def loss(self, y):
+        """
+        The loss function, i.e. ELBO
+        :rtype: torch.Tensor
+        """
+        # ===== Sample states ===== #
+        transformed = self._approximation.sample(self._numsamples)
+
+        # TODO: Clean this up and make it work for matrices
+        # ===== Sample parameters ===== #
+        self.sample_params()
 
         # ===== Helpers ===== #
         x_t = transformed[:, 1:]
@@ -83,21 +106,12 @@ class VariationalBayes(BatchAlgorithm):
         return -(logl + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
 
     def _fit(self, y):
-        # ===== Sample model in place for a primitive version of initialization ===== #
-        self._model.sample_params(self._numsamples)
-
-        # ===== Initialize the state approximation ===== #
-        self._approximation.initialize(y, self._model.hidden_ndim)
-
-        # ===== Setup the parameter approximation ===== #
-        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
-
-        # ===== Define the optimizer ===== #
-        parameters = [*self._approximation.get_parameters(), *self._p_approx.get_parameters()]
-        optimizer = self._optimizer(parameters, **self.optkwargs)
+        optparams = self._initialize(y)
 
         elbo_old = -torch.tensor(float('inf'))
         elbo = -elbo_old
+
+        optimizer = self._opt_type(optparams, **self.optkwargs)
 
         it = 0
         bar = tqdm.tqdm(total=self._maxiters)
@@ -110,9 +124,48 @@ class VariationalBayes(BatchAlgorithm):
             elbo.backward()
             optimizer.step()
 
-            it += 1
             bar.update(1)
-            self._runavg = self._runavg * self._decay - elbo * (1 - self._decay)
+
+            if it > 0:
+                self._runavg = self._runavg * self._decay - elbo * (1 - self._decay)
+            else:
+                self._runavg = -elbo
+
             bar.set_description('{:s} - Avg. ELBO: {:.2f}'.format(str(self), self._runavg))
+            it += 1
 
         return self
+
+
+class VariationalSMC(VariationalBayes):
+    def __init__(self, filter_, maxiters=100, **kwargs):
+        """
+        Implementation of variational smc
+        :param filter_: The filter to use
+        :type filter_: BaseFilter
+        """
+        super().__init__(model=filter_.ssm, maxiters=maxiters, **kwargs)
+        self._filter = filter_.set_nparallel(self._numsamples)
+
+    def _initialize(self, y):
+        self.filter._rsample = True
+
+        # ===== Sample model in place for a primitive version of initialization ===== #
+        self._model.sample_params(self._numsamples)
+
+        # ===== Setup the parameter approximation ===== #
+        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
+
+        return self._p_approx.get_parameters()
+
+    def loss(self, y):
+        self.filter.reset()
+
+        # ===== Sample parameters ===== #
+        self.sample_params()
+
+        # ===== Loss function ===== #
+        self.filter.initialize().longfilter(y, bar=False)
+        ll = self.filter.loglikelihood.mean()
+
+        return -(ll + self._model.p_prior(transformed=True).mean() + self._p_approx.entropy())

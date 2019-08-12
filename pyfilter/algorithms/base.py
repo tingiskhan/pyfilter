@@ -123,6 +123,7 @@ class BatchAlgorithm(BaseAlgorithm):
 
     @enforce_tensor
     def fit(self, y):
+        self._y = y
         self.initialize()._fit(y)
 
         return self

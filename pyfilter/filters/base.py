@@ -327,7 +327,7 @@ def cudawarning(resampling):
 
 
 class ParticleFilter(BaseFilter):
-    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9):
+    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9, need_grad=False):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
@@ -338,6 +338,8 @@ class ParticleFilter(BaseFilter):
         :type proposal: Proposal|str
         :param ess: At which level to resample
         :type ess: float
+        :param need_grad: Whether we need the gradient
+        :type need_grad: bool
         """
 
         cudawarning(resampling)
@@ -354,6 +356,7 @@ class ParticleFilter(BaseFilter):
 
         # ===== Auxiliary variable ===== #
         self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
+        self._rsample = need_grad
 
         # ===== Resampling function ===== #
         self._resampler = resampling
