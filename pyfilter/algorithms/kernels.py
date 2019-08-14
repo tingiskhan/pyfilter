@@ -20,6 +20,7 @@ class BaseKernel(object):
 
         self._recorded_stats = tuple()
         self._length = length
+        self._resampler = None
 
     def _update(self, parameters, filter_, weights):
         """
@@ -35,6 +36,15 @@ class BaseKernel(object):
         """
 
         raise NotImplementedError()
+
+    def set_resampler(self, resampler):
+        """
+        Sets the resampler to use if necessary for kernel.
+        :param resampler: The resampler
+        :type resampler: callable
+        :rtype: BaseKernel
+        """
+        self._resampler = resampler
 
     def update(self, parameters, filter_, weights):
         """
@@ -291,13 +301,6 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
 
 class RegularizedKernel(BaseKernel):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._resampler = None
-
-    def set_resampler(self, resampler):
-        self._resampler = resampler
-
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
         asarray = torch.stack([p.t_values for p in parameters], dim=-1)
@@ -396,12 +399,8 @@ class ParticleMetropolisHastings(BaseKernel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self._resampler = None
         self._y = None
         self.accepted = None
-
-    def set_resampler(self, resampler):
-        self._resampler = resampler
 
     def set_data(self, y):
         self._y = y
