@@ -179,19 +179,11 @@ def _recursion_helper(a, f):
     :rtype: object
     """
 
-    if isinstance(a, Parameter):
-        _recursion_helper(a._prior, f)
-        if a.dim() > 0:
-            a.data[:] = f(a.data)
-        else:
-            a.data = f(a.data)
-
-        if a._grad is not None:
-            a._grad.data[:] = f(a._grad.data)
-
-    elif isinstance(a, torch.Tensor):
+    if isinstance(a, torch.Tensor):
         if a._base is not None:
             return a
+        elif isinstance(a, Parameter):
+            _recursion_helper(a._prior, f)
 
         if a.dim() > 0:
             a.data[:] = f(a.data)
@@ -203,7 +195,7 @@ def _recursion_helper(a, f):
 
     elif isinstance(a, HelperMixin):
         a.apply(f)
-    elif isinstance(a, Iterable):
+    elif isinstance(a, Iterable) and not isinstance(a, str):
         for item in a:
             _recursion_helper(item, f)
     elif isinstance(a, Distribution):
