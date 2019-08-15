@@ -302,6 +302,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
 class RegularizedKernel(BaseKernel):
     def _update(self, parameters, filter_, weights):
+        # TODO: Implement Epachnikov instead
         ess = get_ess(weights, normalized=True)
         asarray = torch.stack([p.t_values for p in parameters], dim=-1)
 
