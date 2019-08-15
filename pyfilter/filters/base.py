@@ -466,7 +466,7 @@ class ParticleFilter(BaseFilter):
         wsqd = w.unsqueeze(-1)
 
         xm = (x * (wsqd if self.ssm.hidden_ndim > 1 else w)).sum(self._sumaxis)
-        ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(self._sumaxis)
+        ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
 
         return xm[1:], ym[1:]
 
