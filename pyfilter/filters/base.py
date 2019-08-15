@@ -1,4 +1,3 @@
-import pandas as pd
 import copy
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
@@ -6,7 +5,7 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose, HelperMixin
+from ..utils import get_ess, choose, HelperMixin, normalize
 
 
 def enforce_tensor(func):
@@ -198,11 +197,12 @@ class BaseFilter(HelperMixin):
         # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
 
-    def predict(self, steps):
+    def predict(self, steps, *args, **kwargs):
         """
         Predicts `steps` ahead using the latest available information.
         :param steps: The number of steps forward to predict
         :type steps: int
+        :param kwargs: Any key worded arguments
         :rtype: tuple[torch.Tensor]
         """
         raise NotImplementedError()
@@ -456,10 +456,19 @@ class ParticleFilter(BaseFilter):
 
         return self
 
-    def predict(self, steps):
-        x, y = self._model.sample(steps+1, x_s=self._x_cur)
+    def predict(self, steps, aggregate=True, **kwargs):
+        x, y = self._model.sample(steps+1, x_s=self._x_cur, **kwargs)
 
-        return x[1:], y[1:]
+        if not aggregate:
+            return x[1:], y[1:]
+
+        w = normalize(self._w_old)
+        wsqd = w.unsqueeze(-1)
+
+        xm = (x * (wsqd if self.ssm.hidden_ndim > 1 else w)).sum(self._sumaxis)
+        ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(self._sumaxis)
+
+        return xm[1:], ym[1:]
 
     def _resample(self, inds):
         self._x_cur = self._x_cur[inds]
