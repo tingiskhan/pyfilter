@@ -314,6 +314,23 @@ class RegularizedKernel(BaseKernel):
         n = var.shape[-1]
         h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
+        # ===== Define distribution ===== #
+        norm_test = _normal_test(asarray)
+
+        std = torch.empty_like(asarray)
+        var = torch.empty_like(asarray)
+
+        t_mask = ~norm_test
+        if t_mask.any():
+            sort, _ = asarray[:, t_mask].sort(0)
+            std[:, t_mask] = (sort[int(0.75 * asarray.shape[0])] - sort[int(0.25 * asarray.shape[0])]) / 1.349
+
+            var[:, t_mask] = std[:, t_mask] ** 2
+
+        if norm_test.any():
+            var[:, norm_test] = (w * (asarray[:, norm_test] - mean[norm_test]) ** 2).sum(0)
+            std[:, norm_test] = var[:, norm_test].sqrt()
+
         scale = h * var.sqrt()
         dist = Independent(Normal(torch.zeros_like(scale), scale), 1)
 
@@ -322,7 +339,7 @@ class RegularizedKernel(BaseKernel):
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = dist.sample((asarray.shape[0],))
+        samples = dist.sample()
         for i, p in enumerate(parameters):
             p.t_values = p.t_values + samples[:, i]
 
