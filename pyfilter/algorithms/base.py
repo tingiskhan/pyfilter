@@ -62,6 +62,18 @@ class BaseAlgorithm(HelperMixin):
 
         return self
 
+    def predict(self, steps, *args, **kwargs):
+        """
+        Predicts `steps` ahead.
+        :param steps: The number of steps
+        :type steps: int
+        :param args: Any arguments
+        :param kwargs: Any keyworded arguments
+        :rtype: tuple[torch.Tensor]
+        """
+
+        raise NotImplementedError()
+
     def __repr__(self):
         return str(self.__class__.__name__)
 
