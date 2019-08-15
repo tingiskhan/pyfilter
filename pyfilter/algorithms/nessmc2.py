@@ -61,3 +61,9 @@ class NESSMC2(SequentialAlgorithm):
             self._iterator.set_description(desc=str(self._ness))
 
         return self._ness.update(y)
+
+    def predict(self, steps, aggregate=True, **kwargs):
+        if not self._switched:
+            return self._smc2.predict(steps, aggregate=aggregate, **kwargs)
+
+        return self._ness.predict(steps, aggregate=aggregate, **kwargs)

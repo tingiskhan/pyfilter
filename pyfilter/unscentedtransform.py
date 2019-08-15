@@ -146,12 +146,18 @@ class UnscentedTransform(HelperMixin):
         self._cov = torch.zeros((*parts, self._ndim, self._ndim))
         self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
 
+        # TODO: Perhaps move this to Timeseries?
         self._views = tuple()
+        shape = (parts[0], 1)
+
+        if len(parts) > 1:
+            shape += (1,)
+
         for model in [self._model.hidden, self._model.observable]:
             params = tuple()
             for p in model.theta:
                 if p.trainable:
-                    view = p.view(*parts, 1, *p.shape[1:])
+                    view = p.view(*shape, *p.shape[1:])
                 else:
                     view = p
 

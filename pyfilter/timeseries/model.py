@@ -2,6 +2,7 @@ import copy
 from ..utils import flatten, HelperMixin
 import torch
 from .parameter import Parameter
+from .base import TimeseriesBase, AffineModel
 
 
 class StateSpaceModel(HelperMixin):
@@ -9,9 +10,9 @@ class StateSpaceModel(HelperMixin):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: pyfilter.timeseries.base.AffineModel
+        :type hidden: TimeseriesBase
         :param observable: The observable process(es) constituting the SSM
-        :type observable: pyfilter.timeseries.base.AffineModel
+        :type observable: TimeseriesBase
         """
 
         self.hidden = hidden
@@ -133,7 +134,7 @@ class StateSpaceModel(HelperMixin):
 
         return self.hidden.weight(y, x)
 
-    def sample(self, steps, x_s=None, samples=None):
+    def sample(self, steps, x_s=None, samples=None, only_mean=False):
         """
         Constructs a sample trajectory for both the observable and the hidden process.
         :param steps: The number of steps
@@ -142,6 +143,8 @@ class StateSpaceModel(HelperMixin):
         :type x_s: torch.Tensor
         :param samples: How many samples
         :type samples: tuple[int]|int
+        :param only_mean: Whether to sample only mean
+        :type only_mean: bool
         :return: Sampled trajectories
         :rtype: tuple[torch.Tensor]
         """
@@ -163,8 +166,14 @@ class StateSpaceModel(HelperMixin):
             hidden[i] = x
             obs[i] = y
 
-            x = self.propagate(x)
-            y = self.observable.propagate(x)
+            if not only_mean:
+                x = self.propagate(x)
+                y = self.observable.propagate(x)
+            elif only_mean and isinstance(self.hidden, AffineModel) and isinstance(self.observable, AffineModel):
+                x = self.hidden.mean(x)
+                y = self.observable.mean(x)
+            else:
+                raise NotImplementedError('Currently not implemented for model of type {}!'.format(self.hidden))
 
         return hidden, obs
 

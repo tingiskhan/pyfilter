@@ -1,6 +1,6 @@
 from .base import SequentialAlgorithm
 from ..filters.base import ParticleFilter, cudawarning
-from ..utils import get_ess
+from ..utils import get_ess, normalize
 import torch
 from ..resampling import residual
 from .kernels import AdaptiveShrinkageKernel, RegularizedKernel
@@ -88,3 +88,17 @@ class NESS(SequentialAlgorithm):
         self._w_rec += self.filter.s_ll[-1]
 
         return self
+
+    def predict(self, steps, aggregate=True, **kwargs):
+        px, py = self.filter.predict(steps, aggregate=aggregate, **kwargs)
+
+        if not aggregate:
+            return px, py
+
+        w = normalize(self._w_rec)
+        wsqd = w.unsqueeze(-1)
+
+        xm = (px * (wsqd if self.filter.ssm.hidden_ndim > 1 else w)).sum(1)
+        ym = (py * (wsqd if self.filter.ssm.obs_ndim > 1 else w)).sum(1)
+
+        return xm, ym
