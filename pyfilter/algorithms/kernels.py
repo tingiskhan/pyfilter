@@ -224,21 +224,21 @@ def _shrink(values, w, ess):
     # ===== Calculate STD ===== #
     norm_test = _normal_test(values)
 
-    std = torch.empty_like(values)
-    var = torch.empty_like(values)
+    std = torch.empty_like(mean)
+    var = torch.empty_like(mean)
 
     # ===== For those not normally distributed ===== #
     t_mask = ~norm_test
     if t_mask.any():
         sort, _ = values[:, t_mask].sort(0)
-        std[:, t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+        std[t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
 
-        var[:, t_mask] = std[:, t_mask] ** 2
+        var[t_mask] = std[t_mask] ** 2
 
     # ===== Those normally distributed ===== #
     if norm_test.any():
-        var[:, norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0)
-        std[:, norm_test] = var[:, norm_test].sqrt()
+        var[norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0)
+        std[norm_test] = var[norm_test].sqrt()
 
     # ===== Calculate bandwidth ===== #
     bw = 1.59 * std * ess ** (-1 / 3)
@@ -262,7 +262,7 @@ class ShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         for i, p in enumerate(parameters):
-            m, s = means[:, i], scales[:, i]
+            m, s = means[:, i], scales[i]
 
             p.t_values = _jitter(m, s)
 
@@ -289,7 +289,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         for i, (p, delta) in enumerate(zip(parameters, self.get_diff())):
-            m, s = means[:, i], scales[:, i]
+            m, s = means[:, i], scales[i]
             switched = (delta.abs() < self._eps).all()
 
             p.t_values = _jitter(
@@ -318,25 +318,34 @@ class RegularizedKernel(BaseKernel):
 
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
-        asarray = torch.stack([p.t_values for p in parameters], dim=-1)
+        values = torch.stack([p.t_values for p in parameters], dim=-1)
 
         # ===== Calculate covariance ===== #
         w = weights.unsqueeze(-1)
-        mean = (asarray * w).sum(0)
-        var = (w * (asarray - mean) ** 2).sum(0)
+        mean = (values * w).sum(0)
+        std = torch.empty_like(mean)
+
+        norm_test = _normal_test(values)
+
+        t_mask = ~norm_test
+        if t_mask.any():
+            sort, _ = values[:, t_mask].sort(0)
+            std[t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
+        if norm_test.any():
+            std[norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0).sqrt()
 
         # ===== Define "optimal" bw ===== #
-        n = var.shape[-1]
+        n = std.shape[-1]
         h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
-        scale = h * var.sqrt()
+        scale = h * std
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = self._sample_epachnikov(n, asarray.shape[0])
+        samples = self._sample_epachnikov(n, values.shape[0])
         for i, p in enumerate(parameters):
             p.t_values = p.t_values + scale[i] * samples[:, i]
 
