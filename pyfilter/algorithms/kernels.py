@@ -4,7 +4,7 @@ from ..timeseries.parameter import Parameter
 import torch
 from scipy.stats import chi2
 from math import sqrt
-from torch.distributions import MultivariateNormal, Independent, Normal
+from torch.distributions import MultivariateNormal, Independent
 
 
 class BaseKernel(object):
@@ -301,8 +301,22 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
 
 class RegularizedKernel(BaseKernel):
+    def _sample_epachnikov(self, ndim, samples, is_samples=10000):
+        """
+        Samples from the epachnikov kernel.
+        :rtype: torch.Tensor
+        """
+
+        hypercube = torch.empty((is_samples, ndim)).uniform_(-1, 1)    # type: torch.Tensor
+        norm = hypercube.norm(dim=-1)
+        w = (1 - norm ** 2) * (norm < 1).float()
+
+        normalized = normalize(w.log())
+        inds = torch.multinomial(normalized, num_samples=samples, replacement=True)
+
+        return hypercube[inds]
+
     def _update(self, parameters, filter_, weights):
-        # TODO: Implement Epachnikov instead
         ess = get_ess(weights, normalized=True)
         asarray = torch.stack([p.t_values for p in parameters], dim=-1)
 
@@ -315,34 +329,16 @@ class RegularizedKernel(BaseKernel):
         n = var.shape[-1]
         h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
-        # ===== Define distribution ===== #
-        norm_test = _normal_test(asarray)
-
-        std = torch.empty_like(asarray)
-        var = torch.empty_like(asarray)
-
-        t_mask = ~norm_test
-        if t_mask.any():
-            sort, _ = asarray[:, t_mask].sort(0)
-            std[:, t_mask] = (sort[int(0.75 * asarray.shape[0])] - sort[int(0.25 * asarray.shape[0])]) / 1.349
-
-            var[:, t_mask] = std[:, t_mask] ** 2
-
-        if norm_test.any():
-            var[:, norm_test] = (w * (asarray[:, norm_test] - mean[norm_test]) ** 2).sum(0)
-            std[:, norm_test] = var[:, norm_test].sqrt()
-
         scale = h * var.sqrt()
-        dist = Independent(Normal(torch.zeros_like(scale), scale), 1)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = dist.sample()
+        samples = self._sample_epachnikov(n, asarray.shape[0])
         for i, p in enumerate(parameters):
-            p.t_values = p.t_values + samples[:, i]
+            p.t_values = p.t_values + scale[i] * samples[:, i]
 
         return self
 
