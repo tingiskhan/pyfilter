@@ -148,7 +148,7 @@ class UnscentedTransform(HelperMixin):
 
         # TODO: Perhaps move this to Timeseries?
         self._views = tuple()
-        shape = (parts[0], 1)
+        shape = (parts[0], 1) if len(parts) > 0 else parts
 
         if len(parts) > 1:
             shape += (1,)
