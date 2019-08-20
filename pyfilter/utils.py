@@ -205,9 +205,10 @@ def _recursion_helper(a, f):
     return a
 
 
-class HelperMixin(object):
-    _OBJTYPENAME = 'objtype'
+_OBJTYPENAME = 'objtype'
 
+
+class HelperMixin(object):
     def apply(self, f):
         """
         Applies the function `f` to all objects derived from Tensor class.
@@ -247,7 +248,7 @@ class HelperMixin(object):
         # TODO: Implement serializing as native objects. How to deserialize though?
         # TODO: Only supports 1 level iterables currently, fix this
         res = dict()
-        res[self._OBJTYPENAME] = self.__class__.__name__
+        res[_OBJTYPENAME] = self.__class__.__name__
 
         for name, a in _yield_objs(self):
             if isinstance(a, torch.Tensor):
@@ -273,8 +274,8 @@ class HelperMixin(object):
         :rtype: HelperMixin
         """
 
-        if state[self._OBJTYPENAME] != self.__class__.__name__:
-            raise ValueError('Cannot cast {} as {}!'.format(state[self._OBJTYPENAME], self.__class__.__name__))
+        if state[_OBJTYPENAME] != self.__class__.__name__:
+            raise ValueError('Cannot cast {} as {}!'.format(state[_OBJTYPENAME], self.__class__.__name__))
 
         attrs = dir(self)
         for k, v in state.items():

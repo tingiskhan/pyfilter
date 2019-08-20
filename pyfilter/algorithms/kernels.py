@@ -419,9 +419,15 @@ def _eval_kernel(params, dist, n_params):
 
 
 class ParticleMetropolisHastings(BaseKernel):
-    def __init__(self, **kwargs):
+    def __init__(self, nsteps=1, **kwargs):
+        """
+        Implements a base class for the particle Metropolis Hastings class.
+        :param nsteps: The number of steps to perform
+        :type nsteps: int
+        """
         super().__init__(**kwargs)
 
+        self._nsteps = nsteps
         self._y = None
         self.accepted = None
 
@@ -438,34 +444,37 @@ class ParticleMetropolisHastings(BaseKernel):
         raise NotImplementedError()
 
     def _update(self, parameters, filter_, weights):
-        # ===== Construct distribution ===== #
-        dist = self.define_pdf(parameters, weights)
+        for i in range(self._nsteps):
+            # ===== Construct distribution ===== #
+            dist = self.define_pdf(parameters, weights)
 
-        # ===== Resample among parameters ===== #
-        inds = self._resampler(weights, normalized=True)
-        filter_.resample(inds, entire_history=True)
+            # ===== Resample among parameters ===== #
+            inds = self._resampler(weights, normalized=True)
+            filter_.resample(inds, entire_history=True)
 
-        # ===== Define new filters and move via MCMC ===== #
-        t_filt = filter_.copy()
-        t_filt.viewify_params((filter_._n_parallel, 1))
-        _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
+            # ===== Define new filters and move via MCMC ===== #
+            t_filt = filter_.copy()
+            t_filt.viewify_params((filter_._n_parallel, 1))
+            _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
 
-        # ===== Filter data ===== #
-        t_filt.reset().initialize().longfilter(self._y, bar=False)
+            # ===== Filter data ===== #
+            t_filt.reset().initialize().longfilter(self._y, bar=False)
 
-        quotient = t_filt.loglikelihood - filter_.loglikelihood
+            quotient = t_filt.loglikelihood - filter_.loglikelihood
 
-        # ===== Calculate acceptance ratio ===== #
-        plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
-        kernel = _eval_kernel(filter_.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
+            # ===== Calculate acceptance ratio ===== #
+            plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
+            kernel = _eval_kernel(filter_.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
 
-        # ===== Check which to accept ===== #
-        u = torch.empty_like(quotient).uniform_().log()
-        toaccept = u < quotient + plogquot + kernel
+            # ===== Check which to accept ===== #
+            u = torch.empty_like(quotient).uniform_().log()
+            toaccept = u < quotient + plogquot + kernel
 
-        # ===== Update the description ===== #
-        self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
-        filter_.exchange(t_filt, toaccept)
+            # ===== Update the description ===== #
+            self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
+            filter_.exchange(t_filt, toaccept)
+
+            weights = normalize(filter_.loglikelihood)
 
         return self
 
