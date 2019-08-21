@@ -3,19 +3,20 @@ import torch
 from torch import optim
 import tqdm
 from math import sqrt
-from .varapprox import MeanField, BaseApproximation, ParameterApproximation
+from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
+from ..timeseries import StateSpaceModel
 
 
 eps = sqrt(torch.finfo(torch.float32).eps)
 
 
 class VariationalBayes(BatchAlgorithm):
-    def __init__(self, model, num_samples=4, approx=MeanField(), optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
+    def __init__(self, model, num_samples=4, approx=None, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
         """
         Implements Variational Bayes.
         :param model: The model
-        :type model: pyfilter.timeseries.StateSpaceModel
+        :type model: StateSpaceModel|pyfilter.timeseries.base.TimeseriesBase
         :param num_samples: The number of samples
         :type num_samples: int
         :param approx: The variational approximation to use for the latent space
@@ -32,8 +33,10 @@ class VariationalBayes(BatchAlgorithm):
         self._model = model
         self._numsamples = num_samples
 
-        self._approximation = approx
-        self._p_approx = None   # type: ParameterApproximation
+        self._s_approx = approx or StateMeanField()
+        self._p_approx = ParameterMeanField()
+
+        self._is_ssm = isinstance(model, StateSpaceModel)
 
         self._opt_type = optimizer
         self._maxiters = int(maxiters)
@@ -43,13 +46,33 @@ class VariationalBayes(BatchAlgorithm):
         self._decay = 0.975
 
     @property
-    def approximation(self):
+    def _model_params(self):
         """
-        Returns the resulting variational approximation
+        Helper method for returning the correct parameters.
+        :rtype: tuple[Parameter]
+        """
+
+        return self._model.flat_theta_dists if self._is_ssm else self._model.theta_dists
+
+    @property
+    def s_approximation(self):
+        """
+        Returns the resulting variational approximation of the parameters.
+        :rtype: BaseApproximation
+        """
+        if not self._is_ssm:
+            raise ValueError('There is no state approximation!')
+
+        return self._s_approx
+
+    @property
+    def p_approximation(self):
+        """
+        Returns the resulting variational approximation of the parameters.
         :rtype: BaseApproximation
         """
 
-        return self._approximation
+        return self._p_approx
 
     def sample_params(self):
         """
@@ -59,7 +82,7 @@ class VariationalBayes(BatchAlgorithm):
         """
 
         params = self._p_approx.sample(self._numsamples)
-        for i, p in enumerate(self._model.flat_theta_dists):
+        for i, p in enumerate(self._model_params):
             p.detach_()
             p[:] = p.bijection(params[..., i])
 
@@ -72,38 +95,45 @@ class VariationalBayes(BatchAlgorithm):
         self._model.sample_params(self._numsamples)
 
         # ===== Setup the parameter approximation ===== #
-        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
+        self._p_approx = self._p_approx.initialize(self._model_params)
+
+        params = self._p_approx.get_parameters()
 
         # ===== Initialize the state approximation ===== #
-        self._approximation.initialize(y, self._model.hidden_ndim)
+        if self._is_ssm:
+            self._s_approx.initialize(y, self._model.hidden_ndim)
+            params += self._s_approx.get_parameters()
 
-        return [*self._approximation.get_parameters(), *self._p_approx.get_parameters()]
+        return params
 
     def loss(self, y):
         """
-        The loss function, i.e. ELBO
+        The loss function, i.e. ELBO.
         :rtype: torch.Tensor
         """
-        # ===== Sample states ===== #
-        transformed = self._approximation.sample(self._numsamples)
-
-        # TODO: Clean this up and make it work for matrices
         # ===== Sample parameters ===== #
         self.sample_params()
+        entropy = self._p_approx.entropy()
 
-        # ===== Helpers ===== #
-        x_t = transformed[:, 1:]
-        x_tm1 = transformed[:, :-1]
+        if self._is_ssm:
+            # ===== Sample states ===== #
+            transformed = self._s_approx.sample(self._numsamples)
 
-        if self._model.hidden_ndim < 2:
-            x_t.squeeze_(-1)
-            x_tm1.squeeze_(-1)
+            # ===== Helpers ===== #
+            x_t = transformed[:, 1:]
+            x_tm1 = transformed[:, :-1]
 
-        # ===== Loss function ===== #
-        logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1).mean(0)
-        entropy = self._approximation.entropy() + self._p_approx.entropy()
+            if self._model.hidden_ndim < 2:
+                x_t.squeeze_(-1)
+                x_tm1.squeeze_(-1)
 
-        return -(logl + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
+            logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1))
+            entropy += self._s_approx.entropy()
+
+        else:
+            logl = self._model.weight(y[1:], y[:-1])
+
+        return -(logl.sum(1).mean(0) + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
 
     def _fit(self, y):
         optparams = self._initialize(y)
@@ -154,7 +184,7 @@ class VariationalSMC(VariationalBayes):
         self._model.sample_params(self._numsamples)
 
         # ===== Setup the parameter approximation ===== #
-        self._p_approx = ParameterApproximation().initialize(self._model.flat_theta_dists)
+        self._p_approx = self._p_approx.initialize(self._model.flat_theta_dists)
 
         return self._p_approx.get_parameters()
 
