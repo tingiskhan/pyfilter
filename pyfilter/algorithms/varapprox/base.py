@@ -1,9 +1,11 @@
 
 
 class BaseApproximation(object):
-    """
-    A base class for constructing variational approximations of the latent states.
-    """
+    def __init__(self):
+        """
+        Base class for constructing variational approximations.
+        """
+        self._dist = None
 
     def initialize(self, data, ndim):
         """
@@ -24,7 +26,7 @@ class BaseApproximation(object):
         :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self._dist.entropy()
 
     def sample(self, num_samples):
         """
@@ -34,7 +36,8 @@ class BaseApproximation(object):
         :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        samples = (num_samples,) if isinstance(num_samples, int) else num_samples
+        return self._dist.rsample(samples)
 
     def get_parameters(self):
         """
