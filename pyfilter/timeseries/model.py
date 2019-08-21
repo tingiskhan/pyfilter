@@ -149,7 +149,6 @@ class StateSpaceModel(HelperMixin):
         :rtype: tuple[torch.Tensor]
         """
 
-        # TODO: Could be somewhat improved
         x = x_s if x_s is not None else self.initialize(size=samples)
         x_shape = steps, *x.shape
         y_shape = (*x_shape[:-1], self.obs_ndim) if self.hidden_ndim > 1 else (*x_shape, self.obs_ndim)
