@@ -25,7 +25,7 @@ def tensor_caster(func):
             res = torch.ones_like(x) * res
 
         res = res if not isinstance(res, StateVariable) else res.get_base()
-        res.__sv = tx
+        res.__sv = tx   # To keep GC from collecting the variable recording the gradients - really ugly, but works
 
         return res
 
