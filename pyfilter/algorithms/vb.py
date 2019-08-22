@@ -165,6 +165,8 @@ class VariationalSMC(VariationalBayes):
         :param filter_: The filter to use
         :type filter_: BaseFilter
         """
+        raise NotImplementedError('Currently does not work')
+
         super().__init__(model=filter_.ssm, maxiters=maxiters, **kwargs)
         self._filter = filter_.set_nparallel(self._numsamples)
 
