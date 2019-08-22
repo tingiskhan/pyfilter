@@ -39,7 +39,7 @@ class IteratedFilteringV2(BatchAlgorithm):
         self._cooling = log(1 / cooling) / iterations
 
     def initialize(self):
-        for th in self._filter.ssm.flat_theta_dists:
+        for th in self._filter.ssm.theta_dists:
             th.sample_(self._particles)
 
         return self

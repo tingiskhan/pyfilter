@@ -78,18 +78,8 @@ class Tests(unittest.TestCase):
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
-    def test_InitializeModel1D(self):
-        sample = self.model.initialize()
-
-        assert isinstance(sample, torch.Tensor)
-
-    def test_InitializeModel(self):
-        sample = self.model.initialize(1000)
-
-        assert sample.shape == (1000,)
-
     def test_Propagate(self):
-        x = self.model.initialize(1000)
+        x = self.model.hidden.i_sample(1000)
 
         sample = self.model.propagate(x)
 

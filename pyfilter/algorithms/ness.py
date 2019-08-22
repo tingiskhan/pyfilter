@@ -73,7 +73,7 @@ class NESS(SequentialAlgorithm):
 
         if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
             if self._ess < self._regth * self._particles:
-                self._regularizer.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
+                self._regularizer.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             else:
                 indices = self._resampler(self._w_rec)
                 self.filter = self.filter.resample(indices, entire_history=False)
@@ -84,7 +84,7 @@ class NESS(SequentialAlgorithm):
         self._logged_ess += (self._ess,)
 
         # ===== Jitter ===== #
-        self._kernel.update(self.filter.ssm.flat_theta_dists, self.filter, self._w_rec)
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
