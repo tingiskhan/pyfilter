@@ -1,7 +1,6 @@
 from .affine import AffineModel
 import torch
-from torch.distributions import Normal, Independent
-from .parameter import Parameter
+from torch.distributions import Normal, Independent, Distribution
 
 
 # TODO: Add integration step as well
@@ -45,11 +44,11 @@ class OrnsteinUhlenbeck(EulerMaruyma):
         """
         Implements the Ornstein-Uhlenbeck process.
         :param kappa: The reversion parameter
-        :type kappa: torch.Tensor|float|Parameter
+        :type kappa: torch.Tensor|float|Distribution
         :param gamma: The mean parameter
-        :type gamma: torch.Tensor|float|Parameter
+        :type gamma: torch.Tensor|float|Distribution
         :param sigma: The standard deviation
-        :type sigma: torch.Tensor|float|Parameter
+        :type sigma: torch.Tensor|float|Distribution
         """
         super().__init__((_fh0, _gh0), (self._f, self._g), (kappa, gamma, sigma), dt=dt, ndim=ndim)
 
