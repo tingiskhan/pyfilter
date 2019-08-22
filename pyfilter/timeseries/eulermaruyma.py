@@ -1,4 +1,4 @@
-from .base import AffineModel
+from .affine import AffineModel
 import torch
 from torch.distributions import Normal, Independent
 from .parameter import Parameter

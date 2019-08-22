@@ -455,7 +455,7 @@ class ParticleMetropolisHastings(BaseKernel):
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
             t_filt.viewify_params((filter_._n_parallel, 1))
-            _mcmc_move(t_filt.ssm.flat_theta_dists, dist)
+            _mcmc_move(t_filt.ssm.theta_dists, dist)
 
             # ===== Filter data ===== #
             t_filt.reset().initialize().longfilter(self._y, bar=False)
@@ -464,7 +464,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Calculate acceptance ratio ===== #
             plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
-            kernel = _eval_kernel(filter_.ssm.flat_theta_dists, dist, t_filt.ssm.flat_theta_dists)
+            kernel = _eval_kernel(filter_.ssm.theta_dists, dist, t_filt.ssm.theta_dists)
 
             # ===== Check which to accept ===== #
             u = torch.empty_like(quotient).uniform_().log()

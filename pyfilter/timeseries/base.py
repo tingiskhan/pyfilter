@@ -1,9 +1,10 @@
-from torch.distributions import Distribution, AffineTransform, TransformedDistribution
+from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter
 from ..utils import concater, HelperMixin
 from .statevariable import StateVariable
+from copy import deepcopy
 
 
 def tensor_caster(func):
@@ -59,23 +60,150 @@ def finite_decorator(func):
     return wrapper
 
 
-def _get_shape(x, ndim):
-    """
-    Gets the shape to generate samples for.
-    :param x: The tensor
-    :type x: torch.Tensor|float
-    :param ndim: The dimensions
-    :type ndim: int
-    :rtype: tuple[int]
-    """
+class TimeseriesInterface(HelperMixin):
+    @property
+    def theta(self):
+        """
+        Returns the parameters of the model.
+        :rtype: tuple[Parameter]
+        """
 
-    if not isinstance(x, torch.Tensor):
-        return ()
+        raise NotImplementedError()
 
-    return x.shape if ndim < 2 else x.shape[:-1]
+    @property
+    def theta_dists(self):
+        """
+        Returns the parameters that are distributions.
+        :rtype: tuple[Parameter]
+        """
+
+        raise NotImplementedError()
+
+    def viewify_params(self, shape):
+        """
+        Makes views of the parameters.
+        :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
+        :type shape: tuple|torch.Size
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        raise NotImplementedError()
+
+    def sample_params(self, shape=None):
+        """
+        Samples the parameters of the model in place.
+        :param shape: The shape to use
+        :return: Self
+        :rtype: AffineModel
+        """
+
+        raise NotImplementedError()
+
+    def weight(self, y, x):
+        """
+        Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
+        distribution is different from the underlying.
+        :param y: The value at x_t
+        :type y: torch.Tensor
+        :param x: The value at x_{t-1}
+        :type x: torch.Tensor
+        :return: The log-weights
+        :rtype: torch.Tensor
+        """
+
+        raise NotImplementedError()
+
+    def propagate(self, x, as_dist=False):
+        """
+        Propagates the model forward conditional on the previous state and current parameters.
+        :param x: The previous state
+        :type x: torch.Tensor
+        :param as_dist: Whether to return the new value as a distribution
+        :type as_dist: bool
+        :return: Samples from the model
+        :rtype: torch.Tensor|Distribution
+        """
+
+        raise NotImplementedError()
+
+    def sample(self, steps, samples=None):
+        """
+        Samples a trajectory from the model.
+        :param steps: The number of steps
+        :type steps: int
+        :param samples: Number of sample paths
+        :type samples: int
+        :return: An array of sampled values
+        :rtype: torch.Tensor
+        """
+
+        raise NotImplementedError()
+
+    def p_apply(self, func, transformed=False):
+        """
+        Applies `func` to each parameter of the model "inplace", i.e. manipulates `self.theta`.
+        :param func: Function to apply, must be of the structure func(param)
+        :type func: callable
+        :param transformed: Whether or not results from applied function are transformed variables
+        :type transformed: bool
+        :return: Instance of self
+        :rtype: AffineModel
+        """
+
+        for p in self.theta_dists:
+            if transformed:
+                p.t_values = func(p)
+            else:
+                p.values = func(p)
+
+        return self
+
+    def p_prior(self, transformed=True):
+        """
+        Calculates the prior log-likelihood of the current values.
+        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
+        :type transformed: bool
+        :return: The prior of the current parameter values
+        :rtype: torch.Tensor
+        """
+
+        if transformed:
+            prop1 = 'transformed_dist'
+            prop2 = 't_values'
+        else:
+            prop1 = 'dist'
+            prop2 = 'values'
+
+        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2))))
+
+    def p_map(self, func):
+        """
+        Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
+        that are distributions.
+        :param func: The function to apply to parameters.
+        :type func: callable
+        :return: Returns tuple of values
+        :rtype: tuple[Parameter]
+        """
+
+        out = tuple()
+        for p in self.theta_dists:
+            out += (func(p),)
+
+        return out
+
+    def copy(self):
+        """
+        Returns a deep copy of the object.
+        :return: Copy of current instance
+        :rtype: TimeseriesInterface
+        """
+
+        return deepcopy(self)
 
 
-class TimeseriesBase(HelperMixin):
+class TimeseriesBase(TimeseriesInterface):
     def __init__(self, theta, noise):
         """
         The base class for time series.
@@ -147,20 +275,10 @@ class TimeseriesBase(HelperMixin):
 
     @property
     def theta(self):
-        """
-        Returns the parameters of the model.
-        :rtype: tuple[Parameter]
-        """
-
         return self._theta
 
     @property
     def theta_dists(self):
-        """
-        Returns the indices for parameter are distributions.
-        :rtype: tuple[Parameter]
-        """
-
         distparams = tuple(p for p in self._dist_theta.values() if isinstance(p, Parameter))
         return tuple(p for p in self.theta if p.trainable) + distparams
 
@@ -182,13 +300,6 @@ class TimeseriesBase(HelperMixin):
         return tuple(shape)[-1]
 
     def viewify_params(self, shape):
-        """
-        Defines views to be used as parameters instead
-        :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
-        :type shape: tuple|torch.Size
-        :return: Self
-        :rtype: AffineModel
-        """
         shape = size_getter(shape)
         self._viewshape = shape
 
@@ -215,33 +326,12 @@ class TimeseriesBase(HelperMixin):
         return self
 
     def sample_params(self, shape=None):
-        """
-        Samples the parameters of the model in place.
-        :param shape: The shape to use
-        :return: Self
-        :rtype: AffineModel
-        """
-
         for param in self.theta_dists:
             param.sample_(shape)
 
         self.viewify_params(shape)
 
         return self
-
-    def weight(self, y, x):
-        """
-        Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
-        distribution is different from the underlying.
-        :param y: The value at x_t
-        :type y: torch.Tensor
-        :param x: The value at x_{t-1}
-        :type x: torch.Tensor
-        :return: The log-weights
-        :rtype: torch.Tensor
-        """
-
-        raise NotImplementedError()
 
     def i_sample(self, shape=None, as_dist=False):
         """
@@ -256,30 +346,7 @@ class TimeseriesBase(HelperMixin):
 
         raise NotImplementedError()
 
-    def propagate(self, x, as_dist=False):
-        """
-        Propagates the model forward conditional on the previous state and current parameters.
-        :param x: The previous state
-        :type x: torch.Tensor
-        :param as_dist: Whether to return the new value as a distribution
-        :type as_dist: bool
-        :return: Samples from the model
-        :rtype: torch.Tensor|Distribution
-        """
-
-        raise NotImplementedError()
-
     def sample(self, steps, samples=None):
-        """
-        Samples a trajectory from the model.
-        :param steps: The number of steps
-        :type steps: int
-        :param samples: Number of sample paths
-        :type samples: int
-        :return: An array of sampled values
-        :rtype: torch.Tensor
-        """
-
         x_s = self.i_sample(samples)
         out = torch.zeros(steps, *x_s.shape)
         out[0] = x_s
@@ -289,230 +356,9 @@ class TimeseriesBase(HelperMixin):
 
         return out
 
-    def p_apply(self, func, transformed=False):
-        """
-        Applies `func` to each parameter of the model "inplace", i.e. manipulates `self.theta`.
-        :param func: Function to apply, must be of the structure func(param)
-        :type func: callable
-        :param transformed: Whether or not results from applied function are transformed variables
-        :type transformed: bool
-        :return: Instance of self
-        :rtype: AffineModel
-        """
-
-        for p in self.theta_dists:
-            if transformed:
-                p.t_values = func(p)
-            else:
-                p.values = func(p)
-
-        return self
-
-    def p_prior(self, transformed=True):
-        """
-        Calculates the prior log-likelihood of the current values.
-        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
-        :type transformed: bool
-        :return: The prior of the current parameter values
-        :rtype: torch.Tensor
-        """
-
-        if transformed:
-            prop1 = 'transformed_dist'
-            prop2 = 't_values'
-        else:
-            prop1 = 'dist'
-            prop2 = 'values'
-
-        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2))))
-
-    def p_map(self, func):
-        """
-        Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
-        that are distributions.
-        :param func: The function to apply to parameters.
-        :type func: callable
-        :return: Returns tuple of values
-        :rtype: tuple[Parameter]
-        """
-
-        out = tuple()
-        for p in self.theta_dists:
-            out += (func(p),)
-
-        return out
-
     # TODO: Might not be optimal, but think it will work
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
         if key == '_theta':
             self.viewify_params(self._viewshape)
-
-
-class AffineModel(TimeseriesBase):
-    def __init__(self, initial, funcs, theta, noise):
-        """
-        Class for defining model with affine dynamics.
-        :param initial: The functions governing the initial dynamics of the process
-        :type initial: tuple[callable]
-        :param funcs: The functions governing the dynamics of the process
-        :type funcs: tuple[callable]
-        :param theta: The parameters governing the dynamics
-        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
-        :param noise: The noise governing the noise process
-        :type noise: tuple[Distribution]
-        """
-
-        super().__init__(theta, noise)
-
-        # ===== Dynamics ===== #
-        self.f0, self.g0 = initial
-        self.f, self.g = funcs
-
-    @init_caster
-    def i_mean(self):
-        """
-        Calculates the mean of the initial distribution.
-        :return: The mean of the initial distribution
-        :rtype: torch.Tensor
-        """
-
-        return self.f0(*self._theta_vals)
-
-    @init_caster
-    def i_scale(self):
-        """
-        Calculates the scale of the initial distribution.
-        :return: The scale of the initial distribution
-        :rtype: torch.Tensor
-        """
-
-        return self.g0(*self._theta_vals)
-
-    @tensor_caster
-    def f_val(self, x):
-        """
-        Evaluates the drift part of the process.
-        :param x: The state of the process.
-        :type x: torch.Tensor
-        :return: The mean
-        :rtype: torch.Tensor
-        """
-
-        return self.f(x, *self._theta_vals)
-
-    @tensor_caster
-    def g_val(self, x):
-        """
-        Evaluates the diffusion part of the process.
-        :param x: The state of the process.
-        :type x: torch.Tensor
-        :return: The mean
-        :rtype: torch.Tensor
-        """
-
-        return self.g(x, *self._theta_vals)
-
-    def mean(self, x):
-        """
-        Calculates the mean of the process conditional on the previous state and current parameters.
-        :param x: The state of the process.
-        :type x: torch.Tensor
-        :return: The mean
-        :rtype: torch.Tensor
-        """
-
-        return self.f_val(x)
-
-    def scale(self, x):
-        """
-        Calculates the scale of the process conditional on the current state and parameters.
-        :param x: The state of the process
-        :type x: torch.Tensor
-        :return: The scale
-        :rtype: torch.Tensor
-        """
-
-        return self.g_val(x)
-
-    def weight(self, y, x):
-        loc, scale = self.mean(x), self.scale(x)
-
-        return self.predefined_weight(y, loc, scale)
-
-    @finite_decorator
-    def predefined_weight(self, y, loc, scale):
-        """
-        Helper method for weighting with loc and scale.
-        :param y: The value at x_t
-        :type y: torch.Tensor
-        :param loc: The mean
-        :type loc: torch.Tensor
-        :param scale: The scale
-        :type scale: torch.Tensor
-        :return: The log-weights
-        :rtype: torch.Tensor
-        """
-
-        dist = self._define_transdist(loc, scale)
-
-        return dist.log_prob(y)
-
-    def _define_transdist(self, loc, scale):
-        """
-        Helper method for defining the transition density
-        :param loc: The mean
-        :type loc: torch.Tensor
-        :param scale: The scale
-        :type scale: torch.Tensor
-        :return: Distribution
-        :rtype: Distribution
-        """
-
-        loc, scale = torch.broadcast_tensors(loc, scale)
-
-        shape = _get_shape(loc, self.ndim)
-
-        return TransformedDistribution(self.noise.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim))
-
-    def i_sample(self, shape=None, as_dist=False):
-        shape = size_getter(shape)
-
-        dist = TransformedDistribution(
-            self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
-        )
-
-        if as_dist:
-            return dist
-
-        return dist.sample()
-
-    def propagate(self, x, as_dist=False):
-        dist = self._define_transdist(self.mean(x), self.scale(x))
-
-        if as_dist:
-            return dist
-
-        return dist.sample()
-
-
-class AffineObservations(AffineModel):
-    def __init__(self, funcs, theta, noise):
-        """
-        Class for defining model with affine dynamics in the observable process.
-        :param funcs: The functions governing the dynamics of the process
-        :type funcs: tuple of callable
-        :param theta: The parameters governing the dynamics
-        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
-        :param noise: The noise governing the noise process
-        :type noise: Distribution
-        """
-        super().__init__((None, None), funcs, theta, (None, noise))
-
-    def sample(self, steps, samples=None):
-        raise NotImplementedError("Cannot sample from Observable only!")
-
-    def _verify_dimensions(self):
-        # TODO: Implement this
-        return self

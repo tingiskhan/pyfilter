@@ -451,7 +451,7 @@ class ParticleFilter(BaseFilter):
         return self
 
     def initialize(self):
-        self._x_cur = self._model.initialize(self._particles)
+        self._x_cur = self._model.hidden.i_sample(self._particles)
         self._w_old = torch.zeros(self._particles, device=self._x_cur.device)
 
         return self

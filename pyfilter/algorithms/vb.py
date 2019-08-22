@@ -46,15 +46,6 @@ class VariationalBayes(BatchAlgorithm):
         self._decay = 0.975
 
     @property
-    def _model_params(self):
-        """
-        Helper method for returning the correct parameters.
-        :rtype: tuple[Parameter]
-        """
-
-        return self._model.flat_theta_dists if self._is_ssm else self._model.theta_dists
-
-    @property
     def s_approximation(self):
         """
         Returns the resulting variational approximation of the parameters.
@@ -82,7 +73,7 @@ class VariationalBayes(BatchAlgorithm):
         """
 
         params = self._p_approx.sample(self._numsamples)
-        for i, p in enumerate(self._model_params):
+        for i, p in enumerate(self._model.theta_dists):
             p.detach_()
             p[:] = p.bijection(params[..., i])
 
@@ -95,7 +86,7 @@ class VariationalBayes(BatchAlgorithm):
         self._model.sample_params(self._numsamples)
 
         # ===== Setup the parameter approximation ===== #
-        self._p_approx = self._p_approx.initialize(self._model_params)
+        self._p_approx = self._p_approx.initialize(self._model.theta_dists)
 
         params = self._p_approx.get_parameters()
 
@@ -127,7 +118,7 @@ class VariationalBayes(BatchAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            logl = (self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1))
+            logl = self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)
             entropy += self._s_approx.entropy()
 
         else:
@@ -174,6 +165,8 @@ class VariationalSMC(VariationalBayes):
         :param filter_: The filter to use
         :type filter_: BaseFilter
         """
+        raise NotImplementedError('Currently does not work')
+
         super().__init__(model=filter_.ssm, maxiters=maxiters, **kwargs)
         self._filter = filter_.set_nparallel(self._numsamples)
 
@@ -184,7 +177,7 @@ class VariationalSMC(VariationalBayes):
         self._model.sample_params(self._numsamples)
 
         # ===== Setup the parameter approximation ===== #
-        self._p_approx = self._p_approx.initialize(self._model.flat_theta_dists)
+        self._p_approx = self._p_approx.initialize(self._model.theta_dists)
 
         return self._p_approx.get_parameters()
 

@@ -136,7 +136,7 @@ def construct_diag(x):
     return c * b
 
 
-def flatten(iterable):
+def flatten(*args):
     """
     Flattens an array comprised of an arbitrary number of lists. Solution found at:
         https://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists
@@ -145,13 +145,13 @@ def flatten(iterable):
     :return:
     """
     out = list()
-    for el in iterable:
+    for el in args:
         if isinstance(el, Iterable) and not isinstance(el, (str, bytes, torch.Tensor)):
-            out.extend(flatten(el))
+            out.extend(flatten(*el))
         else:
             out.append(el)
 
-    return out
+    return tuple(out)
 
 
 def _yield_objs(obj):
