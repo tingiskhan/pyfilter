@@ -115,9 +115,9 @@ class Tests(unittest.TestCase):
 
         filt = SISR(self.model, 1000).set_nparallel(shape).initialize().longfilter(y)
 
-        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1)
+        filtermeans = filt.filtermeans
 
-        x = filtermeans[:, 0:1]
+        x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
 
         assert mape.median(0)[0].max() < 0.05
@@ -132,9 +132,9 @@ class Tests(unittest.TestCase):
 
         filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().longfilter(y)
 
-        filtermeans = torch.cat(filt.filtermeans()).reshape(x.shape[0], -1)
+        filtermeans = filt.filtermeans
 
-        x = filtermeans[:, 0:1]
+        x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
 
         assert mape.median(0)[0].max() < 0.05
@@ -156,7 +156,7 @@ class Tests(unittest.TestCase):
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
                 (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
                 (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),
-                (IteratedFilteringV2, {'particles': 1000, 'filter_': SISR(model.copy(), 1000)})
+                (IteratedFilteringV2, {'filter_': SISR(model.copy(), 1000)})
             ]
 
             for alg, props in algs:
