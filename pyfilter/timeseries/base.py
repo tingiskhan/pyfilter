@@ -85,7 +85,7 @@ class TimeseriesInterface(HelperMixin):
         :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
         :type shape: tuple|torch.Size
         :return: Self
-        :rtype: AffineModel
+        :rtype: TimeseriesInterface
         """
 
         raise NotImplementedError()
@@ -95,10 +95,15 @@ class TimeseriesInterface(HelperMixin):
         Samples the parameters of the model in place.
         :param shape: The shape to use
         :return: Self
-        :rtype: AffineModel
+        :rtype: TimeseriesInterface
         """
 
-        raise NotImplementedError()
+        for param in self.theta_dists:
+            param.sample_(shape)
+
+        self.viewify_params(shape)
+
+        return self
 
     def weight(self, y, x):
         """
@@ -148,7 +153,7 @@ class TimeseriesInterface(HelperMixin):
         :param transformed: Whether or not results from applied function are transformed variables
         :type transformed: bool
         :return: Instance of self
-        :rtype: AffineModel
+        :rtype: TimeseriesInterface
         """
 
         for p in self.theta_dists:
@@ -322,14 +327,6 @@ class TimeseriesBase(TimeseriesInterface):
 
         if len(pdict) > 0:
             self.noise.__init__(**pdict)
-
-        return self
-
-    def sample_params(self, shape=None):
-        for param in self.theta_dists:
-            param.sample_(shape)
-
-        self.viewify_params(shape)
 
         return self
 

@@ -42,12 +42,6 @@ class StateSpaceModel(TimeseriesInterface):
 
         return self.observable.ndim
 
-    def sample_params(self, shape=None):
-        for mod in [self.hidden, self.observable]:
-            mod.sample_params(shape)
-
-        return self
-
     def propagate(self, x, as_dist=False):
         return self.hidden.propagate(x, as_dist=as_dist)
 

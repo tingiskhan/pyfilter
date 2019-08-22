@@ -148,3 +148,12 @@ def experimental(func):
         return func(obj, *args, **kwargs)
 
     return wrapper
+
+
+def preliminary(func):
+    def wrapper(obj, *args, **kwargs):
+        warnings.warn('{:s} is only a preliminary version algorithm, use at own risk'.format(str(obj)))
+
+        return func(obj, *args, **kwargs)
+
+    return wrapper
