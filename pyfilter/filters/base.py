@@ -327,7 +327,7 @@ def cudawarning(resampling):
 
 
 class ParticleFilter(BaseFilter):
-    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9, need_grad=False):
+    def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.9, need_grad=False):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
