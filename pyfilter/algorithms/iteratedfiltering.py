@@ -1,5 +1,6 @@
 from .base import BatchAlgorithm, preliminary
 from ..filters.base import ParticleFilter
+from ..filters import SISR
 from ..resampling import residual
 from tqdm import tqdm
 from .kernels import _jitter as jittering
@@ -20,8 +21,8 @@ class IteratedFilteringV2(BatchAlgorithm):
         :type cooling: float
         """
 
-        if not isinstance(filter_, ParticleFilter):
-            raise NotImplementedError('Only works for filters of type {}!'.format(ParticleFilter.__class__.__name__))
+        if not isinstance(filter_, SISR):
+            raise NotImplementedError('Only works for filters of type {}!'.format(SISR.__class__.__name__))
 
         super().__init__(filter_)
 
