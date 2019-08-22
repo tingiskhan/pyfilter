@@ -1,34 +1,32 @@
-from .base import BatchAlgorithm
-from ..filters.base import BaseFilter, KalmanFilter, ParticleFilter
-from ..resampling import systematic
+from .base import BatchAlgorithm, preliminary
+from ..filters.base import ParticleFilter
+from ..resampling import residual
 from tqdm import tqdm
 from .kernels import _jitter as jittering
 from math import log, exp
+import torch
 
 
 class IteratedFilteringV2(BatchAlgorithm):
-    def __init__(self, filter_, particles, iterations=30, resampler=systematic, cooling=0.1):
+    @preliminary
+    def __init__(self, filter_, iterations=30, resampler=residual, cooling=0.1):
         """
         Implements the Iterated Filtering version 2 (IF2) algorithm by Ionides et al.
-        :param filter_: The filter to use. If `filter_` is of type `ParticleFilter` and the number of particles is not
-                        the same, the number of particles in `filter_` will be overridden.
-        :type filter_: BaseFilter
-        :param particles: The number of particles to use
-        :type particles: int
+        :param filter_: The filter to use.
+        :type filter_: ParticleFilter
         :param iterations: The number of iterations
         :type iterations: int
         :param cooling: How much of the scale to remain after all the iterations
         :type cooling: float
         """
 
-        super().__init__(filter_)
-        self._particles = particles
+        if not isinstance(filter_, ParticleFilter):
+            raise NotImplementedError('Only works for filters of type {}!'.format(ParticleFilter.__class__.__name__))
 
-        if isinstance(filter_, ParticleFilter):
-            self.filter._particles = particles
-            self.filter._ess = 0.
-        elif isinstance(filter_, KalmanFilter):
-            self.filter.set_nparallel(particles)
+        super().__init__(filter_)
+
+        self._particles = self.filter._particles
+        self.filter._ess = 0.
 
         self._iters = iterations
         self._resampler = resampler
@@ -39,9 +37,7 @@ class IteratedFilteringV2(BatchAlgorithm):
         self._cooling = log(1 / cooling) / iterations
 
     def initialize(self):
-        for th in self._filter.ssm.theta_dists:
-            th.sample_(self._particles)
-
+        self.filter.ssm.sample_params(self._particles)
         return self
 
     def _fit(self, y):
@@ -50,27 +46,21 @@ class IteratedFilteringV2(BatchAlgorithm):
             # ===== Iterate over data ===== #
             iterator.set_description('{:s} - Iteration {:d}'.format(str(self), m + 1))
 
-            self.filter.initialize()
+            self.filter.reset().initialize()
 
             # TODO: Should perhaps be a dynamic setting of initial variance
             scale = 0.1 * exp(-self._cooling * m)
             for yt in y:
                 # ===== Update parameters ===== #
-                self.filter.ssm.p_apply(lambda x: jittering(x, scale), transformed=True)
+                self.filter.ssm.p_apply(lambda x: jittering(x.t_values, scale), transformed=True)
 
                 # ===== Perform filtering move ===== #
                 self.filter.filter(yt)
 
                 # ===== Resample ===== #
-                if isinstance(self.filter, ParticleFilter):
-                    weights = self.filter._w_old
-                else:
-                    weights = self.filter.s_ll[-1]
+                inds = self._resampler(self.filter._w_old)
+                self.filter.resample(inds, entire_history=False)
 
-                inds = self._resampler(weights)
-                self._filter = self.filter.resample(inds, entire_history=False)
-
-                if isinstance(self.filter, ParticleFilter):
-                    self.filter._w_old *= 0.
+                self.filter._w_old = torch.zeros_like(self.filter._w_old)
 
         return self
