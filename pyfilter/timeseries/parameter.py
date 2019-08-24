@@ -61,6 +61,27 @@ class Parameter(torch.Tensor):
         return result
 
     @property
+    def shape(self):
+        """
+        Returns the dimension of the parameter.
+        :rtype: torch.Size
+        """
+
+        return self.distr.event_shape
+
+    def c_numel(self):
+        """
+        Custom 'numel' function for the prior event shape.
+        :rtype: int
+        """
+
+        res = 1
+        for it in self.shape:
+            res *= it
+
+        return res
+
+    @property
     @lru_cache()
     def transformed_dist(self):
         """
