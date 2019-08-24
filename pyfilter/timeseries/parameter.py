@@ -61,9 +61,9 @@ class Parameter(torch.Tensor):
         return result
 
     @property
-    def shape(self):
+    def c_shape(self):
         """
-        Returns the dimension of the parameter.
+        Returns the dimension of the prior.
         :rtype: torch.Size
         """
 
@@ -71,12 +71,12 @@ class Parameter(torch.Tensor):
 
     def c_numel(self):
         """
-        Custom 'numel' function for the prior event shape.
+        Custom 'numel' function for the number of elements in the prior's event shape.
         :rtype: int
         """
 
         res = 1
-        for it in self.shape:
+        for it in self.c_shape:
             res *= it
 
         return res
@@ -122,13 +122,13 @@ class Parameter(torch.Tensor):
         :param x: The values
         :type x: Tensor
         """
-        if not isinstance(x, torch.Tensor) and self.data is not None:
+        if not isinstance(x, torch.Tensor):
             raise ValueError('Is not the same type!')
+        elif x.shape != self.data.shape:
+            raise ValueError('Not of same shape!')
         elif not self.trainable:
             self.data[:] = x
             return
-        elif x.shape != self.data.shape:
-            raise ValueError('Not of same shape!')
 
         support = self._prior.support.check(x)
 
