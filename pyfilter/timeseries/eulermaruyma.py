@@ -40,9 +40,9 @@ def _gh0(reversion, level, std):
 
 
 class OrnsteinUhlenbeck(EulerMaruyma):
-    def __init__(self, kappa, gamma, sigma, dt=1., ndim=1):
+    def __init__(self, kappa, gamma, sigma, dt=1.):
         """
-        Implements the Ornstein-Uhlenbeck process. If ndim > 1 then the processes are assumed independent.
+        Implements the Ornstein-Uhlenbeck process.
         :param kappa: The reversion parameter
         :type kappa: torch.Tensor|float|Distribution
         :param gamma: The mean parameter
@@ -50,7 +50,7 @@ class OrnsteinUhlenbeck(EulerMaruyma):
         :param sigma: The standard deviation
         :type sigma: torch.Tensor|float|Distribution
         """
-        super().__init__((_fh0, _gh0), (self._f, self._g), (kappa, gamma, sigma), dt=dt, ndim=ndim)
+        super().__init__((_fh0, _gh0), (self._f, self._g), (kappa, gamma, sigma), dt=dt, ndim=1)
 
     def mean(self, x):
         return self.f_val(x)
