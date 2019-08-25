@@ -40,7 +40,7 @@ class ParameterMeanField(BaseApproximation):
         return self._mean, self._std
 
     def initialize(self, parameters, *args):
-        self._mean = torch.zeros(len(parameters))
+        self._mean = torch.zeros(sum(p.c_numel() for p in parameters))
         self._std = torch.ones_like(self._mean)
 
         for i, p in enumerate(parameters):

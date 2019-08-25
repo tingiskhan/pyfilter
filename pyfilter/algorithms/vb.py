@@ -6,6 +6,7 @@ from math import sqrt
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
+from .kernels import _unflattify
 
 
 eps = sqrt(torch.finfo(torch.float32).eps)
@@ -75,7 +76,7 @@ class VariationalBayes(BatchAlgorithm):
         params = self._p_approx.sample(self._numsamples)
         for i, p in enumerate(self._model.theta_dists):
             p.detach_()
-            p[:] = p.bijection(params[..., i])
+            p[:] = _unflattify(p.bijection(params[..., i]), p.c_shape)
 
         self._model.viewify_params((self._numsamples, 1))
 
