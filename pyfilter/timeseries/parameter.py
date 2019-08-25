@@ -33,10 +33,12 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
 
 class Parameter(torch.Tensor):
     def __new__(cls, parameter=None, requires_grad=False):
-        if isinstance(parameter, torch.Tensor):
+        if isinstance(parameter, Parameter):
+            raise ValueError('The input cannot be of instance `{}`!'.format(parameter.__class__.__name__))
+        elif isinstance(parameter, torch.Tensor):
             _data = parameter
         elif not isinstance(parameter, dist.Distribution):
-            _data = torch.tensor(parameter)
+            _data = torch.tensor(parameter) if not isinstance(parameter, np.ndarray) else torch.from_numpy(parameter)
         else:
             # This is just a place holder
             _data = torch.empty(parameter.event_shape)

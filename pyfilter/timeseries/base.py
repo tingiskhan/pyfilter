@@ -253,7 +253,7 @@ class TimeseriesBase(TimeseriesInterface):
                 elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
                     raise ValueError('You cannot have distributional parameters in the initial distribution!')
 
-        self._theta = tuple(Parameter(th) for th in theta)
+        self._theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
         # ===== Check dimensions ===== #
         self._verify_dimensions()
@@ -284,8 +284,7 @@ class TimeseriesBase(TimeseriesInterface):
 
     @property
     def theta_dists(self):
-        distparams = tuple(p for p in self._dist_theta.values() if isinstance(p, Parameter))
-        return tuple(p for p in self.theta if p.trainable) + distparams
+        return tuple(p for p in self.theta if p.trainable) + tuple(self._dist_theta.values())
 
     @property
     @lru_cache()
