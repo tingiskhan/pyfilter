@@ -431,7 +431,7 @@ def _eval_kernel(params, dist, n_params):
     """
 
     p_vals, _ = stacker(params, lambda u: u.t_values)
-    n_p_vals, _ = stacker(params, lambda u: u.t_values)
+    n_p_vals, _ = stacker(n_params, lambda u: u.t_values)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
