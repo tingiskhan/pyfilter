@@ -6,7 +6,7 @@ from math import sqrt
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
-from .kernels import _unflattify
+from .kernels import _unflattify, stacker
 
 
 eps = sqrt(torch.finfo(torch.float32).eps)
@@ -36,6 +36,8 @@ class VariationalBayes(BatchAlgorithm):
 
         self._s_approx = approx or StateMeanField()
         self._p_approx = ParameterMeanField()
+
+        self._p_mask = None
 
         self._is_ssm = isinstance(model, StateSpaceModel)
 
@@ -74,9 +76,9 @@ class VariationalBayes(BatchAlgorithm):
         """
 
         params = self._p_approx.sample(self._numsamples)
-        for i, p in enumerate(self._model.theta_dists):
+        for p, msk in zip(self._model.theta_dists, self._mask):
             p.detach_()
-            p[:] = _unflattify(p.bijection(params[..., i]), p.c_shape)
+            p[:] = _unflattify(p.bijection(params[:, msk]), p.c_shape)
 
         self._model.viewify_params((self._numsamples, 1))
 
@@ -85,6 +87,7 @@ class VariationalBayes(BatchAlgorithm):
     def _initialize(self, y):
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._numsamples)
+        _, self._mask = stacker(self._model.theta_dists)    # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
         self._p_approx = self._p_approx.initialize(self._model.theta_dists)
