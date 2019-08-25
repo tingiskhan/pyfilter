@@ -47,7 +47,10 @@ class ParameterMeanField(BaseApproximation):
         _, mask = stacker(parameters)
 
         for p, msk in zip(parameters, mask):
-            self._mean[msk] = p.bijection.inv(p.distr.mean)
+            try:
+                self._mean[msk] = p.bijection.inv(p.distr.mean)
+            except NotImplementedError:
+                pass
 
         self._mean.requires_grad_(True)
         self._std.requires_grad_(True)
