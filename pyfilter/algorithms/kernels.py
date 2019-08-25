@@ -274,7 +274,21 @@ def _shrink(values, w, ess):
     return mean + beta * (values - mean), bw
 
 
-# TODO: For all kernels need to figure out simple way to reshape parameters to correct sizes
+def _unflattify(values, shape):
+    """
+    Unflattifies parameter values.
+    :param values: The flattened array of values that are to be unflattified
+    :type values: torch.Tensor
+    :param shape: The shape of the parameter prior
+    :type shape: torch.Size
+    :rtype: torch.Tensor
+    """
+
+    if len(shape) < 1 or values.shape[1:] == shape:
+        return values
+
+    return values.reshape(values.shape[0], *shape)
+
 
 class ShrinkageKernel(BaseKernel):
     """
@@ -292,7 +306,7 @@ class ShrinkageKernel(BaseKernel):
         for i, p in enumerate(parameters):
             m, s = means[:, i], scales[i]
 
-            p.t_values = _jitter(m, s)
+            p.t_values = _unflattify(_jitter(m, s), p.c_shape)
 
         return self
 
@@ -320,10 +334,10 @@ class AdaptiveShrinkageKernel(BaseKernel):
             m, s = means[:, msk], scales[msk]
             switched = (delta.abs() < self._eps).all()
 
-            p.t_values = _jitter(
+            p.t_values = _unflattify(_jitter(
                 m if not switched else p.t_values,
                 s
-            )
+            ), p.c_shape)
 
         return self
 
@@ -375,7 +389,7 @@ class RegularizedKernel(BaseKernel):
         # ===== Sample params ===== #
         samples = self._sample_epachnikov(n, values.shape[0])
         for p, msk in zip(parameters, mask):
-            p.t_values = p.t_values + scale[msk] * samples[:, msk]
+            p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
 
         return self
 
@@ -384,7 +398,7 @@ def _mcmc_move(params, dist, mask, shape):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: tuple[Distribution]
+    :type params: tuple[Parameter]
     :param dist: The distribution to use for sampling
     :type dist: MultivariateNormal
     :param mask: The mask to apply for parameters
@@ -398,7 +412,7 @@ def _mcmc_move(params, dist, mask, shape):
     rvs = dist.sample((shape,))
 
     for p, msk in zip(params, mask):
-        p.t_values = rvs[:, msk]
+        p.t_values = _unflattify(rvs[:, msk], p.c_shape)
 
     return True
 
@@ -416,8 +430,8 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals = torch.stack([p.t_values for p in params], dim=-1)
-    n_p_vals = torch.stack([p.t_values for p in n_params], dim=-1)
+    p_vals, _ = stacker(params, lambda u: u.t_values)
+    n_p_vals, _ = stacker(params, lambda u: u.t_values)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
