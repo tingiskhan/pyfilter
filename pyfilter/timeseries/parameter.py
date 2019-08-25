@@ -33,10 +33,12 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
 
 class Parameter(torch.Tensor):
     def __new__(cls, parameter=None, requires_grad=False):
-        if isinstance(parameter, torch.Tensor):
+        if isinstance(parameter, Parameter):
+            raise ValueError('The input cannot be of instance `{}`!'.format(parameter.__class__.__name__))
+        elif isinstance(parameter, torch.Tensor):
             _data = parameter
         elif not isinstance(parameter, dist.Distribution):
-            _data = torch.tensor(parameter)
+            _data = torch.tensor(parameter) if not isinstance(parameter, np.ndarray) else torch.from_numpy(parameter)
         else:
             # This is just a place holder
             _data = torch.empty(parameter.event_shape)
@@ -59,6 +61,27 @@ class Parameter(torch.Tensor):
 
         memo[id(self)] = result
         return result
+
+    @property
+    def c_shape(self):
+        """
+        Returns the dimension of the prior.
+        :rtype: torch.Size
+        """
+
+        return self.distr.event_shape
+
+    def c_numel(self):
+        """
+        Custom 'numel' function for the number of elements in the prior's event shape.
+        :rtype: int
+        """
+
+        res = 1
+        for it in self.c_shape:
+            res *= it
+
+        return res
 
     @property
     @lru_cache()
@@ -101,13 +124,13 @@ class Parameter(torch.Tensor):
         :param x: The values
         :type x: Tensor
         """
-        if not isinstance(x, torch.Tensor) and self.data is not None:
+        if not isinstance(x, torch.Tensor):
             raise ValueError('Is not the same type!')
+        elif x.shape != self.data.shape:
+            raise ValueError('Not of same shape!')
         elif not self.trainable:
             self.data[:] = x
             return
-        elif x.shape != self.data.shape:
-            raise ValueError('Not of same shape!')
 
         support = self._prior.support.check(x)
 

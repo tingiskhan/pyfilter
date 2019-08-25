@@ -7,6 +7,33 @@ from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
 
 
+def stacker(parameters, selector=lambda u: u.values):
+    """
+    Stacks the parameters and returns a n-tuple containing the mask for each parameter.
+    :param parameters: The parameters
+    :type parameters: tuple[Parameter]|list[Parameter]
+    :param selector: The selector
+    :rtype: torch.Tensor, tuple[slice]
+    """
+
+    to_conc = tuple()
+    mask = tuple()
+
+    i = 0
+    for p in parameters:
+        if p.c_numel() < 2:
+            to_conc += (selector(p).unsqueeze(-1),)
+            slc = i
+        else:
+            to_conc += (selector(p).flatten(1),)
+            slc = slice(i, i + p.c_numel())
+
+        mask += (slc,)
+        i += p.c_numel()
+
+    return torch.cat(to_conc, dim=-1), mask
+
+
 class BaseKernel(object):
     def __init__(self, record_stats=True, length=2):
         """
@@ -209,8 +236,6 @@ def _shrink(values, w, ess):
     :type values: torch.Tensor
     :param w: The normalized weights
     :type w: torch.Tensor
-    :param p: The p parameter
-    :type p: float
     :param ess: The previous ESS
     :type ess: float
     :return: The mean of the shrunk distribution and bandwidth
@@ -249,6 +274,22 @@ def _shrink(values, w, ess):
     return mean + beta * (values - mean), bw
 
 
+def _unflattify(values, shape):
+    """
+    Unflattifies parameter values.
+    :param values: The flattened array of values that are to be unflattified
+    :type values: torch.Tensor
+    :param shape: The shape of the parameter prior
+    :type shape: torch.Size
+    :rtype: torch.Tensor
+    """
+
+    if len(shape) < 1 or values.shape[1:] == shape:
+        return values
+
+    return values.reshape(values.shape[0], *shape)
+
+
 class ShrinkageKernel(BaseKernel):
     """
     An improved regular shrinkage kernel, from the paper ..
@@ -258,13 +299,14 @@ class ShrinkageKernel(BaseKernel):
         ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        means, scales = _shrink(torch.stack(tuple(p.t_values for p in parameters), -1), weights, ess)
+        stacked, mask = stacker(parameters, lambda u: u.t_values)
+        means, scales = _shrink(stacked, weights, ess)
 
         # ===== Mutate parameters ===== #
         for i, p in enumerate(parameters):
             m, s = means[:, i], scales[i]
 
-            p.t_values = _jitter(m, s)
+            p.t_values = _unflattify(_jitter(m, s), p.c_shape)
 
         return self
 
@@ -279,23 +321,23 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         super().__init__(**kwargs)
         self._eps = eps
-        self._switched = False
 
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
 
         # ===== Perform shrinkage ===== #
-        means, scales = _shrink(torch.stack(tuple(p.t_values for p in parameters), -1), weights, ess)
+        stacked, mask = stacker(parameters, lambda u: u.t_values)
+        means, scales = _shrink(stacked, weights, ess)
 
         # ===== Mutate parameters ===== #
-        for i, (p, delta) in enumerate(zip(parameters, self.get_diff())):
-            m, s = means[:, i], scales[i]
+        for p, msk, delta in zip(parameters, mask, self.get_diff()):
+            m, s = means[:, msk], scales[msk]
             switched = (delta.abs() < self._eps).all()
 
-            p.t_values = _jitter(
+            p.t_values = _unflattify(_jitter(
                 m if not switched else p.t_values,
                 s
-            )
+            ), p.c_shape)
 
         return self
 
@@ -318,7 +360,7 @@ class RegularizedKernel(BaseKernel):
 
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
-        values = torch.stack([p.t_values for p in parameters], dim=-1)
+        values, mask = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
         w = weights.unsqueeze(-1)
@@ -346,55 +388,31 @@ class RegularizedKernel(BaseKernel):
 
         # ===== Sample params ===== #
         samples = self._sample_epachnikov(n, values.shape[0])
-        for i, p in enumerate(parameters):
-            p.t_values = p.t_values + scale[i] * samples[:, i]
+        for p, msk in zip(parameters, mask):
+            p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
 
         return self
 
 
-def _disc_jitter(parameter, i, w, p, ess, shrink):
-    """
-    Jitters the parameters using discrete propagation.
-    :param parameter: The parameters of the model, inputs as (values, prior)
-    :type parameter: Parameter
-    :param i: The indices to jitter
-    :type i: torch.Tensor
-    :param w: The normalized weights
-    :type w: torch.Tensor
-    :param p: The p parameter
-    :type p: float
-    :param ess: The previous ESS
-    :type ess: float
-    :param shrink: Whether to shrink as well as adjusting variance
-    :type shrink: bool
-    :return: Proposed values
-    :rtype: torch.Tensor
-    """
-    # TODO: This may be improved
-    if i.sum() == 0:
-        return parameter.t_values
-
-    return (1 - i) * parameter.t_values + i * _continuous_jitter(parameter, w, p, ess, shrink=shrink)
-
-
-def _mcmc_move(params, dist):
+def _mcmc_move(params, dist, mask, shape):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: tuple[Distribution]
+    :type params: tuple[Parameter]
     :param dist: The distribution to use for sampling
     :type dist: MultivariateNormal
+    :param mask: The mask to apply for parameters
+    :type mask: tuple[slice]
+    :param shape: The shape to sample
+    :type shape: int
     :return: Samples from a multivariate normal distribution
     :rtype: torch.Tensor
     """
-    shape = next(p.t_values.shape for p in params)
-    if len(shape) > 1:
-        shape = shape[:-1]
 
-    rvs = dist.sample(shape)
+    rvs = dist.sample((shape,))
 
-    for p, vals in zip(params, rvs.t()):
-        p.t_values = vals
+    for p, msk in zip(params, mask):
+        p.t_values = _unflattify(rvs[:, msk], p.c_shape)
 
     return True
 
@@ -412,8 +430,8 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals = torch.stack([p.t_values for p in params], dim=-1)
-    n_p_vals = torch.stack([p.t_values for p in n_params], dim=-1)
+    p_vals, _ = stacker(params, lambda u: u.t_values)
+    n_p_vals, _ = stacker(n_params, lambda u: u.t_values)
 
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
@@ -432,11 +450,25 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def set_data(self, y):
+        """
+        Sets the data to be used when calculating acceptance probabilities.
+        :param y: The data
+        :type y: tuple[torch.Tensor]
+        :return: Self
+        :rtype: ParticleMetropolisHastings
+        """
         self._y = y
 
-    def define_pdf(self, parameters, weights):
+        return self
+
+    def define_pdf(self, values, weights):
         """
-        The method to be overriden by the user for defining the kernel to propagate the parameters.
+        The method to be overridden by the user for defining the kernel to propagate the parameters. Note that the
+        parameters are propagated in the transformed space.
+        :param values: The parameters as a single Tensor
+        :type values: torch.Tensor
+        :param weights: The normalized weights of the particles
+        :type weights: torch.Tensor
         :return: A distribution
         :rtype: MultivariateNormal|Independent
         """
@@ -446,7 +478,8 @@ class ParticleMetropolisHastings(BaseKernel):
     def _update(self, parameters, filter_, weights):
         for i in range(self._nsteps):
             # ===== Construct distribution ===== #
-            dist = self.define_pdf(parameters, weights)
+            stacked, mask = stacker(parameters, lambda u: u.t_values)
+            dist = self.define_pdf(stacked, weights)
 
             # ===== Resample among parameters ===== #
             inds = self._resampler(weights, normalized=True)
@@ -455,7 +488,7 @@ class ParticleMetropolisHastings(BaseKernel):
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
             t_filt.viewify_params((filter_._n_parallel, 1))
-            _mcmc_move(t_filt.ssm.theta_dists, dist)
+            _mcmc_move(t_filt.ssm.theta_dists, dist, mask, stacked.shape[0])
 
             # ===== Filter data ===== #
             t_filt.reset().initialize().longfilter(self._y, bar=False)
@@ -480,14 +513,9 @@ class ParticleMetropolisHastings(BaseKernel):
 
 
 class SymmetricMH(ParticleMetropolisHastings):
-    def define_pdf(self, parameters, weights):
-        asarray = torch.stack([p.t_values for p in parameters], dim=-1)
-
-        if asarray.dim() > 2:
-            asarray = asarray[..., 0]
-
-        mean = (asarray * weights.unsqueeze(-1)).sum(0)
-        centralized = asarray - mean
+    def define_pdf(self, values, weights):
+        mean = (values * weights.unsqueeze(-1)).sum(0)
+        centralized = values - mean
         cov = torch.matmul(weights * centralized.t(), centralized)
 
         return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))

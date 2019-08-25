@@ -17,7 +17,7 @@ class LinearGaussianObservations(Proposal):
         self._mat = None
 
     def _get_mat_and_fix_y(self, x, y):
-        return self._model.observable.theta[0].values, y
+        return self._model.observable._theta_vals[0], y
 
     def set_model(self, model):
         if not isinstance(model, LGO):

@@ -1,6 +1,7 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal
+from ..kernels import stacker
 
 
 class StateMeanField(BaseApproximation):
@@ -40,11 +41,16 @@ class ParameterMeanField(BaseApproximation):
         return self._mean, self._std
 
     def initialize(self, parameters, *args):
-        self._mean = torch.zeros(len(parameters))
+        self._mean = torch.zeros(sum(p.c_numel() for p in parameters))
         self._std = torch.ones_like(self._mean)
 
-        for i, p in enumerate(parameters):
-            self._mean[i] = p.bijection.inv(p.distr.mean)
+        _, mask = stacker(parameters)
+
+        for p, msk in zip(parameters, mask):
+            try:
+                self._mean[msk] = p.bijection.inv(p.distr.mean)
+            except NotImplementedError:
+                pass
 
         self._mean.requires_grad_(True)
         self._std.requires_grad_(True)
