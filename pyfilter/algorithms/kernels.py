@@ -343,13 +343,13 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
 
 class RegularizedKernel(BaseKernel):
-    def _sample_epachnikov(self, ndim, samples, is_samples=10000):
+    def _sample_epachnikov(self, ndim, samples, device, is_samples=10000):
         """
         Samples from the epachnikov kernel.
         :rtype: torch.Tensor
         """
 
-        hypercube = torch.empty((is_samples, ndim)).uniform_(-1, 1)    # type: torch.Tensor
+        hypercube = torch.empty((is_samples, ndim), device=device).uniform_(-1, 1)    # type: torch.Tensor
         norm = hypercube.norm(dim=-1)
         w = (1 - norm ** 2) * (norm < 1).float()
 
@@ -387,7 +387,7 @@ class RegularizedKernel(BaseKernel):
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = self._sample_epachnikov(n, values.shape[0])
+        samples = self._sample_epachnikov(n, values.shape[0], device=values.device)
         for p, msk in zip(parameters, mask):
             p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
 
