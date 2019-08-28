@@ -2,7 +2,7 @@ import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
-from torch.distributions import Distribution
+from torch.distributions import Distribution, Transform
 from .timeseries.parameter import Parameter
 import numbers
 
@@ -195,7 +195,7 @@ def _recursion_helper(a, f):
     elif isinstance(a, Iterable) and not isinstance(a, str):
         for item in (a if not isinstance(a, dict) else a.values()):
             _recursion_helper(item, f)
-    elif isinstance(a, Distribution):
+    elif isinstance(a, (Distribution, Transform)):
         for _, at in _yield_objs(a):
             _recursion_helper(at, f)
 
