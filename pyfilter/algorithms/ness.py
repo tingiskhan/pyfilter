@@ -3,11 +3,11 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess, normalize
 import torch
 from ..resampling import residual
-from .kernels import AdaptiveShrinkageKernel, RegularizedKernel
+from .kernels import RegularizedKernel, AdaptiveShrinkageKernel
 
 
 class NESS(SequentialAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, resampling=residual, kernel=None, reg_thresh=0.5):
+    def __init__(self, filter_, particles, threshold=0.9, resampling=residual, kernel=None):
         """
         Implements the NESS alorithm by Miguez and Crisan.
         :param particles: The particles to use for approximating the density
@@ -16,8 +16,6 @@ class NESS(SequentialAlgorithm):
         :type threshold: float
         :param kernel: The kernel to use when propagating the parameter particles
         :type kernel: pyfilter.algorithms.kernels.BaseKernel
-        :param reg_thresh: When to regularize
-        :type reg_thresh: float
         """
 
         cudawarning(resampling)
@@ -33,7 +31,7 @@ class NESS(SequentialAlgorithm):
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
-        self._regth = reg_thresh
+        self._regth = 0.5 * threshold
 
         self._regularizer = RegularizedKernel()
         self._regularizer.set_resampler(self._resampler)
@@ -67,21 +65,31 @@ class NESS(SequentialAlgorithm):
 
         return torch.tensor(self._logged_ess)
 
+    def _resample(self):
+        """
+        Helper methdd for resampling
+        :return: Self
+        :rtype: NESS
+        """
+
+        if self._ess < self._regth * self._particles:
+            self._regularizer.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
+        else:
+            indices = self._resampler(self._w_rec)
+            self.filter = self.filter.resample(indices, entire_history=False)
+
+        self._w_rec = torch.zeros_like(self._w_rec)
+
+        return self
+
     def _update(self, y):
-        # ===== Resample ===== #
-        self._ess = get_ess(self._w_rec)
-
-        if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
-            if self._ess < self._regth * self._particles:
-                self._regularizer.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
-            else:
-                indices = self._resampler(self._w_rec)
-                self.filter = self.filter.resample(indices, entire_history=False)
-
-            self._w_rec = torch.zeros_like(self._w_rec)
-
         # ===== Log ESS ===== #
+        self._ess = get_ess(self._w_rec)
         self._logged_ess += (self._ess,)
+
+        # ===== Resample ===== #
+        if self._ess < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
+            self._resample()
 
         # ===== Jitter ===== #
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)

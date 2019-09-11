@@ -35,7 +35,7 @@ def stacker(parameters, selector=lambda u: u.values):
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=True, length=2):
+    def __init__(self, record_stats=False, length=None):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
@@ -72,6 +72,8 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
         self._resampler = resampler
+
+        return self
 
     def update(self, parameters, filter_, weights):
         """
@@ -203,32 +205,6 @@ def _jitter(values, scale):
     return values + scale * torch.empty_like(values).normal_()
 
 
-def _continuous_jitter(parameter, w, p, ess, shrink=True):
-    """
-    Jitters the parameters using the optimal shrinkage of ...
-    :param parameter: The parameters of the model, inputs as (values, prior)
-    :type parameter: Parameter
-    :param w: The normalized weights
-    :type w: torch.Tensor
-    :param p: The p parameter
-    :type p: float
-    :param ess: The previous ESS
-    :type ess: float
-    :param shrink: Whether to shrink as well as adjusting variance
-    :type shrink: bool
-    :return: Proposed values
-    :rtype: torch.Tensor
-    """
-    values = parameter.t_values
-
-    if not shrink:
-        return _jitter(values, 1 / sqrt(ess ** ((p + 2) / p)))
-
-    mean, bw = _shrink(values, w, ess)
-
-    return _jitter(mean, bw)
-
-
 def _shrink(values, w, ess):
     """
     Shrinks the parameters towards their mean.
@@ -290,6 +266,27 @@ def _unflattify(values, shape):
     return values.reshape(values.shape[0], *shape)
 
 
+class RegularJittering(BaseKernel):
+    def __init__(self, p=4, **kwargs):
+        """
+        The regular jittering kernel proposed in the original paper.
+        :param p: The p controlling the variance
+        :type p: float
+        """
+        super().__init__(**kwargs)
+        self._p = p
+
+    def _update(self, parameters, filter_, weights):
+        ess = get_ess(weights, normalized=True)
+
+        # ===== Mutate parameters ===== #
+        scale = 1 / sqrt(ess ** ((self._p + 2) / self._p))
+        for p in parameters:
+            p.t_values = _unflattify(_jitter(p.t_values, scale), p.c_shape)
+
+        return self
+
+
 class ShrinkageKernel(BaseKernel):
     """
     An improved regular shrinkage kernel, from the paper ..
@@ -297,14 +294,15 @@ class ShrinkageKernel(BaseKernel):
 
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
+        w = normalize(filter_.s_ll[-1] if len(filter_.s_ll) > 0 else torch.zeros_like(weights))
 
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        means, scales = _shrink(stacked, weights, ess)
+        shrunk_mean, scales = _shrink(stacked, w, ess)
 
         # ===== Mutate parameters ===== #
-        for i, p in enumerate(parameters):
-            m, s = means[:, i], scales[i]
+        for msk, p in zip(mask, parameters):
+            m, s = shrunk_mean[:, msk], scales[msk]
 
             p.t_values = _unflattify(_jitter(m, s), p.c_shape)
 
@@ -318,26 +316,40 @@ class AdaptiveShrinkageKernel(BaseKernel):
         :param eps: The tolerance for when to stop shrinking
         :type eps: float
         """
-
         super().__init__(**kwargs)
         self._eps = eps
+        self._old_var = None
 
     def _update(self, parameters, filter_, weights):
         ess = get_ess(weights, normalized=True)
+        w = normalize(filter_.s_ll[-1] if len(filter_.s_ll) > 0 else torch.zeros_like(weights))
 
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        means, scales = _shrink(stacked, weights, ess)
+        shrunk_mean, scales = _shrink(stacked, w, ess)
+
+        # ===== Check "convergence" ====== #
+        w = add_dimensions(weights, stacked.dim())
+
+        mean = (w * stacked).sum(0)
+        var = (w * (stacked - mean) ** 2).sum(0)
+
+        if self._old_var is None:
+            var_diff = var
+        else:
+            var_diff = var - self._old_var
 
         # ===== Mutate parameters ===== #
-        for p, msk, delta in zip(parameters, mask, self.get_diff()):
-            m, s = means[:, msk], scales[msk]
-            switched = (delta.abs() < self._eps).all()
+        for p, msk in zip(parameters, mask):
+            m, s = shrunk_mean[:, msk], scales[msk]
+            switched = (var_diff[msk].abs() < self._eps).all()
 
             p.t_values = _unflattify(_jitter(
                 m if not switched else p.t_values,
                 s
             ), p.c_shape)
+
+        self._old_var = var
 
         return self
 
