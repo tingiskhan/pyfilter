@@ -49,7 +49,7 @@ class BaseKernel(object):
         self._length = length
         self._resampler = None
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, *args):
         """
         Defines the function for updating the parameters for the user to override.
         :param parameters: The parameters of the model to update
@@ -75,7 +75,7 @@ class BaseKernel(object):
 
         return self
 
-    def update(self, parameters, filter_, weights):
+    def update(self, parameters, filter_, weights, *args):
         """
         Defines the function for updating the parameters.
         :param parameters: The parameters of the model to update
@@ -93,7 +93,7 @@ class BaseKernel(object):
         if self._record_stats:
             self.record_stats(parameters, w)
 
-        self._update(parameters, filter_, w)
+        self._update(parameters, filter_, w, *args)
 
         return self
 
@@ -145,23 +145,6 @@ class BaseKernel(object):
 
                 temp += (tempdict,)
             res += (temp,)
-
-        return res
-
-    def get_diff(self):
-        """
-        Get the difference between the two latest scales.
-        :rtype: tuple[torch.Tensor]
-        """
-
-        if self._length is not None and self._length < 2:
-            raise ValueError('Length must be bigger than 1!')
-        elif len(self._recorded_stats) < 2:
-            return tuple(p['scale'] for p in self._recorded_stats[-1])
-
-        res = tuple()
-        for pt, ptm1 in zip(self._recorded_stats[-1], self._recorded_stats[-2]):
-            res += (pt['scale'] - ptm1['scale'],)
 
         return res
 
@@ -276,11 +259,9 @@ class RegularJittering(BaseKernel):
         super().__init__(**kwargs)
         self._p = p
 
-    def _update(self, parameters, filter_, weights):
-        ess = get_ess(weights, normalized=True)
-
+    def _update(self, parameters, filter_, weights, ess):
         # ===== Mutate parameters ===== #
-        scale = 1 / sqrt(ess ** ((self._p + 2) / self._p))
+        scale = 1 / sqrt(weights.numel() ** ((self._p + 2) / self._p))
         for p in parameters:
             p.t_values = _unflattify(_jitter(p.t_values, scale), p.c_shape)
 
@@ -292,13 +273,10 @@ class ShrinkageKernel(BaseKernel):
     An improved regular shrinkage kernel, from the paper ..
     """
 
-    def _update(self, parameters, filter_, weights):
-        ess = get_ess(weights, normalized=True)
-        w = normalize(filter_.s_ll[-1] if len(filter_.s_ll) > 0 else torch.zeros_like(weights))
-
+    def _update(self, parameters, filter_, weights, ess):
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        shrunk_mean, scales = _shrink(stacked, w, ess)
+        shrunk_mean, scales = _shrink(stacked, weights, ess)
 
         # ===== Mutate parameters ===== #
         for msk, p in zip(mask, parameters):
@@ -320,13 +298,10 @@ class AdaptiveShrinkageKernel(BaseKernel):
         self._eps = eps
         self._old_var = None
 
-    def _update(self, parameters, filter_, weights):
-        ess = get_ess(weights, normalized=True)
-        w = normalize(filter_.s_ll[-1] if len(filter_.s_ll) > 0 else torch.zeros_like(weights))
-
+    def _update(self, parameters, filter_, weights, ess):
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        shrunk_mean, scales = _shrink(stacked, w, ess)
+        shrunk_mean, scales = _shrink(stacked, weights, ess)
 
         # ===== Check "convergence" ====== #
         w = add_dimensions(weights, stacked.dim())
@@ -341,13 +316,10 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         for p, msk in zip(parameters, mask):
-            m, s = shrunk_mean[:, msk], scales[msk]
             switched = (var_diff[msk].abs() < self._eps).all()
+            m = (stacked if switched else shrunk_mean)[:, msk]
 
-            p.t_values = _unflattify(_jitter(
-                m if not switched else p.t_values,
-                s
-            ), p.c_shape)
+            p.t_values = _unflattify(_jitter(m, scales[msk]), p.c_shape)
 
         self._old_var = var
 
@@ -370,7 +342,7 @@ class RegularizedKernel(BaseKernel):
 
         return hypercube[inds]
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, ess):
         ess = get_ess(weights, normalized=True)
         values, mask = stacker(parameters, lambda u: u.t_values)
 

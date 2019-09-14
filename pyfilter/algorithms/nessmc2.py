@@ -32,7 +32,7 @@ class NESSMC2(SequentialAlgorithm):
 
     @property
     def logged_ess(self):
-        return torch.stack(self._smc2._logged_ess + self._ness._logged_ess, dim=0)
+        return torch.cat((self._smc2.logged_ess, self._ness.logged_ess))
 
     def initialize(self):
         self._smc2.initialize()
@@ -59,6 +59,7 @@ class NESSMC2(SequentialAlgorithm):
                 self._smc2.rejuvenate()
 
             self._ness._w_rec = self._smc2._w_rec
+            self._ness._logged_ess = (self._smc2.logged_ess[-1],)
             self._iterator.set_description(desc=str(self._ness))
 
         return self._ness.update(y)
