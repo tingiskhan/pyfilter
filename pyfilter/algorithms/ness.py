@@ -26,19 +26,17 @@ class NESS(SequentialAlgorithm):
 
         super().__init__(filter_)
 
-        self._kernel = kernel or ShrinkageKernel()
+        self._kernel = kernel or AdaptiveShrinkageKernel()
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
         self._w_rec = torch.zeros(particles)
+        self._old_ll = torch.zeros_like(self._w_rec)
 
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
-        self._regth = 0.5 * threshold
-
-        self._regularizer = RegularizedKernel()
-        self._regularizer.set_resampler(self._resampler)
+        self._regularizer = RegularizedKernel().set_resampler(self._resampler)
 
         # ===== ESS related ===== #
         self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
@@ -73,29 +71,34 @@ class NESS(SequentialAlgorithm):
         :return: Self
         :rtype: NESS
         """
+        if self._logged_ess[-1] < self._th / 2 * self._particles:
+            self._regularizer.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
+        else:
+            indices = self._resampler(self._w_rec)
+            self.filter = self.filter.resample(indices, entire_history=False)
 
-        indices = self._resampler(self._w_rec)
-        self.filter = self.filter.resample(indices, entire_history=False)
         self._w_rec = torch.zeros_like(self._w_rec)
+        self._old_ll = torch.zeros_like(self._old_ll)
 
         return self
 
     def _update(self, y):
+        # ===== Resample ===== #
+        if self._logged_ess[-1] < self._th * self._particles:
+            self._resample()
+
         # TODO: Would be better to calculate mean/variance using un-resampled particles, fix
         # ===== Jitter ===== #
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._old_ll, self._logged_ess[-1])
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._old_ll = self._filter.s_ll[-1]
+        self._w_rec += self._old_ll
 
         # ===== Log ESS ===== #
         ess = get_ess(self._w_rec)
         self._logged_ess += (ess,)
-
-        # ===== Resample ===== #
-        if ess < self._th * self._particles:
-            self._resample()
 
         return self
 
