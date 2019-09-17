@@ -31,7 +31,6 @@ class NESS(SequentialAlgorithm):
 
         # ===== Weights ===== #
         self._w_rec = torch.zeros(particles)
-        self._old_ll = torch.zeros_like(self._w_rec)
 
         # ===== Algorithm specific ===== #
         self._th = threshold
@@ -78,7 +77,6 @@ class NESS(SequentialAlgorithm):
             self.filter = self.filter.resample(indices, entire_history=False)
 
         self._w_rec = torch.zeros_like(self._w_rec)
-        self._old_ll = torch.zeros_like(self._old_ll)
 
         return self
 
@@ -89,11 +87,10 @@ class NESS(SequentialAlgorithm):
 
         # TODO: Would be better to calculate mean/variance using un-resampled particles, fix
         # ===== Jitter ===== #
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._old_ll, self._logged_ess[-1])
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
-        self._old_ll = self._filter.s_ll[-1]
         self._w_rec += self._old_ll
 
         # ===== Log ESS ===== #
