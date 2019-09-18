@@ -91,7 +91,7 @@ class NESS(SequentialAlgorithm):
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
-        self._w_rec += self._old_ll
+        self._w_rec += self.filter.s_ll[-1]
 
         # ===== Log ESS ===== #
         ess = get_ess(self._w_rec)
