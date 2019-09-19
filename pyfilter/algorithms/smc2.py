@@ -42,8 +42,6 @@ class SMC2(NESS):
             self.rejuvenate()
             self._iterator.set_description(desc=str(self))
 
-            self._lastrejuv = len(self._y)
-
         return self
 
     def rejuvenate(self):
