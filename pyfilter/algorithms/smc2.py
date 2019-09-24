@@ -1,5 +1,5 @@
 from .ness import NESS
-from .kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH, GaussianKDE
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
@@ -94,3 +94,53 @@ class SMC2(NESS):
         self._w_rec = self.filter.loglikelihood - oldlogl
 
         return self
+
+
+class SMC2FW(NESS):
+    def __init__(self, filter_, particles, block_len=100, switch=200, resampling=residual, **kwargs):
+        """
+        Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
+        :param block_len: The block length to use
+        :type block_len: int
+        :param switch: When to switch to using fixed width for sampling
+        :type switch: int
+        :param kwargs: Kwargs to SMC2
+        """
+        super().__init__(filter_, particles, resampling=resampling)
+        self._smc2 = SMC2(self.filter, particles, resampling=resampling, **kwargs)
+
+        self._bl = int(block_len)
+        self._switch = int(switch)
+        self._switched = False
+        self._kernel = GaussianKDE().set_resampler(self._resampler)
+
+    def initialize(self):
+        self._smc2.initialize()
+        return self
+
+    def _update(self, y):
+        if len(self._y) < self._switch:
+            # TODO: Better to do this on instantiation instead
+            self._smc2._iterator = self._iterator
+            return self._smc2.update(y)
+
+        # ===== Perform switch ===== #
+        if not self._switched:
+            self._w_rec = self._smc2._w_rec
+            self._switched = True
+            self._logged_ess = self._smc2._logged_ess
+
+        # ===== Check if to propagate ===== #
+        if len(self._y) % self._bl == 0:
+            self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
+            self._w_rec = torch.zeros_like(self._w_rec)
+
+        # ===== Perform a filtering move ===== #
+        self.filter.filter(y)
+        self._w_rec += self.filter.s_ll[-1]
+
+        # ===== Calculate efficient number of samples ===== #
+        self._logged_ess += (get_ess(self._w_rec),)
+
+        return self
+

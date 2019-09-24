@@ -327,26 +327,8 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
 
 class RegularizedKernel(BaseKernel):
-    def _sample_epachnikov(self, ndim, samples, device, is_samples=10000):
-        """
-        Samples from the epachnikov kernel.
-        :rtype: torch.Tensor
-        """
-
-        hypercube = torch.empty((is_samples, ndim), device=device).uniform_(-1, 1)    # type: torch.Tensor
-        norm = hypercube.norm(dim=-1)
-        w = (1 - norm ** 2) * (norm < 1).float()
-
-        normalized = normalize(w.log())
-        inds = torch.multinomial(normalized, num_samples=samples, replacement=True)
-
-        return hypercube[inds]
-
-    def _update(self, parameters, filter_, weights, ess):
-        ess = get_ess(weights, normalized=True)
-        values, mask = stacker(parameters, lambda u: u.t_values)
-
-        # ===== Calculate covariance ===== #
+    @staticmethod
+    def _get_bandwidth(weights, values, ess):
         w = weights.unsqueeze(-1)
         mean = (values * w).sum(0)
         std = torch.empty_like(mean)
@@ -364,18 +346,46 @@ class RegularizedKernel(BaseKernel):
         n = std.shape[-1]
         h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
-        scale = h * std
+        return h * std
+
+    def _generate_samples(self, values):
+        """
+        Samples from the epachnikov kernel.
+        :rtype: torch.Tensor
+        """
+        ndim = values.shape[-1]
+        is_samples = 5 * values.shape[0]    # TODO: Fix this
+
+        hypercube = torch.empty((is_samples, ndim), device=values.device).uniform_(-1, 1)  # type: torch.Tensor
+        norm = hypercube.norm(dim=-1)
+        w = (1 - norm ** 2) * (norm < 1).float()
+
+        normalized = normalize(w.log())
+        inds = torch.multinomial(normalized, num_samples=values.shape[0], replacement=True)
+
+        return hypercube[inds]
+
+    def _update(self, parameters, filter_, weights, ess):
+        values, mask = stacker(parameters, lambda u: u.t_values)
+
+        # ===== Calculate covariance ===== #
+        scale = self._get_bandwidth(weights, values, ess)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = self._sample_epachnikov(n, values.shape[0], device=values.device)
+        samples = self._generate_samples(values)
         for p, msk in zip(parameters, mask):
             p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
 
         return self
+
+
+class GaussianKDE(RegularizedKernel):
+    def _generate_samples(self, values):
+        return torch.empty_like(values).normal_()
 
 
 def _mcmc_move(params, dist, mask, shape):
