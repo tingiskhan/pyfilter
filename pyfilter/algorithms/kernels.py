@@ -326,7 +326,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
         return self
 
 
-class RegularizedKernel(BaseKernel):
+class EpachnikovKDE(BaseKernel):
     @staticmethod
     def _get_bandwidth(weights, values, ess):
         w = weights.unsqueeze(-1)
@@ -383,7 +383,7 @@ class RegularizedKernel(BaseKernel):
         return self
 
 
-class GaussianKDE(RegularizedKernel):
+class GaussianKDE(EpachnikovKDE):
     def _generate_samples(self, values):
         return torch.empty_like(values).normal_()
 

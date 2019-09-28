@@ -3,7 +3,7 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess, normalize
 import torch
 from ..resampling import residual
-from .kernels import RegularizedKernel, ShrinkageKernel, AdaptiveShrinkageKernel
+from .kernels import EpachnikovKDE, ShrinkageKernel, AdaptiveShrinkageKernel
 from ..filters import SISR
 
 
@@ -35,7 +35,7 @@ class NESS(SequentialAlgorithm):
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
-        self._regularizer = RegularizedKernel().set_resampler(self._resampler)
+        self._regularizer = EpachnikovKDE().set_resampler(self._resampler)
 
         # ===== ESS related ===== #
         self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
