@@ -287,8 +287,9 @@ class ShrinkageKernel(BaseKernel):
         return self
 
 
+# TODO: The eps is completely arbitrary... but kinda influences the posterior
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=1e-4, **kwargs):
+    def __init__(self, eps=1e-5, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
