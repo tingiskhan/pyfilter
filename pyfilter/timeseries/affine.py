@@ -1,5 +1,5 @@
 from .base import TimeseriesBase, init_caster, finite_decorator, tensor_caster
-from torch.distributions import Distribution, AffineTransform, TransformedDistribution
+from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from .parameter import size_getter
 
@@ -165,6 +165,34 @@ class AffineModel(TimeseriesBase):
             return dist
 
         return dist.sample()
+
+
+class RandomWalk(AffineModel):
+    def __init__(self, std):
+        """
+        Defines a random walk.
+        :param std: The vector of standard deviations
+        :type std: torch.Tensor|float
+        """
+
+        def f0(s):
+            return torch.zeros_like(s)
+
+        def g0(s):
+            return s
+
+        def f(x, s):
+            return x
+
+        def g(x, s):
+            return s
+
+        if not isinstance(std, torch.Tensor):
+            normal = Normal(0., 1.)
+        else:
+            normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
+
+        super().__init__((f0, g0), (f, g), (std,), (normal, normal))
 
 
 class AffineObservations(AffineModel):
