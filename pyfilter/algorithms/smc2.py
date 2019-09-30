@@ -1,4 +1,5 @@
 from .ness import NESS
+from .base import experimental
 from .kernels import ParticleMetropolisHastings, SymmetricMH, GaussianKDE
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
@@ -97,6 +98,7 @@ class SMC2(NESS):
 
 
 class SMC2FW(NESS):
+    @experimental
     def __init__(self, filter_, particles, block_len=100, switch=200, resampling=residual, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
