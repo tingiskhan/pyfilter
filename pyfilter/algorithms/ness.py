@@ -35,7 +35,6 @@ class NESS(SequentialAlgorithm):
         # ===== Algorithm specific ===== #
         self._th = threshold
         self._resampler = resampling
-        self._regularizer = EpachnikovKDE().set_resampler(self._resampler)
 
         # ===== ESS related ===== #
         self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
@@ -70,11 +69,9 @@ class NESS(SequentialAlgorithm):
         :return: Self
         :rtype: NESS
         """
-        if self._logged_ess[-1] < self._th / 2 * self._particles:
-            self._regularizer.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
-        else:
-            indices = self._resampler(self._w_rec)
-            self.filter = self.filter.resample(indices, entire_history=False)
+
+        indices = self._resampler(self._w_rec)
+        self.filter = self.filter.resample(indices, entire_history=False)
 
         self._w_rec = torch.zeros_like(self._w_rec)
 
