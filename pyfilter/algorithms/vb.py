@@ -2,14 +2,11 @@ from .base import BatchAlgorithm
 import torch
 from torch import optim
 import tqdm
-from math import sqrt
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
 from .kernels import _unflattify, stacker
-
-
-eps = sqrt(torch.finfo(torch.float32).eps)
+from ..utils import EPS
 
 
 class VariationalBayes(BatchAlgorithm):
@@ -140,7 +137,7 @@ class VariationalBayes(BatchAlgorithm):
 
         it = 0
         bar = tqdm.tqdm(total=self._maxiters)
-        while (elbo - elbo_old).abs() > eps and it < self._maxiters:
+        while (elbo - elbo_old).abs() > EPS and it < self._maxiters:
             elbo_old = elbo
 
             # ===== Perform optimization ===== #

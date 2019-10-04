@@ -5,9 +5,11 @@ import torch
 from torch.distributions import Distribution, Transform
 from .timeseries.parameter import Parameter
 import numbers
+from math import sqrt
 
 
 _NATIVE = (bool, str, numbers.Number)
+EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
 def get_ess(w, normalized=False):

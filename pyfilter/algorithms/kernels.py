@@ -1,5 +1,5 @@
 from ..filters.base import BaseFilter
-from ..utils import get_ess, normalize, add_dimensions
+from ..utils import EPS, normalize, add_dimensions
 from ..timeseries.parameter import Parameter
 import torch
 from scipy.stats import chi2
@@ -289,7 +289,7 @@ class ShrinkageKernel(BaseKernel):
 
 # TODO: The eps is completely arbitrary... but kinda influences the posterior
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=1e-5, **kwargs):
+    def __init__(self, eps=EPS, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
