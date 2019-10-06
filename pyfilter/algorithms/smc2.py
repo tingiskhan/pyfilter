@@ -133,7 +133,7 @@ class SMC2FW(NESS):
             self._logged_ess = self._smc2._logged_ess
 
         # ===== Check if to propagate ===== #
-        if len(self._y) % self._bl == 0:
+        if self._logged_ess[-1] < self._smc2._th * self._particles or (~torch.isfinite(self._w_rec)).any():
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
             self._w_rec = torch.zeros_like(self._w_rec)
 

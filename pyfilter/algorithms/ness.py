@@ -79,7 +79,7 @@ class NESS(SequentialAlgorithm):
 
     def _update(self, y):
         # ===== Resample ===== #
-        if self._logged_ess[-1] < self._th * self._particles:
+        if self._logged_ess[-1] < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
             self._resample()
 
         # TODO: Would be better to calculate mean/variance using un-resampled particles, fix
