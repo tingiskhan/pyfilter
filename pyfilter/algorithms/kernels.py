@@ -325,7 +325,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
         self._old_var = var
 
         return self
-
+      
 
 class EpachnikovKDE(BaseKernel):
     @staticmethod
