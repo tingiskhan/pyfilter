@@ -314,7 +314,7 @@ class AdaptiveShrinkageKernel(BaseKernel):
         self._old_var = var
 
         return self
-
+      
 
 class ResamplerKernel(BaseKernel):
     def set_resampler(self, resampler):
