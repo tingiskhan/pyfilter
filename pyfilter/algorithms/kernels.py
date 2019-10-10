@@ -64,17 +64,6 @@ class BaseKernel(object):
 
         raise NotImplementedError()
 
-    def set_resampler(self, resampler):
-        """
-        Sets the resampler to use if necessary for kernel.
-        :param resampler: The resampler
-        :type resampler: callable
-        :rtype: BaseKernel
-        """
-        self._resampler = resampler
-
-        return self
-
     def update(self, parameters, filter_, weights, *args):
         """
         Defines the function for updating the parameters.
@@ -327,7 +316,20 @@ class AdaptiveShrinkageKernel(BaseKernel):
         return self
 
 
-class EpachnikovKDE(BaseKernel):
+class ResamplerKernel(BaseKernel):
+    def set_resampler(self, resampler):
+        """
+        Sets the resampler to use if necessary for kernel.
+        :param resampler: The resampler
+        :type resampler: callable
+        :rtype: BaseKernel
+        """
+        self._resampler = resampler
+
+        return self
+
+
+class EpachnikovKDE(ResamplerKernel):
     @staticmethod
     def _get_bandwidth(weights, values, ess):
         w = weights.unsqueeze(-1)
@@ -431,7 +433,7 @@ def _eval_kernel(params, dist, n_params):
     return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
 
 
-class ParticleMetropolisHastings(BaseKernel):
+class ParticleMetropolisHastings(ResamplerKernel):
     def __init__(self, nsteps=1, **kwargs):
         """
         Implements a base class for the particle Metropolis Hastings class.
