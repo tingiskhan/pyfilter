@@ -381,7 +381,7 @@ class EpachnikovKDE(ResamplerKernel):
         # ===== Sample params ===== #
         samples = self._generate_samples(values)
         for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
+            p.t_values = _unflattify(values[inds, msk] + scale[msk] * samples[:, msk], p.c_shape)
 
         return self
 
