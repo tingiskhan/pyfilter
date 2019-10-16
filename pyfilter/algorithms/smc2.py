@@ -113,7 +113,11 @@ class SMC2DW(NESS):
 
         self._switch = int(switch)
         self._switched = False
+
+        # ===== Resampling related ===== #
         self._kernel = GaussianKDE().set_resampler(self._resampler)
+        self._bl = 125
+        self._min_th = 0.1
 
     def initialize(self):
         self._smc2.initialize()
@@ -132,7 +136,7 @@ class SMC2DW(NESS):
             self._logged_ess = self._smc2._logged_ess
 
         # ===== Check if to propagate ===== #
-        if self._logged_ess[-1] < self._smc2._th * self._particles or (~torch.isfinite(self._w_rec)).any():
+        if len(self._y) % self._bl == 0 or self._logged_ess[-1] < self._min_th * self._particles:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
             self._w_rec = torch.zeros_like(self._w_rec)
 
