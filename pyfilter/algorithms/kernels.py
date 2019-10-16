@@ -330,20 +330,10 @@ class ResamplerKernel(BaseKernel):
 
 
 class EpachnikovKDE(ResamplerKernel):
-    @staticmethod
-    def _get_bandwidth(weights, values, ess):
+    def _get_bandwidth(self, weights, values, ess):
         w = weights.unsqueeze(-1)
         mean = (values * w).sum(0)
-        std = torch.empty_like(mean)
-
-        norm_test = _normal_test(values)
-
-        t_mask = ~norm_test
-        if t_mask.any():
-            sort, _ = values[:, t_mask].sort(0)
-            std[t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
-        if norm_test.any():
-            std[norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0).sqrt()
+        std = (w * (values - mean) ** 2).sum(0).sqrt()
 
         # ===== Define "optimal" bw ===== #
         n = std.shape[-1]
@@ -389,6 +379,30 @@ class EpachnikovKDE(ResamplerKernel):
 class GaussianKDE(EpachnikovKDE):
     def _generate_samples(self, values):
         return torch.empty_like(values).normal_()
+
+
+class DiscreteKernel(GaussianKDE):
+    def _update(self, parameters, filter_, weights, ess):
+        values, mask = stacker(parameters, lambda u: u.t_values)
+
+        # ===== Calculate covariance ===== #
+        scale = self._get_bandwidth(weights, values, ess)
+
+        # ===== Resample ===== #
+        inds = self._resampler(weights, normalized=True)
+        bern = torch.empty_like(weights).bernoulli_(1 / ess ** 0.5).bool()
+
+        # ===== Sample params ===== #
+        new_values = values[inds][bern]
+        new_values += scale * self._generate_samples(new_values)
+
+        values[bern] = new_values
+
+        # ===== Update params ===== #
+        for p, msk in zip(parameters, mask):
+            p.t_values = _unflattify(values[:, msk], p.c_shape)
+
+        return self
 
 
 def _mcmc_move(params, dist, mask, shape):
