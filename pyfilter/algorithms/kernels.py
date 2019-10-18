@@ -381,21 +381,22 @@ class GaussianKDE(EpachnikovKDE):
         return torch.empty_like(values).normal_()
 
 
-class DiscreteKernel(GaussianKDE):
+class DiscreteKernel(BaseKernel):
     def _update(self, parameters, filter_, weights, ess):
         values, mask = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
-        scale = self._get_bandwidth(weights, values, ess)
+        mean = (values * weights.unsqueeze(-1)).sum(0)
+        centralized = values - mean
+        cov = torch.matmul(weights * centralized.t(), centralized)
+
+        mvn = MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
 
         # ===== Resample ===== #
-        inds = self._resampler(weights, normalized=True)
         bern = torch.empty_like(weights).bernoulli_(1 / ess ** 0.5).bool()
 
         # ===== Sample params ===== #
-        new_values = values[inds][bern]
-        new_values += scale * self._generate_samples(new_values)
-
+        new_values = mvn.sample((bern.sum(),))
         values[bern] = new_values
 
         # ===== Update params ===== #
