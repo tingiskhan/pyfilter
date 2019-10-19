@@ -51,6 +51,22 @@ def _construct_mvn(x, w):
     return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
 
 
+def _sample_values_discrete(x, w, ess):
+    # ===== Calculate mvn ===== #
+    mvn = _construct_mvn(x, w)
+
+    # ===== Resample ===== #
+    bern = torch.empty_like(w).bernoulli_(1 / ess ** 0.5).bool()
+
+    # ===== Sample params ===== #
+    new_values = mvn.sample((bern.sum(),))
+    out = x.clone()
+
+    out[bern] = new_values
+
+    return out
+
+
 class BaseKernel(object):
     def __init__(self, record_stats=False, length=None):
         """
@@ -401,20 +417,11 @@ class GaussianKDE(EpachnikovKDE):
 class DiscreteKernel(BaseKernel):
     def _update(self, parameters, filter_, weights, ess):
         values, mask = stacker(parameters, lambda u: u.t_values)
-
-        # ===== Calculate mvn ===== #
-        mvn = _construct_mvn(values, weights)
-
-        # ===== Resample ===== #
-        bern = torch.empty_like(weights).bernoulli_(1 / ess ** 0.5).bool()
-
-        # ===== Sample params ===== #
-        new_values = mvn.sample((bern.sum(),))
-        values[bern] = new_values
+        x = _sample_values_discrete(values, weights, ess)
 
         # ===== Update params ===== #
         for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(values[:, msk], p.c_shape)
+            p.t_values = _unflattify(x[:, msk], p.c_shape)
 
         return self
 
