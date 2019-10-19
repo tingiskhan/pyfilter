@@ -34,6 +34,23 @@ def stacker(parameters, selector=lambda u: u.values):
     return torch.cat(to_conc, dim=-1), mask
 
 
+def _construct_mvn(x, w):
+    """
+    Constructs a multivariate normal distribution of weighted samples.
+    :param x: The samples
+    :type x: torch.Tensor
+    :param w: The weights
+    :type w: torch.Tensor
+    :rtype: MultivariateNormal
+    """
+
+    mean = (x * w.unsqueeze(-1)).sum(0)
+    centralized = x - mean
+    cov = torch.matmul(w * centralized.t(), centralized)
+
+    return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+
+
 class BaseKernel(object):
     def __init__(self, record_stats=False, length=None):
         """
@@ -385,12 +402,8 @@ class DiscreteKernel(BaseKernel):
     def _update(self, parameters, filter_, weights, ess):
         values, mask = stacker(parameters, lambda u: u.t_values)
 
-        # ===== Calculate covariance ===== #
-        mean = (values * weights.unsqueeze(-1)).sum(0)
-        centralized = values - mean
-        cov = torch.matmul(weights * centralized.t(), centralized)
-
-        mvn = MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+        # ===== Calculate mvn ===== #
+        mvn = _construct_mvn(values, weights)
 
         # ===== Resample ===== #
         bern = torch.empty_like(weights).bernoulli_(1 / ess ** 0.5).bool()
@@ -526,8 +539,4 @@ class ParticleMetropolisHastings(ResamplerKernel):
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, values, weights):
-        mean = (values * weights.unsqueeze(-1)).sum(0)
-        centralized = values - mean
-        cov = torch.matmul(weights * centralized.t(), centralized)
-
-        return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+        return _construct_mvn(values, weights)
