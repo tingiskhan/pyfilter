@@ -97,11 +97,11 @@ class SMC2(NESS):
         return self
 
 
-class SMC2DW(NESS):
+class SMC2FW(NESS):
     @experimental
-    def __init__(self, filter_, particles, switch=200, resampling=residual, **kwargs):
+    def __init__(self, filter_, particles, switch=200, resampling=residual, block_len=125, **kwargs):
         """
-        Implements a version of the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
+        Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
         :param block_len: The block length to use
         :type block_len: int
         :param switch: When to switch to using fixed width for sampling
@@ -116,7 +116,7 @@ class SMC2DW(NESS):
 
         # ===== Resampling related ===== #
         self._kernel = GaussianKDE().set_resampler(self._resampler)
-        self._bl = 125
+        self._bl = block_len
         self._min_th = 0.1
 
     def initialize(self):
