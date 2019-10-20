@@ -5,6 +5,7 @@ import torch
 from scipy.stats import chi2
 from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
+import numpy as np
 
 
 def stacker(parameters, selector=lambda u: u.values):
@@ -68,18 +69,18 @@ def _sample_values_discrete(x, w, ess):
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=False, length=None):
+    def __init__(self, record_stats=True):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
         :type record_stats: bool
-        :param length: How many to record. If `None` records everything
-        :type length: int
         """
         self._record_stats = record_stats
 
-        self._recorded_stats = tuple()
-        self._length = length
+        self._recorded_stats = dict()
+        self._recorded_stats['mean'] = tuple()
+        self._recorded_stats['scale'] = tuple()
+
         self._resampler = None
 
     def _update(self, parameters, filter_, weights, *args):
@@ -130,7 +131,8 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
 
-        res = tuple()
+        m_res = tuple()
+        s_res = tuple()
         for p in parameters:
             weights = add_dimensions(weights, p.dim())
             vals = p.t_values
@@ -138,35 +140,27 @@ class BaseKernel(object):
             mean = (vals * weights).sum(0)
             scale = ((vals - mean) ** 2 * weights).sum(0).sqrt()
 
-            res += ({
-                'mean': mean,
-                'scale': scale
-            },)
+            m_res += (mean,)
+            s_res += (scale,)
 
-        self._recorded_stats += (
-            res,
-        )
-
-        if self._length is not None:
-            self._recorded_stats = self._recorded_stats[-self._length:]
+        self._recorded_stats['mean'] += (m_res,)
+        self._recorded_stats['scale'] += (s_res,)
 
         return self
 
     def get_as_numpy(self):
         """
         Returns the stats numpy arrays instead of torch tensor.
-        :rtype: tuple[tuple[dict[str, numpy.array]]
+        :rtype: dict[str,np.ndarray]
         """
-        res = tuple()
-        for pt in self._recorded_stats:
-            temp = tuple()
-            for p in pt:
-                tempdict = dict()
-                for k, v in p.items():
-                    tempdict[k] = v.numpy()
 
-                temp += (tempdict,)
-            res += (temp,)
+        res = dict()
+        for k, v in self._recorded_stats.items():
+            t_res = tuple()
+            for pt in v:
+                t_res += (np.array(pt),)
+
+            res[k] = np.stack(t_res)
 
         return res
 
@@ -300,18 +294,18 @@ class ShrinkageKernel(BaseKernel):
         stacked, mask = stacker(parameters, lambda u: u.t_values)
         shrunk_mean, scales = _shrink(stacked, weights, ess)
 
+        jittered = _jitter(shrunk_mean, scales)
+
         # ===== Mutate parameters ===== #
         for msk, p in zip(mask, parameters):
-            m, s = shrunk_mean[:, msk], scales[msk]
-
-            p.t_values = _unflattify(_jitter(m, s), p.c_shape)
+            p.t_values = _unflattify(jittered[:, msk], p.c_shape)
 
         return self
 
 
 # TODO: The eps is completely arbitrary... but kinda influences the posterior
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=1e-5, **kwargs):
+    def __init__(self, eps=EPS, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
@@ -320,11 +314,15 @@ class AdaptiveShrinkageKernel(BaseKernel):
         super().__init__(**kwargs)
         self._eps = eps
         self._old_var = None
+        self._switched = None
 
     def _update(self, parameters, filter_, weights, ess):
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
         shrunk_mean, scales = _shrink(stacked, weights, ess)
+
+        if self._switched is None:
+            self._switched = torch.zeros_like(scales).bool()
 
         # ===== Check "convergence" ====== #
         w = add_dimensions(weights, stacked.dim())
@@ -337,14 +335,33 @@ class AdaptiveShrinkageKernel(BaseKernel):
         else:
             var_diff = var - self._old_var
 
-        # ===== Mutate parameters ===== #
-        for p, msk in zip(parameters, mask):
-            switched = (var_diff[msk].abs() < self._eps).all()
-            m = (stacked if switched else shrunk_mean)[:, msk]
+        self._switched = (var_diff.abs() < self._eps) & ~self._switched
 
-            p.t_values = _unflattify(_jitter(m, scales[msk]), p.c_shape)
+        # ===== Mutate parameters ===== #
+        if self._switched.any():
+            stacked[:, self._switched] = _sample_values_discrete(stacked[:, self._switched], weights, ess)
+
+        t = ~self._switched
+        if t.any():
+            stacked[:, t] = _jitter(shrunk_mean[:, t], scales[t])
+
+        # ===== Set new values ===== #
+        for p, msk in zip(parameters, mask):
+            p.t_values = _unflattify(stacked[:, msk], p.c_shape)
 
         self._old_var = var
+
+        return self
+
+
+class DiscreteKernel(BaseKernel):
+    def _update(self, parameters, filter_, weights, ess):
+        values, mask = stacker(parameters, lambda u: u.t_values)
+        x = _sample_values_discrete(values, weights, ess)
+
+        # ===== Update params ===== #
+        for p, msk in zip(parameters, mask):
+            p.t_values = _unflattify(x[:, msk], p.c_shape)
 
         return self
       
@@ -412,18 +429,6 @@ class EpachnikovKDE(ResamplerKernel):
 class GaussianKDE(EpachnikovKDE):
     def _generate_samples(self, values):
         return torch.empty_like(values).normal_()
-
-
-class DiscreteKernel(BaseKernel):
-    def _update(self, parameters, filter_, weights, ess):
-        values, mask = stacker(parameters, lambda u: u.t_values)
-        x = _sample_values_discrete(values, weights, ess)
-
-        # ===== Update params ===== #
-        for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(x[:, msk], p.c_shape)
-
-        return self
 
 
 def _mcmc_move(params, dist, mask, shape):

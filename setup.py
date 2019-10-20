@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyfilter',
-    version='0.3.16',
+    version='0.3.17',
     author='Victor Gruselius',
     author_email='victor.gruselius@gmail.com',
     description='Package for performing online Bayesian inference in state space models',
@@ -15,5 +15,6 @@ setup(
         'torch>=1.0.0',
         'tqdm>=4.26',
         'scikit-learn>=0.20.1',
+        'numpy>=1.16.4'
     ]
 )

@@ -3,7 +3,7 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess, normalize
 import torch
 from ..resampling import residual
-from .kernels import AdaptiveShrinkageKernel, DiscreteKernel
+from .kernels import AdaptiveShrinkageKernel
 from ..filters import SISR
 
 
@@ -26,7 +26,7 @@ class NESS(SequentialAlgorithm):
 
         super().__init__(filter_)
 
-        self._kernel = kernel or DiscreteKernel()
+        self._kernel = kernel or AdaptiveShrinkageKernel()
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
