@@ -1,5 +1,5 @@
 from ..filters.base import BaseFilter
-from ..utils import EPS, normalize, add_dimensions
+from ..utils import normalize, add_dimensions
 from ..timeseries.parameter import Parameter
 import torch
 from scipy.stats import chi2
@@ -305,7 +305,7 @@ class ShrinkageKernel(BaseKernel):
 
 # TODO: The eps is completely arbitrary... but kinda influences the posterior
 class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=EPS, **kwargs):
+    def __init__(self, eps=1e-5, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
@@ -339,15 +339,13 @@ class AdaptiveShrinkageKernel(BaseKernel):
 
         # ===== Mutate parameters ===== #
         if self._switched.any():
-            stacked[:, self._switched] = _sample_values_discrete(stacked[:, self._switched], weights, ess)
+            shrunk_mean[:, self._switched] = stacked[:, self._switched]
 
-        t = ~self._switched
-        if t.any():
-            stacked[:, t] = _jitter(shrunk_mean[:, t], scales[t])
+        jittered = _jitter(shrunk_mean, scales)
 
         # ===== Set new values ===== #
         for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(stacked[:, msk], p.c_shape)
+            p.t_values = _unflattify(jittered[:, msk], p.c_shape)
 
         self._old_var = var
 
