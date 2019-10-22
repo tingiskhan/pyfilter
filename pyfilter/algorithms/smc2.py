@@ -1,6 +1,6 @@
 from .ness import NESS
 from .base import experimental
-from .kernels import ParticleMetropolisHastings, SymmetricMH, GaussianKDE
+from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
@@ -115,7 +115,7 @@ class SMC2FW(NESS):
         self._switched = False
 
         # ===== Resampling related ===== #
-        self._kernel = GaussianKDE().set_resampler(self._resampler)
+        self._kernel = KernelDensitySampler().set_resampler(self._resampler)
         self._bl = block_len
         self._min_th = 0.1
 

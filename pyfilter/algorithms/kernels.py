@@ -6,6 +6,7 @@ from scipy.stats import chi2
 from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
 import numpy as np
+from ..kde import _jitter, KernelDensityEstimate, Gaussian
 
 
 def stacker(parameters, selector=lambda u: u.values):
@@ -190,20 +191,6 @@ def _normal_test(x, alpha=0.05):
     return chi2(2).ppf(1 - alpha) >= jb
 
 
-def _jitter(values, scale):
-    """
-    Jitters the parameters.
-    :param values: The values
-    :type values: torch.Tensor
-    :param scale: The scaling to use for the variance of the proposal
-    :type scale: float
-    :return: Proposed values
-    :rtype: torch.Tensor
-    """
-
-    return values + scale * torch.empty_like(values).normal_()
-
-
 def _shrink(values, w, ess):
     """
     Shrinks the parameters towards their mean.
@@ -362,7 +349,7 @@ class DiscreteKernel(BaseKernel):
             p.t_values = _unflattify(x[:, msk], p.c_shape)
 
         return self
-      
+
 
 class ResamplerKernel(BaseKernel):
     def set_resampler(self, resampler):
@@ -377,56 +364,32 @@ class ResamplerKernel(BaseKernel):
         return self
 
 
-class EpachnikovKDE(ResamplerKernel):
-    def _get_bandwidth(self, weights, values, ess):
-        w = weights.unsqueeze(-1)
-        mean = (values * w).sum(0)
-        std = (w * (values - mean) ** 2).sum(0).sqrt()
-
-        # ===== Define "optimal" bw ===== #
-        n = std.shape[-1]
-        h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
-
-        return h * std
-
-    def _generate_samples(self, values):
+class KernelDensitySampler(ResamplerKernel):
+    def __init__(self, kde=None):
         """
-        Samples from the epachnikov kernel.
-        :rtype: torch.Tensor
+        Implements a sampler that samples from a KDE representation.
+        :param kde: The KDE
+        :type kde: KernelDensityEstimate
         """
-        ndim = values.shape[-1]
-        is_samples = 5 * values.shape[0]    # TODO: Fix this
-
-        hypercube = torch.empty((is_samples, ndim), device=values.device).uniform_(-1, 1)  # type: torch.Tensor
-        norm = hypercube.norm(dim=-1)
-        w = (1 - norm ** 2) * (norm < 1).float()
-
-        normalized = normalize(w.log())
-        inds = torch.multinomial(normalized, num_samples=values.shape[0], replacement=True)
-
-        return hypercube[inds]
+        super().__init__()
+        self._kde = kde or Gaussian()
 
     def _update(self, parameters, filter_, weights, ess):
         values, mask = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
-        scale = self._get_bandwidth(weights, values, ess)
+        kde = self._kde.fit(values, weights)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = self._generate_samples(values)
+        samples = kde.sample()
         for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(values[inds, msk] + scale[msk] * samples[:, msk], p.c_shape)
+            p.t_values = _unflattify(samples[:, msk], p.c_shape)
 
         return self
-
-
-class GaussianKDE(EpachnikovKDE):
-    def _generate_samples(self, values):
-        return torch.empty_like(values).normal_()
 
 
 def _mcmc_move(params, dist, mask, shape):
