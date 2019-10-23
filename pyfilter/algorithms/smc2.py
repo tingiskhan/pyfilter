@@ -26,8 +26,7 @@ class SMC2(NESS):
         super().__init__(filter_, particles, resampling=resampling)
 
         self._th = threshold
-        self._kernel = kernel or SymmetricMH()
-        self._kernel.set_resampler(self._resampler)
+        self._kernel = kernel or SymmetricMH(resampling=resampling)
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
@@ -62,9 +61,6 @@ class SMC2(NESS):
 
         self._iterator.set_description(desc='{:s} - Accepted particles is {:.1%}'.format(str(self), accepted))
         sleep(1)
-
-        # ===== Update recursive weights ===== #
-        self._w_rec = torch.zeros_like(self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if accepted < 0.2 and isinstance(self.filter, ParticleFilter):
@@ -115,7 +111,7 @@ class SMC2FW(NESS):
         self._switched = False
 
         # ===== Resampling related ===== #
-        self._kernel = KernelDensitySampler().set_resampler(self._resampler)
+        self._kernel = KernelDensitySampler(resampling=resampling)
         self._bl = block_len
         self._min_th = 0.1
 
@@ -137,8 +133,7 @@ class SMC2FW(NESS):
 
         # ===== Check if to propagate ===== #
         if len(self._y) % self._bl == 0 or self._logged_ess[-1] < self._min_th * self._particles:
-            self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
-            self._w_rec = torch.zeros_like(self._w_rec)
+            self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)

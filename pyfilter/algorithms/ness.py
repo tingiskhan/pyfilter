@@ -3,7 +3,7 @@ from ..filters.base import ParticleFilter, cudawarning
 from ..utils import get_ess, normalize
 import torch
 from ..resampling import residual
-from .kernels import AdaptiveShrinkageKernel
+from .kernels import AdaptiveKernel
 from ..filters import SISR
 
 
@@ -26,15 +26,11 @@ class NESS(SequentialAlgorithm):
 
         super().__init__(filter_)
 
-        self._kernel = kernel or AdaptiveShrinkageKernel()
+        self._kernel = kernel or AdaptiveKernel(ess=threshold, resampling=resampling)
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
         self._w_rec = torch.zeros(particles)
-
-        # ===== Algorithm specific ===== #
-        self._th = threshold
-        self._resampler = resampling
 
         # ===== ESS related ===== #
         self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
@@ -63,28 +59,9 @@ class NESS(SequentialAlgorithm):
 
         return torch.tensor(self._logged_ess)
 
-    def _resample(self):
-        """
-        Helper method for resampling.
-        :return: Self
-        :rtype: NESS
-        """
-
-        indices = self._resampler(self._w_rec)
-        self.filter = self.filter.resample(indices, entire_history=False)
-
-        self._w_rec = torch.zeros_like(self._w_rec)
-
-        return self
-
     def _update(self, y):
-        # ===== Resample ===== #
-        if self._logged_ess[-1] < self._th * self._particles or (~torch.isfinite(self._w_rec)).any():
-            self._resample()
-
-        # TODO: Would be better to calculate mean/variance using un-resampled particles, fix
         # ===== Jitter ===== #
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec, self._logged_ess[-1])
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
