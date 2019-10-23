@@ -133,8 +133,7 @@ class NonShrinkingKernel(ShrinkingKernel):
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
         # ===== Calculate variance ===== #
-        mean = (w.unsqueeze(-1) * x).sum(0)
-        self._cov = robust_var(x, w, mean)
+        self._cov = robust_var(x, w)
 
         # ===== Calculate shrinkage and shrink ===== #
         self._means = x
