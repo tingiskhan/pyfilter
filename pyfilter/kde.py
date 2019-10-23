@@ -117,13 +117,29 @@ class ShrinkingKernel(KernelDensityEstimate):
         self._cov = robust_var(x, w, mean)
 
         # ===== Calculate shrinkage and shrink ===== #
-        beta = (1 - self._bw_fac ** 2).sqrt()
+        beta = (1. - self._bw_fac ** 2).sqrt()
         self._means = mean + beta * (x - mean)
 
         return self
 
     def sample(self):
         return _jitter(self._means, self._bw_fac * self._cov.sqrt())
+
+
+class NonShrinkingKernel(ShrinkingKernel):
+    def fit(self, x, w):
+        # ===== Calculate bandwidth ===== #
+        ess = get_ess(w)
+        self._bw_fac = 1.59 * ess ** (-1 / 3)
+
+        # ===== Calculate variance ===== #
+        mean = (w.unsqueeze(-1) * x).sum(0)
+        self._cov = robust_var(x, w, mean)
+
+        # ===== Calculate shrinkage and shrink ===== #
+        self._means = x
+
+        return self
 
 
 class Gaussian(KernelDensityEstimate):
