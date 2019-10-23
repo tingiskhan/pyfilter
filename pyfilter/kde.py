@@ -113,7 +113,7 @@ class ShrinkingKernel(KernelDensityEstimate):
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
         # ===== Calculate variance ===== #
-        mean = (w * x).sum(0)
+        mean = (w.unsqueeze(-1) * x).sum(0)
         self._cov = robust_var(x, w, mean)
 
         # ===== Calculate shrinkage and shrink ===== #
