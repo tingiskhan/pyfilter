@@ -5,8 +5,8 @@ import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
-from .kernels import _unflattify, stacker
-from ..utils import EPS
+from .kernels import stacker
+from ..utils import EPS, unflattify
 
 
 class VariationalBayes(BatchAlgorithm):
@@ -75,7 +75,7 @@ class VariationalBayes(BatchAlgorithm):
         params = self._p_approx.sample(self._numsamples)
         for p, msk in zip(self._model.theta_dists, self._mask):
             p.detach_()
-            p[:] = _unflattify(p.bijection(params[:, msk]), p.c_shape)
+            p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
 
         self._model.viewify_params((self._numsamples, 1))
 
