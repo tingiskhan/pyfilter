@@ -55,7 +55,8 @@ class NESSMC2(SequentialAlgorithm):
         if not self._switched:
             self._switched = True
 
-            if get_ess(self._smc2._w_rec) < self._ness._th * self._smc2._w_rec.shape[0] and self._updateonhandshake:
+            threshold = self._ness._kernel._th * self._smc2._w_rec.shape[0]
+            if get_ess(self._smc2._w_rec) <  threshold and self._updateonhandshake:
                 self._smc2.rejuvenate()
 
             self._ness._w_rec = self._smc2._w_rec
