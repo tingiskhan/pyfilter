@@ -31,6 +31,20 @@ def silverman(n, ess):
     return (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
 
+def scott(n, ess):
+    """
+    Returns Silverman's factor.
+    :param n: The dimension
+    :type n: int
+    :param ess: The ess
+    :type ess: float
+    :return: Bandwidth factor
+    :rtype: float
+    """
+
+    return 1.059 * ess ** (-1 / (n + 4))
+
+
 def robust_var(x, w, mean=None):
     """
     Calculates the scale robustly
