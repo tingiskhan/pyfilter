@@ -4,7 +4,7 @@ from ..timeseries.parameter import Parameter
 import torch
 from torch.distributions import MultivariateNormal, Independent
 import numpy as np
-from ..kde import KernelDensityEstimate, Gaussian, ShrinkingKernel, NonShrinkingKernel
+from ..kde import KernelDensityEstimate, IndependentGaussian, ShrinkingKernel, NonShrinkingKernel, MultivariateGaussian
 from ..resampling import residual
 
 
@@ -287,7 +287,7 @@ class KernelDensitySampler(BaseKernel):
         :type kde: KernelDensityEstimate
         """
         super().__init__(**kwargs)
-        self._kde = kde or Gaussian()
+        self._kde = kde or MultivariateGaussian()
 
     def _update(self, parameters, filter_, weights):
         values, mask = stacker(parameters, lambda u: u.t_values)

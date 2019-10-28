@@ -155,7 +155,7 @@ class NonShrinkingKernel(ShrinkingKernel):
         return self
 
 
-class Gaussian(KernelDensityEstimate):
+class IndependentGaussian(KernelDensityEstimate):
     def __init__(self, factor=silverman):
         """
         Implements a Gaussian KDE.
@@ -182,3 +182,35 @@ class Gaussian(KernelDensityEstimate):
         inds = self._resampling(self._w, normalized=True)
 
         return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
+
+
+class MultivariateGaussian(IndependentGaussian):
+    def __init__(self, **kwargs):
+        """
+        Constructs a multivariate Gaussian kernel.
+        :param kwargs: Any kwargs
+        """
+        super().__init__(**kwargs)
+        self._post_mean = None
+
+    def fit(self, x, w):
+        # ===== Calculate bandwidth ===== #
+        ess = get_ess(w)
+        self._bw_fac = self._fac(x.shape[-1], ess)
+
+        # ===== Calculate statistics ===== #
+        self._w = w
+
+        self._post_mean = mean = (x * w.unsqueeze(-1)).sum(0)
+        centralized = x - mean
+        self._cov = torch.matmul(w * centralized.t(), centralized).cholesky()
+
+        self._means = torch.solve((x - self._post_mean).T, self._cov).solution.T
+
+        return self
+
+    def sample(self):
+        inds = self._resampling(self._w, normalized=True)
+        jittered = _jitter(self._means[inds], self._bw_fac)
+
+        return self._post_mean + jittered.matmul(self._cov.T)
