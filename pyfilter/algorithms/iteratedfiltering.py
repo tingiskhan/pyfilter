@@ -3,7 +3,7 @@ from ..filters.base import ParticleFilter
 from ..filters import SISR
 from ..resampling import residual
 from tqdm import tqdm
-from .kernels import _jitter as jittering
+from ..kde import _jitter as jittering
 from math import log, exp
 import torch
 

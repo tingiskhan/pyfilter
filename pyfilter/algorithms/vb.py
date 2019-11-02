@@ -2,14 +2,11 @@ from .base import BatchAlgorithm
 import torch
 from torch import optim
 import tqdm
-from math import sqrt
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
-from .kernels import _unflattify, stacker
-
-
-eps = sqrt(torch.finfo(torch.float32).eps)
+from .kernels import stacker
+from ..utils import EPS, unflattify
 
 
 class VariationalBayes(BatchAlgorithm):
@@ -78,7 +75,7 @@ class VariationalBayes(BatchAlgorithm):
         params = self._p_approx.sample(self._numsamples)
         for p, msk in zip(self._model.theta_dists, self._mask):
             p.detach_()
-            p[:] = _unflattify(p.bijection(params[:, msk]), p.c_shape)
+            p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
 
         self._model.viewify_params((self._numsamples, 1))
 
@@ -140,7 +137,7 @@ class VariationalBayes(BatchAlgorithm):
 
         it = 0
         bar = tqdm.tqdm(total=self._maxiters)
-        while (elbo - elbo_old).abs() > eps and it < self._maxiters:
+        while (elbo - elbo_old).abs() > EPS and it < self._maxiters:
             elbo_old = elbo
 
             # ===== Perform optimization ===== #

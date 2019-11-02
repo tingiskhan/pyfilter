@@ -1,10 +1,11 @@
 from ..filters.base import BaseFilter
-from ..utils import get_ess, normalize, add_dimensions
+from ..utils import normalize, add_dimensions, unflattify, get_ess
 from ..timeseries.parameter import Parameter
 import torch
-from scipy.stats import chi2
-from math import sqrt
 from torch.distributions import MultivariateNormal, Independent
+import numpy as np
+from ..kde import KernelDensityEstimate, IndependentGaussian, ShrinkingKernel, NonShrinkingKernel, MultivariateGaussian
+from ..resampling import residual
 
 
 def stacker(parameters, selector=lambda u: u.values):
@@ -34,35 +35,41 @@ def stacker(parameters, selector=lambda u: u.values):
     return torch.cat(to_conc, dim=-1), mask
 
 
+def _construct_mvn(x, w):
+    """
+    Constructs a multivariate normal distribution of weighted samples.
+    :param x: The samples
+    :type x: torch.Tensor
+    :param w: The weights
+    :type w: torch.Tensor
+    :rtype: MultivariateNormal
+    """
+
+    mean = (x * w.unsqueeze(-1)).sum(0)
+    centralized = x - mean
+    cov = torch.matmul(w * centralized.t(), centralized)
+
+    return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+
+
 class BaseKernel(object):
-    def __init__(self, record_stats=False, length=None):
+    def __init__(self, record_stats=True, resampling=residual, ess=0.9):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
         :type record_stats: bool
-        :param length: How many to record. If `None` records everything
-        :type length: int
+        :param ess: At which ESS to resample
+        :type ess: ess
         """
+
         self._record_stats = record_stats
 
-        self._recorded_stats = tuple()
-        self._length = length
-        self._resampler = None
+        self._recorded_stats = dict()
+        self._recorded_stats['mean'] = tuple()
+        self._recorded_stats['scale'] = tuple()
 
-    def _update(self, parameters, filter_, weights, *args):
-        """
-        Defines the function for updating the parameters for the user to override.
-        :param parameters: The parameters of the model to update
-        :type parameters: tuple[Parameter]
-        :param filter_: The filter
-        :type filter_: BaseFilter
-        :param weights: The weights to be passed
-        :type weights: torch.Tensor
-        :return: Self
-        :rtype: BaseKernel
-        """
-
-        raise NotImplementedError()
+        self._resampler = resampling
+        self._th = ess
 
     def set_resampler(self, resampler):
         """
@@ -75,7 +82,23 @@ class BaseKernel(object):
 
         return self
 
-    def update(self, parameters, filter_, weights, *args):
+    def _update(self, parameters, filter_, weights):
+        """
+        Defines the function for updating the parameters for the user to override. Should return whether it resampled or
+        not.
+        :param parameters: The parameters of the model to update
+        :type parameters: tuple[Parameter]
+        :param filter_: The filter
+        :type filter_: BaseFilter
+        :param weights: The weights to be passed
+        :type weights: torch.Tensor
+        :return: Self
+        :rtype: BaseKernel
+        """
+
+        raise NotImplementedError()
+
+    def update(self, parameters, filter_, weights):
         """
         Defines the function for updating the parameters.
         :param parameters: The parameters of the model to update
@@ -93,7 +116,9 @@ class BaseKernel(object):
         if self._record_stats:
             self.record_stats(parameters, w)
 
-        self._update(parameters, filter_, w, *args)
+        resampled = self._update(parameters, filter_, w)
+        if resampled:
+            weights[:] = 0.
 
         return self
 
@@ -108,187 +133,87 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
 
-        res = tuple()
-        for p in parameters:
-            weights = add_dimensions(weights, p.dim())
-            vals = p.t_values
+        values, _ = stacker(parameters, lambda u: u.t_values)
+        weights = weights.unsqueeze(-1)
 
-            mean = (vals * weights).sum(0)
-            scale = ((vals - mean) ** 2 * weights).sum(0).sqrt()
+        mean = (values * weights).sum(0)
+        scale = ((values - mean) ** 2 * weights).sum(0).sqrt()
 
-            res += ({
-                'mean': mean,
-                'scale': scale
-            },)
-
-        self._recorded_stats += (
-            res,
-        )
-
-        if self._length is not None:
-            self._recorded_stats = self._recorded_stats[-self._length:]
+        self._recorded_stats['mean'] += (mean,)
+        self._recorded_stats['scale'] += (scale,)
 
         return self
 
     def get_as_numpy(self):
         """
         Returns the stats numpy arrays instead of torch tensor.
-        :rtype: tuple[tuple[dict[str, numpy.array]]
+        :rtype: dict[str,np.ndarray]
         """
-        res = tuple()
-        for pt in self._recorded_stats:
-            temp = tuple()
-            for p in pt:
-                tempdict = dict()
-                for k, v in p.items():
-                    tempdict[k] = v.numpy()
 
-                temp += (tempdict,)
-            res += (temp,)
+        res = dict()
+        for k, v in self._recorded_stats.items():
+            t_res = tuple()
+            for pt in v:
+                t_res += (pt.cpu().numpy(),)
+
+            res[k] = np.stack(t_res)
 
         return res
 
 
-def _normal_test(x, alpha=0.05):
-    """
-    Implements a basic Jarque-Bera test for normality.
-    :param x: The data
-    :type x: torch.Tensor
-    :param alpha: The level of confidence
-    :type alpha: float
-    :return: Whether a normal distribution or not
-    :rtype: bool
-    """
-    mean = x.mean(0)
-    var = ((x - mean) ** 2).mean(0)
-
-    # ===== Skew ===== #
-    skew = ((x - mean) ** 3).mean(0) / var ** 1.5
-
-    # ===== Kurtosis ===== #
-    kurt = ((x - mean) ** 4).mean(0) / var ** 2
-
-    # ===== Statistic ===== #
-    jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
-
-    return chi2(2).ppf(1 - alpha) >= jb
-
-
-def _jitter(values, scale):
-    """
-    Jitters the parameters.
-    :param values: The values
-    :type values: torch.Tensor
-    :param scale: The scaling to use for the variance of the proposal
-    :type scale: float
-    :return: Proposed values
-    :rtype: torch.Tensor
-    """
-
-    return values + scale * torch.empty_like(values).normal_()
-
-
-def _shrink(values, w, ess):
-    """
-    Shrinks the parameters towards their mean.
-    :param values: The values
-    :type values: torch.Tensor
-    :param w: The normalized weights
-    :type w: torch.Tensor
-    :param ess: The previous ESS
-    :type ess: float
-    :return: The mean of the shrunk distribution and bandwidth
-    :rtype: torch.Tensor, torch.Tensor
-    """
-    # ===== Calculate mean ===== #
-    w = add_dimensions(w, values.dim())
-
-    mean = (w * values).sum(0)
-
-    # ===== Calculate STD ===== #
-    norm_test = _normal_test(values)
-
-    std = torch.empty_like(mean)
-    var = torch.empty_like(mean)
-
-    # ===== For those not normally distributed ===== #
-    t_mask = ~norm_test
-    if t_mask.any():
-        sort, _ = values[:, t_mask].sort(0)
-        std[t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
-
-        var[t_mask] = std[t_mask] ** 2
-
-    # ===== Those normally distributed ===== #
-    if norm_test.any():
-        var[norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0)
-        std[norm_test] = var[norm_test].sqrt()
-
-    # ===== Calculate bandwidth ===== #
-    bw = 1.59 * std * ess ** (-1 / 3)
-
-    # ===== Calculate shrinkage and shrink ===== #
-    beta = ((var - bw ** 2) / var).sqrt()
-
-    return mean + beta * (values - mean), bw
-
-
-def _unflattify(values, shape):
-    """
-    Unflattifies parameter values.
-    :param values: The flattened array of values that are to be unflattified
-    :type values: torch.Tensor
-    :param shape: The shape of the parameter prior
-    :type shape: torch.Size
-    :rtype: torch.Tensor
-    """
-
-    if len(shape) < 1 or values.shape[1:] == shape:
-        return values
-
-    return values.reshape(values.shape[0], *shape)
-
-
-class RegularJittering(BaseKernel):
-    def __init__(self, p=4, **kwargs):
+class OnlineKernel(BaseKernel):
+    def __init__(self, kde=None, **kwargs):
         """
-        The regular jittering kernel proposed in the original paper.
-        :param p: The p controlling the variance
-        :type p: float
+        An improved regular shrinkage kernel, from the paper ..
+        :param kde: The KDE algorithm to use
+        :type kde: KernelDensityEstimate
         """
         super().__init__(**kwargs)
-        self._p = p
 
-    def _update(self, parameters, filter_, weights, ess):
-        # ===== Mutate parameters ===== #
-        scale = 1 / sqrt(weights.numel() ** ((self._p + 2) / self._p))
-        for p in parameters:
-            p.t_values = _unflattify(_jitter(p.t_values, scale), p.c_shape)
+        self._kde = kde or ShrinkingKernel()
+        self._resampled = None
 
-        return self
+    def _resample(self, filter_, weights):
+        """
+        Helper method for performing resampling.
+        :param filter_: The filter to resample
+        :type filter_: BaseFilter
+        :param weights: The weights
+        :type weights: torch.Tensor
+        :rtype: torch.Tensor
+        """
 
+        self._resampled = False
 
-class ShrinkageKernel(BaseKernel):
-    """
-    An improved regular shrinkage kernel, from the paper ..
-    """
+        if get_ess(weights, normalized=True) > self._th * weights.numel():
+            return torch.arange(weights.numel())
 
-    def _update(self, parameters, filter_, weights, ess):
+        inds = self._resampler(weights, normalized=True)
+        filter_.resample(inds, entire_history=False)
+        self._resampled = True
+
+        return inds
+
+    def _update(self, parameters, filter_, weights):
         # ===== Perform shrinkage ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        shrunk_mean, scales = _shrink(stacked, weights, ess)
+        kde = self._kde.fit(stacked, weights)
+
+        inds = self._resample(filter_, weights)
+        kde._means = kde._means[inds]
+
+        jittered = kde.sample()
 
         # ===== Mutate parameters ===== #
         for msk, p in zip(mask, parameters):
-            m, s = shrunk_mean[:, msk], scales[msk]
+            p.t_values = unflattify(jittered[:, msk], p.c_shape)
 
-            p.t_values = _unflattify(_jitter(m, s), p.c_shape)
-
-        return self
+        return self._resampled
 
 
-class AdaptiveShrinkageKernel(BaseKernel):
-    def __init__(self, eps=1e-4, **kwargs):
+# TODO: The eps is completely arbitrary... but kinda influences the posterior
+class AdaptiveKernel(OnlineKernel):
+    def __init__(self, eps=5e-5, **kwargs):
         """
         Implements the adaptive shrinkage kernel of ..
         :param eps: The tolerance for when to stop shrinking
@@ -297,11 +222,14 @@ class AdaptiveShrinkageKernel(BaseKernel):
         super().__init__(**kwargs)
         self._eps = eps
         self._old_var = None
+        self._switched = None
 
-    def _update(self, parameters, filter_, weights, ess):
-        # ===== Perform shrinkage ===== #
+        self._shrink_kde = ShrinkingKernel()
+        self._non_shrink = NonShrinkingKernel()
+
+    def _update(self, parameters, filter_, weights):
+        # ===== Define stacks ===== #
         stacked, mask = stacker(parameters, lambda u: u.t_values)
-        shrunk_mean, scales = _shrink(stacked, weights, ess)
 
         # ===== Check "convergence" ====== #
         w = add_dimensions(weights, stacked.dim())
@@ -309,73 +237,68 @@ class AdaptiveShrinkageKernel(BaseKernel):
         mean = (w * stacked).sum(0)
         var = (w * (stacked - mean) ** 2).sum(0)
 
+        if self._switched is None:
+            self._switched = torch.zeros_like(mean).bool()
+
         if self._old_var is None:
             var_diff = var
         else:
             var_diff = var - self._old_var
 
-        # ===== Mutate parameters ===== #
-        for p, msk in zip(parameters, mask):
-            switched = (var_diff[msk].abs() < self._eps).all()
-            m = (stacked if switched else shrunk_mean)[:, msk]
-
-            p.t_values = _unflattify(_jitter(m, scales[msk]), p.c_shape)
-
         self._old_var = var
+        self._switched = (var_diff.abs() < self._eps) & ~self._switched
 
-        return self
+        # ===== Resample ===== #
+        inds = self._resample(filter_, weights)
+
+        # ===== Perform shrinkage ===== #
+        jittered = torch.empty_like(stacked)
+
+        if (~self._switched).any():
+            shrink_kde = self._shrink_kde.fit(stacked[:, ~self._switched], weights)
+            shrink_kde._means = shrink_kde._means[inds]
+
+            jittered[:, ~self._switched] = shrink_kde.sample()
+
+        if self._switched.any():
+            non_shrink = self._non_shrink.fit(stacked[:, self._switched], weights)
+            non_shrink._means = non_shrink._means[inds]
+
+            jittered[:, self._switched] = non_shrink.sample()
+
+        # ===== Set new values ===== #
+        for p, msk in zip(parameters, mask):
+            p.t_values = unflattify(jittered[:, msk], p.c_shape)
+
+        return self._resampled
 
 
-class RegularizedKernel(BaseKernel):
-    def _sample_epachnikov(self, ndim, samples, device, is_samples=10000):
+class KernelDensitySampler(BaseKernel):
+    def __init__(self, kde=None, **kwargs):
         """
-        Samples from the epachnikov kernel.
-        :rtype: torch.Tensor
+        Implements a sampler that samples from a KDE representation.
+        :param kde: The KDE
+        :type kde: KernelDensityEstimate
         """
+        super().__init__(**kwargs)
+        self._kde = kde or MultivariateGaussian()
 
-        hypercube = torch.empty((is_samples, ndim), device=device).uniform_(-1, 1)    # type: torch.Tensor
-        norm = hypercube.norm(dim=-1)
-        w = (1 - norm ** 2) * (norm < 1).float()
-
-        normalized = normalize(w.log())
-        inds = torch.multinomial(normalized, num_samples=samples, replacement=True)
-
-        return hypercube[inds]
-
-    def _update(self, parameters, filter_, weights, ess):
-        ess = get_ess(weights, normalized=True)
+    def _update(self, parameters, filter_, weights):
         values, mask = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
-        w = weights.unsqueeze(-1)
-        mean = (values * w).sum(0)
-        std = torch.empty_like(mean)
-
-        norm_test = _normal_test(values)
-
-        t_mask = ~norm_test
-        if t_mask.any():
-            sort, _ = values[:, t_mask].sort(0)
-            std[t_mask] = (sort[int(0.75 * values.shape[0])] - sort[int(0.25 * values.shape[0])]) / 1.349
-        if norm_test.any():
-            std[norm_test] = (w * (values[:, norm_test] - mean[norm_test]) ** 2).sum(0).sqrt()
-
-        # ===== Define "optimal" bw ===== #
-        n = std.shape[-1]
-        h = (ess * (n + 2) / 4) ** (-1 / (n + 4))
-
-        scale = h * std
+        kde = self._kde.fit(values, weights)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = self._sample_epachnikov(n, values.shape[0], device=values.device)
+        samples = kde.sample()
         for p, msk in zip(parameters, mask):
-            p.t_values = _unflattify(p.t_values + scale[msk] * samples[:, msk], p.c_shape)
+            p.t_values = unflattify(samples[:, msk], p.c_shape)
 
-        return self
+        return True
 
 
 def _mcmc_move(params, dist, mask, shape):
@@ -396,7 +319,7 @@ def _mcmc_move(params, dist, mask, shape):
     rvs = dist.sample((shape,))
 
     for p, msk in zip(params, mask):
-        p.t_values = _unflattify(rvs[:, msk], p.c_shape)
+        p.t_values = unflattify(rvs[:, msk], p.c_shape)
 
     return True
 
@@ -493,13 +416,9 @@ class ParticleMetropolisHastings(BaseKernel):
 
             weights = normalize(filter_.loglikelihood)
 
-        return self
+        return True
 
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, values, weights):
-        mean = (values * weights.unsqueeze(-1)).sum(0)
-        centralized = values - mean
-        cov = torch.matmul(weights * centralized.t(), centralized)
-
-        return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+        return _construct_mvn(values, weights)

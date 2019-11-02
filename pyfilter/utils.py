@@ -5,9 +5,12 @@ import torch
 from torch.distributions import Distribution, Transform
 from .timeseries.parameter import Parameter
 import numbers
+from math import sqrt
+from scipy.stats import chi2
 
 
 _NATIVE = (bool, str, numbers.Number)
+EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
 def get_ess(w, normalized=False):
@@ -152,6 +155,47 @@ def flatten(*args):
             out.append(el)
 
     return tuple(out)
+
+
+def normal_test(x, alpha=0.05):
+    """
+    Implements a basic Jarque-Bera test for normality.
+    :param x: The data
+    :type x: torch.Tensor
+    :param alpha: The level of confidence
+    :type alpha: float
+    :return: Whether a normal distribution or not
+    :rtype: bool
+    """
+    mean = x.mean(0)
+    var = ((x - mean) ** 2).mean(0)
+
+    # ===== Skew ===== #
+    skew = ((x - mean) ** 3).mean(0) / var ** 1.5
+
+    # ===== Kurtosis ===== #
+    kurt = ((x - mean) ** 4).mean(0) / var ** 2
+
+    # ===== Statistic ===== #
+    jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
+
+    return chi2(2).ppf(1 - alpha) >= jb
+
+
+def unflattify(values, shape):
+    """
+    Unflattifies parameter values.
+    :param values: The flattened array of values that are to be unflattified
+    :type values: torch.Tensor
+    :param shape: The shape of the parameter prior
+    :type shape: torch.Size
+    :rtype: torch.Tensor
+    """
+
+    if len(shape) < 1 or values.shape[1:] == shape:
+        return values
+
+    return values.reshape(values.shape[0], *shape)
 
 
 def _yield_objs(obj):

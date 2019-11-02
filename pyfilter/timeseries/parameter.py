@@ -196,7 +196,7 @@ class Parameter(torch.Tensor):
 
         return isinstance(self._prior, dist.Distribution)
 
-    def get_kde(self, weights=None, transformed=True):
+    def get_kde(self, weights=None, transformed=False):
         """
         Constructs KDE of the discrete representation on the transformed space.
         :param weights: The weights to use
@@ -225,11 +225,10 @@ class Parameter(torch.Tensor):
         :rtype: tuple[np.ndarray]
         """
 
-        transformed = kwargs.pop('transformed', None)
-        kde = self.get_kde(transformed=True, **kwargs)
+        kde = self.get_kde(**kwargs)
 
         # ===== Gets the range to plot ===== #
-        vals = self.t_values.cpu().numpy()
+        vals = kde.dataset
         low = vals.min()
         high = vals.max()
 
@@ -239,9 +238,9 @@ class Parameter(torch.Tensor):
         while kde.logpdf(high) > np.log(1e-3):
             high += 1e-2
 
-        xrange_ = torch.linspace(low, high, num)
+        xrange_ = np.linspace(low, high, num)
 
-        return self.bijection(xrange_).cpu().numpy(), np.exp(kde.logpdf(xrange_.cpu().numpy()))
+        return xrange_, np.exp(kde.logpdf(xrange_))
 
     def __reduce_ex__(self, protocol):
         return (
