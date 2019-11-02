@@ -133,20 +133,14 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
 
-        m_res = tuple()
-        s_res = tuple()
-        for p in parameters:
-            weights = add_dimensions(weights, p.dim())
-            vals = p.t_values
+        values, _ = stacker(parameters, lambda u: u.t_values)
+        weights = weights.unsqueeze(-1)
 
-            mean = (vals * weights).sum(0)
-            scale = ((vals - mean) ** 2 * weights).sum(0).sqrt()
+        mean = (values * weights).sum(0)
+        scale = ((values - mean) ** 2 * weights).sum(0).sqrt()
 
-            m_res += (mean,)
-            s_res += (scale,)
-
-        self._recorded_stats['mean'] += (m_res,)
-        self._recorded_stats['scale'] += (s_res,)
+        self._recorded_stats['mean'] += (mean,)
+        self._recorded_stats['scale'] += (scale,)
 
         return self
 
@@ -160,7 +154,7 @@ class BaseKernel(object):
         for k, v in self._recorded_stats.items():
             t_res = tuple()
             for pt in v:
-                t_res += (np.array(pt),)
+                t_res += (pt.cpu().numpy(),)
 
             res[k] = np.stack(t_res)
 
