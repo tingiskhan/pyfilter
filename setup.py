@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
-
+from pyfilter import __version__
 
 setup(
     name='pyfilter',
-    version='0.3.17',
+    version=__version__,
     author='Victor Gruselius',
     author_email='victor.gruselius@gmail.com',
     description='Package for performing online Bayesian inference in state space models',
