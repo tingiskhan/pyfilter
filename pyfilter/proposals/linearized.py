@@ -43,8 +43,11 @@ class Linearized(Proposal):
         logl = obs_logl + hid_logl
 
         # ===== Do backward-pass ===== #
-        oloc.backward(torch.ones_like(oloc), retain_graph=True)
-        dobsx = mu.grad.clone()
+        if oloc.requires_grad:
+            oloc.backward(torch.ones_like(oloc), retain_graph=True)
+            dobsx = mu.grad.clone()
+        else:
+            dobsx = 0.
 
         logl.backward(torch.ones_like(logl))
         dlogl = mu.grad.clone()
