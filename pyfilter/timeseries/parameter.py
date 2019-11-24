@@ -196,27 +196,21 @@ class Parameter(torch.Tensor):
 
         return isinstance(self._prior, dist.Distribution)
 
-    def get_kde(self, weights=None, transformed=False):
+    def get_kde(self, weights=None):
         """
         Constructs KDE of the discrete representation on the transformed space.
         :param weights: The weights to use
         :type weights: torch.Tensor
-        :param transformed: Whether to perform on transformed or actual values
-        :type transformed: bool
         :return: KDE object
         :rtype: gaussian_kde
         """
-        if transformed:
-            array = self.t_values.cpu().numpy()
-        else:
-            array = self.values.cpu().numpy()
+        array = self.t_values
 
-        weights = weights.cpu().numpy() if weights is not None else weights
+        # ===== Perform transformation ===== #
+        w = self.bijection.inv.log_abs_det_jacobian(self.values, array).exp()
+        weights = (weights * w if weights is not None else w).cpu().numpy()
 
-        if array.ndim > 1:
-            array = array[..., 0]
-
-        return gaussian_kde(array, weights=weights)
+        return gaussian_kde(array.cpu().numpy(), weights=weights)
 
     def get_plottable(self, num=100, **kwargs):
         """
@@ -238,9 +232,10 @@ class Parameter(torch.Tensor):
         while kde.logpdf(high) > np.log(1e-3):
             high += 1e-2
 
-        xrange_ = np.linspace(low, high, num)
+        xeval = np.linspace(low, high, num)
+        xrange_ = self.bijection(torch.from_numpy(xeval)).cpu().numpy()
 
-        return xrange_, np.exp(kde.logpdf(xrange_))
+        return xrange_, np.exp(kde.logpdf(xeval))
 
     def __reduce_ex__(self, protocol):
         return (
