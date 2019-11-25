@@ -1,6 +1,6 @@
 from .ness import NESS
 from .base import experimental
-from .kernels import ParticleMetropolisHastings, SymmetricMH, ApproximateSymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH, ApproximateSymmetricMH, KernelDensitySampler
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
@@ -98,9 +98,9 @@ class SMC2FW(NESS):
     def __init__(self, filter_, particles, switch=200, resampling=residual, block_len=125, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
-        :param block_len: The block length to use
+        :param block_len: The minimum block length to use
         :type block_len: int
-        :param switch: When to switch to using fixed width for sampling
+        :param switch: When to switch to using fixed width sampling
         :type switch: int
         :param kwargs: Kwargs to SMC2
         """
@@ -109,11 +109,11 @@ class SMC2FW(NESS):
 
         self._switch = int(switch)
         self._switched = False
+        self._last_update = switch
 
         # ===== Resampling related ===== #
         self._kernel = ApproximateSymmetricMH(block_len=block_len, resampling=resampling)
         self._bl = block_len
-        self._min_th = 0.1
 
     def initialize(self):
         self._smc2.initialize()
@@ -132,12 +132,17 @@ class SMC2FW(NESS):
             self._logged_ess = self._smc2._logged_ess
 
         # ===== Check if to propagate ===== #
-        if len(self._y) % self._bl == 0:
+        if self._last_update - self._bl >= 0 and self._logged_ess[-1] < self._smc2._th * self._particles:
+            if isinstance(self._kernel, ParticleMetropolisHastings):
+                self._kernel._bl = self._last_update
+
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
+            self._last_update = 0
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
         self._w_rec += self.filter.s_ll[-1]
+        self._last_update += 1
 
         # ===== Calculate efficient number of samples ===== #
         self._logged_ess += (get_ess(self._w_rec),)

@@ -470,7 +470,7 @@ class ExactGPModel(gpytorch.models.ExactGP):
 
 
 class ApproximateParticleMetropolisHastings(ParticleMetropolisHastings):
-    def __init__(self, block_len, training_iter=100, **kwargs):
+    def __init__(self, block_len, training_iter=250, **kwargs):
         """
         Implements base class for approximate Particle MH.
         :param block_len: The size of the blocks to use
