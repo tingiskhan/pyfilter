@@ -54,6 +54,9 @@ class Linearized(Proposal):
 
         mu = mu.detach()
         oscale = oscale.detach()
+        # For cases when we return the tensor itself
+        # TODO: Perhaps copy in the wrapper instead?
+        x.detach_()
 
         if self._model.hidden_ndim < 2:
             var = 1 / (1 / hscale ** 2 + (dobsx / oscale) ** 2)
