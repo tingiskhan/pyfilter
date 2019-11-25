@@ -8,21 +8,21 @@ import torch
 
 
 class NESSMC2(SequentialAlgorithm):
-    def __init__(self, filter_, particles, handshake=500, smc2_threshold=0.5, resampling=residual,
+    def __init__(self, filter_, particles, switch=500, smc2_threshold=0.5, resampling=residual,
                  update_on_handshake=True, smc2_kernel=None, **nesskwargs):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
         demanding to use the SMC2.
-        :param handshake: At which point to switch algorithms, in number of observations
-        :type handshake: int
+        :param switch: At which point to switch algorithms, in number of observations
+        :type switch: int
         :param update_on_handshake: Whether to perform MCMC move on handshake if ESS is below threshold of NESS
         :type update_on_handshake: bool
         """
 
         super().__init__(filter_)
 
-        self._hs = handshake
+        self._switch = switch
         self._switched = False
         self._updateonhandshake = update_on_handshake
 
@@ -49,7 +49,7 @@ class NESSMC2(SequentialAlgorithm):
         return self
 
     def _update(self, y):
-        if len(self._smc2._y) < self._hs:
+        if len(self._smc2._y) < self._switch:
             return self._smc2.update(y)
 
         if not self._switched:

@@ -1,6 +1,6 @@
 from .ness import NESS
 from .base import experimental
-from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
+from .kernels import ParticleMetropolisHastings, SymmetricMH, ApproximateSymmetricMH
 from ..utils import get_ess, normalize
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
@@ -111,7 +111,7 @@ class SMC2FW(NESS):
         self._switched = False
 
         # ===== Resampling related ===== #
-        self._kernel = KernelDensitySampler(resampling=resampling)
+        self._kernel = ApproximateSymmetricMH(block_len=block_len, resampling=resampling)
         self._bl = block_len
         self._min_th = 0.1
 
@@ -132,7 +132,7 @@ class SMC2FW(NESS):
             self._logged_ess = self._smc2._logged_ess
 
         # ===== Check if to propagate ===== #
-        if len(self._y) % self._bl == 0 or self._logged_ess[-1] < self._min_th * self._particles:
+        if len(self._y) % self._bl == 0:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Perform a filtering move ===== #
