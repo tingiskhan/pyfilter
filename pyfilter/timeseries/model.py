@@ -75,8 +75,8 @@ class StateSpaceModel(TimeseriesInterface):
         if self.obs_ndim < 2:
             y_shape = y_shape[:-1]
 
-        hidden = torch.zeros(x_shape)
-        obs = torch.zeros(y_shape)
+        hidden = torch.zeros(x_shape, device=x.device)
+        obs = torch.zeros(y_shape, device=x.device)
 
         y = self.observable.propagate(x)
 
