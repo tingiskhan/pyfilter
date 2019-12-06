@@ -75,8 +75,7 @@ class SMC2(SequentialParticleAlgorithm):
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
 
-        acc = self._kernel.accepted
-        msg = '{:s} - Increasing number of state particles from {:d} -> {:d} as acceptance was {:.2%}'.format(acc)
+        msg = '{:s} - Increasing particles from {:d} -> {:d}'
         self._iterator.set_description(desc=msg.format(str(self), oldparts, self.filter.particles))
 
         self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
