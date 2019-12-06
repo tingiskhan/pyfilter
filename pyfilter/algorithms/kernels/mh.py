@@ -50,7 +50,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
     def _calc_diff_logl(self, t_filt, filter_):
         """
-        Helper method for calculating the acceptance probability.
+        Helper method for calculating the difference in log likelihood between proposed and existing parameters.
         :param t_filt: The new filter
         :type t_filt: BaseFilter
         :param filter_: The old filter
@@ -80,7 +80,7 @@ class ParticleMetropolisHastings(BaseKernel):
             stacked, mask = stacker(parameters, lambda u: u.t_values)
             dist = self.define_pdf(stacked, weights)
 
-            # ===== Do stuff prior to saving ===== #
+            # ===== Perform necessary operation prior to resampling ===== #
             self._before_resampling(filter_, stacked)
 
             # ===== Resample among parameters ===== #
