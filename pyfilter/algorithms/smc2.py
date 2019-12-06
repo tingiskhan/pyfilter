@@ -1,19 +1,15 @@
-from .ness import NESS
-from .base import experimental
-from .kernels import ParticleMetropolisHastings, SymmetricMH, ApproximateSymmetricMH, KernelDensitySampler
-from ..utils import get_ess, normalize
+from .base import experimental, SequentialParticleAlgorithm
+from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
+from ..utils import get_ess
 from ..filters.base import KalmanFilter, ParticleFilter
 from time import sleep
-from ..resampling import systematic, residual
 import torch
 
 
-class SMC2(NESS):
-    def __init__(self, filter_, particles, threshold=0.2, resampling=residual, kernel=None):
+class SMC2(SequentialParticleAlgorithm):
+    def __init__(self, filter_, particles, threshold=0.2, kernel=None):
         """
         Implements the SMC2 algorithm by Chopin et al.
-        :param particles: The amount of particles
-        :type particles: int
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :type threshold: float
         :param kernel: The kernel to use
@@ -23,10 +19,13 @@ class SMC2(NESS):
         if isinstance(filter_, KalmanFilter):
             raise ValueError('`filter_` must be of instance `{:s}!'.format(ParticleFilter.__name__))
 
-        super().__init__(filter_, particles, resampling=resampling)
+        super().__init__(filter_, particles)
 
         self._th = threshold
-        self._kernel = kernel or SymmetricMH(resampling=resampling)
+        self._kernel = kernel or SymmetricMH()
+
+        if not isinstance(self._kernel, ParticleMetropolisHastings):
+            raise ValueError('The kernel must be of instance {}!'.format(ParticleMetropolisHastings.__class__.__name__))
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
@@ -93,9 +92,9 @@ class SMC2(NESS):
         return self
 
 
-class SMC2FW(NESS):
+class SMC2FW(SequentialParticleAlgorithm):
     @experimental
-    def __init__(self, filter_, particles, switch=200, resampling=residual, block_len=125, **kwargs):
+    def __init__(self, filter_, particles, switch=200, block_len=125, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
         :param block_len: The minimum block length to use
@@ -104,15 +103,15 @@ class SMC2FW(NESS):
         :type switch: int
         :param kwargs: Kwargs to SMC2
         """
-        super().__init__(filter_, particles, resampling=resampling)
-        self._smc2 = SMC2(self.filter, particles, resampling=resampling, **kwargs)
+        super().__init__(filter_, particles)
+        self._smc2 = SMC2(self.filter, particles, **kwargs)
 
         self._switch = int(switch)
         self._switched = False
         self._last_update = switch
 
         # ===== Resampling related ===== #
-        self._kernel = ApproximateSymmetricMH(block_len=block_len, resampling=resampling)
+        self._kernel = KernelDensitySampler()
         self._bl = block_len
 
     def initialize(self):
@@ -130,6 +129,7 @@ class SMC2FW(NESS):
             self._w_rec = self._smc2._w_rec
             self._switched = True
             self._logged_ess = self._smc2._logged_ess
+            self._iterator.set_description(str(self))
 
         # ===== Check if to propagate ===== #
         if self._last_update - self._bl >= 0 and self._logged_ess[-1] < self._smc2._th * self._particles:

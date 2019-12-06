@@ -1,34 +1,32 @@
-from .base import SequentialAlgorithm
+from .base import SequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 from tqdm import tqdm
-from ..resampling import systematic, residual
 from ..utils import get_ess
 import torch
 
 
-class NESSMC2(SequentialAlgorithm):
-    def __init__(self, filter_, particles, switch=500, smc2_threshold=0.5, resampling=residual,
-                 update_on_handshake=True, smc2_kernel=None, **nesskwargs):
+class NESSMC2(SequentialParticleAlgorithm):
+    def __init__(self, filter_, particles, switch=500, smc2_th=0.5, update_switch=True, smc2_kernel=None, **nesskwargs):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
         demanding to use the SMC2.
         :param switch: At which point to switch algorithms, in number of observations
         :type switch: int
-        :param update_on_handshake: Whether to perform MCMC move on handshake if ESS is below threshold of NESS
-        :type update_on_handshake: bool
+        :param update_switch: Whether to perform MCMC move on switch if ESS is below threshold of NESS
+        :type update_switch: bool
         """
 
-        super().__init__(filter_)
+        super().__init__(filter_, particles)
 
         self._switch = switch
         self._switched = False
-        self._updateonhandshake = update_on_handshake
+        self._updateonhandshake = update_switch
 
         # ===== Set some key-worded arguments ===== #
-        self._smc2 = SMC2(self.filter, particles, resampling=resampling, threshold=smc2_threshold, kernel=smc2_kernel)
-        self._ness = NESS(self.filter, particles, resampling=resampling, **nesskwargs)
+        self._smc2 = SMC2(self.filter, particles, threshold=smc2_th, kernel=smc2_kernel)
+        self._ness = NESS(self.filter, particles, **nesskwargs)
 
     @property
     def logged_ess(self):

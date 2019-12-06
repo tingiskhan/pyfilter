@@ -1,7 +1,7 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal
-from ..kernels import stacker
+from ..utils import stacker
 
 
 class StateMeanField(BaseApproximation):
