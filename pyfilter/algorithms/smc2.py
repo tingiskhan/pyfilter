@@ -55,14 +55,8 @@ class SMC2(SequentialParticleAlgorithm):
         self._kernel.set_data(self._y)
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
-        # ===== Update the description ===== #
-        accepted = self._kernel.accepted
-
-        self._iterator.set_description(desc='{:s} - Accepted particles is {:.1%}'.format(str(self), accepted))
-        sleep(1)
-
         # ===== Increase states if less than 20% are accepted ===== #
-        if accepted < 0.2 and isinstance(self.filter, ParticleFilter):
+        if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
             self._increase_states()
 
         return self
@@ -81,7 +75,8 @@ class SMC2(SequentialParticleAlgorithm):
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
 
-        msg = '{:s} - Increasing number of state particles from {:d} -> {:d}'
+        acc = self._kernel.accepted
+        msg = '{:s} - Increasing number of state particles from {:d} -> {:d} as acceptance was {:.2%}'.format(acc)
         self._iterator.set_description(desc=msg.format(str(self), oldparts, self.filter.particles))
 
         self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
