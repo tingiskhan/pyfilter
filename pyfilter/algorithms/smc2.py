@@ -2,7 +2,6 @@ from .base import experimental, SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
 from ..utils import get_ess
 from ..filters.base import KalmanFilter, ParticleFilter
-from time import sleep
 import torch
 
 
