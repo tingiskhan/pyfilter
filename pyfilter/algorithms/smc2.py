@@ -126,9 +126,6 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         # ===== Check if to propagate ===== #
         if self._last_update - self._bl >= 0 and self._logged_ess[-1] < self._smc2._th * self._particles:
-            if isinstance(self._kernel, ParticleMetropolisHastings):
-                self._kernel._bl = self._last_update
-
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._last_update = 0
 

@@ -103,15 +103,11 @@ class AdaptiveKernel(OnlineKernel):
 
         if (~self._switched).any():
             shrink_kde = self._shrink_kde.fit(stacked[:, ~self._switched], weights)
-            shrink_kde._means = shrink_kde._means[inds]
-
-            jittered[:, ~self._switched] = shrink_kde.sample()
+            jittered[:, ~self._switched] = shrink_kde.sample(inds=inds)
 
         if self._switched.any():
             non_shrink = self._non_shrink.fit(stacked[:, self._switched], weights)
-            non_shrink._means = non_shrink._means[inds]
-
-            jittered[:, self._switched] = non_shrink.sample()
+            jittered[:, self._switched] = non_shrink.sample(inds=inds)
 
         # ===== Set new values ===== #
         for p, msk in zip(parameters, mask):
@@ -141,7 +137,7 @@ class KernelDensitySampler(BaseKernel):
         filter_.resample(inds, entire_history=False)
 
         # ===== Sample params ===== #
-        samples = kde.sample()
+        samples = kde.sample(inds=inds)
         for p, msk in zip(parameters, mask):
             p.t_values = unflattify(samples[:, msk], p.c_shape)
 

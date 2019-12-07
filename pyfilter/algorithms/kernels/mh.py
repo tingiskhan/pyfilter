@@ -1,11 +1,9 @@
 from ...filters.base import BaseFilter
-from ...utils import normalize, EPS
+from ...utils import normalize
 from .base import BaseKernel
 from pyfilter.algorithms.utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
 import torch
 from torch.distributions import MultivariateNormal, Independent
-import gpytorch
-from gpytorch import kernels as k
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -117,96 +115,5 @@ class ParticleMetropolisHastings(BaseKernel):
 
 
 class SymmetricMH(ParticleMetropolisHastings):
-    def define_pdf(self, values, weights):
-        return _construct_mvn(values, weights)
-
-
-class ExactGPModel(gpytorch.models.ExactGP):
-    def __init__(self, train_x, train_y, likelihood):
-        super(ExactGPModel, self).__init__(train_x, train_y, likelihood)
-        self.mean_module = gpytorch.means.ConstantMean()
-        self.covar_module = k.ScaleKernel(k.MaternKernel(ard_num_dims=train_x.shape[-1]))
-
-    def forward(self, x):
-        mean_x = self.mean_module(x)
-        covar_x = self.covar_module(x)
-        return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-
-
-class ApproximateParticleMetropolisHastings(ParticleMetropolisHastings):
-    def __init__(self, block_len, training_iter=250, **kwargs):
-        """
-        Implements base class for approximate Particle MH.
-        :param block_len: The size of the blocks to use
-        :type block_len: int
-        :param training_iter: The maximum amount of training iterations
-        :type training_iter: int
-        """
-
-        super().__init__(**kwargs)
-        self._bl = int(block_len)
-        self._iters = int(training_iter)
-
-        self._entire_hist = False
-        self._model = None
-
-    def _fit_gp(self, x, y):
-        """
-        Fits the Gaussian process.
-        :param x: The parameters
-        :param y: The likelihood
-        :return:
-        """
-        # ===== Define model ===== #
-        likelihood = gpytorch.likelihoods.GaussianLikelihood().to(x.device)
-        model = ExactGPModel(x, y, likelihood).to(x.device) if self._model is None else self._model
-
-        if self._model is not None:
-            model.set_train_data(x, y)
-
-        # ===== Set to train mode ===== #
-        model.train()
-        likelihood.train()
-
-        # ===== Define optimizer ===== #
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-
-        # ===== Set loss ===== #
-        mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model)
-
-        # ===== Perform optimization ===== #
-        old = torch.tensor(float('inf'))
-        loss = -old
-        i = 0
-        while (loss - old).abs() > EPS and i <= self._iters:
-            old = loss
-
-            optimizer.zero_grad()
-
-            output = model(x)
-            loss = -mll(output, y)
-            loss.backward()
-
-            optimizer.step()
-
-            i += 1
-
-        return model
-
-    def _calc_diff_logl(self, t_filt, filter_):
-        stacked, _ = stacker(filter_.ssm.theta_dists, lambda u: u.t_values)
-        n_stacked, _ = stacker(t_filt.ssm.theta_dists, lambda u: u.t_values)
-
-        self._model.eval()
-
-        return self._model(n_stacked).loc - self._model(stacked).loc
-
-    def _before_resampling(self, filter_, stacked):
-        self._model = self._fit_gp(stacked, sum(filter_.s_ll[-self._bl:]))
-
-        return self
-
-
-class ApproximateSymmetricMH(ApproximateParticleMetropolisHastings):
     def define_pdf(self, values, weights):
         return _construct_mvn(values, weights)
