@@ -110,9 +110,11 @@ class KernelDensityEstimate(object):
 
         raise NotImplementedError()
 
-    def sample(self):
+    def sample(self, inds=None):
         """
         Samples from the KDE.
+        :param inds: Whether to manually specify the samples chosen
+        :type inds: torch.Tensor
         :return: New samples
         :rtype: torch.Tensor
         """
@@ -136,8 +138,9 @@ class ShrinkingKernel(KernelDensityEstimate):
 
         return self
 
-    def sample(self):
-        return _jitter(self._means, self._bw_fac * self._cov.sqrt())
+    def sample(self, inds=None):
+        inds = inds if inds is not None else torch.ones_like(self._means)
+        return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
 
 
 class NonShrinkingKernel(ShrinkingKernel):
@@ -178,8 +181,8 @@ class IndependentGaussian(KernelDensityEstimate):
 
         return self
 
-    def sample(self):
-        inds = self._resampling(self._w, normalized=True)
+    def sample(self, inds=None):
+        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
 
         return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
 
@@ -209,8 +212,8 @@ class MultivariateGaussian(IndependentGaussian):
 
         return self
 
-    def sample(self):
-        inds = self._resampling(self._w, normalized=True)
+    def sample(self, inds=None):
+        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
         jittered = _jitter(self._means[inds], self._bw_fac)
 
         return self._post_mean + jittered.matmul(self._cov.T)

@@ -1,4 +1,6 @@
 import copy
+from abc import ABC
+
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
@@ -18,7 +20,7 @@ def enforce_tensor(func):
     return wrapper
 
 
-class BaseFilter(HelperMixin):
+class BaseFilter(HelperMixin, ABC):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.
@@ -169,14 +171,14 @@ class BaseFilter(HelperMixin):
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type y: torch.Tensor
+        :type y: torch.Tensor|tuple[torch.Tensor]
         :param bar: Whether to print a progressbar
         :type bar: bool
         :return: Self
         :rtype: BaseFilter
         """
 
-        astuple = tuple(y)
+        astuple = tuple(y) if not isinstance(y, tuple) else y
         if bar:
             iterator = tqdm(astuple, desc=str(self.__class__.__name__))
         else:
@@ -326,7 +328,7 @@ def cudawarning(resampling):
         raise ValueError(msg)
 
 
-class ParticleFilter(BaseFilter):
+class ParticleFilter(BaseFilter, ABC):
     def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.9, need_grad=False):
         """
         Implements the base functionality of a particle filter.

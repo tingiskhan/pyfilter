@@ -5,7 +5,7 @@ import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
-from .kernels import stacker
+from .utils import stacker
 from ..utils import EPS, unflattify
 
 
@@ -48,7 +48,7 @@ class VariationalBayes(BatchAlgorithm):
     @property
     def s_approximation(self):
         """
-        Returns the resulting variational approximation of the parameters.
+        Returns the resulting variational approximation of the states.
         :rtype: BaseApproximation
         """
         if not self._is_ssm:

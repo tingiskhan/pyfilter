@@ -1,10 +1,13 @@
-from ..filters.base import BaseFilter, enforce_tensor
+from abc import ABC
+from ..filters.base import BaseFilter, enforce_tensor, ParticleFilter
 from tqdm import tqdm
 import warnings
 from ..utils import HelperMixin
+import torch
+from ..utils import normalize
 
 
-class BaseAlgorithm(HelperMixin):
+class BaseAlgorithm(HelperMixin, ABC):
     def __init__(self, filter_):
         """
         Implements a base class for algorithms, i.e. algorithms for inferring parameters.
@@ -78,7 +81,7 @@ class BaseAlgorithm(HelperMixin):
         return str(self.__class__.__name__)
 
 
-class SequentialAlgorithm(BaseAlgorithm):
+class SequentialAlgorithm(BaseAlgorithm, ABC):
     """
     Algorithm for online inference.
     """
@@ -117,7 +120,62 @@ class SequentialAlgorithm(BaseAlgorithm):
         return self
 
 
-class BatchAlgorithm(BaseAlgorithm):
+class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
+    def __init__(self, filter_, particles):
+        """
+        Implements a base class for sequential particle algorithms.
+        :param particles: The number of particles to use
+        :type particles: int
+        """
+        super().__init__(filter_)
+        self._filter.set_nparallel(particles)
+
+        # ===== Weights ===== #
+        self._w_rec = torch.zeros(particles)
+
+        # ===== ESS related ===== #
+        self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
+        self._particles = particles
+
+    def initialize(self):
+        """
+        Overwrites the initialization.
+        :return: Self
+        :rtype: NESS
+        """
+
+        self.filter.ssm.sample_params(self._particles)
+
+        shape = (self._particles, 1) if isinstance(self.filter, ParticleFilter) else (self._particles,)
+        self.filter.viewify_params(shape).initialize()
+
+        return self
+
+    @property
+    def logged_ess(self):
+        """
+        Returns the logged ESS.
+        :rtype: torch.Tensor
+        """
+
+        return torch.tensor(self._logged_ess)
+
+    def predict(self, steps, aggregate=True, **kwargs):
+        px, py = self.filter.predict(steps, aggregate=aggregate, **kwargs)
+
+        if not aggregate:
+            return px, py
+
+        w = normalize(self._w_rec)
+        wsqd = w.unsqueeze(-1)
+
+        xm = (px * (wsqd if self.filter.ssm.hidden_ndim > 1 else w)).sum(1)
+        ym = (py * (wsqd if self.filter.ssm.obs_ndim > 1 else w)).sum(1)
+
+        return xm, ym
+
+
+class BatchAlgorithm(BaseAlgorithm, ABC):
     """
     Algorithm for batch inference.
     """
