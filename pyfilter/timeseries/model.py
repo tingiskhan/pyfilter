@@ -1,17 +1,17 @@
 from ..utils import flatten
 import torch
-from .base import TimeseriesBase, TimeseriesInterface
-from .affine import AffineModel
+from .base import StochasticProcess, StochasticProcessBase
+from .affine import AffineProcess
 
 
-class StateSpaceModel(TimeseriesInterface):
+class StateSpaceModel(StochasticProcessBase):
     def __init__(self, hidden, observable):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: TimeseriesBase
+        :type hidden: StochasticProcess
         :param observable: The observable process(es) constituting the SSM
-        :type observable: TimeseriesBase
+        :type observable: StochasticProcess
         """
 
         self.hidden = hidden
@@ -45,8 +45,8 @@ class StateSpaceModel(TimeseriesInterface):
     def propagate(self, x, as_dist=False):
         return self.hidden.propagate(x, as_dist=as_dist)
 
-    def weight(self, y, x):
-        return self.observable.weight(y, x)
+    def log_prob(self, y, x):
+        return self.observable.log_prob(y, x)
 
     def viewify_params(self, shape):
         for mod in [self.hidden, self.observable]:
@@ -65,9 +65,9 @@ class StateSpaceModel(TimeseriesInterface):
         :rtype: torch.Tensor
         """
 
-        return self.hidden.weight(y, x)
+        return self.hidden.log_prob(y, x)
 
-    def sample(self, steps, x_s=None, samples=None, only_mean=False):
+    def sample_path(self, steps, x_s=None, samples=None, only_mean=False):
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
         x_shape = steps, *x.shape
         y_shape = (*x_shape[:-1], self.obs_ndim) if self.hidden_ndim > 1 else (*x_shape, self.obs_ndim)
@@ -87,7 +87,7 @@ class StateSpaceModel(TimeseriesInterface):
             if not only_mean:
                 x = self.propagate(x)
                 y = self.observable.propagate(x)
-            elif only_mean and isinstance(self.hidden, AffineModel) and isinstance(self.observable, AffineModel):
+            elif only_mean and isinstance(self.hidden, AffineProcess) and isinstance(self.observable, AffineProcess):
                 x = self.hidden.mean(x)
                 y = self.observable.mean(x)
             else:

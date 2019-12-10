@@ -11,4 +11,4 @@ class Bootstrap(Proposal):
         return self
 
     def weight(self, y, xn, xo):
-        return self._model.weight(y, xn)
+        return self._model.log_prob(y, xn)

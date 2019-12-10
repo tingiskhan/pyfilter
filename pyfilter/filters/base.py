@@ -459,7 +459,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def predict(self, steps, aggregate=True, **kwargs):
-        x, y = self._model.sample(steps+1, x_s=self._x_cur, **kwargs)
+        x, y = self._model.sample_path(steps + 1, x_s=self._x_cur, **kwargs)
 
         if not aggregate:
             return x[1:], y[1:]

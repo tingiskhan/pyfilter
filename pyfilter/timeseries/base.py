@@ -1,3 +1,5 @@
+from abc import ABC
+
 from torch.distributions import Distribution
 import torch
 from functools import lru_cache
@@ -60,7 +62,7 @@ def finite_decorator(func):
     return wrapper
 
 
-class TimeseriesInterface(HelperMixin):
+class StochasticProcessBase(HelperMixin):
     @property
     def theta(self):
         """
@@ -85,7 +87,7 @@ class TimeseriesInterface(HelperMixin):
         :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
         :type shape: tuple|torch.Size
         :return: Self
-        :rtype: TimeseriesInterface
+        :rtype: StochasticProcessBase
         """
 
         raise NotImplementedError()
@@ -95,7 +97,7 @@ class TimeseriesInterface(HelperMixin):
         Samples the parameters of the model in place.
         :param shape: The shape to use
         :return: Self
-        :rtype: TimeseriesInterface
+        :rtype: StochasticProcessBase
         """
 
         for param in self.theta_dists:
@@ -105,7 +107,7 @@ class TimeseriesInterface(HelperMixin):
 
         return self
 
-    def weight(self, y, x):
+    def log_prob(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.
@@ -132,7 +134,7 @@ class TimeseriesInterface(HelperMixin):
 
         raise NotImplementedError()
 
-    def sample(self, steps, samples=None):
+    def sample_path(self, steps, samples=None):
         """
         Samples a trajectory from the model.
         :param steps: The number of steps
@@ -153,7 +155,7 @@ class TimeseriesInterface(HelperMixin):
         :param transformed: Whether or not results from applied function are transformed variables
         :type transformed: bool
         :return: Instance of self
-        :rtype: TimeseriesInterface
+        :rtype: StochasticProcessBase
         """
 
         for p in self.theta_dists:
@@ -202,34 +204,37 @@ class TimeseriesInterface(HelperMixin):
         """
         Returns a deep copy of the object.
         :return: Copy of current instance
-        :rtype: TimeseriesInterface
+        :rtype: StochasticProcessBase
         """
 
         return deepcopy(self)
 
 
-class TimeseriesBase(TimeseriesInterface):
-    def __init__(self, theta, noise):
+class StochasticProcess(StochasticProcessBase, ABC):
+    def __init__(self, theta, initial_dist, increment_dist):
         """
         The base class for time series.
         :param theta: The parameters governing the dynamics
         :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
-        :param noise: The noise governing the noise process
-        :type noise: tuple[Distribution]
+        :param initial_dist: The initial distribution
+        :type initial_dist: Distribution
+        :param increment_dist: The distribution of the increments
+        :type increment_dist: Distribution
         """
 
         super().__init__()
 
         # ===== Check distributions ===== #
         cases = (
-            all(isinstance(n, Distribution) for n in noise),
-            (isinstance(noise[-1], Distribution) and noise[0] is None)
+            all(isinstance(n, Distribution) for n in (initial_dist, increment_dist)),
+            (isinstance(increment_dist, Distribution) and initial_dist is None)
         )
 
         if not any(cases):
             raise ValueError('All must be of instance `torch.distributions.Distribution`!')
 
-        self.noise0, self.noise = noise
+        self.initial_dist = initial_dist
+        self.increment_dist = increment_dist
 
         # ===== Some helpers ===== #
         self._theta_vals = None
@@ -240,7 +245,7 @@ class TimeseriesBase(TimeseriesInterface):
 
         # ===== Parameters ===== #
         self._dist_theta = dict()
-        for n in [self.noise0, self.noise]:
+        for n in [self.initial_dist, self.increment_dist]:
             if n is None:
                 continue
 
@@ -248,9 +253,9 @@ class TimeseriesBase(TimeseriesInterface):
                 if k.startswith('_'):
                     continue
 
-                if isinstance(v, Parameter) and n is self.noise:
+                if isinstance(v, Parameter) and n is self.increment_dist:
                     self._dist_theta[k] = v
-                elif isinstance(v, Parameter) and v.trainable and n is self.noise0:
+                elif isinstance(v, Parameter) and v.trainable and n is self.initial_dist:
                     raise ValueError('You cannot have distributional parameters in the initial distribution!')
 
         self._theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
@@ -282,6 +287,16 @@ class TimeseriesBase(TimeseriesInterface):
     def theta(self):
         return self._theta
 
+    @theta.setter
+    def theta(self, x):
+        if len(x) != len(self._theta):
+            raise ValueError('The number of parameters must be same!')
+        if all(isinstance(p, Parameter) for p in x):
+            raise ValueError(f'Not all items are of instance {Parameter.__class__.__name__}')
+
+        self._theta = x
+        self.viewify_params(self._viewshape)
+
     @property
     def theta_dists(self):
         return tuple(p for p in self.theta if p.trainable) + tuple(self._dist_theta.values())
@@ -294,7 +309,7 @@ class TimeseriesBase(TimeseriesInterface):
         :return: Dimension of process
         :rtype: int
         """
-        shape = self.noise.event_shape
+        shape = self.increment_dist.event_shape
         if len(shape) < 1:
             return 1
 
@@ -325,7 +340,7 @@ class TimeseriesBase(TimeseriesInterface):
             pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
 
         if len(pdict) > 0:
-            self.noise.__init__(**pdict)
+            self.increment_dist.__init__(**pdict)
 
         return self
 
@@ -342,7 +357,7 @@ class TimeseriesBase(TimeseriesInterface):
 
         raise NotImplementedError()
 
-    def sample(self, steps, samples=None):
+    def sample_path(self, steps, samples=None):
         x_s = self.i_sample(samples)
         out = torch.zeros(steps, *x_s.shape)
         out[0] = x_s
@@ -351,10 +366,3 @@ class TimeseriesBase(TimeseriesInterface):
             out[i] = self.propagate(out[i-1])
 
         return out
-
-    # TODO: Might not be optimal, but think it will work
-    def __setattr__(self, key, value):
-        self.__dict__[key] = value
-
-        if key == '_theta':
-            self.viewify_params(self._viewshape)

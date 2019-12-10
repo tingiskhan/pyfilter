@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineModel, AffineObservations, StateSpaceModel
+from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceModel
 from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
@@ -64,7 +64,7 @@ class Tests(unittest.TestCase):
     def test_UnscentedTransform1D(self):
         # ===== 1D model ===== #
         norm = Normal(0., 1.)
-        linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+        linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
         linearobs = AffineObservations((fo, go), (1., 1.), norm)
         model = StateSpaceModel(linear, linearobs)
 
@@ -82,7 +82,7 @@ class Tests(unittest.TestCase):
 
         norm = Normal(0., 1.)
         mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-        mvnlinear = AffineModel((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
+        mvnlinear = AffineProcess((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
         mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)

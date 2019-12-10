@@ -1,10 +1,10 @@
-from .affine import AffineModel
+from .affine import AffineProcess
 import torch
 from torch.distributions import Normal, Independent, Distribution
 
 
 # TODO: Add integration step as well
-class EulerMaruyma(AffineModel):
+class EulerMaruyma(AffineProcess):
     def __init__(self, initial, funcs, theta, dt=1., ndim=1):
         """
         Implements the Euler-Maruyama scheme.

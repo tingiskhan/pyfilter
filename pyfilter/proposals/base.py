@@ -74,7 +74,7 @@ class Proposal(HelperMixin):
         :rtype: torch.Tensor
         """
 
-        return self._model.weight(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
+        return self._model.log_prob(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
 
     def resample(self, inds):
         """
@@ -121,11 +121,11 @@ class Proposal(HelperMixin):
         """
 
         if not isinstance(self._kernel, (TransformedDistribution, Independent)):
-            return self._model.weight(y, self._kernel.loc)
+            return self._model.log_prob(y, self._kernel.loc)
         elif isinstance(self._kernel, Independent):
-            return self._model.weight(y, self._kernel.base_dist.loc)
+            return self._model.log_prob(y, self._kernel.base_dist.loc)
 
         # TODO: Not entirely sure about this, but think this is the case
         at = next(k for k in self._kernel.transforms if isinstance(k, AffineTransform))
 
-        return self._model.weight(y, at.loc)
+        return self._model.log_prob(y, at.loc)

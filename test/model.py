@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineModel, Parameter, LinearGaussianObservations
+from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineProcess, Parameter, LinearGaussianObservations
 from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
@@ -64,7 +64,7 @@ def gomvn(x, sigma):
 class Tests(unittest.TestCase):
     # ===== 1D model ===== #
     norm = Normal(0., 1.)
-    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
     linearobs = AffineObservations((fo, go), (1., 1.), norm)
     model = StateSpaceModel(linear, linearobs)
 
@@ -73,7 +73,7 @@ class Tests(unittest.TestCase):
     scale = torch.diag(mat)
 
     mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-    mvnlinear = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
+    mvnlinear = AffineProcess((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
     mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
     mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
@@ -86,18 +86,18 @@ class Tests(unittest.TestCase):
         assert sample.shape == (1000,)
 
     def test_Sample(self):
-        x, y = self.model.sample(50)
+        x, y = self.model.sample_path(50)
 
         assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
 
     def test_SampleMultivariate(self):
-        x, y = self.mvnmodel.sample(30)
+        x, y = self.mvnmodel.sample_path(30)
 
         assert len(x) == 30 and x[0].shape == (2,)
 
     def test_SampleMultivariateSamples(self):
         shape = (100, 100)
-        x, y = self.mvnmodel.sample(30, samples=shape)
+        x, y = self.mvnmodel.sample_path(30, samples=shape)
 
         assert x.shape == (30, *shape, 2) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
 
@@ -106,7 +106,7 @@ class Tests(unittest.TestCase):
 
         steps = 30
 
-        x, y = linearmodel.sample(steps)
+        x, y = linearmodel.sample_path(steps)
 
         assert len(x) == steps and len(y) == steps
 
@@ -114,6 +114,6 @@ class Tests(unittest.TestCase):
 
         mvn_linearmodel = LinearGaussianObservations(self.mvnlinear, a=mat)
 
-        x, y = mvn_linearmodel.sample(30)
+        x, y = mvn_linearmodel.sample_path(30)
 
         assert len(x) == steps and len(y) == steps

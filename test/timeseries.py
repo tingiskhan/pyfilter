@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineModel, EulerMaruyma, OrnsteinUhlenbeck, Parameter
+from pyfilter.timeseries import AffineProcess, EulerMaruyma, OrnsteinUhlenbeck, Parameter
 from pyfilter.timeseries.statevariable import StateVariable
 import scipy.stats as stats
 import numpy as np
@@ -26,7 +26,7 @@ def g0(alpha, sigma):
 class Tests(unittest.TestCase):
     norm = Normal(0., 1.)
 
-    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
 
     def test_TimeseriesCreate_1D(self):
 
@@ -40,7 +40,7 @@ class Tests(unittest.TestCase):
     def test_Timeseries3DState2DParam(self):
         alpha = 0.5 * torch.ones((500, 1))
         x = torch.randn(size=(500, 200))
-        linear = AffineModel((f0, g0), (f, g), (alpha, 1.), (Normal(0., 1.), Normal(0., 1.)))
+        linear = AffineProcess((f0, g0), (f, g), (alpha, 1.), (Normal(0., 1.), Normal(0., 1.)))
 
         assert np.allclose(linear.mean(x), f(x, alpha, 1.))
 
@@ -60,12 +60,12 @@ class Tests(unittest.TestCase):
         assert not all(out == 0.)
 
     def test_SampleTrajectory1D(self):
-        sample = self.linear.sample(500)
+        sample = self.linear.sample_path(500)
 
         assert sample.shape[0] == 500
 
     def test_SampleTrajectory2D(self):
-        sample = self.linear.sample(500, 250)
+        sample = self.linear.sample_path(500, 250)
 
         assert sample.shape == (500, 250)
 
@@ -74,14 +74,14 @@ class Tests(unittest.TestCase):
 
         obs = 0.
 
-        assert np.allclose(self.linear.weight(obs, sample).numpy(), stats.norm.logpdf(obs, loc=sample, scale=1))
+        assert np.allclose(self.linear.log_prob(obs, sample).numpy(), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_Weight2D(self):
         sample = self.linear.i_sample(shape=(500, 200))
 
         obs = 1
 
-        assert np.allclose(self.linear.weight(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
+        assert np.allclose(self.linear.log_prob(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
 
     def test_EulerMaruyama(self):
         zero = torch.tensor(0.)
@@ -89,14 +89,14 @@ class Tests(unittest.TestCase):
 
         mod = EulerMaruyma((lambda: zero, lambda: one), (lambda u: zero, lambda u: one), (), ndim=1)
 
-        samples = mod.sample(30)
+        samples = mod.sample_path(30)
 
         assert samples.shape == (30,)
 
     def test_OrnsteinUhlenbeck(self):
         mod = OrnsteinUhlenbeck(0.05, 1, 0.15)
 
-        x = mod.sample(300)
+        x = mod.sample_path(300)
 
         assert x.shape == (300,)
 

@@ -14,7 +14,7 @@ class VariationalBayes(BatchAlgorithm):
         """
         Implements Variational Bayes.
         :param model: The model
-        :type model: StateSpaceModel|pyfilter.timeseries.base.TimeseriesBase
+        :type model: StateSpaceModel|pyfilter.timeseries.base.StochasticProcess
         :param num_samples: The number of samples
         :type num_samples: int
         :param approx: The variational approximation to use for the latent space
@@ -119,11 +119,11 @@ class VariationalBayes(BatchAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            logl = self._model.weight(y, x_t) + self._model.h_weight(x_t, x_tm1)
+            logl = self._model.log_prob(y, x_t) + self._model.h_weight(x_t, x_tm1)
             entropy += self._s_approx.entropy()
 
         else:
-            logl = self._model.weight(y[1:], y[:-1])
+            logl = self._model.log_prob(y[1:], y[:-1])
 
         return -(logl.sum(1).mean(0) + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
 

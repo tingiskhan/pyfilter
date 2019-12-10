@@ -3,7 +3,7 @@ import numpy as np
 import pykalman
 from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import AffineModel, LinearGaussianObservations
+from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
 import torch
 from pyfilter.proposals import Unscented
@@ -54,12 +54,12 @@ def g0mvn(alpha, sigma):
 class Tests(unittest.TestCase):
     # ===== Simple 1D model ===== #
     norm = Normal(0., 1.)
-    linear = AffineModel((f0, g0), (f, g), (1., 1.), (norm, norm))
+    linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
     model = LinearGaussianObservations(linear, 1., 1.)
 
     # ===== Simple 2D model ===== #
     mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
-    mvn = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1.), (mvn, mvn))
+    mvn = AffineProcess((f0mvn, g0mvn), (fmvn, gmvn), (0.5, 1.), (mvn, mvn))
     a = torch.Tensor([1., 2.])
 
     mvnmodel = LinearGaussianObservations(mvn, a, 1.)
@@ -71,7 +71,7 @@ class Tests(unittest.TestCase):
 
     def test_Filters(self):
         for model in [self.model, self.mvnmodel]:
-            x, y = model.sample(500)
+            x, y = model.sample_path(500)
 
             for filter_, props in [
                 (SISR, {'particles': 500}),
@@ -106,11 +106,11 @@ class Tests(unittest.TestCase):
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
     def test_ParallellFiltersAndStability(self):
-        x, y = self.model.sample(50)
+        x, y = self.model.sample_path(50)
 
         shape = 30
 
-        linear = AffineModel((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
+        linear = AffineProcess((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000).set_nparallel(shape).initialize().longfilter(y)
@@ -123,11 +123,11 @@ class Tests(unittest.TestCase):
         assert mape.median(0)[0].max() < 0.05
 
     def test_ParallelUnscented(self):
-        x, y = self.model.sample(50)
+        x, y = self.model.sample_path(50)
 
         shape = 30
 
-        linear = AffineModel((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
+        linear = AffineProcess((f0, g0), (f, g), (1., 1.), (self.norm, self.norm))
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().longfilter(y)
@@ -142,15 +142,15 @@ class Tests(unittest.TestCase):
     def test_Algorithms(self):
         priors = Exponential(2.), Exponential(2.)
         # ===== Test for multiple models ===== #
-        hidden1d = AffineModel((f0, g0), (f, g), priors, (self.linear.noise0, self.linear.noise))
+        hidden1d = AffineProcess((f0, g0), (f, g), priors, (self.linear.initial_dist, self.linear.increment_dist))
         oned = LinearGaussianObservations(hidden1d, 1., Exponential(1))
 
-        hidden2d = AffineModel((f0mvn, g0mvn), (fmvn, gmvn), priors, (self.mvn.noise0, self.mvn.noise))
+        hidden2d = AffineProcess((f0mvn, g0mvn), (fmvn, gmvn), priors, (self.mvn.initial_dist, self.mvn.increment_dist))
         twod = LinearGaussianObservations(hidden2d, self.a, Exponential(1.))
 
         # ====== Run inference ===== #
         for trumod, model in [(self.model, oned), (self.mvnmodel, twod)]:
-            x, y = trumod.sample(550)
+            x, y = trumod.sample_path(550)
 
             algs = [
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200)}),

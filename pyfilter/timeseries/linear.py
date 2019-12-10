@@ -1,5 +1,5 @@
 from .model import StateSpaceModel
-from .affine import AffineModel, AffineObservations
+from .affine import AffineProcess, AffineObservations
 import torch
 from torch import distributions as dists
 
@@ -29,7 +29,7 @@ class LinearGaussianObservations(StateSpaceModel):
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
         :param hidden: The hidden dynamics
-        :type hidden: AffineModel
+        :type hidden: AffineProcess
         :param a: The A-matrix, must be constant (currently)
         :type a: torch.Tensor|float|dists.Distribution
         :param scale: The variance of the observations, can be constant or learnable. Currently assumes that all

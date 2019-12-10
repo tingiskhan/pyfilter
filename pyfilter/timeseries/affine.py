@@ -1,4 +1,4 @@
-from .base import TimeseriesBase, init_caster, finite_decorator, tensor_caster
+from .base import StochasticProcess, init_caster, finite_decorator, tensor_caster
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from .parameter import size_getter
@@ -20,21 +20,17 @@ def _get_shape(x, ndim):
     return x.shape if ndim < 2 else x.shape[:-1]
 
 
-class AffineModel(TimeseriesBase):
-    def __init__(self, initial, funcs, theta, noise):
+class AffineProcess(StochasticProcess):
+    def __init__(self, initial, funcs, theta, initial_dist, increment_dist):
         """
         Class for defining model with affine dynamics.
         :param initial: The functions governing the initial dynamics of the process
         :type initial: tuple[callable]
         :param funcs: The functions governing the dynamics of the process
         :type funcs: tuple[callable]
-        :param theta: The parameters governing the dynamics
-        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
-        :param noise: The noise governing the noise process
-        :type noise: tuple[Distribution]
         """
 
-        super().__init__(theta, noise)
+        super().__init__(theta, initial_dist, increment_dist)
 
         # ===== Dynamics ===== #
         self.f0, self.g0 = initial
@@ -106,7 +102,7 @@ class AffineModel(TimeseriesBase):
 
         return self.g_val(x)
 
-    def weight(self, y, x):
+    def log_prob(self, y, x):
         loc, scale = self.mean(x), self.scale(x)
 
         return self.predefined_weight(y, loc, scale)
@@ -144,13 +140,15 @@ class AffineModel(TimeseriesBase):
 
         shape = _get_shape(loc, self.ndim)
 
-        return TransformedDistribution(self.noise.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim))
+        return TransformedDistribution(
+            self.increment_dist.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim)
+        )
 
     def i_sample(self, shape=None, as_dist=False):
         shape = size_getter(shape)
 
         dist = TransformedDistribution(
-            self.noise0.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
+            self.initial_dist.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
         )
 
         if as_dist:
@@ -167,7 +165,7 @@ class AffineModel(TimeseriesBase):
         return dist.sample()
 
 
-class RandomWalk(AffineModel):
+class RandomWalk(AffineProcess):
     def __init__(self, std):
         """
         Defines a random walk.
@@ -192,25 +190,4 @@ class RandomWalk(AffineModel):
         else:
             normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
-        super().__init__((f0, g0), (f, g), (std,), (normal, normal))
-
-
-class AffineObservations(AffineModel):
-    def __init__(self, funcs, theta, noise):
-        """
-        Class for defining model with affine dynamics in the observable process.
-        :param funcs: The functions governing the dynamics of the process
-        :type funcs: tuple of callable
-        :param theta: The parameters governing the dynamics
-        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
-        :param noise: The noise governing the noise process
-        :type noise: Distribution
-        """
-        super().__init__((None, None), funcs, theta, (None, noise))
-
-    def sample(self, steps, samples=None):
-        raise NotImplementedError("Cannot sample from Observable only!")
-
-    def _verify_dimensions(self):
-        # TODO: Implement this
-        return self
+        super().__init__((f0, g0), (f, g), (std,), normal, normal)
