@@ -1,10 +1,8 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, EulerMaruyma, OrnsteinUhlenbeck, Parameter
 from pyfilter.timeseries.statevariable import StateVariable
-import scipy.stats as stats
-import numpy as np
 import torch
-from torch.distributions import Normal, Exponential
+from torch.distributions import Normal, Exponential, Independent
 
 
 def f(x, alpha, sigma):
@@ -24,82 +22,6 @@ def g0(alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    norm = Normal(0., 1.)
-
-    linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
-
-    def test_TimeseriesCreate_1D(self):
-
-        assert self.linear.mean(torch.tensor(1.)) == 1. and self.linear.scale(torch.tensor(1.)) == 1.
-
-    def test_Timeseries2DState(self):
-        x = np.random.normal(size=500)
-
-        assert np.allclose(self.linear.mean(torch.tensor(x)), f(x, 1, 1))
-
-    def test_Timeseries3DState2DParam(self):
-        alpha = 0.5 * torch.ones((500, 1))
-        x = torch.randn(size=(500, 200))
-        linear = AffineProcess((f0, g0), (f, g), (alpha, 1.), (Normal(0., 1.), Normal(0., 1.)))
-
-        assert np.allclose(linear.mean(x), f(x, alpha, 1.))
-
-    def test_SampleInitial(self):
-        x = self.linear.i_sample()
-
-        assert isinstance(x, torch.Tensor)
-
-    def test_Propagate(self):
-        out = torch.zeros(500)
-
-        out[0] = self.linear.i_sample()
-
-        for i in range(1, out.shape[0]):
-            out[i] = self.linear.propagate(out[i-1])
-
-        assert not all(out == 0.)
-
-    def test_SampleTrajectory1D(self):
-        sample = self.linear.sample_path(500)
-
-        assert sample.shape[0] == 500
-
-    def test_SampleTrajectory2D(self):
-        sample = self.linear.sample_path(500, 250)
-
-        assert sample.shape == (500, 250)
-
-    def test_Weight1D(self):
-        sample = self.linear.i_sample()
-
-        obs = 0.
-
-        assert np.allclose(self.linear.log_prob(obs, sample).numpy(), stats.norm.logpdf(obs, loc=sample, scale=1))
-
-    def test_Weight2D(self):
-        sample = self.linear.i_sample(shape=(500, 200))
-
-        obs = 1
-
-        assert np.allclose(self.linear.log_prob(obs, sample), stats.norm.logpdf(obs, loc=sample, scale=1))
-
-    def test_EulerMaruyama(self):
-        zero = torch.tensor(0.)
-        one = torch.tensor(1.)
-
-        mod = EulerMaruyma((lambda: zero, lambda: one), (lambda u: zero, lambda u: one), (), ndim=1)
-
-        samples = mod.sample_path(30)
-
-        assert samples.shape == (30,)
-
-    def test_OrnsteinUhlenbeck(self):
-        mod = OrnsteinUhlenbeck(0.05, 1, 0.15)
-
-        x = mod.sample_path(300)
-
-        assert x.shape == (300,)
-
     def test_StateVariable(self):
         # ===== Emulate last value ===== #
         rands = torch.empty((300, 3)).normal_()
@@ -159,3 +81,94 @@ class Tests(unittest.TestCase):
         positive.t_values = values
 
         assert (positive == positive.bijection(values)).all()
+
+    def test_LinearNoBatch(self):
+        norm = Normal(0., 1.)
+        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+
+        # ===== Initialize ===== #
+        x = linear.i_sample()
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = torch.empty(num + 1, *x.shape)
+        samps[0] = x
+        for t in range(num):
+            samps[t + 1] = linear.propagate(samps[t])
+
+        self.assertEqual(samps.size(), torch.Size([num + 1]))
+
+        # ===== Sample path ===== #
+        path = linear.sample_path(num + 1)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_LinearBatch(self):
+        norm = Normal(0., 1.)
+        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+
+        # ===== Initialize ===== #
+        shape = 1000, 100
+        x = linear.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = torch.empty(num + 1, *x.shape)
+        samps[0] = x
+        for t in range(num):
+            samps[t + 1] = linear.propagate(samps[t])
+
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = linear.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_BatchedParameter(self):
+        norm = Normal(0., 1.)
+        shape = 1000, 100
+
+        a = torch.ones((shape[0], 1))
+
+        init = Normal(a, 1.)
+        linear = AffineProcess((f, g), (a, a), init, norm)
+
+        # ===== Initialize ===== #
+        x = linear.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = torch.empty(num + 1, *x.shape)
+        samps[0] = x
+        for t in range(num):
+            samps[t + 1] = linear.propagate(samps[t])
+
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = linear.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_MultiDimensional(self):
+        mu = torch.zeros(2)
+        scale = torch.ones_like(mu)
+
+        shape = 1000, 100
+
+        mvn = Independent(Normal(mu, scale), 1)
+        mvn = AffineProcess((f, g), (1., 1.), mvn, mvn)
+
+        # ===== Initialize ===== #
+        x = mvn.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = torch.empty(num + 1, *x.shape)
+        samps[0] = x
+        for t in range(num):
+            samps[t + 1] = mvn.propagate(samps[t])
+
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape, *mu.shape]))
+
+        # ===== Sample path ===== #
+        path = mvn.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
