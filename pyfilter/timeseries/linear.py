@@ -1,5 +1,6 @@
 from .model import StateSpaceModel
-from .affine import AffineProcess, AffineObservations
+from .affine import AffineProcess
+from .observable import AffineObservations
 import torch
 from torch import distributions as dists
 

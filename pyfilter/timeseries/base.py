@@ -1,5 +1,4 @@
 from abc import ABC
-
 from torch.distributions import Distribution
 import torch
 from functools import lru_cache
@@ -237,6 +236,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self.increment_dist = increment_dist
 
         # ===== Some helpers ===== #
+        self._theta = None
         self._theta_vals = None
         self._viewshape = None
 
@@ -257,7 +257,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
                 if isinstance(v, Parameter) and n is self.increment_dist:
                     self._dist_theta[k] = v
 
-        self._theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
+        self.theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
         # ===== Check dimensions ===== #
         self._verify_dimensions()
@@ -288,9 +288,9 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     @theta.setter
     def theta(self, x):
-        if len(x) != len(self._theta):
+        if self._theta is not None and len(x) != len(self._theta):
             raise ValueError('The number of parameters must be same!')
-        if all(isinstance(p, Parameter) for p in x):
+        if not all(isinstance(p, Parameter) for p in x):
             raise ValueError(f'Not all items are of instance {Parameter.__class__.__name__}')
 
         self._theta = x
@@ -355,7 +355,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         :rtype: torch.Tensor
         """
 
-        raise NotImplementedError()
+        return self.initial_dist.expand(size_getter(shape)).sample()
 
     def sample_path(self, steps, samples=None):
         x_s = self.i_sample(samples)

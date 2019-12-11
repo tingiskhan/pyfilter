@@ -1,7 +1,6 @@
 from .base import StochasticProcess, init_caster, finite_decorator, tensor_caster
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
-from .parameter import size_getter
 
 
 def _get_shape(x, ndim):
@@ -21,7 +20,7 @@ def _get_shape(x, ndim):
 
 
 class AffineProcess(StochasticProcess):
-    def __init__(self, initial, funcs, theta, initial_dist, increment_dist):
+    def __init__(self, funcs, theta, initial_dist, increment_dist):
         """
         Class for defining model with affine dynamics.
         :param initial: The functions governing the initial dynamics of the process
@@ -33,28 +32,7 @@ class AffineProcess(StochasticProcess):
         super().__init__(theta, initial_dist, increment_dist)
 
         # ===== Dynamics ===== #
-        self.f0, self.g0 = initial
         self.f, self.g = funcs
-
-    @init_caster
-    def i_mean(self):
-        """
-        Calculates the mean of the initial distribution.
-        :return: The mean of the initial distribution
-        :rtype: torch.Tensor
-        """
-
-        return self.f0(*self._theta_vals)
-
-    @init_caster
-    def i_scale(self):
-        """
-        Calculates the scale of the initial distribution.
-        :return: The scale of the initial distribution
-        :rtype: torch.Tensor
-        """
-
-        return self.g0(*self._theta_vals)
 
     @tensor_caster
     def f_val(self, x):
@@ -143,18 +121,6 @@ class AffineProcess(StochasticProcess):
         return TransformedDistribution(
             self.increment_dist.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim)
         )
-
-    def i_sample(self, shape=None, as_dist=False):
-        shape = size_getter(shape)
-
-        dist = TransformedDistribution(
-            self.initial_dist.expand(shape), AffineTransform(self.i_mean(), self.i_scale(), event_dim=self._event_dim)
-        )
-
-        if as_dist:
-            return dist
-
-        return dist.sample()
 
     def propagate(self, x, as_dist=False):
         dist = self._define_transdist(self.mean(x), self.scale(x))
