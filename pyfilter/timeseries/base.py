@@ -355,7 +355,12 @@ class StochasticProcess(StochasticProcessBase, ABC):
         :rtype: torch.Tensor
         """
 
-        return self.initial_dist.expand(size_getter(shape)).sample()
+        dist = self.initial_dist.expand(size_getter(shape))
+
+        if as_dist:
+            return dist
+
+        return dist.sample()
 
     def sample_path(self, steps, samples=None):
         x_s = self.i_sample(samples)
