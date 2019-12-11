@@ -245,6 +245,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         # ===== Parameters ===== #
         self._dist_theta = dict()
+        # TODO: Make sure same keys are same reference
         for n in [self.initial_dist, self.increment_dist]:
             if n is None:
                 continue
@@ -255,8 +256,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
                 if isinstance(v, Parameter) and n is self.increment_dist:
                     self._dist_theta[k] = v
-                elif isinstance(v, Parameter) and v.trainable and n is self.initial_dist:
-                    raise ValueError('You cannot have distributional parameters in the initial distribution!')
 
         self._theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
@@ -340,6 +339,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
             pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
 
         if len(pdict) > 0:
+            self.initial_dist.__init__(**pdict)
             self.increment_dist.__init__(**pdict)
 
         return self
