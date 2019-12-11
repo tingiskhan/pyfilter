@@ -8,6 +8,22 @@ from .statevariable import StateVariable
 from copy import deepcopy
 
 
+def to_state_variable(obj, x):
+    """
+    Helper function for casting as StateVariable.
+    :param obj: The timeseries object
+    :type obj: StochasticProcess
+    :param x: The tensor
+    :type x: torch.Tensor
+    :return:
+    """
+
+    if obj._inputdim > 1 and not isinstance(x, StateVariable):
+        return StateVariable(x)
+
+    return x
+
+
 def tensor_caster(func):
     """
     Function for helping out when it comes to multivariate models. Returns a torch.Tensor
@@ -17,10 +33,7 @@ def tensor_caster(func):
     """
 
     def wrapper(obj, x):
-        if obj._inputdim > 1:
-            tx = StateVariable(x)
-        else:
-            tx = x
+        tx = to_state_variable(obj, x)
 
         res = concater(func(obj, tx))
         if not isinstance(res, torch.Tensor):
@@ -28,17 +41,6 @@ def tensor_caster(func):
 
         res = res if not isinstance(res, StateVariable) else res.get_base()
         res.__sv = tx   # To keep GC from collecting the variable recording the gradients - really ugly, but works
-
-        return res
-
-    return wrapper
-
-
-def init_caster(func):
-    def wrapper(obj):
-        res = concater(func(obj))
-        if not isinstance(res, torch.Tensor):
-            raise ValueError('The result must be of type `torch.Tensor`!')
 
         return res
 
@@ -106,7 +108,22 @@ class StochasticProcessBase(HelperMixin):
 
         return self
 
+    @tensor_caster
     def log_prob(self, y, x):
+        """
+        Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
+        distribution is different from the underlying.
+        :param y: The value at x_t
+        :type y: torch.Tensor
+        :param x: The value at x_{t-1}
+        :type x: torch.Tensor
+        :return: The log-weights
+        :rtype: torch.Tensor
+        """
+
+        return self._log_prob(y, x)
+
+    def _log_prob(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.
@@ -120,7 +137,21 @@ class StochasticProcessBase(HelperMixin):
 
         raise NotImplementedError()
 
+    @tensor_caster
     def propagate(self, x, as_dist=False):
+        """
+        Propagates the model forward conditional on the previous state and current parameters.
+        :param x: The previous state
+        :type x: torch.Tensor
+        :param as_dist: Whether to return the new value as a distribution
+        :type as_dist: bool
+        :return: Samples from the model
+        :rtype: torch.Tensor|Distribution
+        """
+
+        return self._propagate(x, as_dist)
+
+    def _propagate(self, x, as_dist=False):
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
