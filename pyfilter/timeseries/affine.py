@@ -38,6 +38,17 @@ class AffineProcess(StochasticProcess):
 
         return self.predefined_weight(y, loc, scale)
 
+    @tensor_caster
+    def mean_scale(self, x):
+        """
+        Returns the mean and scale of the process evaluated at x_t
+        :param x: The previous state
+        :type x: torch.Tensor
+        :rtype: tuple[torch.Tensor]
+        """
+
+        return self._mean_scale(x)
+
     def _mean_scale(self, x):
         """
         Returns the mean and scale of the process.

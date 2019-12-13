@@ -103,7 +103,7 @@ def add_dimensions(x, ndim):
     return x.view(*x.shape, *((ndim - x.dim()) * (1,)))
 
 
-def concater(x):
+def concater(*x):
     """
     Concatenates output.
     :type x: tuple[torch.Tensor]|torch.Tensor

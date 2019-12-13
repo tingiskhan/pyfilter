@@ -50,7 +50,7 @@ def tensor_caster_mult(func):
     :rtype: torch.Tensor
     """
 
-    def wrapper(obj, x, y):
+    def wrapper(obj, y, x):
         tx = to_state_variable(obj, x)
 
         res = func(obj, y, tx)
