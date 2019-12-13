@@ -69,17 +69,22 @@ class StochasticProcessBase(HelperMixin):
         return self._log_prob(y, x)
 
     def _log_prob(self, y, x):
+        raise NotImplementedError()
+
+    @tensor_caster
+    def propagate_u(self, x, u):
         """
-        Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
-        distribution is different from the underlying.
-        :param y: The value at x_t
-        :type y: torch.Tensor
-        :param x: The value at x_{t-1}
+        Propagate the process conditional on both state and draws from incremental distribution.
+        :param x: The previous state
         :type x: torch.Tensor
-        :return: The log-weights
+        :param u: The current draws from the incremental distribution
+        :type u: torch.Tensor
         :rtype: torch.Tensor
         """
 
+        return self._propagate_u(x, u)
+
+    def _propagate_u(self, x, u):
         raise NotImplementedError()
 
     @tensor_caster
@@ -97,16 +102,6 @@ class StochasticProcessBase(HelperMixin):
         return self._propagate(x, as_dist)
 
     def _propagate(self, x, as_dist=False):
-        """
-        Propagates the model forward conditional on the previous state and current parameters.
-        :param x: The previous state
-        :type x: torch.Tensor
-        :param as_dist: Whether to return the new value as a distribution
-        :type as_dist: bool
-        :return: Samples from the model
-        :rtype: torch.Tensor|Distribution
-        """
-
         raise NotImplementedError()
 
     def sample_path(self, steps, samples=None):

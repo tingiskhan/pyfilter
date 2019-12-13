@@ -104,6 +104,9 @@ class AffineProcess(StochasticProcess):
 
         return dist.sample()
 
+    def _propagate_u(self, x, u):
+        return self.f(x, *self._theta_vals) + self.g(x, *self._theta_vals) * u
+
 
 class RandomWalk(AffineProcess):
     def __init__(self, std):
