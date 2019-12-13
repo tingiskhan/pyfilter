@@ -105,7 +105,8 @@ class AffineProcess(StochasticProcess):
         return dist.sample()
 
     def _propagate_u(self, x, u):
-        return self.f(x, *self._theta_vals) + self.g(x, *self._theta_vals) * u
+        loc, scale = self._mean_scale(x)
+        return loc + scale * u
 
 
 class RandomWalk(AffineProcess):
