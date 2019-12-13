@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter
+from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, EulerMaruyama
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
 from torch.distributions import Normal, Exponential, Independent
@@ -220,3 +220,27 @@ class Tests(unittest.TestCase):
         path = sde.sample_path(num + 1, shape)
         self.assertEqual(samps.shape, path.shape)
 
+    def test_SDE(self):
+        norm = Normal(0., 1.)
+        shape = 1000, 100
+
+        a = 1e-2 * torch.ones((shape[0], 1))
+
+        init = Normal(a, 1.)
+        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=0.1, num_steps=10)
+
+        # ===== Initialize ===== #
+        x = sde.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = [x]
+        for t in range(num):
+            samps.append(sde.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = sde.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
