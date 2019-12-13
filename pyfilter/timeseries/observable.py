@@ -9,9 +9,9 @@ class AffineObservations(AffineProcess):
         :type funcs: tuple of callable
         """
 
-        super().__init__((None, None), funcs, theta, None, noise)
+        super().__init__(funcs, theta, None, noise)
 
-    def sample_path(self, steps, samples=None):
+    def sample_path(self, steps, **kwargs):
         raise NotImplementedError("Cannot sample from Observable only!")
 
     def _verify_dimensions(self):

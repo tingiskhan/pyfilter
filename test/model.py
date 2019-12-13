@@ -1,6 +1,5 @@
 import unittest
-import numpy as np
-from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineProcess, Parameter, LinearGaussianObservations
+from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineProcess, LinearGaussianObservations
 from torch.distributions import Normal, MultivariateNormal, Beta
 import torch
 
@@ -62,58 +61,20 @@ def gomvn(x, sigma):
 
 
 class Tests(unittest.TestCase):
-    # ===== 1D model ===== #
-    norm = Normal(0., 1.)
-    linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
-    linearobs = AffineObservations((fo, go), (1., 1.), norm)
-    model = StateSpaceModel(linear, linearobs)
-
-    # ===== 2D model ===== #
-    mat = torch.eye(2)
-    scale = torch.diag(mat)
-
-    mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-    mvnlinear = AffineProcess((f0mvn, g0mvn), (fmvn, gmvn), (mat, scale), (mvn, mvn))
-    mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
-
-    mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
-
-    def test_Propagate(self):
-        x = self.model.hidden.i_sample(1000)
-
-        sample = self.model.propagate(x)
-
-        assert sample.shape == (1000,)
-
     def test_Sample(self):
-        x, y = self.model.sample_path(50)
+        # ==== Hidden ==== #
+        norm = Normal(0., 1.)
+        linear = AffineProcess((f, g), (1., 1.), norm, norm)
 
-        assert len(x) == 50 and len(y) == 50 and np.array(x).shape == (50,)
+        # ==== Observable ===== #
+        obs = AffineObservations((fo, go), (1., 0.), norm)
 
-    def test_SampleMultivariate(self):
-        x, y = self.mvnmodel.sample_path(30)
+        # ===== Model ===== #
+        mod = StateSpaceModel(linear, obs)
 
-        assert len(x) == 30 and x[0].shape == (2,)
+        # ===== Sample ===== #
+        x, y = mod.sample_path(100)
 
-    def test_SampleMultivariateSamples(self):
-        shape = (100, 100)
-        x, y = self.mvnmodel.sample_path(30, samples=shape)
+        diff = ((x - y) ** 2).mean().sqrt()
 
-        assert x.shape == (30, *shape, 2) and isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
-
-    def test_LinearGaussianObservations(self):
-        linearmodel = LinearGaussianObservations(self.linear)
-
-        steps = 30
-
-        x, y = linearmodel.sample_path(steps)
-
-        assert len(x) == steps and len(y) == steps
-
-        mat = torch.eye(2)
-
-        mvn_linearmodel = LinearGaussianObservations(self.mvnlinear, a=mat)
-
-        x, y = mvn_linearmodel.sample_path(30)
-
-        assert len(x) == steps and len(y) == steps
+        assert x.shape == y.shape and x.shape[0] == 100 and diff < 1e-3

@@ -5,7 +5,7 @@ from functools import lru_cache
 from .parameter import Parameter, size_getter
 from ..utils import HelperMixin
 from copy import deepcopy
-from .utils import tensor_caster
+from .utils import tensor_caster, tensor_caster_mult
 
 
 class StochasticProcessBase(HelperMixin):
@@ -53,7 +53,7 @@ class StochasticProcessBase(HelperMixin):
 
         return self
 
-    @tensor_caster
+    @tensor_caster_mult
     def log_prob(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
@@ -338,8 +338,8 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return dist.sample()
 
-    def sample_path(self, steps, samples=None):
-        x_s = self.i_sample(samples)
+    def sample_path(self, steps, samples=None, x_s=None):
+        x_s = self.i_sample(samples) if x_s is None else x_s
         out = torch.zeros(steps, *x_s.shape)
         out[0] = x_s
 

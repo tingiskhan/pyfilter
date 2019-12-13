@@ -1,7 +1,6 @@
 from ..utils import flatten
 import torch
 from .base import StochasticProcess, StochasticProcessBase
-from .affine import AffineProcess
 
 
 class StateSpaceModel(StochasticProcessBase):
@@ -45,7 +44,7 @@ class StateSpaceModel(StochasticProcessBase):
     def propagate(self, x, as_dist=False):
         return self.hidden.propagate(x, as_dist=as_dist)
 
-    def log_prob(self, y, x):
+    def _log_prob(self, y, x):
         return self.observable.log_prob(y, x)
 
     def viewify_params(self, shape):
@@ -67,31 +66,11 @@ class StateSpaceModel(StochasticProcessBase):
 
         return self.hidden.log_prob(y, x)
 
-    def sample_path(self, steps, x_s=None, samples=None, only_mean=False):
+    def sample_path(self, steps, x_s=None, samples=None):
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
-        x_shape = steps, *x.shape
-        y_shape = (*x_shape[:-1], self.obs_ndim) if self.hidden_ndim > 1 else (*x_shape, self.obs_ndim)
 
-        if self.obs_ndim < 2:
-            y_shape = y_shape[:-1]
-
-        hidden = torch.zeros(x_shape, device=x.device)
-        obs = torch.zeros(y_shape, device=x.device)
-
-        y = self.observable.propagate(x)
-
-        for i in range(steps):
-            hidden[i] = x
-            obs[i] = y
-
-            if not only_mean:
-                x = self.propagate(x)
-                y = self.observable.propagate(x)
-            elif only_mean and isinstance(self.hidden, AffineProcess) and isinstance(self.observable, AffineProcess):
-                x = self.hidden.mean(x)
-                y = self.observable.mean(x)
-            else:
-                raise NotImplementedError('Currently not implemented for model of type {}!'.format(self.hidden))
+        hidden = self.hidden.sample_path(steps, x_s=x)
+        obs = self.observable.propagate(hidden)
 
         return hidden, obs
 

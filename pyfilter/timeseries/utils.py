@@ -41,6 +41,28 @@ def tensor_caster(func):
     return wrapper
 
 
+def tensor_caster_mult(func):
+    """
+    Function for helping out calculating the
+    :param func: The function to pass
+    :type func: callable
+    :rtype: torch.Tensor
+    """
+
+    def wrapper(obj, x, y):
+        tx = to_state_variable(obj, x)
+
+        res = func(obj, y, tx)
+        if not isinstance(res, torch.Tensor):
+            raise ValueError(f'Must be of instance {torch.Tensor.__class__.__name__}')
+
+        res.__sv = tx  # To keep GC from collecting the variable recording the gradients - really ugly, but works
+
+        return res
+
+    return wrapper
+
+
 def finite_decorator(func):
     def wrapper(*args, **kwargs):
         out = func(*args, **kwargs)

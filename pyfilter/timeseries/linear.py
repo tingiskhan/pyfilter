@@ -1,3 +1,5 @@
+from abc import ABC
+
 from .model import StateSpaceModel
 from .affine import AffineProcess
 from .observable import AffineObservations
