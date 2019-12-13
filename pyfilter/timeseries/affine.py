@@ -1,6 +1,7 @@
-from .base import StochasticProcess, finite_decorator, to_state_variable
+from .base import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
+from .utils import tensor_caster
 
 
 def _get_shape(x, ndim):
@@ -33,11 +34,11 @@ class AffineProcess(StochasticProcess):
         self.f, self.g = funcs
 
     def _log_prob(self, y, x):
-        loc, scale = self.mean_scale(x)
+        loc, scale = self._mean_scale(x)
 
         return self.predefined_weight(y, loc, scale)
 
-    def mean_scale(self, x):
+    def _mean_scale(self, x):
         """
         Returns the mean and scale of the process.
         :param x: The previous state
@@ -46,11 +47,8 @@ class AffineProcess(StochasticProcess):
         :rtype: tuple[torch.Tensor]
         """
 
-        tx = to_state_variable(self, x)
+        return self.f(x, *self._theta_vals), self.g(x, *self._theta_vals)
 
-        return self.f(tx, *self._theta_vals), self.g(tx, *self._theta_vals)
-
-    @finite_decorator
     def predefined_weight(self, y, loc, scale):
         """
         Helper method for weighting with loc and scale.
@@ -88,7 +86,7 @@ class AffineProcess(StochasticProcess):
         )
 
     def _propagate(self, x, as_dist=False):
-        dist = self._define_transdist(*self.mean_scale(x))
+        dist = self._define_transdist(*self._mean_scale(x))
 
         if as_dist:
             return dist

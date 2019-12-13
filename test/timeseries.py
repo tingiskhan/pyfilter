@@ -91,11 +91,11 @@ class Tests(unittest.TestCase):
 
         # ===== Propagate ===== #
         num = 100
-        samps = torch.empty(num + 1, *x.shape)
-        samps[0] = x
+        samps = [x]
         for t in range(num):
-            samps[t + 1] = linear.propagate(samps[t])
+            samps.append(linear.propagate(samps[-1]))
 
+        samps = torch.stack(samps)
         self.assertEqual(samps.size(), torch.Size([num + 1]))
 
         # ===== Sample path ===== #
@@ -112,11 +112,11 @@ class Tests(unittest.TestCase):
 
         # ===== Propagate ===== #
         num = 100
-        samps = torch.empty(num + 1, *x.shape)
-        samps[0] = x
+        samps = [x]
         for t in range(num):
-            samps[t + 1] = linear.propagate(samps[t])
+            samps.append(linear.propagate(samps[-1]))
 
+        samps = torch.stack(samps)
         self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
 
         # ===== Sample path ===== #
@@ -137,11 +137,11 @@ class Tests(unittest.TestCase):
 
         # ===== Propagate ===== #
         num = 100
-        samps = torch.empty(num + 1, *x.shape)
-        samps[0] = x
+        samps = [x]
         for t in range(num):
-            samps[t + 1] = linear.propagate(samps[t])
+            samps.append(linear.propagate(samps[-1]))
 
+        samps = torch.stack(samps)
         self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
 
         # ===== Sample path ===== #
@@ -162,11 +162,11 @@ class Tests(unittest.TestCase):
 
         # ===== Propagate ===== #
         num = 100
-        samps = torch.empty(num + 1, *x.shape)
-        samps[0] = x
+        samps = [x]
         for t in range(num):
-            samps[t + 1] = mvn.propagate(samps[t])
+            samps.append(mvn.propagate(samps[-1]))
 
+        samps = torch.stack(samps)
         self.assertEqual(samps.size(), torch.Size([num + 1, *shape, *mu.shape]))
 
         # ===== Sample path ===== #
