@@ -1,5 +1,4 @@
-from .affine import AffineProcess, RandomWalk
-from .eulermaruyma import EulerMaruyma, OrnsteinUhlenbeck
+from .affine import AffineProcess, RandomWalk, OneStepEulerMaruyma, OrnsteinUhlenbeck
 from .model import StateSpaceModel
 from .parameter import Parameter
 from .linear import LinearGaussianObservations

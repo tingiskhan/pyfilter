@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.timeseries import AffineProcess, EulerMaruyma, OrnsteinUhlenbeck, Parameter
+from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
 from torch.distributions import Normal, Exponential, Independent
@@ -13,11 +13,11 @@ def g(x, alpha, sigma):
     return sigma
 
 
-def f0(alpha, sigma):
-    return torch.zeros_like(alpha)
+def f_sde(x, alpha, sigma):
+    return -alpha * x
 
 
-def g0(alpha, sigma):
+def g_sde(x, alpha, sigma):
     return sigma
 
 
@@ -130,7 +130,7 @@ class Tests(unittest.TestCase):
         a = torch.ones((shape[0], 1))
 
         init = Normal(a, 1.)
-        linear = AffineProcess((f, g), (a, a), init, norm)
+        linear = AffineProcess((f, g), (a, 1.), init, norm)
 
         # ===== Initialize ===== #
         x = linear.i_sample(shape)
@@ -172,3 +172,51 @@ class Tests(unittest.TestCase):
         # ===== Sample path ===== #
         path = mvn.sample_path(num + 1, shape)
         self.assertEqual(samps.shape, path.shape)
+
+    def test_OneStepEuler(self):
+        norm = Normal(0., 1.)
+        shape = 1000, 100
+
+        a = 1e-2 * torch.ones((shape[0], 1))
+
+        init = Normal(a, 1.)
+        sde = OneStepEulerMaruyma((f_sde, g_sde), (a, 0.15), init, norm)
+
+        # ===== Initialize ===== #
+        x = sde.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = [x]
+        for t in range(num):
+            samps.append(sde.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = sde.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_OrnsteinUhlenbeck(self):
+        shape = 1000, 100
+
+        a = 1e-2 * torch.ones((shape[0], 1))
+        sde = OrnsteinUhlenbeck(a, 0., 0.15, 1)
+
+        # ===== Initialize ===== #
+        x = sde.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 100
+        samps = [x]
+        for t in range(num):
+            samps.append(sde.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = sde.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
