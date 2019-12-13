@@ -26,14 +26,15 @@ def tensor_caster(func):
     :rtype: torch.Tensor
     """
 
-    def wrapper(obj, x):
+    def wrapper(obj, x, **kwargs):
         tx = to_state_variable(obj, x)
 
-        res = func(obj, tx)
-        if not isinstance(res, torch.Tensor):
-            raise ValueError(f'Must be of instance {torch.Tensor.__class__.__name__}')
+        res = func(obj, tx, **kwargs)
 
-        res = res if not isinstance(res, StateVariable) else res.get_base()
+        if not isinstance(res, StateVariable):
+            return res
+
+        res = res.get_base()
         res.__sv = tx   # To keep GC from collecting the variable recording the gradients - really ugly, but works
 
         return res

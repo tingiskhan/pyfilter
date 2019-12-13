@@ -44,7 +44,7 @@ class StateSpaceModel(StochasticProcessBase):
     def propagate(self, x, as_dist=False):
         return self.hidden.propagate(x, as_dist=as_dist)
 
-    def _log_prob(self, y, x):
+    def log_prob(self, y, x):
         return self.observable.log_prob(y, x)
 
     def viewify_params(self, shape):
