@@ -63,7 +63,7 @@ class LinearGaussianObservations(Proposal):
 
         # ===== Observable ===== #
         c, y = self._get_mat_and_fix_y(x, y)
-        o_var_inv = 1 / self._model.observable.theta[-1] ** 2
+        o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
 
         if self._model.hidden_ndim < 2:
             self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)

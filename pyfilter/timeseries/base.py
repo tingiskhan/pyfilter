@@ -272,6 +272,14 @@ class StochasticProcess(StochasticProcessBase, ABC):
         return tuple(p for p in self.theta if p.trainable) + tuple(self._dist_theta.values())
 
     @property
+    def theta_vals(self):
+        """
+        Returns the values of the parameters.
+        :rtype: tuple[torch.Tensor]
+        """
+        return self._theta_vals
+
+    @property
     @lru_cache()
     def ndim(self):
         """

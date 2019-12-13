@@ -58,7 +58,7 @@ class AffineProcess(StochasticProcess):
         :rtype: tuple[torch.Tensor]
         """
 
-        return self.f(x, *self._theta_vals), self.g(x, *self._theta_vals)
+        return self.f(x, *self.theta_vals), self.g(x, *self.theta_vals)
 
     def predefined_weight(self, y, loc, scale):
         """
