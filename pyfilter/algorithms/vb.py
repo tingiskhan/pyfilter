@@ -176,6 +176,7 @@ class VariationalSMC(VariationalBayes):
 
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._numsamples)
+        _, self._mask = stacker(self._model.theta_dists)  # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
         self._p_approx = self._p_approx.initialize(self._model.theta_dists)
