@@ -54,18 +54,18 @@ class OrnsteinUhlenbeck(StochasticDifferentialEquation):
         :type ndim: int
         """
 
+        def f(x, reversion, level, std):
+            return level + (x - level) * torch.exp(-reversion * self._dt)
+
+        def g(x, reversion, level, std):
+            return std / (2 * reversion).sqrt() * (1 - torch.exp(-2 * reversion * self._dt)).sqrt()
+
         if ndim > 1:
             dist = Independent(Normal(torch.zeros(ndim), torch.ones(ndim)), 1)
         else:
             dist = Normal(0., 1)
 
-        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
-
-    def _f(self, x, reversion, level, std):
-        return level + (x - level) * torch.exp(-reversion * self._dt)
-
-    def _g(self, x, reversion, level, std):
-        return std / (2 * reversion).sqrt() * (1 - torch.exp(-2 * reversion * self._dt)).sqrt()
+        super().__init__((f, g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
 
 
 # TODO: Works for all distributions where the variance of the incremental distribution can be constructed as a product

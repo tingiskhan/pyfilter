@@ -72,22 +72,6 @@ class StochasticProcessBase(HelperMixin):
         raise NotImplementedError()
 
     @tensor_caster
-    def propagate_u(self, x, u):
-        """
-        Propagate the process conditional on both state and draws from incremental distribution.
-        :param x: The previous state
-        :type x: torch.Tensor
-        :param u: The current draws from the incremental distribution
-        :type u: torch.Tensor
-        :rtype: torch.Tensor
-        """
-
-        return self._propagate_u(x, u)
-
-    def _propagate_u(self, x, u):
-        raise NotImplementedError()
-
-    @tensor_caster
     def propagate(self, x, as_dist=False):
         """
         Propagates the model forward conditional on the previous state and current parameters.
@@ -350,3 +334,19 @@ class StochasticProcess(StochasticProcessBase, ABC):
             out[i] = self.propagate(out[i-1])
 
         return out
+
+    @tensor_caster
+    def propagate_u(self, x, u):
+        """
+        Propagate the process conditional on both state and draws from incremental distribution.
+        :param x: The previous state
+        :type x: torch.Tensor
+        :param u: The current draws from the incremental distribution
+        :type u: torch.Tensor
+        :rtype: torch.Tensor
+        """
+
+        return self._propagate_u(x, u)
+
+    def _propagate_u(self, x, u):
+        raise NotImplementedError()
