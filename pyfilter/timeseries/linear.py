@@ -52,7 +52,7 @@ class LinearGaussianObservations(StateSpaceModel):
         # ====== Define distributions ===== #
         n = dists.Normal(0., 1.) if dim < 2 else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
 
-        if not isinstance(scale, (torch.Tensor, float)):
+        if not isinstance(scale, (torch.Tensor, float, dists.Distribution)):
             raise ValueError(f'`scale` parameter must be numeric type!')
 
         # ===== Determine propagator function ===== #
