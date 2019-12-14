@@ -49,7 +49,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
-            m, s = self._mean_scale(x)
+            m, s = self.mean_scale(x)
             x = m + s * u
 
         return x
