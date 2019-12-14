@@ -1,5 +1,3 @@
-from abc import ABC
-
 from .model import StateSpaceModel
 from .affine import AffineProcess
 from .observable import AffineObservations
@@ -53,7 +51,9 @@ class LinearGaussianObservations(StateSpaceModel):
 
         # ====== Define distributions ===== #
         n = dists.Normal(0., 1.) if dim < 2 else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
-        scale = (scale,) if not isinstance(scale, (tuple, list)) else scale
+
+        if not isinstance(scale, (torch.Tensor, float)):
+            raise ValueError(f'`scale` parameter must be numeric type!')
 
         # ===== Determine propagator function ===== #
         if dim > 1:
@@ -63,6 +63,6 @@ class LinearGaussianObservations(StateSpaceModel):
         else:
             f = f_0d
 
-        observable = AffineObservations((f, g), (a, *scale), n)
+        observable = AffineObservations((f, g), (a, scale), n)
 
         super().__init__(hidden, observable)
