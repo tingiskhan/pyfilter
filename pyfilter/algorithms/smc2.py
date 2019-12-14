@@ -86,7 +86,6 @@ class SMC2(SequentialParticleAlgorithm):
 
 
 class SMC2FW(SequentialParticleAlgorithm):
-    @experimental
     def __init__(self, filter_, particles, switch=200, block_len=125, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
