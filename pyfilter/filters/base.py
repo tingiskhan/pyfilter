@@ -349,6 +349,10 @@ class ParticleFilter(BaseFilter, ABC):
         # ===== Resampling function ===== #
         self._resampler = resampling
 
+        # ===== Logged ESS ===== #
+        self.logged_ess = tuple()
+
+        # ===== Proposal ===== #
         if proposal == 'auto':
             try:
                 proposal = _PROPOSAL_MAPPING[type(self._model)]()
@@ -411,6 +415,8 @@ class ParticleFilter(BaseFilter, ABC):
         ess = get_ess(weights) / weights.shape[-1]
         mask = ess < self._th
 
+        self.logged_ess += (ess,)
+
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
 
@@ -468,6 +474,10 @@ class ParticleFilter(BaseFilter, ABC):
         self._x_cur[inds] = filter_._x_cur[inds]
         self._w_old[inds] = filter_._w_old[inds]
 
+        return self
+
+    def _reset(self):
+        self.logged_ess = tuple()
         return self
 
 
