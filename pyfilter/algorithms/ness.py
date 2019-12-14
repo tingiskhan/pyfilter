@@ -20,7 +20,7 @@ class NESS(SequentialParticleAlgorithm):
         self._kernel = kernel or AdaptiveKernel()
 
         if not isinstance(self._kernel, OnlineKernel):
-            raise ValueError('Kernel must be of instance {}!'.format(OnlineKernel.__class__.__name__))
+            raise ValueError(f'Kernel must be of instance {OnlineKernel.__class__.__name__}!')
 
     def _update(self, y):
         # ===== Jitter ===== #

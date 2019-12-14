@@ -16,7 +16,7 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         if isinstance(filter_, KalmanFilter):
-            raise ValueError('`filter_` must be of instance `{:s}!'.format(ParticleFilter.__name__))
+            raise ValueError(f'`filter_` must be of instance `{ParticleFilter.__class__.__name__}!')
 
         super().__init__(filter_, particles)
 
@@ -24,7 +24,7 @@ class SMC2(SequentialParticleAlgorithm):
         self._kernel = kernel or SymmetricMH()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
-            raise ValueError('The kernel must be of instance {}!'.format(ParticleMetropolisHastings.__class__.__name__))
+            raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #

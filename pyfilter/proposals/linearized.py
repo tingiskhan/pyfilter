@@ -18,9 +18,9 @@ class Linearized(Proposal):
 
     def set_model(self, model):
         if model.obs_ndim > 1:
-            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+            raise NotImplementedError('More observation dimensions than 1 is currently not implemented!')
         elif not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
-            raise ValueError('Both observable and hidden must be of type {}!'.format(AffineProcess.__class__.__name__))
+            raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
 
         self._model = model
 
@@ -95,9 +95,9 @@ class LocalLinearization(LinearGaussianObservations):
 
     def set_model(self, model):
         if model.obs_ndim > 1:
-            raise NotImplementedError("More observation dimensions than 1 is currently not implemented!")
+            raise NotImplementedError('More observation dimensions than 1 is currently not implemented!')
         elif not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
-            raise ValueError('Both observable and hidden must be of type {}!'.format(AffineProcess.__class__.__name__))
+            raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
 
         self._model = model
 
