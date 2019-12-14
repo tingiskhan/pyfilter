@@ -125,7 +125,7 @@ class SMC2FW(SequentialParticleAlgorithm):
             self._iterator.set_description(str(self))
 
         # ===== Check if to propagate ===== #
-        if self._last_update - self._bl >= 0 and self._logged_ess[-1] < self._smc2._th * self._particles:
+        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._last_update = 0
 
