@@ -343,7 +343,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     def sample_path(self, steps, samples=None, x_s=None):
         x_s = self.i_sample(samples) if x_s is None else x_s
-        out = torch.zeros(steps, *x_s.shape)
+        out = torch.zeros(steps, *x_s.shape, device=x_s.device, dtype=x_s.dtype)
         out[0] = x_s
 
         for i in range(1, steps):
