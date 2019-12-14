@@ -316,18 +316,6 @@ def _construct_empty(array):
     return temp * torch.ones_like(array, dtype=temp.dtype)
 
 
-def cudawarning(resampling):
-    """
-    Raises an error if you're using CUDA and have `systematic` enabled.
-    :return: Nothing
-    :rtype: None
-    """
-
-    if 'cuda' == torch.tensor(1.).device.type and resampling is systematic:
-        msg = '`systematic` relies on `numpy`, you must use `multinomial` instead as CUDA is enabled.'
-        raise ValueError(msg)
-
-
 class ParticleFilter(BaseFilter, ABC):
     def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.9, need_grad=False):
         """
@@ -343,8 +331,6 @@ class ParticleFilter(BaseFilter, ABC):
         :param need_grad: Whether we need the gradient
         :type need_grad: bool
         """
-
-        cudawarning(resampling)
 
         super().__init__(model)
 
