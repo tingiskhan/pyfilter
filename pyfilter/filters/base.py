@@ -1,10 +1,9 @@
 import copy
 from abc import ABC
-
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, EulerMaruyama
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose, HelperMixin, normalize
@@ -360,6 +359,10 @@ class ParticleFilter(BaseFilter, ABC):
                 proposal = Bootstrap()
 
         self._proposal = proposal.set_model(self._model)    # type: Proposal
+
+        if isinstance(self.ssm.hidden, EulerMaruyama) and not isinstance(proposal, Bootstrap):
+            msg = f'All models of type {EulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
+            raise NotImplementedError(msg)
 
     @property
     def proposal(self):

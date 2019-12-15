@@ -2,6 +2,7 @@ from .affine import AffineProcess
 import torch
 from abc import ABC
 from torch.distributions import Distribution, Normal, Independent
+from ..utils import Empirical
 
 
 class StochasticDifferentialEquation(AffineProcess, ABC):
@@ -79,14 +80,14 @@ class EulerMaruyama(OneStepEulerMaruyma):
         self._ns = kwargs.pop('num_steps', 1)
 
     def _propagate(self, x, as_dist=False):
-        if as_dist:
-            raise ValueError(f'Does not work for {self.__class__.__name__}!')
-
         for i in range(self._ns):
             dist = self._define_transdist(*self.mean_scale(x))
             x = dist.sample()
 
-        return x
+        if not as_dist:
+            return x
+
+        return Empirical(x)
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):

@@ -358,3 +358,22 @@ class TempOverride(object):
         setattr(self._obj, self._attr, self._old_vals)
 
         return self
+
+
+class Empirical(Distribution):
+    def __init__(self, samples):
+        """
+        Helper class for timeseries without an analytical expression.
+        :param samples: The sample
+        :type samples: torch.Tensor
+        """
+        super().__init__()
+        self._samples = samples
+        self.loc = samples
+        self.scale = torch.zeros_like(samples)
+
+    def sample(self, sample_shape=torch.Size()):
+        if sample_shape != self._samples.shape and sample_shape != torch.Size():
+            raise ValueError('Current implementation only allows passing an empty size!')
+
+        return self._samples
