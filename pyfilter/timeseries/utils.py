@@ -13,7 +13,10 @@ def to_state_variable(obj, x):
     """
 
     if obj._inputdim > 1 and not isinstance(x, StateVariable):
-        return StateVariable(x)
+        out = StateVariable(x)
+        x.__sv = out
+
+        return out
 
     return x
 
@@ -31,11 +34,8 @@ def tensor_caster(func):
 
         res = func(obj, tx, **kwargs)
 
-        if not isinstance(res, StateVariable):
-            return res
-
-        res = res.get_base()
-        res.__sv = tx   # To keep GC from collecting the variable recording the gradients - really ugly, but works
+        if isinstance(res, StateVariable):
+            res = res.get_base()
 
         return res
 
