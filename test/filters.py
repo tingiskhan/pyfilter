@@ -3,9 +3,9 @@ import numpy as np
 import pykalman
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
+from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, EulerMaruyama
 import torch
-from pyfilter.proposals import Unscented, Linearized
+from pyfilter.proposals import Unscented, Linearized, Bootstrap
 from pyfilter.utils import concater
 
 
@@ -54,7 +54,7 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == torch.Size([1000])
 
     def test_Filters(self):
-        for model in [self.model, self.mvnmodel]:
+        for model in [self.mvnmodel]:
             x, y = model.sample_path(500)
 
             for filter_, props in [
@@ -123,3 +123,19 @@ class Tests(unittest.TestCase):
         mape = ((x - filtermeans[:, 1:]) / x).abs()
 
         assert mape.median(0)[0].max() < 0.05
+
+    def test_SDE(self):
+        def f(x, a, s):
+            return -a * x
+
+        def g(x, a, s):
+            return s
+
+        em = EulerMaruyama((f, g), (0.02, 0.15), Normal(0., 1.), Normal(0., 1.), dt=1e-2, num_steps=10)
+        model = LinearGaussianObservations(em, scale=1e-3)
+
+        x, y = model.sample_path(100)
+
+        filt = SISR(model, 200, proposal=Bootstrap()).initialize().longfilter(y)
+
+        self.assertLess(((x - filt.filtermeans) ** 2).mean().sqrt(), 1e-2)
