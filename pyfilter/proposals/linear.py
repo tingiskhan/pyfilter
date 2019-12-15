@@ -1,6 +1,6 @@
 from .base import Proposal
 from torch.distributions import Normal, MultivariateNormal
-from ..timeseries import LinearGaussianObservations as LGO
+from ..timeseries import LinearGaussianObservations as LGO, AffineProcess
 import torch
 from ..utils import construct_diag
 
@@ -20,8 +20,8 @@ class LinearGaussianObservations(Proposal):
         return self._model.observable._theta_vals[0], y
 
     def set_model(self, model):
-        if not isinstance(model, LGO):
-            raise ValueError('Model must be of instance {}'.format(LGO.__name__))
+        if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
+            raise ValueError('Model combination not supported!')
 
         self._model = model
 
@@ -58,12 +58,12 @@ class LinearGaussianObservations(Proposal):
 
     def construct(self, y, x):
         # ===== Hidden ===== #
-        loc = self._model.hidden.mean(x)
-        h_var_inv = 1 / self._model.hidden.scale(x) ** 2
+        loc, scale = self._model.hidden.mean_scale(x)
+        h_var_inv = 1 / scale ** 2
 
         # ===== Observable ===== #
         c, y = self._get_mat_and_fix_y(x, y)
-        o_var_inv = 1 / self._model.observable.scale(x) ** 2
+        o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
 
         if self._model.hidden_ndim < 2:
             self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)

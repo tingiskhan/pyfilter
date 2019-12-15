@@ -1,5 +1,6 @@
 from .model import StateSpaceModel
-from .affine import AffineModel, AffineObservations
+from .affine import AffineProcess
+from .observable import AffineObservations
 import torch
 from torch import distributions as dists
 
@@ -29,7 +30,7 @@ class LinearGaussianObservations(StateSpaceModel):
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
         :param hidden: The hidden dynamics
-        :type hidden: AffineModel
+        :type hidden: AffineProcess
         :param a: The A-matrix, must be constant (currently)
         :type a: torch.Tensor|float|dists.Distribution
         :param scale: The variance of the observations, can be constant or learnable. Currently assumes that all
@@ -50,7 +51,9 @@ class LinearGaussianObservations(StateSpaceModel):
 
         # ====== Define distributions ===== #
         n = dists.Normal(0., 1.) if dim < 2 else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
-        scale = (scale,) if not isinstance(scale, (tuple, list)) else scale
+
+        if not isinstance(scale, (torch.Tensor, float, dists.Distribution)):
+            raise ValueError(f'`scale` parameter must be numeric type!')
 
         # ===== Determine propagator function ===== #
         if dim > 1:
@@ -60,6 +63,6 @@ class LinearGaussianObservations(StateSpaceModel):
         else:
             f = f_0d
 
-        observable = AffineObservations((f, g), (a, *scale), n)
+        observable = AffineObservations((f, g), (a, scale), n)
 
         super().__init__(hidden, observable)

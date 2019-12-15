@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import MultivariateNormal
-from pyfilter.utils import unflattify
+from ..utils import unflattify
 
 
 def stacker(parameters, selector=lambda u: u.values):

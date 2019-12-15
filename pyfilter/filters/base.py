@@ -1,10 +1,9 @@
 import copy
 from abc import ABC
-
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, EulerMaruyama
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose, HelperMixin, normalize
@@ -316,18 +315,6 @@ def _construct_empty(array):
     return temp * torch.ones_like(array, dtype=temp.dtype)
 
 
-def cudawarning(resampling):
-    """
-    Raises an error if you're using CUDA and have `systematic` enabled.
-    :return: Nothing
-    :rtype: None
-    """
-
-    if 'cuda' == torch.tensor(1.).device.type and resampling is systematic:
-        msg = '`systematic` relies on `numpy`, you must use `multinomial` instead as CUDA is enabled.'
-        raise ValueError(msg)
-
-
 class ParticleFilter(BaseFilter, ABC):
     def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.9, need_grad=False):
         """
@@ -343,8 +330,6 @@ class ParticleFilter(BaseFilter, ABC):
         :param need_grad: Whether we need the gradient
         :type need_grad: bool
         """
-
-        cudawarning(resampling)
 
         super().__init__(model)
 
@@ -363,6 +348,10 @@ class ParticleFilter(BaseFilter, ABC):
         # ===== Resampling function ===== #
         self._resampler = resampling
 
+        # ===== Logged ESS ===== #
+        self.logged_ess = tuple()
+
+        # ===== Proposal ===== #
         if proposal == 'auto':
             try:
                 proposal = _PROPOSAL_MAPPING[type(self._model)]()
@@ -370,6 +359,10 @@ class ParticleFilter(BaseFilter, ABC):
                 proposal = Bootstrap()
 
         self._proposal = proposal.set_model(self._model)    # type: Proposal
+
+        if isinstance(self.ssm.hidden, EulerMaruyama) and not isinstance(proposal, Bootstrap):
+            msg = f'All models of type {EulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
+            raise NotImplementedError(msg)
 
     @property
     def proposal(self):
@@ -425,6 +418,8 @@ class ParticleFilter(BaseFilter, ABC):
         ess = get_ess(weights) / weights.shape[-1]
         mask = ess < self._th
 
+        self.logged_ess += (ess,)
+
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
 
@@ -459,7 +454,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def predict(self, steps, aggregate=True, **kwargs):
-        x, y = self._model.sample(steps+1, x_s=self._x_cur, **kwargs)
+        x, y = self._model.sample_path(steps + 1, x_s=self._x_cur, **kwargs)
 
         if not aggregate:
             return x[1:], y[1:]
@@ -482,6 +477,10 @@ class ParticleFilter(BaseFilter, ABC):
         self._x_cur[inds] = filter_._x_cur[inds]
         self._w_old[inds] = filter_._w_old[inds]
 
+        return self
+
+    def _reset(self):
+        self.logged_ess = tuple()
         return self
 
 

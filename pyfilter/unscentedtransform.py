@@ -1,4 +1,4 @@
-from .timeseries import StateSpaceModel, AffineModel
+from .timeseries import StateSpaceModel, AffineProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
@@ -13,21 +13,20 @@ def _propagate_sps(spx, spn, process, temp_params):
     :param spn: The noise Sigma points
     :type spn: torch.Tensor
     :param process: The process
-    :type process: AffineModel
+    :type process: AffineProcess
     :return: Translated and scaled sigma points
     :rtype: torch.Tensor
     """
 
+    is_md = process.ndim > 1
+
+    if not is_md:
+        spx = spx.squeeze(-1)
+        spn = spn.squeeze(-1)
+
     with TempOverride(process, '_theta_vals', temp_params):
-        mean = process.mean(spx)
-        scale = process.scale(spx)
-
-    mean, scale = torch.broadcast_tensors(mean, scale)
-
-    if process._inputdim != process.ndim and process.ndim == 1:
-        return (mean + scale * spn[..., 0]).unsqueeze(-1)
-
-    return mean + scale * spn
+        out = process.propagate_u(spx, u=spn)
+        return out if is_md else out.unsqueeze(-1)
 
 
 def _covcalc(a, b, wc):
@@ -182,15 +181,15 @@ class UnscentedTransform(HelperMixin):
         self._mean[..., self._sslc] = x if self._model.hidden_ndim > 1 else x.unsqueeze(-1)
 
         # ==== Set state covariance ===== #
-        var = self._model.hidden.i_scale() ** 2
+        var = self._model.hidden.initial_dist.variance
         if self._model.hidden_ndim < 2:
             var.unsqueeze_(-1)
 
         self._cov[..., self._sslc, self._sslc] = construct_diag(var)
 
         # ==== Set noise covariance ===== #
-        self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.noise.variance)
-        self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.noise.variance)
+        self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
+        self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
 
         self._initialized = True
 

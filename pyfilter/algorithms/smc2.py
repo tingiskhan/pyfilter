@@ -16,7 +16,7 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         if isinstance(filter_, KalmanFilter):
-            raise ValueError('`filter_` must be of instance `{:s}!'.format(ParticleFilter.__name__))
+            raise ValueError(f'`filter_` must be of instance `{ParticleFilter.__class__.__name__}!')
 
         super().__init__(filter_, particles)
 
@@ -24,7 +24,7 @@ class SMC2(SequentialParticleAlgorithm):
         self._kernel = kernel or SymmetricMH()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
-            raise ValueError('The kernel must be of instance {}!'.format(ParticleMetropolisHastings.__class__.__name__))
+            raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
 
     def _update(self, y):
         # ===== Perform a filtering move ===== #
@@ -86,7 +86,6 @@ class SMC2(SequentialParticleAlgorithm):
 
 
 class SMC2FW(SequentialParticleAlgorithm):
-    @experimental
     def __init__(self, filter_, particles, switch=200, block_len=125, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
@@ -125,7 +124,7 @@ class SMC2FW(SequentialParticleAlgorithm):
             self._iterator.set_description(str(self))
 
         # ===== Check if to propagate ===== #
-        if self._last_update - self._bl >= 0 and self._logged_ess[-1] < self._smc2._th * self._particles:
+        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._last_update = 0
 
