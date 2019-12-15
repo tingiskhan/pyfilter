@@ -23,6 +23,7 @@ class StochasticDifferentialEquation(AffineProcess, ABC):
         super().__init__(dynamics, theta, init_dist, increment_dist)
 
 
+# TODO: Works for all distributions where the variance of the incremental distribution can be constructed as a product
 class OneStepEulerMaruyma(StochasticDifferentialEquation):
     def __init__(self, funcs, theta, initial_dist, inc_dist, dt=1.):
         """
@@ -68,7 +69,6 @@ class OrnsteinUhlenbeck(StochasticDifferentialEquation):
         super().__init__((f, g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
 
 
-# TODO: Works for all distributions where the variance of the incremental distribution can be constructed as a product
 class EulerMaruyama(OneStepEulerMaruyma):
     def __init__(self, dynamics, theta, init_dist, increment_dist, dt, **kwargs):
         """
