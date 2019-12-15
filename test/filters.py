@@ -5,7 +5,7 @@ from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 import torch
-from pyfilter.proposals import Unscented
+from pyfilter.proposals import Unscented, Linearized
 from pyfilter.utils import concater
 
 
@@ -60,7 +60,9 @@ class Tests(unittest.TestCase):
             for filter_, props in [
                 (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
-                (UKF, {})
+                (UKF, {}),
+                (SISR, {'particles': 500, 'proposal': Linearized()}),
+                (SISR, {'particles': 500, 'proposal': Unscented()})
             ]:
                 filt = filter_(model, **props).initialize()
 
