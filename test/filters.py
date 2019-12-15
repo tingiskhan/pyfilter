@@ -136,6 +136,9 @@ class Tests(unittest.TestCase):
 
         x, y = model.sample_path(100)
 
+        with self.assertRaises(NotImplementedError):
+            SISR(model, 200)
+
         filt = SISR(model, 200, proposal=Bootstrap()).initialize().longfilter(y)
 
         self.assertLess(((x - filt.filtermeans) ** 2).mean().sqrt(), 1e-2)
