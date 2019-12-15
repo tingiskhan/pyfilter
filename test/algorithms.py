@@ -45,7 +45,7 @@ class MyTestCase(unittest.TestCase):
         model = LinearGaussianObservations(linear, scale=0.1)
 
         mv_linear = AffineProcess((fmvn, gmvn), (0.5, 0.25), mvn, mvn)
-        mvnmodel = LinearGaussianObservations(mv_linear, scale=0.1)
+        mvnmodel = LinearGaussianObservations(mv_linear, torch.tensor([1., 2.]), scale=0.1)
 
         # ===== Test for multiple models ===== #
         priors = Normal(0., 1.), Exponential(1.)
