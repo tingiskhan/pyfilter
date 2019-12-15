@@ -49,20 +49,20 @@ class Linearized(Proposal):
         dlogl = h_loc.grad.clone()
 
         mu = h_loc.detach()
-        oscale = o_scale.detach()
+        o_scale.detach_()
         # For cases when we return the tensor itself
         # TODO: Perhaps copy in the wrapper instead?
         x.detach_()
 
         if self._model.hidden_ndim < 2:
-            var = 1 / (1 / h_scale ** 2 + (dobsx / oscale) ** 2)
+            var = 1 / (1 / h_scale ** 2 + (dobsx / o_scale) ** 2)
             mean = mu + var * dlogl
 
             self._kernel = Normal(mean, var.sqrt())
 
             return self
 
-        o_inv_var = 1 / oscale ** 2
+        o_inv_var = 1 / o_scale ** 2
 
         if self._model.observable.ndim > 1:
             ...
