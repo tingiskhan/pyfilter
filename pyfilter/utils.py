@@ -368,8 +368,7 @@ class Empirical(Distribution):
         :type samples: torch.Tensor
         """
         super().__init__()
-        self._samples = samples
-        self.loc = samples
+        self.loc = self._samples = samples
         self.scale = torch.zeros_like(samples)
 
     def sample(self, sample_shape=torch.Size()):
