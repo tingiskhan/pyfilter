@@ -14,7 +14,7 @@ def to_state_variable(obj, x):
 
     if obj._inputdim > 1 and not isinstance(x, StateVariable):
         out = StateVariable(x)
-        x.__sv = out
+        x.__sv = out    # To keep GC from collecting the variable recording the gradients - really ugly, but works
 
         return out
 
@@ -56,8 +56,6 @@ def tensor_caster_mult(func):
         res = func(obj, y, tx)
         if not isinstance(res, torch.Tensor):
             raise ValueError(f'Must be of instance {torch.Tensor.__class__.__name__}')
-
-        res.__sv = tx  # To keep GC from collecting the variable recording the gradients - really ugly, but works
 
         return res
 
