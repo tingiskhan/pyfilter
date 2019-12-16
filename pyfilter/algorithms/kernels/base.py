@@ -2,6 +2,17 @@ from ...utils import normalize
 from pyfilter.algorithms.utils import stacker
 import numpy as np
 from ...resampling import residual
+import torch
+
+
+def finite_decorator(func):
+    def wrapper(obj, parameters, filter_, w):
+        mask = ~torch.isfinite(w)
+        w[mask] = float('-inf')
+
+        return func(obj, parameters, filter_, w)
+
+    return wrapper
 
 
 class BaseKernel(object):
@@ -48,6 +59,7 @@ class BaseKernel(object):
 
         raise NotImplementedError()
 
+    @finite_decorator
     def update(self, parameters, filter_, weights):
         """
         Defines the function for updating the parameters.

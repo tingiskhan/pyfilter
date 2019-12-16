@@ -32,7 +32,7 @@ class OnlineKernel(BaseKernel):
 
         self._resampled = False
 
-        if get_ess(weights, normalized=True) > self._th * weights.numel():
+        if get_ess(weights, normalized=True) > self._th * weights.numel() and not (weights == 0.).any():
             return torch.arange(weights.numel())
 
         inds = self._resampler(weights, normalized=True)
