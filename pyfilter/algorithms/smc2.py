@@ -86,11 +86,9 @@ class SMC2(SequentialParticleAlgorithm):
 
 
 class SMC2FW(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, switch=200, block_len=125, **kwargs):
+    def __init__(self, filter_, particles, switch=200, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
-        :param block_len: The minimum block length to use
-        :type block_len: int
         :param switch: When to switch to using fixed width sampling
         :type switch: int
         :param kwargs: Kwargs to SMC2
@@ -100,11 +98,9 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         self._switch = int(switch)
         self._switched = False
-        self._last_update = switch
 
         # ===== Resampling related ===== #
         self._kernel = KernelDensitySampler()
-        self._bl = block_len
 
     def initialize(self):
         self._smc2.initialize()
@@ -125,14 +121,12 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         # ===== Check if to propagate ===== #
         nans = (~torch.isfinite(self._w_rec)).any()
-        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles or nans:
+        if self._logged_ess[-1] < self._smc2._th * self._particles or nans:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
-            self._last_update = 0
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
         self._w_rec += self.filter.s_ll[-1]
-        self._last_update += 1
 
         # ===== Calculate efficient number of samples ===== #
         self._logged_ess += (get_ess(self._w_rec),)
