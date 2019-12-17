@@ -8,7 +8,7 @@ import torch
 def finite_decorator(func):
     def wrapper(obj, parameters, filter_, w):
         mask = ~torch.isfinite(w)
-        w[mask] = float('-inf')
+        w[mask] = -float('inf')
 
         return func(obj, parameters, filter_, w)
 
