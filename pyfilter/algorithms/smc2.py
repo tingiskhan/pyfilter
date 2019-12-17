@@ -124,7 +124,8 @@ class SMC2FW(SequentialParticleAlgorithm):
             self._iterator.set_description(str(self))
 
         # ===== Check if to propagate ===== #
-        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles:
+        nans = (~torch.isfinite(self._w_rec)).any()
+        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles or nans:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._last_update = 0
 

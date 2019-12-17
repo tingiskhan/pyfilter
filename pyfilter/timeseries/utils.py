@@ -60,19 +60,3 @@ def tensor_caster_mult(func):
         return res
 
     return wrapper
-
-
-def finite_decorator(func):
-    def wrapper(*args, **kwargs):
-        out = func(*args, **kwargs)
-
-        mask = torch.isfinite(out)
-
-        if (~mask).all():
-            raise ValueError('All weights seem to be `nan`, adjust your model')
-
-        out[~mask] = float('-inf')
-
-        return out
-
-    return wrapper
