@@ -6,13 +6,17 @@ from torch.autograd import grad
 
 
 class Linearized(Proposal):
-    def __init__(self):
+    def __init__(self, alpha=1e-3):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
+        :param alpha: If `None`, uses second order information about the likelihood function, else takes step
+        proportional to `alpha`.
+        :type alpha: None|float
         """
         super().__init__()
         self._var_chooser = None
+        self._alpha = alpha
 
     def set_model(self, model):
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
@@ -33,15 +37,18 @@ class Linearized(Proposal):
 
         var = self._var_chooser(h_loc)
 
-        g = grad(logl, var, grad_outputs=torch.ones_like(logl), create_graph=True)[-1]
-        g2 = grad(g, var, grad_outputs=torch.ones_like(g))[-1]
+        g = grad(logl, var, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
         # ===== Define mean and scale ===== #
-        var = -1 / g2.detach()
-        std = var.sqrt()
-        mean = h_loc.detach() + var * g.detach()
+        if self._alpha is None:
+            var = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
+            std = var.sqrt()
+            mean = h_loc.detach() + var * g.detach()
 
-        x.detach_()
+            x.detach_()
+        else:
+            std = h_scale.detach()
+            mean = h_loc.detach() + self._alpha * g.detach()
 
         if self._model.hidden_ndim < 2:
             self._kernel = Normal(mean, std)
