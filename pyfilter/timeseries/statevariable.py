@@ -1,7 +1,7 @@
 import torch
 
 
-# TODO: Don't know if good, but works
+# TODO: Really should return the object instead, this is sub-optimal
 class StateVariable(torch.Tensor):
     """
     Implements a custom state variable for easier usage when performing indexing in functions, while still retaining

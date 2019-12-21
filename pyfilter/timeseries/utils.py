@@ -14,7 +14,7 @@ def to_state_variable(obj, x):
 
     if obj._inputdim > 1 and not isinstance(x, StateVariable):
         out = StateVariable(x)
-        x.__sv = out    # To keep GC from collecting the variable recording the gradients - really ugly, but works
+        x._statevar = out    # To keep GC from collecting the variable recording the gradients - really ugly, but works
 
         return out
 

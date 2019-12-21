@@ -54,7 +54,7 @@ class Tests(unittest.TestCase):
         assert filt._x_cur.shape == torch.Size([1000])
 
     def test_Filters(self):
-        for model in [self.mvnmodel]:
+        for model in [self.model, self.mvnmodel]:
             x, y = model.sample_path(500)
 
             for filter_, props in [
