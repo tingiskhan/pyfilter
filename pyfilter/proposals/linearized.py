@@ -44,11 +44,11 @@ class Linearized(Proposal):
             var = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
             std = var.sqrt()
             mean = h_loc.detach() + var * g.detach()
-
-            x.detach_()
         else:
             std = h_scale.detach()
             mean = h_loc.detach() + self._alpha * g.detach()
+
+        x.detach_()
 
         if self._model.hidden_ndim < 2:
             self._kernel = Normal(mean, std)
