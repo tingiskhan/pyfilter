@@ -1,81 +1,58 @@
 from .base import Proposal
 import torch
-from torch.distributions import Normal, MultivariateNormal
-from ..utils import construct_diag
+from torch.distributions import Normal, Independent
 from ..timeseries import AffineProcess
+from torch.autograd import grad
 
 
-# TODO: Check if we can speed up
 class Linearized(Proposal):
-    def __init__(self):
+    def __init__(self, alpha=1e-3):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
+        :param alpha: If `None`, uses second order information about the likelihood function, else takes step
+        proportional to `alpha`.
+        :type alpha: None|float
         """
-
         super().__init__()
+        self._var_chooser = None
+        self._alpha = alpha
 
     def set_model(self, model):
-        if model.obs_ndim > 1:
-            raise NotImplementedError('More observation dimensions than 1 is currently not implemented!')
-        elif not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
+        if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
             raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
 
         self._model = model
+        self._var_chooser = (lambda u: u) if self._model.hidden_ndim < 2 else (lambda u: u._statevar)
 
         return self
 
     def construct(self, y, x):
-        # ===== Define helpers ===== #
+        # ===== Mean of propagated dist ===== #
         h_loc, h_scale = self._model.hidden.mean_scale(x)
         h_loc.requires_grad_(True)
 
-        o_loc, o_scale = self._model.observable.mean_scale(h_loc)
+        # ===== Get gradients ===== #
+        logl = self._model.observable.log_prob(y, h_loc) + self._model.hidden.log_prob(h_loc, x)
 
-        # ===== Calculate the log-likelihood ===== #
-        obs_logl = self._model.observable.predefined_weight(y, o_loc, o_scale)
-        hid_logl = self._model.hidden.predefined_weight(h_loc, h_loc, h_scale)
+        var = self._var_chooser(h_loc)
 
-        logl = obs_logl + hid_logl
+        g = grad(logl, var, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
-        # ===== Do backward-pass ===== #
-        if o_loc.requires_grad:
-            o_loc.backward(torch.ones_like(o_loc), retain_graph=True)
-            dobsx = h_loc.grad.clone()
+        # ===== Define mean and scale ===== #
+        if self._alpha is None:
+            var = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
+            std = var.sqrt()
+            mean = h_loc.detach() + var * g.detach()
         else:
-            dobsx = 0.
+            std = h_scale.detach()
+            mean = h_loc.detach() + self._alpha * g.detach()
 
-        logl.backward(torch.ones_like(logl))
-        dlogl = h_loc.grad.clone()
-
-        mu = h_loc.detach()
-        o_scale.detach_()
-        # For cases when we return the tensor itself
-        # TODO: Perhaps copy in the wrapper instead?
         x.detach_()
 
         if self._model.hidden_ndim < 2:
-            var = 1 / (1 / h_scale ** 2 + (dobsx / o_scale) ** 2)
-            mean = mu + var * dlogl
-
-            self._kernel = Normal(mean, var.sqrt())
-
-            return self
-
-        o_inv_var = 1 / o_scale ** 2
-
-        if self._model.observable.ndim > 1:
-            ...
+            self._kernel = Normal(mean, std)
         else:
-            o_inv_var = construct_diag(o_inv_var.unsqueeze(-1))
-
-        h_inv_var = construct_diag(1 / h_scale ** 2)
-
-        # TODO: Not working for multi dimensional output. Line 35 must be altered to handle Jacobian...
-        temp = torch.matmul(dobsx.unsqueeze(-1), dobsx.unsqueeze(-2)) * o_inv_var
-        var = (h_inv_var + temp).inverse()
-
-        mean = mu + torch.matmul(var, dlogl.unsqueeze(-1))[..., 0]
-        self._kernel = MultivariateNormal(mean, scale_tril=torch.cholesky(var))
+            self._kernel = Independent(Normal(mean, std), 1)
 
         return self
