@@ -2,7 +2,8 @@ import unittest
 from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, EulerMaruyama
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
-from torch.distributions import Normal, Exponential, Independent
+from torch.distributions import Normal, Exponential, Independent, Poisson
+import math
 
 
 def f(x, alpha, sigma):
@@ -174,13 +175,17 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_OneStepEuler(self):
-        norm = Normal(0., 1.)
+
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
 
         init = Normal(a, 1.)
-        sde = OneStepEulerMaruyma((f_sde, g_sde), (a, 0.15), init, norm)
+
+        dt = 1.
+        norm = Normal(0., math.sqrt(dt))
+
+        sde = OneStepEulerMaruyma((f_sde, g_sde), (a, 0.15), init, norm, dt)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
@@ -202,7 +207,7 @@ class Tests(unittest.TestCase):
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
-        sde = OrnsteinUhlenbeck(a, 0., 0.15, 1)
+        sde = OrnsteinUhlenbeck(a, 0., 0.15, 1, dt=1.)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
@@ -221,19 +226,46 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_SDE(self):
-        norm = Normal(0., 1.)
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
+        dt = 0.1
+        norm = Normal(0., math.sqrt(dt))
 
         init = Normal(a, 1.)
-        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=0.1, num_steps=10)
+        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
         # ===== Propagate ===== #
         num = 100
+        samps = [x]
+        for t in range(num):
+            samps.append(sde.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = sde.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_Poisson(self):
+        shape = 1000, 100
+
+        a = 1e-2 * torch.ones((shape[0], 1))
+        dt = 1e-2
+        dist = Poisson(dt * 0.1)
+
+        init = Normal(a, 1.)
+        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+
+        # ===== Initialize ===== #
+        x = sde.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 1000
         samps = [x]
         for t in range(num):
             samps.append(sde.propagate(samps[-1]))

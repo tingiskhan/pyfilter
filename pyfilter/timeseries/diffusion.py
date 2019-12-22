@@ -8,7 +8,8 @@ from ..utils import Empirical
 class StochasticDifferentialEquation(AffineProcess, ABC):
     def __init__(self, dynamics, theta, init_dist, increment_dist, dt, num_steps=1):
         """
-        Base class for stochastic differential equations.
+        Base class for stochastic differential equations. Note that the incremental distribution should include `dt`,
+        as in for normal distributions the variance should be `dt`, and same for other.
         :param dynamics: The dynamics, tuple of functions
         :type dynamics: tuple[callable]
         :param dt: The step size
@@ -17,16 +18,14 @@ class StochasticDifferentialEquation(AffineProcess, ABC):
         :type num_steps: int
         """
 
-        self._dt = torch.tensor(dt)
-        self._sqdt = self._dt.sqrt()
+        self._dt = dt
         self._ns = num_steps
 
         super().__init__(dynamics, theta, init_dist, increment_dist)
 
 
-# TODO: Works for all distributions where the variance of the incremental distribution can be constructed as a product
 class OneStepEulerMaruyma(StochasticDifferentialEquation):
-    def __init__(self, funcs, theta, initial_dist, inc_dist, dt=1.):
+    def __init__(self, funcs, theta, initial_dist, inc_dist, dt):
         """
         Implements a one-step Euler-Maruyama model, similar to PyMC3.
         :param dt: The step-size to use in the approximation.
@@ -37,13 +36,13 @@ class OneStepEulerMaruyma(StochasticDifferentialEquation):
             return x + funcs[0](x, *args) * self._dt
 
         def g(x, *args):
-            return funcs[1](x, *args) * self._sqdt
+            return funcs[1](x, *args)
 
         super().__init__((f, g), theta, initial_dist, inc_dist, dt=dt, num_steps=1)
 
 
 class OrnsteinUhlenbeck(StochasticDifferentialEquation):
-    def __init__(self, kappa, gamma, sigma, ndim, dt=1.):
+    def __init__(self, kappa, gamma, sigma, ndim, dt):
         """
         Implements the Ornstein-Uhlenbeck process.
         :param kappa: The reversion parameter

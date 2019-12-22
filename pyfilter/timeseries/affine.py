@@ -114,7 +114,7 @@ class RandomWalk(AffineProcess):
         """
         Defines a random walk.
         :param std: The vector of standard deviations
-        :type std: torch.Tensor|float
+        :type std: torch.Tensor|float|Distribution
         """
 
         def f(x, s):
