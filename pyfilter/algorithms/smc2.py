@@ -86,7 +86,7 @@ class SMC2(SequentialParticleAlgorithm):
 
 
 class SMC2FW(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, switch=200, block_len=125, **kwargs):
+    def __init__(self, filter_, particles, switch=200, block_len=125, kde=None, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
         :param block_len: The minimum block length to use
@@ -100,10 +100,10 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         self._switch = int(switch)
         self._switched = False
-        self._last_update = switch
+        self._last_update = 0
 
         # ===== Resampling related ===== #
-        self._kernel = KernelDensitySampler()
+        self._kernel = KernelDensitySampler(kde=kde)
         self._bl = block_len
 
     def initialize(self):
@@ -125,7 +125,7 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         # ===== Check if to propagate ===== #
         nans = (~torch.isfinite(self._w_rec)).any()
-        if self._last_update - self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles or nans:
+        if self._last_update % self._bl == 0 or self._logged_ess[-1] < 0.1 * self._particles or nans:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._last_update = 0
 
