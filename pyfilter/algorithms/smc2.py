@@ -2,6 +2,7 @@ from .base import experimental, SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
 from ..utils import get_ess
 from ..filters.base import KalmanFilter, ParticleFilter
+from ..kde import KernelDensityEstimate
 import torch
 
 
@@ -93,6 +94,8 @@ class SMC2FW(SequentialParticleAlgorithm):
         :type block_len: int
         :param switch: When to switch to using fixed width sampling
         :type switch: int
+        :param kde: The KDE approximation to use for parameters
+        :type kde: KernelDensityEstimate
         :param kwargs: Kwargs to SMC2
         """
         super().__init__(filter_, particles)
@@ -100,7 +103,7 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         self._switch = int(switch)
         self._switched = False
-        self._last_update = 0
+        self._num_iters = 0
 
         # ===== Resampling related ===== #
         self._kernel = KernelDensitySampler(kde=kde)
@@ -125,14 +128,14 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         # ===== Check if to propagate ===== #
         force_rejuv = self._logged_ess[-1] < 0.1 * self._particles or (~torch.isfinite(self._w_rec)).any()
-        if (self._last_update >= self._bl and self._logged_ess[-1] < self._smc2._th * self._particles) or force_rejuv:
+        if self._num_iters % self._bl == 0 or force_rejuv:
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
-            self._last_update = 0
+            self._num_iters = 0
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
         self._w_rec += self.filter.s_ll[-1]
-        self._last_update += 1
+        self._num_iters += 1
 
         # ===== Calculate efficient number of samples ===== #
         self._logged_ess += (get_ess(self._w_rec),)
