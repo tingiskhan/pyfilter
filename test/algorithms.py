@@ -1,7 +1,7 @@
 import unittest
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
 from torch.distributions import Normal, Exponential, Independent
-from pyfilter.filters import SISR, UKF
+from pyfilter.filters import APF, UKF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
@@ -48,7 +48,7 @@ class MyTestCase(unittest.TestCase):
         mvnmodel = LinearGaussianObservations(mv_linear, torch.tensor([1., 2.]), scale=0.1)
 
         # ===== Test for multiple models ===== #
-        priors = Normal(0., 1.), Exponential(1.)
+        priors = Exponential(1.), Exponential(1.)
 
         hidden1d = AffineProcess((f, g), priors, dist, dist)
         oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
@@ -57,17 +57,18 @@ class MyTestCase(unittest.TestCase):
         prior = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
         twod = LinearGaussianObservations(hidden2d, prior, Exponential(1.))
 
+        particles = 1000
         # ====== Run inference ===== #
         for trumod, model in [(model, oned), (mvnmodel, twod)]:
             x, y = trumod.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
-                (NESS, {'particles': 1000, 'filter_': UKF(model.copy())}),
-                (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
-                (SMC2FW, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
-                (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
-                (IteratedFilteringV2, {'filter_': SISR(model.copy(), 1000)})
+                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (IteratedFilteringV2, {'filter_': APF(model.copy(), particles)})
             ]
 
             for alg, props in algs:
@@ -75,7 +76,7 @@ class MyTestCase(unittest.TestCase):
 
                 alg = alg.fit(y)
 
-                w = normalize(alg._w_rec)
+                w = normalize(alg._w_rec if hasattr(alg, '_w_rec') else torch.ones(particles))
 
                 tru_params = trumod.hidden.theta + trumod.observable.theta
                 inf_params = alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta
