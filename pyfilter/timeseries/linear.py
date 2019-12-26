@@ -31,7 +31,7 @@ class LinearGaussianObservations(StateSpaceModel):
         state process.
         :param hidden: The hidden dynamics
         :type hidden: AffineProcess
-        :param a: The A-matrix, must be constant (currently)
+        :param a: The A-matrix
         :type a: torch.Tensor|float|dists.Distribution
         :param scale: The variance of the observations, can be constant or learnable. Currently assumes that all
                       components are independent.
