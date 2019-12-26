@@ -6,7 +6,7 @@ from torch.autograd import grad
 
 
 class Linearized(Proposal):
-    def __init__(self, alpha=1e-3):
+    def __init__(self, alpha=0.25):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
@@ -41,13 +41,13 @@ class Linearized(Proposal):
 
         # ===== Define mean and scale ===== #
         if self._alpha is None:
-            var = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
-            std = var.sqrt()
-            mean = h_loc.detach() + var * g.detach()
+            step = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
+            std = step.sqrt()
         else:
             std = h_scale.detach()
-            mean = h_loc.detach() + self._alpha * g.detach()
+            step = self._alpha
 
+        mean = h_loc.detach() + step * g.detach()
         x.detach_()
 
         if self._model.hidden_ndim < 2:

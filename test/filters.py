@@ -61,7 +61,7 @@ class Tests(unittest.TestCase):
                 (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
                 (UKF, {}),
-                (SISR, {'particles': 500, 'proposal': Linearized()}),
+                (SISR, {'particles': 500, 'proposal': Linearized(alpha=None)}),
                 (SISR, {'particles': 500, 'proposal': Unscented()})
             ]:
                 filt = filter_(model, **props).initialize()
