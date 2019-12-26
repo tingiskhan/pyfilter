@@ -1,7 +1,7 @@
 import unittest
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
 from torch.distributions import Normal, Exponential, Independent
-from pyfilter.filters import APF, UKF
+from pyfilter.filters import SISR, UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
@@ -54,8 +54,7 @@ class MyTestCase(unittest.TestCase):
         oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
 
         hidden2d = AffineProcess((fmvn, gmvn), priors, mvn, mvn)
-        prior = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
-        twod = LinearGaussianObservations(hidden2d, prior, Exponential(1.))
+        twod = LinearGaussianObservations(hidden2d, torch.tensor([1., 2.]), Exponential(1.))
 
         particles = 1000
         # ====== Run inference ===== #
@@ -68,7 +67,7 @@ class MyTestCase(unittest.TestCase):
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (IteratedFilteringV2, {'filter_': APF(model.copy(), particles)})
+                (IteratedFilteringV2, {'filter_': SISR(model.copy(), particles)})
             ]
 
             for alg, props in algs:
