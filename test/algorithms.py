@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2
+from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
 from torch.distributions import Normal, Exponential, Independent
 from pyfilter.filters import SISR, UKF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
@@ -51,7 +51,7 @@ class MyTestCase(unittest.TestCase):
         priors = Normal(0., 1.), Exponential(1.)
 
         hidden1d = AffineProcess((f, g), priors, dist, dist)
-        oned = LinearGaussianObservations(hidden1d, Normal(0., 1.), Exponential(1.))
+        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
 
         hidden2d = AffineProcess((fmvn, gmvn), priors, mvn, mvn)
         prior = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
@@ -65,6 +65,7 @@ class MyTestCase(unittest.TestCase):
                 (NESS, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
                 (NESS, {'particles': 1000, 'filter_': UKF(model.copy())}),
                 (SMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
+                (SMC2FW, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
                 (NESSMC2, {'particles': 1000, 'filter_': SISR(model.copy(), 200, ess=1.)}),
                 (IteratedFilteringV2, {'filter_': SISR(model.copy(), 1000)})
             ]
@@ -75,7 +76,14 @@ class MyTestCase(unittest.TestCase):
                 alg = alg.fit(y)
 
                 w = normalize(alg._w_rec)
-                for trup, p in zip(trumod.hidden.theta + trumod.observable.theta, alg.filter.ssm.theta_dists):
+
+                tru_params = trumod.hidden.theta + trumod.observable.theta
+                inf_params = alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta
+
+                for trup, p in zip(tru_params, inf_params):
+                    if not p.trainable:
+                        continue
+
                     kde = p.get_kde(weights=w)
 
                     transed = p.bijection.inv(trup)
