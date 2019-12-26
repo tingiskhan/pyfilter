@@ -217,3 +217,25 @@ class MultivariateGaussian(IndependentGaussian):
         jittered = _jitter(self._means[inds], self._bw_fac)
 
         return self._post_mean + jittered.matmul(self._cov.T)
+
+
+class ConstantKernel(MultivariateGaussian):
+    def __init__(self, bw):
+        """
+        Kernel with constant, prespecified bandwidth.
+        :param bw: The bandwidth to use
+        :type bw: float|torch.Tensor
+        """
+        super().__init__()
+        self._bw_fac = bw
+
+    def fit(self, x, w):
+        # ===== Calculate statistics ===== #
+        self._w = w
+
+        self._post_mean = (x * w.unsqueeze(-1)).sum(0)
+        self._cov = torch.eye(x.shape[-1], device=x.device) * self._bw_fac
+
+        self._means = x - self._post_mean
+
+        return self

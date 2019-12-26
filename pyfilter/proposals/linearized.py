@@ -36,7 +36,6 @@ class Linearized(Proposal):
         logl = self._model.observable.log_prob(y, h_loc) + self._model.hidden.log_prob(h_loc, x)
 
         var = self._var_chooser(h_loc)
-
         g = grad(logl, var, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
         # ===== Define mean and scale ===== #
