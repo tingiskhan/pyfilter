@@ -77,11 +77,19 @@ class UnscentedTransform(HelperMixin):
         :type k: float
         """
 
-        self._a = a
-        self._b = b
+        # ===== Model ===== #
         self._model = model
         self._ndim = 2 * model.hidden_ndim + model.obs_ndim
+
+        if any(self._model.hidden._dist_theta) or any(self._model.observable._dist_theta):
+            raise ValueError('Cannot currently handle case when distribution is parameterized!')
+
+        # ===== Parameters =====#
+        self._a = a
+        self._b = b
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
+
+        # ===== Auxiliary variables ===== #
         self._ymean = None
         self._ycov = None
         self._views = None
