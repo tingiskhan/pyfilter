@@ -1,6 +1,6 @@
 import unittest
 from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
-from torch.distributions import Normal, Exponential, Independent
+from torch.distributions import Normal, Exponential, Independent, Gamma, TransformedDistribution, PowerTransform
 from pyfilter.filters import SISR, UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
@@ -34,6 +34,10 @@ def gmvn(x, alpha, sigma):
     return concater(sigma, sigma)
 
 
+def make_invgamma(*args):
+    return TransformedDistribution(Gamma(*args), PowerTransform(-1))
+
+
 class MyTestCase(unittest.TestCase):
     def test_Algorithms(self):
         # ===== Distributions ===== #
@@ -48,13 +52,13 @@ class MyTestCase(unittest.TestCase):
         mvnmodel = LinearGaussianObservations(mv_linear, torch.tensor([1., 2.]), scale=0.1)
 
         # ===== Test for multiple models ===== #
-        priors = Exponential(1.), Exponential(1.)
+        priors = Exponential(1.), make_invgamma(2., 1.)
 
         hidden1d = AffineProcess((f, g), priors, dist, dist)
-        oned = LinearGaussianObservations(hidden1d, 1., Exponential(1.))
+        oned = LinearGaussianObservations(hidden1d, 1., make_invgamma(2., 1.))
 
         hidden2d = AffineProcess((fmvn, gmvn), priors, mvn, mvn)
-        twod = LinearGaussianObservations(hidden2d, torch.tensor([1., 2.]), Exponential(1.))
+        twod = LinearGaussianObservations(hidden2d, torch.tensor([1., 2.]), make_invgamma(2., 1.))
 
         particles = 1000
         # ====== Run inference ===== #
