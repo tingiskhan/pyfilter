@@ -36,7 +36,7 @@ class AffineProcess(StochasticProcess):
     def _log_prob(self, y, x):
         loc, scale = self._mean_scale(x)
 
-        return self.predefined_weight(y, loc, scale)
+        return self._define_transdist(loc, scale).log_prob(y)
 
     @tensor_caster
     def mean_scale(self, x):
@@ -59,23 +59,6 @@ class AffineProcess(StochasticProcess):
         """
 
         return self.f(x, *self.theta_vals), self.g(x, *self.theta_vals)
-
-    def predefined_weight(self, y, loc, scale):
-        """
-        Helper method for weighting with loc and scale.
-        :param y: The value at x_t
-        :type y: torch.Tensor
-        :param loc: The mean
-        :type loc: torch.Tensor
-        :param scale: The scale
-        :type scale: torch.Tensor
-        :return: The log-weights
-        :rtype: torch.Tensor
-        """
-
-        dist = self._define_transdist(loc, scale)
-
-        return dist.log_prob(y)
 
     def _define_transdist(self, loc, scale):
         """

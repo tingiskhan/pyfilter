@@ -62,7 +62,7 @@ class MyTestCase(unittest.TestCase):
             x, y = trumod.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESS, {'particles': particles, 'filter_': SISR(model.copy(), 200)}),
                 (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),

@@ -1,7 +1,6 @@
 from .base import SequentialParticleAlgorithm
 from ..utils import get_ess
 from .kernels import AdaptiveKernel, OnlineKernel
-from ..filters import SISR
 
 
 class NESS(SequentialParticleAlgorithm):
@@ -11,10 +10,6 @@ class NESS(SequentialParticleAlgorithm):
         :param kernel: The kernel to use when propagating the parameter particles
         :type kernel: OnlineKernel
         """
-
-        if isinstance(filter_, SISR) and filter_._th != 1.:
-            raise ValueError('The filter must have `ess = 1.`!')
-
         super().__init__(filter_, particles)
 
         self._kernel = kernel or AdaptiveKernel()
