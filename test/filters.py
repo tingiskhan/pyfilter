@@ -142,4 +142,4 @@ class Tests(unittest.TestCase):
 
         filt = SISR(model, 200, proposal=Bootstrap()).initialize().longfilter(y)
 
-        self.assertLess(((x - filt.filtermeans) ** 2).mean().sqrt(), 1e-2)
+        self.assertLess(((x - filt.filtermeans) ** 2).mean().sqrt(), 5e-2)
