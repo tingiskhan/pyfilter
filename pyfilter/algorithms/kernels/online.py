@@ -47,9 +47,7 @@ class OnlineKernel(BaseKernel):
         kde = self._kde.fit(stacked, weights)
 
         inds = self._resample(filter_, weights)
-        kde._means = kde._means[inds]
-
-        jittered = kde.sample()
+        jittered = kde.sample(inds=inds)
 
         # ===== Mutate parameters ===== #
         for msk, p in zip(mask, parameters):
