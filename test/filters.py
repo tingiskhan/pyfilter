@@ -116,7 +116,7 @@ class Tests(unittest.TestCase):
         linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
         self.model.hidden = linear
 
-        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().to_('cuda:0').longfilter(y)
+        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().longfilter(y)
 
         filtermeans = filt.filtermeans
 
@@ -135,11 +135,11 @@ class Tests(unittest.TestCase):
         em = EulerMaruyama((f, g), (0.02, 0.15), Normal(0., 1.), Normal(0., 1.), dt=1e-2, num_steps=10)
         model = LinearGaussianObservations(em, scale=1e-3)
 
-        x, y = model.sample_path(100)
+        x, y = model.sample_path(500)
 
         with self.assertRaises(NotImplementedError):
             SISR(model, 200)
 
-        filt = SISR(model, 200, proposal=Bootstrap()).initialize().longfilter(y)
+        filt = SISR(model, 500, proposal=Bootstrap()).initialize().longfilter(y)
 
-        self.assertLess(((x - filt.filtermeans) ** 2).mean().sqrt(), 5e-2)
+        self.assertLess(torch.std(x - filt.filtermeans), 5e-2)
