@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.algorithms import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
+from pyfilter.inference import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
 from torch.distributions import Normal, Exponential, Independent, Gamma, TransformedDistribution, PowerTransform
 from pyfilter.filters import SISR, UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
@@ -39,7 +39,7 @@ def make_invgamma(*args):
 
 
 class MyTestCase(unittest.TestCase):
-    def test_Algorithms(self):
+    def test_Inference(self):
         # ===== Distributions ===== #
         dist = Normal(0., 1.)
         mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)

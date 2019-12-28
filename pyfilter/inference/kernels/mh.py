@@ -1,7 +1,7 @@
 from ...filters.base import BaseFilter
 from ...utils import normalize
 from .base import BaseKernel
-from pyfilter.algorithms.utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
+from pyfilter.inference.utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
 import torch
 from torch.distributions import MultivariateNormal, Independent
 

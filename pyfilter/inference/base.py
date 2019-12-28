@@ -10,7 +10,7 @@ from ..utils import normalize
 class BaseAlgorithm(HelperMixin, ABC):
     def __init__(self, filter_):
         """
-        Implements a base class for algorithms, i.e. algorithms for inferring parameters.
+        Implements a base class for inference, i.e. inference for inferring parameters.
         :param filter_: The filter
         :type filter_: BaseFilter
         """
@@ -123,7 +123,7 @@ class SequentialAlgorithm(BaseAlgorithm, ABC):
 class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
     def __init__(self, filter_, particles):
         """
-        Implements a base class for sequential particle algorithms.
+        Implements a base class for sequential particle inference.
         :param particles: The number of particles to use
         :type particles: int
         """
