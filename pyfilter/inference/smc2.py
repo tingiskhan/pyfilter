@@ -1,7 +1,7 @@
 from .base import experimental, SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
 from ..utils import get_ess
-from ..filters.base import KalmanFilter, ParticleFilter
+from ..filters.base import BaseKalmanFilter, ParticleFilter
 from ..kde import KernelDensityEstimate
 import torch
 
@@ -16,7 +16,7 @@ class SMC2(SequentialParticleAlgorithm):
         :type kernel: ParticleMetropolisHastings
         """
 
-        if isinstance(filter_, KalmanFilter):
+        if isinstance(filter_, BaseKalmanFilter):
             raise ValueError(f'`filter_` must be of instance `{ParticleFilter.__class__.__name__}!')
 
         super().__init__(filter_, particles)

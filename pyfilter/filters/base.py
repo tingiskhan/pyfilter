@@ -127,7 +127,7 @@ class BaseFilter(HelperMixin, ABC):
         :rtype: BaseFilter
         """
 
-        raise ValueError()
+        raise NotImplementedError()
 
     def initialize(self):
         """
@@ -484,7 +484,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
 
-class KalmanFilter(BaseFilter):
+class BaseKalmanFilter(BaseFilter, ABC):
     def set_nparallel(self, n):
         self._n_parallel = n
 

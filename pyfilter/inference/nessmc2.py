@@ -12,7 +12,7 @@ class NESSMC2(SequentialParticleAlgorithm):
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
         demanding to use the SMC2.
-        :param switch: At which point to switch algorithms, in number of observations
+        :param switch: At which point to switch inference, in number of observations
         :type switch: int
         :param update_switch: Whether to perform MCMC move on switch if ESS is below threshold of NESS
         :type update_switch: bool

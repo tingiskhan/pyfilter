@@ -1,9 +1,9 @@
-from .base import KalmanFilter
+from .base import BaseKalmanFilter
 from ..unscentedtransform import UnscentedTransform
 from ..utils import choose
 
 
-class UKF(KalmanFilter):
+class UKF(BaseKalmanFilter):
     def __init__(self, model, **kwargs):
         """
         Implements the Unscented Kalman Filter by van der Merwe.
