@@ -127,7 +127,7 @@ class BaseFilter(HelperMixin, ABC):
         :rtype: BaseFilter
         """
 
-        raise ValueError()
+        raise NotImplementedError()
 
     def initialize(self):
         """
