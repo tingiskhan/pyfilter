@@ -94,17 +94,7 @@ class UnscentedTransform(HelperMixin):
         self._ycov = None
         self._views = None
 
-        self._initialized = False
         self._diaginds = range(model.hidden_ndim)
-
-    @property
-    def initialized(self):
-        """
-        Returns boolean indicating whether it is initialized or not.
-        :rtype: bool
-        """
-
-        return self._initialized
 
     def _set_slices(self):
         """
@@ -198,8 +188,6 @@ class UnscentedTransform(HelperMixin):
         # ==== Set noise covariance ===== #
         self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
         self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
-
-        self._initialized = True
 
         return self
 
