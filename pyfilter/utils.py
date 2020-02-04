@@ -198,11 +198,13 @@ def unflattify(values, shape):
     return values.reshape(values.shape[0], *shape)
 
 
-def _yield_objs(obj):
+def _yield_objs(obj, visited):
     """
     Yields all of objects of specific type in object.
     :param obj: The object
     :type obj: class
+    :param visited: The visited items
+    :type visited: list[object]
     """
 
     for a in (d for d in dir(obj) if d != '__class__' and not d.startswith('__') and not d.endswith('__')):
@@ -210,10 +212,15 @@ def _yield_objs(obj):
             if isinstance(getattr(type(obj), a), property):
                 continue
         except AttributeError:
-            yield a, getattr(obj, a)
+            attr = getattr(obj, a)
+            if isinstance(attr, torch.Tensor):
+                yield a, attr
+            elif attr not in visited:
+                visited.append(attr)
+                yield a, attr
 
 
-def _recursion_helper(a, f):
+def _recursion_helper(a, f, visited):
     """
     Helper for performing recursions.
     :param a: The object
@@ -227,21 +234,24 @@ def _recursion_helper(a, f):
         if a._base is not None:
             return a
         elif isinstance(a, Parameter):
-            _recursion_helper(a._prior, f)
+            _recursion_helper(a._prior, f, visited)
 
-        a.data = f(a.data)
+        if a.data.dim() > 0:
+            a.data[:] = f(a.data)
+        else:
+            a.data = f(a.data)
 
         if a._grad is not None:
-            a._grad.data = f(a._grad.data)
+            a._grad.data[:] = f(a._grad.data)
 
     elif isinstance(a, HelperMixin):
-        a.apply(f)
+        a.apply(f, visited)
     elif isinstance(a, Iterable) and not isinstance(a, str):
         for item in (a if not isinstance(a, dict) else a.values()):
-            _recursion_helper(item, f)
+            _recursion_helper(item, f, visited)
     elif isinstance(a, (Distribution, Transform)):
-        for _, at in _yield_objs(a):
-            _recursion_helper(at, f)
+        for _, at in _yield_objs(a, visited):
+            _recursion_helper(at, f, visited)
 
     return a
 
@@ -250,7 +260,7 @@ _OBJTYPENAME = 'objtype'
 
 
 class HelperMixin(object):
-    def apply(self, f):
+    def apply(self, f, visited=None):
         """
         Applies the function `f` to all objects derived from Tensor class.
         :param f: The function to apply on each tensor
@@ -258,9 +268,10 @@ class HelperMixin(object):
         :return: Self
         :rtype: Helper
         """
+        visited = visited if visited is not None else list()
 
-        for _, a in _yield_objs(self):
-            _recursion_helper(a, f)
+        for _, a in _yield_objs(self, visited):
+            _recursion_helper(a, f, visited)
 
         return self
 
@@ -272,17 +283,20 @@ class HelperMixin(object):
         :return: Self
         :rtype: Helper
         """
+        visited = list()
 
         def to(u):
             return u.to(device)
 
-        self.apply(to)
+        self.apply(to, visited=visited)
 
         return self
 
-    def state_dict(self):
+    def state_dict(self, visited=None):
         """
         Gets the state dictionary of all the serializable items in the module
+        :param visited: Parameter not to bother with
+        :type visited: list[object]
         :rtype: dict
         """
         # TODO: This might be improved (?)
@@ -290,19 +304,16 @@ class HelperMixin(object):
         # TODO: Only supports 1 level iterables currently, fix this
         res = dict()
         res[_OBJTYPENAME] = self.__class__.__name__
+        visited = visited if visited is not None else list()
 
-        for name, a in _yield_objs(self):
-            if isinstance(a, torch.Tensor):
+        for name, a in _yield_objs(self, visited):
+            if isinstance(a, (torch.Tensor, torch.Size)):
                 res[name] = a
             elif isinstance(a, Iterable):
-                if all(isinstance(it, torch.Tensor) for it in a) and all(it._base is None for it in a):
-                    res[name] = a
-                elif all(isinstance(it, _NATIVE) for it in a):
+                if all(isinstance(it, torch.Tensor) for it in a):
                     res[name] = a
             elif isinstance(a, HelperMixin):
-                res[name] = a.state_dict()
-            elif isinstance(a, _NATIVE):
-                res[name] = a
+                res[name] = a.state_dict(visited=visited)
 
         return res
 

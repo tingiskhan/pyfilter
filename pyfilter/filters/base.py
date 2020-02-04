@@ -35,6 +35,8 @@ class BaseFilter(HelperMixin, ABC):
         self._model = model
         self._n_parallel = None
 
+        self._dummy = torch.tensor(0.)
+
         # ===== Some helpers ===== #
         self.s_ll = tuple()
         self.s_mx = tuple()
@@ -333,7 +335,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         super().__init__(model)
 
-        self._particles = particles
+        self.particles = particles
         self._th = ess
 
         # ===== State variables ===== #
@@ -365,6 +367,24 @@ class ParticleFilter(BaseFilter, ABC):
             raise NotImplementedError(msg)
 
     @property
+    def particles(self):
+        """
+        Returns the number of particles.
+        :rtype: torch.Size
+        """
+
+        return self._particles
+
+    @particles.setter
+    def particles(self, x):
+        """
+        Sets the number of particles.
+        :type x: torch.Tensor|int
+        """
+
+        self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
+
+    @property
     def proposal(self):
         """
         Returns the proposal.
@@ -385,25 +405,6 @@ class ParticleFilter(BaseFilter, ABC):
             raise ValueError('`x` must be {:s}!'.format(Proposal.__name__))
 
         self._proposal = x
-
-    @property
-    def particles(self):
-        """
-        Returns the particles
-        :rtype: int|tuple[int]
-        """
-
-        return self._particles
-
-    @particles.setter
-    def particles(self, x):
-        """
-        Sets the particles
-        :param x: The new number of particles
-        :type x: int
-        """
-
-        self._particles = x
 
     def _resample_state(self, weights):
         """
@@ -434,13 +435,13 @@ class ParticleFilter(BaseFilter, ABC):
         return out, mask
 
     def set_nparallel(self, n):
-        self._n_parallel = n
+        self._n_parallel = torch.Size([n])
 
-        temp = self._particles[-1] if isinstance(self._particles, (tuple, list)) else self._particles
+        temp = self.particles[-1] if len(self.particles) > 0 else self.particles
         if n is not None:
-            self._particles = self._n_parallel, temp
+            self.particles = (*self._n_parallel, temp)
         else:
-            self._particles = temp
+            self.particles = temp
 
         if self._x_cur is not None:
             return self.initialize()
@@ -448,8 +449,8 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def initialize(self):
-        self._x_cur = self._model.hidden.i_sample(self._particles)
-        self._w_old = torch.zeros(self._particles, device=self._x_cur.device)
+        self._x_cur = self._model.hidden.i_sample(self.particles)
+        self._w_old = torch.zeros(self.particles, device=self._x_cur.device)
 
         return self
 
@@ -486,6 +487,6 @@ class ParticleFilter(BaseFilter, ABC):
 
 class BaseKalmanFilter(BaseFilter, ABC):
     def set_nparallel(self, n):
-        self._n_parallel = n
+        self._n_parallel = torch.Size([n])
 
         return self

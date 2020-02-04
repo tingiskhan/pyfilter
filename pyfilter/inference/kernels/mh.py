@@ -87,7 +87,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
-            t_filt.viewify_params((filter_._n_parallel, 1))
+            t_filt.viewify_params((*filter_._n_parallel, 1))
             _mcmc_move(t_filt.ssm.theta_dists, dist, mask, stacked.shape[0])
 
             # ===== Calculate difference in loglikelihood ===== #

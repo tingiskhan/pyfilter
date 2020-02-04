@@ -16,7 +16,14 @@ def size_getter(shape):
     :rtype: torch.Size
     """
 
-    return torch.Size([]) if shape is None else torch.Size(shape if isinstance(shape, (tuple, list)) else (shape,))
+    if shape is None:
+        return torch.Size([])
+    elif isinstance(shape, torch.Size):
+        return shape
+    elif isinstance(shape, int):
+        return torch.Size([shape])
+
+    return torch.Size(shape)
 
 
 # NB: This is basically the same as original, but we include the prior as well

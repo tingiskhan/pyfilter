@@ -131,11 +131,28 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
-        self._w_rec = torch.zeros(particles)
+        self._w_rec = None
 
         # ===== ESS related ===== #
-        self._logged_ess = (torch.tensor(particles, dtype=self._w_rec.dtype),)
-        self._particles = particles
+        self._logged_ess = ()
+        self.particles = particles
+
+    @property
+    def particles(self):
+        """
+        Returns the number of particles.
+        :rtype: torch.Tensor
+        """
+
+        return self._particles
+
+    @particles.setter
+    def particles(self, x):
+        """
+        Sets the particles.
+        """
+
+        self._particles = torch.Size([x])
 
     def initialize(self):
         """
@@ -144,9 +161,10 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         :rtype: NESS
         """
 
-        self.filter.ssm.sample_params(self._particles)
+        self.filter.ssm.sample_params(self.particles)
+        self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
-        shape = (self._particles, 1) if isinstance(self.filter, ParticleFilter) else (self._particles,)
+        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
         self.filter.viewify_params(shape).initialize()
 
         return self
