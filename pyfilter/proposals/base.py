@@ -16,7 +16,7 @@ class Proposal(Module):
         self._kernel = None     # type: Distribution
 
     def modules(self):
-        return self._kernel
+        return {}
 
     @property
     def kernel(self):

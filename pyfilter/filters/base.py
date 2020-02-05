@@ -7,7 +7,7 @@ from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, Eul
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose, normalize
-from ..module import Module
+from ..module import Module, TensorContainer
 
 
 def enforce_tensor(func):
@@ -39,8 +39,8 @@ class BaseFilter(Module, ABC):
         self._dummy = torch.tensor(0.)
 
         # ===== Some helpers ===== #
-        self.s_ll = tuple()
-        self.s_mx = tuple()
+        self.s_ll = TensorContainer()
+        self.s_mx = TensorContainer()
 
     @property
     def s_loglikelihood(self):
@@ -49,8 +49,8 @@ class BaseFilter(Module, ABC):
         :rtype: torch.Tensor
         """
 
-        if len(self.s_ll) > 0:
-            return torch.stack(self.s_ll, dim=0)
+        if bool(self.s_ll):
+            return torch.stack(self.s_ll.tensors, dim=0)
 
         return torch.empty((1,))
 
@@ -65,7 +65,7 @@ class BaseFilter(Module, ABC):
         if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_ll = tuple(xt.clone() for xt in x)
+        self.s_ll = TensorContainer(xt.clone() for xt in x)
 
     @property
     def filtermeans(self):
@@ -74,8 +74,8 @@ class BaseFilter(Module, ABC):
         :rtype: torch.Tensor
         """
 
-        if len(self.s_mx) > 0:
-            return torch.stack(self.s_mx, dim=0)
+        if bool(self.s_mx):
+            return torch.stack(self.s_mx.tensors, dim=0)
 
         return torch.empty((1,))
 
@@ -90,7 +90,7 @@ class BaseFilter(Module, ABC):
         if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_mx = tuple(xt.clone() for xt in x)
+        self.s_mx = TensorContainer(xt.clone() for xt in x)
 
     @property
     def loglikelihood(self):
@@ -153,8 +153,8 @@ class BaseFilter(Module, ABC):
 
         xm, ll = self._filter(y)
 
-        self.s_mx += (xm,)
-        self.s_ll += (ll,)
+        self.s_mx.append(xm)
+        self.s_ll.append(ll)
 
         return self
 
@@ -249,8 +249,8 @@ class BaseFilter(Module, ABC):
         :rtype: BaseFilter
         """
 
-        self.s_mx = tuple()
-        self.s_ll = tuple()
+        self.s_mx = TensorContainer()
+        self.s_ll = TensorContainer()
 
         self._reset()
 
@@ -352,7 +352,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         # ===== Logged ESS ===== #
-        self.logged_ess = tuple()
+        self.logged_ess = TensorContainer()
 
         # ===== Proposal ===== #
         if proposal == 'auto':
@@ -420,7 +420,7 @@ class ParticleFilter(BaseFilter, ABC):
         ess = get_ess(weights) / weights.shape[-1]
         mask = ess < self._th
 
-        self.logged_ess += (ess,)
+        self.logged_ess.append(ess)
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
@@ -482,7 +482,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def _reset(self):
-        self.logged_ess = tuple()
+        self.logged_ess = TensorContainer()
         return self
 
 

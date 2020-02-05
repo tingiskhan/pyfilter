@@ -5,10 +5,7 @@ from types import GeneratorType
 _OBJTYPENAME = 'objtype'
 
 
-class TensorContainer(object):
-    def __init__(self, *args):
-        self._cont = tuple(args) if not isinstance(args[0], GeneratorType) else tuple(*args)
-
+class TensorContainerBase(object):
     @property
     def tensors(self):
         """
@@ -16,6 +13,18 @@ class TensorContainer(object):
         :rtype: tuple[torch.Tensor]
         """
 
+        raise NotImplementedError()
+
+
+class TensorContainer(TensorContainerBase):
+    def __init__(self, *args):
+        if len(args) == 0:
+            self._cont = tuple()
+        else:
+            self._cont = tuple(args) if not isinstance(args[0], GeneratorType) else tuple(*args)
+
+    @property
+    def tensors(self):
         return self._cont
 
     def append(self, x):
@@ -31,6 +40,36 @@ class TensorContainer(object):
 
     def __iter__(self):
         return (t for t in self._cont)
+
+    def __bool__(self):
+        return not not self._cont
+
+    def __len__(self):
+        return len(self._cont)
+
+
+class TensorContainerDict(TensorContainerBase):
+    def __init__(self, **kwargs):
+        self._dict = dict(**kwargs)
+
+    def __setitem__(self, key, value):
+        self._dict[key] = value
+
+    def __getitem__(self, item):
+        return self._dict[item]
+
+    def __dict__(self):
+        return self._dict
+
+    def __bool__(self):
+        return not not self._dict
+
+    @property
+    def tensors(self):
+        return self._dict.values()
+
+    def items(self):
+        return self._dict.items()
 
 
 class Module(object):
@@ -50,7 +89,7 @@ class Module(object):
         :rtype: tuple[Module]
         """
 
-        return tuple(self._find_obj_helper(Module).values())
+        return self._find_obj_helper(Module)
 
     def tensors(self):
         """
@@ -64,7 +103,7 @@ class Module(object):
         res += tuple(self._find_obj_helper(torch.Tensor).values())
 
         # ===== Tensor containers ===== #
-        for tc in self._find_obj_helper(TensorContainer).values():
+        for tc in self._find_obj_helper(TensorContainerBase).values():
             res += tc.tensors
 
         # ===== Modules ===== #
@@ -121,7 +160,7 @@ class Module(object):
         res.update(conts)
 
         # ===== Modules ===== #
-        modules = self._find_obj_helper(Module)
+        modules = self.modules()
 
         for k, m in modules.items():
             res[k] = m.state_dict()
@@ -145,7 +184,7 @@ class Module(object):
 
             if isinstance(attr, Module):
                 attr.load_state_dict(v)
-
-            setattr(self, k, v)
+            else:
+                setattr(self, k, v)
 
         return self

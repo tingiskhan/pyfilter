@@ -34,7 +34,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
-        self._logged_ess += (ess,)
+        self._logged_ess.append(ess)
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():

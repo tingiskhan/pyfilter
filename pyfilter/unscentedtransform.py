@@ -82,7 +82,7 @@ class UnscentedTransform(Module):
         self._model = model
         self._ndim = 2 * model.hidden_ndim + model.obs_ndim
 
-        if any(self._model.hidden._dist_theta) or any(self._model.observable._dist_theta):
+        if self._model.hidden.distributional_theta or self._model.observable.distributional_theta:
             raise ValueError('Cannot currently handle case when distribution is parameterized!')
 
         # ===== Parameters =====#
@@ -96,6 +96,9 @@ class UnscentedTransform(Module):
         self._views = None
 
         self._diaginds = range(model.hidden_ndim)
+
+    def modules(self):
+        return {}
 
     def _set_slices(self):
         """

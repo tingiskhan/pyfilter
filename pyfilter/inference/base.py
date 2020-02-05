@@ -2,7 +2,7 @@ from abc import ABC
 from ..filters.base import BaseFilter, enforce_tensor, ParticleFilter
 from tqdm import tqdm
 import warnings
-from ..module import Module
+from ..module import Module, TensorContainer
 import torch
 from ..utils import normalize
 
@@ -134,7 +134,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         self._w_rec = None
 
         # ===== ESS related ===== #
-        self._logged_ess = ()
+        self._logged_ess = TensorContainer()
         self.particles = particles
 
     @property

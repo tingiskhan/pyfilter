@@ -22,6 +22,9 @@ class Unscented(Proposal):
 
         return self
 
+    def modules(self):
+        return {'_ut': self._ut} if self._ut is not None else {}
+
     def construct(self, y, x):
         if not self._initialized:
             self._ut.initialize(x)

@@ -26,7 +26,6 @@ class NESS(SequentialParticleAlgorithm):
         self._w_rec += self.filter.s_ll[-1]
 
         # ===== Log ESS ===== #
-        ess = get_ess(self._w_rec)
-        self._logged_ess += (ess,)
+        self._logged_ess.append(get_ess(self._w_rec))
 
         return self
