@@ -2,7 +2,8 @@ from .timeseries import StateSpaceModel, AffineProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
-from .utils import construct_diag, HelperMixin, TempOverride
+from .utils import construct_diag, TempOverride
+from .module import Module
 
 
 def _propagate_sps(spx, spn, process, temp_params):
@@ -63,7 +64,7 @@ def _get_meancov(spxy, wm, wc):
     return x, _covcalc(centered, centered, wc)
 
 
-class UnscentedTransform(HelperMixin):
+class UnscentedTransform(Module):
     def __init__(self, model, a=1, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.

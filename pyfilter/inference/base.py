@@ -2,12 +2,12 @@ from abc import ABC
 from ..filters.base import BaseFilter, enforce_tensor, ParticleFilter
 from tqdm import tqdm
 import warnings
-from ..utils import HelperMixin
+from ..module import Module
 import torch
 from ..utils import normalize
 
 
-class BaseAlgorithm(HelperMixin, ABC):
+class BaseAlgorithm(Module, ABC):
     def __init__(self, filter_):
         """
         Implements a base class for inference, i.e. inference for inferring parameters.

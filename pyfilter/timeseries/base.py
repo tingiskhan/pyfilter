@@ -3,12 +3,12 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter
-from ..utils import HelperMixin
 from copy import deepcopy
 from .utils import tensor_caster, tensor_caster_mult
+from ..module import Module
 
 
-class StochasticProcessBase(HelperMixin):
+class StochasticProcessBase(Module):
     @property
     def theta(self):
         """

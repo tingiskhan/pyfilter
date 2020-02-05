@@ -3,14 +3,20 @@ from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceMod
 from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
-from pyfilter.utils import HelperMixin
 from pyfilter.filters import SISR, UKF
+from pyfilter.module import Module, TensorContainer
 
 
-class Help(HelperMixin):
+class Help2(Module):
+    def __init__(self, a):
+        self.a = a
+
+
+class Help(Module):
     def __init__(self, *params):
-        self._params = params
-        self._views = tuple(p.view(-1) for p in params)
+        self._params = TensorContainer(*params)
+        self._views = TensorContainer(p.view(-1) for p in params)
+        self._mod = Help2(self._params[0] + 1)
 
 
 def f(x, alpha, sigma):
