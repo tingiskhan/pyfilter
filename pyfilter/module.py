@@ -35,6 +35,14 @@ class TensorContainer(TensorContainerBase):
 
         return self
 
+    def extend(self, *x):
+        if not (isinstance(x, tuple) and all(isinstance(t, torch.Tensor) for t in x)):
+            raise NotImplementedError()
+
+        self._cont += x
+
+        return self
+
     def __getitem__(self, item):
         return self._cont[item]
 
@@ -66,10 +74,13 @@ class TensorContainerDict(TensorContainerBase):
 
     @property
     def tensors(self):
-        return self._dict.values()
+        return tuple(self.values())
 
     def items(self):
         return self._dict.items()
+
+    def values(self):
+        return self._dict.values()
 
 
 class Module(object):
@@ -107,7 +118,7 @@ class Module(object):
             res += tc.tensors
 
         # ===== Modules ===== #
-        for mod in self.modules():
+        for mod in self.modules().values():
             res += mod.tensors()
 
         return res

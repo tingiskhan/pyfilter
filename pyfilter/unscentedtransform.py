@@ -3,7 +3,7 @@ import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
 from .utils import construct_diag, TempOverride
-from .module import Module
+from .module import Module, TensorContainer
 
 
 def _propagate_sps(spx, spn, process, temp_params):
@@ -164,7 +164,7 @@ class UnscentedTransform(Module):
 
                 params += (view,)
 
-            self._views += (params,)
+            self._views += (TensorContainer(*params),)
 
         return self
 

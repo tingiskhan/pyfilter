@@ -253,7 +253,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     @property
     def theta_dists(self):
-        return tuple(p for p in self.theta if p.trainable) + tuple(self._dist_theta.values())
+        return tuple(p for p in self.theta if p.trainable) + tuple(self.distributional_theta.values())
 
     @property
     def theta_vals(self):
