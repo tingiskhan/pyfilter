@@ -5,6 +5,7 @@ from pyfilter.unscentedtransform import UnscentedTransform
 import torch
 from pyfilter.filters import SISR, UKF
 from pyfilter.module import Module, TensorContainer
+from pyfilter.utils import concater
 
 
 class Help2(Module):
@@ -52,7 +53,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return x[0], x[1]
+    return concater(x[0], x[1])
 
 
 def f0mvn(a, sigma):
@@ -89,7 +90,7 @@ class Tests(unittest.TestCase):
 
         norm = Normal(0., 1.)
         mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-        mvnlinear = AffineProcess((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
+        mvnlinear = AffineProcess((fmvn, g), (mat, scale), mvn, mvn)
         mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
