@@ -1,7 +1,7 @@
 import torch
 from types import GeneratorType
 from .timeseries.parameter import Parameter
-from torch.distributions import Distribution
+from torch.distributions import Distribution, TransformedDistribution
 from copy import deepcopy
 
 
@@ -106,6 +106,26 @@ def _find_types(x, type_):
     return {k: v for k, v in vars(x).items() if isinstance(v, type_)}
 
 
+def _iterate_distribution(d):
+    """
+    Helper method for iterating over distributions.
+    :param d: The distribution
+    :type d: Distribution
+    :rtype: tuple[Distribution]
+    """
+
+    res = tuple()
+    if not isinstance(d, TransformedDistribution):
+        res += tuple(_find_types(d, torch.Tensor).values())
+    else:
+        res += tuple(_find_types(d.base_dist, torch.Tensor).values())
+
+        for t in d.transforms:
+            res += tuple(_find_types(t, torch.Tensor).values())
+
+    return res
+
+
 class Module(object):
     def _find_obj_helper(self, type_):
         """
@@ -140,11 +160,11 @@ class Module(object):
         for tc in self._find_obj_helper(TensorContainerBase).values():
             res += tc.tensors
             for t in (t_ for t_ in tc.tensors if isinstance(t_, Parameter) and t_.trainable):
-                res += tuple(_find_types(t.distr, torch.Tensor).values())
+                res += _iterate_distribution(t.distr)
 
         # ===== Pytorch distributions ===== #
         for d in self._find_obj_helper(Distribution).values():
-            res += tuple(_find_types(d, torch.Tensor).values())
+            res += _iterate_distribution(d)
 
         # ===== Modules ===== #
         for mod in self.modules().values():
