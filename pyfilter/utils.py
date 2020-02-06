@@ -2,8 +2,7 @@ import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
-from torch.distributions import Distribution, Transform
-from .timeseries.parameter import Parameter
+from torch.distributions import Distribution
 import numbers
 from math import sqrt
 from scipy.stats import chi2
@@ -80,9 +79,17 @@ def loglikelihood(w, weights=None):
 
     # ===== Calculate the second term ===== #
     if weights is None:
-        temp = torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)).mean(-1).log()
+        temp = (
+            torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))
+            .mean(-1)
+            .log()
+        )
     else:
-        temp = (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))).sum(-1).log()
+        temp = (
+            (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)))
+            .sum(-1)
+            .log()
+        )
 
     return maxw + temp
 
