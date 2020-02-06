@@ -1,5 +1,8 @@
 import torch
 from types import GeneratorType
+from .timeseries.parameter import Parameter
+from torch.distributions import Distribution
+from copy import deepcopy
 
 
 _OBJTYPENAME = 'objtype'
@@ -14,6 +17,17 @@ class TensorContainerBase(object):
         """
 
         raise NotImplementedError()
+
+    # SEE: https://stackoverflow.com/questions/1500718/how-to-override-the-copy-deepcopy-operations-for-a-python-object
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo=memo))
+
+        return result
 
 
 class TensorContainer(TensorContainerBase):
@@ -66,9 +80,6 @@ class TensorContainerDict(TensorContainerBase):
     def __getitem__(self, item):
         return self._dict[item]
 
-    def __dict__(self):
-        return self._dict
-
     def __bool__(self):
         return not not self._dict
 
@@ -83,6 +94,18 @@ class TensorContainerDict(TensorContainerBase):
         return self._dict.values()
 
 
+def _find_types(x, type_):
+    """
+    Helper method for finding all type_ in x.
+    :param x: The object
+    :param type_: The type
+    :return: Dictionary
+    :rtype: dict
+    """
+
+    return {k: v for k, v in vars(x).items() if isinstance(v, type_)}
+
+
 class Module(object):
     def _find_obj_helper(self, type_):
         """
@@ -92,7 +115,7 @@ class Module(object):
         :rtype: dict[str, object]
         """
 
-        return {k: v for k, v in vars(self).items() if isinstance(v, type_)}
+        return _find_types(self, type_)
 
     def modules(self):
         """
@@ -116,6 +139,12 @@ class Module(object):
         # ===== Tensor containers ===== #
         for tc in self._find_obj_helper(TensorContainerBase).values():
             res += tc.tensors
+            for t in (t_ for t_ in tc.tensors if isinstance(t_, Parameter) and t_.trainable):
+                res += tuple(_find_types(t.distr, torch.Tensor).values())
+
+        # ===== Pytorch distributions ===== #
+        for d in self._find_obj_helper(Distribution).values():
+            res += tuple(_find_types(d, torch.Tensor).values())
 
         # ===== Modules ===== #
         for mod in self.modules().values():
