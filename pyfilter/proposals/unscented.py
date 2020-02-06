@@ -11,6 +11,7 @@ class Unscented(Proposal):
         """
         super().__init__()
         self._ut = None
+        self._initialized = False
 
     def set_model(self, model):
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
@@ -21,8 +22,11 @@ class Unscented(Proposal):
 
         return self
 
+    def modules(self):
+        return {'_ut': self._ut} if self._ut is not None else {}
+
     def construct(self, y, x):
-        if not self._ut.initialized:
+        if not self._initialized:
             self._ut.initialize(x)
 
         self._ut = self._ut.construct(y)
@@ -31,7 +35,7 @@ class Unscented(Proposal):
         return self
 
     def resample(self, inds):
-        if not self._ut.initialized:
+        if not self._initialized:
             return self
 
         self._ut.xmean = choose(self._ut.xmean, inds)

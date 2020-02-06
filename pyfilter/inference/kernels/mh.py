@@ -1,7 +1,7 @@
 from ...filters.base import BaseFilter
 from ...utils import normalize
 from .base import BaseKernel
-from pyfilter.inference.utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
+from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
 import torch
 from torch.distributions import MultivariateNormal, Independent
 
@@ -87,7 +87,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
-            t_filt.viewify_params((filter_._n_parallel, 1))
+            t_filt.viewify_params((*filter_._n_parallel, 1))
             _mcmc_move(t_filt.ssm.theta_dists, dist, mask, stacked.shape[0])
 
             # ===== Calculate difference in loglikelihood ===== #

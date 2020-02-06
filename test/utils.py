@@ -3,13 +3,21 @@ from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceMod
 from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.unscentedtransform import UnscentedTransform
 import torch
-from pyfilter.utils import HelperMixin
+from pyfilter.filters import SISR, UKF
+from pyfilter.module import Module, TensorContainer
+from pyfilter.utils import concater
 
 
-class Help(HelperMixin):
+class Help2(Module):
+    def __init__(self, a):
+        self.a = a
+
+
+class Help(Module):
     def __init__(self, *params):
-        self._params = params
-        self._views = tuple(p.view(-1) for p in params)
+        self._params = TensorContainer(*params)
+        self._views = TensorContainer(p.view(-1) for p in params)
+        self._mod = Help2(self._params[0] + 1)
 
 
 def f(x, alpha, sigma):
@@ -45,7 +53,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return x[0], x[1]
+    return concater(x[0], x[1])
 
 
 def f0mvn(a, sigma):
@@ -64,7 +72,7 @@ class Tests(unittest.TestCase):
     def test_UnscentedTransform1D(self):
         # ===== 1D model ===== #
         norm = Normal(0., 1.)
-        linear = AffineProcess((f0, g0), (f, g), (1., 1.), (norm, norm))
+        linear = AffineProcess((f, g), (1., 1.), norm, norm)
         linearobs = AffineObservations((fo, go), (1., 1.), norm)
         model = StateSpaceModel(linear, linearobs)
 
@@ -82,7 +90,7 @@ class Tests(unittest.TestCase):
 
         norm = Normal(0., 1.)
         mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
-        mvnlinear = AffineProcess((f0mvn, g0), (fmvn, g), (mat, scale), (mvn, mvn))
+        mvnlinear = AffineProcess((fmvn, g), (mat, scale), mvn, mvn)
         mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
@@ -114,3 +122,30 @@ class Tests(unittest.TestCase):
         newobj.load_state_dict(sd)
 
         assert all((p1 == p2).all() for p1, p2 in zip(newobj._params, obj._params))
+        assert all((p1 == p2).all() for p1, p2 in zip(newobj._views, newobj._params))
+        assert all(p1._base is p2 for p1, p2 in zip(newobj._views, newobj._params))
+
+    def test_StateDict(self):
+        # ===== Define model ===== #
+        norm = Normal(0., 1.)
+        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+        linearobs = AffineObservations((fo, go), (1., 1.), norm)
+        model = StateSpaceModel(linear, linearobs)
+
+        # ===== Define filter ===== #
+        filt = SISR(model, 100).initialize()
+
+        # ===== Get statedict ===== #
+        sd = filt.state_dict()
+
+        # ===== Verify that we don't save multiple instances ===== #
+        assert '_model' in sd and '_model' not in sd['_proposal']
+
+        newfilt = SISR(model, 1000).load_state_dict(sd)
+        assert newfilt._w_old is not None and newfilt.ssm is newfilt._proposal._model
+
+        # ===== Test same with UKF and verify that we save UT ===== #
+        ukf = UKF(model).initialize()
+        sd = ukf.state_dict()
+
+        assert '_model' in sd and '_model' not in sd['_ut']

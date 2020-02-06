@@ -6,7 +6,8 @@ from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, EulerMaruyama
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose, HelperMixin, normalize
+from ..utils import get_ess, choose, normalize
+from ..module import Module, TensorContainer
 
 
 def enforce_tensor(func):
@@ -19,7 +20,7 @@ def enforce_tensor(func):
     return wrapper
 
 
-class BaseFilter(HelperMixin, ABC):
+class BaseFilter(Module, ABC):
     def __init__(self, model):
         """
         The basis for filters. Take as input a model and specific attributes.
@@ -35,9 +36,11 @@ class BaseFilter(HelperMixin, ABC):
         self._model = model
         self._n_parallel = None
 
+        self._dummy = torch.tensor(0.)
+
         # ===== Some helpers ===== #
-        self.s_ll = tuple()
-        self.s_mx = tuple()
+        self.s_ll = TensorContainer()
+        self.s_mx = TensorContainer()
 
     @property
     def s_loglikelihood(self):
@@ -46,8 +49,8 @@ class BaseFilter(HelperMixin, ABC):
         :rtype: torch.Tensor
         """
 
-        if len(self.s_ll) > 0:
-            return torch.stack(self.s_ll, dim=0)
+        if bool(self.s_ll):
+            return torch.stack(self.s_ll.tensors, dim=0)
 
         return torch.empty((1,))
 
@@ -62,7 +65,7 @@ class BaseFilter(HelperMixin, ABC):
         if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_ll = tuple(xt.clone() for xt in x)
+        self.s_ll = TensorContainer(xt.clone() for xt in x)
 
     @property
     def filtermeans(self):
@@ -71,8 +74,8 @@ class BaseFilter(HelperMixin, ABC):
         :rtype: torch.Tensor
         """
 
-        if len(self.s_mx) > 0:
-            return torch.stack(self.s_mx, dim=0)
+        if bool(self.s_mx):
+            return torch.stack(self.s_mx.tensors, dim=0)
 
         return torch.empty((1,))
 
@@ -87,7 +90,7 @@ class BaseFilter(HelperMixin, ABC):
         if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
             raise ValueError('Either wrong type or wrong dimensions!')
 
-        self.s_mx = tuple(xt.clone() for xt in x)
+        self.s_mx = TensorContainer(xt.clone() for xt in x)
 
     @property
     def loglikelihood(self):
@@ -150,8 +153,8 @@ class BaseFilter(HelperMixin, ABC):
 
         xm, ll = self._filter(y)
 
-        self.s_mx += (xm,)
-        self.s_ll += (ll,)
+        self.s_mx.append(xm)
+        self.s_ll.append(ll)
 
         return self
 
@@ -246,8 +249,8 @@ class BaseFilter(HelperMixin, ABC):
         :rtype: BaseFilter
         """
 
-        self.s_mx = tuple()
-        self.s_ll = tuple()
+        self.s_mx = TensorContainer()
+        self.s_ll = TensorContainer()
 
         self._reset()
 
@@ -333,7 +336,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         super().__init__(model)
 
-        self._particles = particles
+        self.particles = particles
         self._th = ess
 
         # ===== State variables ===== #
@@ -349,7 +352,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         # ===== Logged ESS ===== #
-        self.logged_ess = tuple()
+        self.logged_ess = TensorContainer()
 
         # ===== Proposal ===== #
         if proposal == 'auto':
@@ -363,6 +366,24 @@ class ParticleFilter(BaseFilter, ABC):
         if isinstance(self.ssm.hidden, EulerMaruyama) and not isinstance(proposal, Bootstrap):
             msg = f'All models of type {EulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
             raise NotImplementedError(msg)
+
+    @property
+    def particles(self):
+        """
+        Returns the number of particles.
+        :rtype: torch.Size
+        """
+
+        return self._particles
+
+    @particles.setter
+    def particles(self, x):
+        """
+        Sets the number of particles.
+        :type x: torch.Tensor|int
+        """
+
+        self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
 
     @property
     def proposal(self):
@@ -386,25 +407,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._proposal = x
 
-    @property
-    def particles(self):
-        """
-        Returns the particles
-        :rtype: int|tuple[int]
-        """
-
-        return self._particles
-
-    @particles.setter
-    def particles(self, x):
-        """
-        Sets the particles
-        :param x: The new number of particles
-        :type x: int
-        """
-
-        self._particles = x
-
     def _resample_state(self, weights):
         """
         Resamples the state in accordance with the weigths.
@@ -418,7 +420,7 @@ class ParticleFilter(BaseFilter, ABC):
         ess = get_ess(weights) / weights.shape[-1]
         mask = ess < self._th
 
-        self.logged_ess += (ess,)
+        self.logged_ess.append(ess)
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(weights)
@@ -434,13 +436,13 @@ class ParticleFilter(BaseFilter, ABC):
         return out, mask
 
     def set_nparallel(self, n):
-        self._n_parallel = n
+        self._n_parallel = torch.Size([n])
 
-        temp = self._particles[-1] if isinstance(self._particles, (tuple, list)) else self._particles
+        temp = self.particles[-1] if len(self.particles) > 0 else self.particles
         if n is not None:
-            self._particles = self._n_parallel, temp
+            self.particles = (*self._n_parallel, temp)
         else:
-            self._particles = temp
+            self.particles = temp
 
         if self._x_cur is not None:
             return self.initialize()
@@ -448,8 +450,8 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def initialize(self):
-        self._x_cur = self._model.hidden.i_sample(self._particles)
-        self._w_old = torch.zeros(self._particles, device=self._x_cur.device)
+        self._x_cur = self._model.hidden.i_sample(self.particles)
+        self._w_old = torch.zeros(self.particles, device=self._x_cur.device)
 
         return self
 
@@ -480,12 +482,12 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def _reset(self):
-        self.logged_ess = tuple()
+        self.logged_ess = TensorContainer()
         return self
 
 
 class BaseKalmanFilter(BaseFilter, ABC):
     def set_nparallel(self, n):
-        self._n_parallel = n
+        self._n_parallel = torch.Size([n])
 
         return self

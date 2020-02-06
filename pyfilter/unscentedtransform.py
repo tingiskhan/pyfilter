@@ -2,7 +2,8 @@ from .timeseries import StateSpaceModel, AffineProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
-from .utils import construct_diag, HelperMixin, TempOverride
+from .utils import construct_diag, TempOverride
+from .module import Module, TensorContainer
 
 
 def _propagate_sps(spx, spn, process, temp_params):
@@ -63,7 +64,7 @@ def _get_meancov(spxy, wm, wc):
     return x, _covcalc(centered, centered, wc)
 
 
-class UnscentedTransform(HelperMixin):
+class UnscentedTransform(Module):
     def __init__(self, model, a=1, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.
@@ -81,7 +82,7 @@ class UnscentedTransform(HelperMixin):
         self._model = model
         self._ndim = 2 * model.hidden_ndim + model.obs_ndim
 
-        if any(self._model.hidden._dist_theta) or any(self._model.observable._dist_theta):
+        if self._model.hidden.distributional_theta or self._model.observable.distributional_theta:
             raise ValueError('Cannot currently handle case when distribution is parameterized!')
 
         # ===== Parameters =====#
@@ -94,17 +95,10 @@ class UnscentedTransform(HelperMixin):
         self._ycov = None
         self._views = None
 
-        self._initialized = False
         self._diaginds = range(model.hidden_ndim)
 
-    @property
-    def initialized(self):
-        """
-        Returns boolean indicating whether it is initialized or not.
-        :rtype: bool
-        """
-
-        return self._initialized
+    def modules(self):
+        return {}
 
     def _set_slices(self):
         """
@@ -154,7 +148,7 @@ class UnscentedTransform(HelperMixin):
         self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
 
         # TODO: Perhaps move this to Timeseries?
-        self._views = tuple()
+        self._views = TensorContainer()
         shape = (parts[0], 1) if len(parts) > 0 else parts
 
         if len(parts) > 1:
@@ -170,7 +164,7 @@ class UnscentedTransform(HelperMixin):
 
                 params += (view,)
 
-            self._views += (params,)
+            self._views.append(TensorContainer(*params))
 
         return self
 
@@ -198,8 +192,6 @@ class UnscentedTransform(HelperMixin):
         # ==== Set noise covariance ===== #
         self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
         self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
-
-        self._initialized = True
 
         return self
 

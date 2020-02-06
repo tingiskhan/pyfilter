@@ -1,5 +1,5 @@
 from ...utils import normalize
-from pyfilter.inference.utils import stacker
+from ..utils import stacker
 import numpy as np
 from ...resampling import residual
 import torch

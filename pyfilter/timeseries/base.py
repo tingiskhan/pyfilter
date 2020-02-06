@@ -3,12 +3,12 @@ from torch.distributions import Distribution
 import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter
-from ..utils import HelperMixin
 from copy import deepcopy
 from .utils import tensor_caster, tensor_caster_mult
+from ..module import Module, TensorContainer, TensorContainerDict
 
 
-class StochasticProcessBase(HelperMixin):
+class StochasticProcessBase(Module):
     @property
     def theta(self):
         """
@@ -199,7 +199,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._event_dim = 0 if self.ndim < 2 else 1
 
         # ===== Parameters ===== #
-        self._dist_theta = dict()
+        self._dist_theta = TensorContainerDict()
         # TODO: Make sure same keys are same reference
         for n in [self.initial_dist, self.increment_dist]:
             if n is None:
@@ -212,7 +212,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
                 if isinstance(v, Parameter) and n is self.increment_dist:
                     self._dist_theta[k] = v
 
-        self.theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
+        self.theta = TensorContainer(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
         # ===== Check dimensions ===== #
         self._verify_dimensions()
@@ -253,7 +253,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     @property
     def theta_dists(self):
-        return tuple(p for p in self.theta if p.trainable) + tuple(self._dist_theta.values())
+        return tuple(p for p in self.theta if p.trainable) + tuple(self.distributional_theta.values())
 
     @property
     def theta_vals(self):
@@ -294,7 +294,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
             params += (var,)
 
-        self._theta_vals = params
+        self._theta_vals = TensorContainer(*params)
 
         # ===== Distributional parameters ===== #
         pdict = dict()

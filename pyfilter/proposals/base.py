@@ -1,9 +1,10 @@
 from ..timeseries.model import StateSpaceModel
-from ..utils import choose, HelperMixin
+from ..utils import choose
 from torch.distributions import MultivariateNormal, Distribution, TransformedDistribution, AffineTransform, Independent
+from ..module import Module
 
 
-class Proposal(HelperMixin):
+class Proposal(Module):
     def __init__(self):
         """
         Defines a proposal object for how to draw the particles.
@@ -13,6 +14,9 @@ class Proposal(HelperMixin):
 
         self._model = None      # type: StateSpaceModel
         self._kernel = None     # type: Distribution
+
+    def modules(self):
+        return {}
 
     @property
     def kernel(self):

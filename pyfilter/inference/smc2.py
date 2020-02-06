@@ -34,7 +34,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
-        self._logged_ess += (ess,)
+        self._logged_ess.append(ess)
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():
@@ -75,8 +75,8 @@ class SMC2(SequentialParticleAlgorithm):
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
 
-        msg = '{:s} - Increasing particles from {:d} -> {:d}'
-        self._iterator.set_description(desc=msg.format(str(self), oldparts, self.filter.particles))
+        msg = f'{str(self)} - Increasing particles from {oldparts} -> {self.filter.particles[-1]}'
+        self._iterator.set_description(desc=msg)
 
         self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
