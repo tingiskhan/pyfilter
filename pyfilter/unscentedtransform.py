@@ -148,7 +148,7 @@ class UnscentedTransform(Module):
         self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
 
         # TODO: Perhaps move this to Timeseries?
-        self._views = tuple()
+        self._views = TensorContainer()
         shape = (parts[0], 1) if len(parts) > 0 else parts
 
         if len(parts) > 1:
@@ -164,7 +164,7 @@ class UnscentedTransform(Module):
 
                 params += (view,)
 
-            self._views += (TensorContainer(*params),)
+            self._views.append(TensorContainer(*params))
 
         return self
 

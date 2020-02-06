@@ -150,8 +150,8 @@ def flatten(*args):
     """
     Flattens an array comprised of an arbitrary number of lists. Solution found at:
         https://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists
-    :param iterable: The iterable you wish to flatten.
-    :type iterable: collections.Iterable
+    :param args: The iterable you wish to flatten.
+    :type args: collections.Iterable
     :return:
     """
     out = list()

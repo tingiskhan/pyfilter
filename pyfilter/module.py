@@ -3,6 +3,7 @@ from types import GeneratorType
 from .timeseries.parameter import Parameter
 from torch.distributions import Distribution, TransformedDistribution
 from copy import deepcopy
+from .utils import flatten
 
 
 _OBJTYPENAME = 'objtype'
@@ -39,10 +40,10 @@ class TensorContainer(TensorContainerBase):
 
     @property
     def tensors(self):
-        return self._cont
+        return flatten(self._cont)
 
     def append(self, x):
-        if not isinstance(x, torch.Tensor):
+        if not isinstance(x, (torch.Tensor, TensorContainerBase)):
             raise NotImplementedError()
 
         self._cont += (x,)
