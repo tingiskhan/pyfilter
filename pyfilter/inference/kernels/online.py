@@ -1,6 +1,6 @@
 from .base import BaseKernel
 from ...kde import KernelDensityEstimate, ShrinkingKernel, NonShrinkingKernel, MultivariateGaussian
-from pyfilter.inference.utils import stacker
+from ..utils import stacker
 from ...utils import unflattify, get_ess, add_dimensions
 import torch
 
