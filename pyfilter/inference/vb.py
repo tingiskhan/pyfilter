@@ -153,7 +153,7 @@ class VariationalBayes(BatchAlgorithm):
             else:
                 self._runavg = -elbo
 
-            bar.set_description('{:s} - Avg. ELBO: {:.2f}'.format(str(self), self._runavg))
+            bar.set_description(f'{str(self)} - Avg. ELBO: {self._runavg:.2f}')
             it += 1
 
         return self
