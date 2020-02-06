@@ -189,7 +189,11 @@ class Module(object):
                 t._grad.data = f(t._grad.data)
 
         for t in (t_ for t_ in self.tensors() if t_._base is not None):
-            t.data = t._base.data.view(t.data.shape)
+            # TODO: Not too sure about this one, happens for some distributions
+            if t._base.dim() > 0:
+                t.data = t._base.data.view(t.data.shape)
+            else:
+                t.data = f(t.data)
 
         return self
 
