@@ -188,7 +188,7 @@ class Module(object):
                 t._grad.data = f(t._grad.data)
 
         for t in (t_ for t_ in self.tensors() if t_._base is not None):
-            t.data = t._base.data
+            t.data = t._base.data.view(t.data.shape)
 
         return self
 
