@@ -107,6 +107,7 @@ def _find_types(x, type_):
     return {k: v for k, v in vars(x).items() if isinstance(v, type_)}
 
 
+# TODO: Wait for pytorch to implement moving entire distributions
 def _iterate_distribution(d):
     """
     Helper method for iterating over distributions.
@@ -118,8 +119,12 @@ def _iterate_distribution(d):
     res = tuple()
     if not isinstance(d, TransformedDistribution):
         res += tuple(_find_types(d, torch.Tensor).values())
+
+        for sd in _find_types(d, Distribution).values():
+            res += _iterate_distribution(sd)
+
     else:
-        res += tuple(_find_types(d.base_dist, torch.Tensor).values())
+        res += _iterate_distribution(d.base_dist)
 
         for t in d.transforms:
             res += tuple(_find_types(t, torch.Tensor).values())
