@@ -92,6 +92,14 @@ class AffineProcess(StochasticProcess):
         return loc + scale * u
 
 
+def _f(x, s):
+    return x
+
+
+def _g(x, s):
+    return s
+
+
 class RandomWalk(AffineProcess):
     def __init__(self, std):
         """
@@ -100,15 +108,9 @@ class RandomWalk(AffineProcess):
         :type std: torch.Tensor|float|Distribution
         """
 
-        def f(x, s):
-            return x
-
-        def g(x, s):
-            return s
-
         if not isinstance(std, torch.Tensor):
             normal = Normal(0., 1.)
         else:
             normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
-        super().__init__((f, g), (std,), normal, normal)
+        super().__init__((_f, _g), (std,), normal, normal)
