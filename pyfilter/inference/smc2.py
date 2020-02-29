@@ -39,7 +39,9 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():
             self.rejuvenate()
-            self._iterator.set_description(desc=str(self))
+
+            if self._iterator is not None:
+                self._iterator.set_description(desc=str(self))
 
         return self
 
