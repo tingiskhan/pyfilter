@@ -37,6 +37,17 @@ class NESSMC2(SequentialParticleAlgorithm):
         self._smc2.initialize()
         return self
 
+    @property
+    def _w_rec(self):
+        if self._switched:
+            return self._ness._w_rec
+
+        return self._smc2._w_rec
+
+    @_w_rec.setter
+    def _w_rec(self, x):
+        return
+
     def fit(self, y, bar=True):
         iterator = y
         if bar:
