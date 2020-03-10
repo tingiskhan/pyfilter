@@ -38,9 +38,11 @@ class NESSMC2(SequentialParticleAlgorithm):
         return self
 
     def fit(self, y, bar=True):
-        self._iterator = self._smc2._iterator = self._ness._iterator = tqdm(y, desc=str(self))
+        iterator = y
+        if bar:
+            self._iterator = self._smc2._iterator = self._ness._iterator = iterator = tqdm(y, desc=str(self))
 
-        for yt in self._iterator if bar else y:
+        for yt in iterator:
             self.update(yt)
 
         self._iterator = self._smc2._iterator = self._ness._iterator = None

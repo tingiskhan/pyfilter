@@ -7,7 +7,7 @@ import torch
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.2, kernel=None):
+    def __init__(self, filter_, particles, threshold=0.2, kernel=None, max_increases=5):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
@@ -23,6 +23,9 @@ class SMC2(SequentialParticleAlgorithm):
 
         self._th = threshold
         self._kernel = kernel or SymmetricMH()
+
+        self._max_increases = max_increases
+        self._increases = 0
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
@@ -72,6 +75,9 @@ class SMC2(SequentialParticleAlgorithm):
         :rtype: SMC2
         """
 
+        if self._increases >= self._max_increases:
+            raise ValueError(f'Configuration only allows {self._max_increases}!')
+
         # ===== Create new filter with double the state particles ===== #
         oldlogl = self.filter.loglikelihood
         oldparts = self.filter.particles[-1]
@@ -87,6 +93,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = self.filter.loglikelihood - oldlogl
+        self._increases += 1
 
         return self
 

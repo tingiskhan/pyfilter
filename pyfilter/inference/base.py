@@ -110,9 +110,11 @@ class SequentialAlgorithm(BaseAlgorithm, ABC):
         return self._update(y)
 
     def fit(self, y, bar=True):
-        self._iterator = tqdm(y, desc=str(self))
+        iterator = y
+        if bar:
+            self._iterator = iterator = tqdm(y, desc=str(self))
 
-        for yt in self._iterator if bar else y:
+        for yt in iterator:
             self.update(yt)
 
         self._iterator = None
