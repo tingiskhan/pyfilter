@@ -66,15 +66,15 @@ def _construct_mvn(x, w):
     return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
 
 
-def _mcmc_move(params, dist, mask, shape):
+def _mcmc_move(params, dist, stacked, shape):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
     :type params: tuple[Parameter]
     :param dist: The distribution to use for sampling
     :type dist: MultivariateNormal
-    :param mask: The mask to apply for parameters
-    :type mask: tuple[slice]
+    :param stacked: The mask to apply for parameters
+    :type stacked: StackedObject
     :param shape: The shape to sample
     :type shape: int
     :return: Samples from a multivariate normal distribution
@@ -83,8 +83,8 @@ def _mcmc_move(params, dist, mask, shape):
 
     rvs = dist.sample((shape,))
 
-    for p, msk in zip(params, mask):
-        p.t_values = unflattify(rvs[:, msk], p.c_shape)
+    for p, msk, ps in zip(params, stacked.mask, stacked.prev_shape):
+        p.t_values = unflattify(rvs[:, msk], ps)
 
     return True
 
@@ -102,7 +102,7 @@ def _eval_kernel(params, dist, n_params):
     :rtype: torch.Tensor
     """
 
-    p_vals, _ = stacker(params, lambda u: u.t_values)
-    n_p_vals, _ = stacker(n_params, lambda u: u.t_values)
+    p_vals = stacker(params, lambda u: u.t_values)
+    n_p_vals = stacker(n_params, lambda u: u.t_values)
 
-    return dist.log_prob(p_vals) - dist.log_prob(n_p_vals)
+    return dist.log_prob(p_vals.concated) - dist.log_prob(n_p_vals.concated)

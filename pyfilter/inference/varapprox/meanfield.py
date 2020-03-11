@@ -44,9 +44,9 @@ class ParameterMeanField(BaseApproximation):
         self._mean = torch.zeros(sum(p.c_numel() for p in parameters))
         self._std = torch.ones_like(self._mean)
 
-        _, mask = stacker(parameters)
+        stacked = stacker(parameters)
 
-        for p, msk in zip(parameters, mask):
+        for p, msk in zip(parameters, stacked.mask):
             try:
                 self._mean[msk] = p.bijection.inv(p.distr.mean)
             except NotImplementedError:

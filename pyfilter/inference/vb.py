@@ -34,7 +34,7 @@ class VariationalBayes(BatchAlgorithm):
         self._s_approx = approx or StateMeanField()
         self._p_approx = ParameterMeanField()
 
-        self._p_mask = None
+        self._mask = None
 
         self._is_ssm = isinstance(model, StateSpaceModel)
 
@@ -84,7 +84,7 @@ class VariationalBayes(BatchAlgorithm):
     def _initialize(self, y):
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._numsamples)
-        _, self._mask = stacker(self._model.theta_dists)    # NB: We create a mask once
+        self._mask = stacker(self._model.theta_dists).mask    # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
         self._p_approx = self._p_approx.initialize(self._model.theta_dists)

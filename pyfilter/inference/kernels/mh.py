@@ -75,11 +75,11 @@ class ParticleMetropolisHastings(BaseKernel):
     def _update(self, parameters, filter_, weights):
         for i in range(self._nsteps):
             # ===== Construct distribution ===== #
-            stacked, mask = stacker(parameters, lambda u: u.t_values)
-            dist = self.define_pdf(stacked, weights)
+            stacked = stacker(parameters, lambda u: u.t_values)
+            dist = self.define_pdf(stacked.concated, weights)
 
             # ===== Perform necessary operation prior to resampling ===== #
-            self._before_resampling(filter_, stacked)
+            self._before_resampling(filter_, stacked.concated)
 
             # ===== Resample among parameters ===== #
             inds = self._resampler(weights, normalized=True)
@@ -88,7 +88,7 @@ class ParticleMetropolisHastings(BaseKernel):
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
             t_filt.viewify_params((*filter_._n_parallel, 1))
-            _mcmc_move(t_filt.ssm.theta_dists, dist, mask, stacked.shape[0])
+            _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, stacked.concated.shape[0])
 
             # ===== Calculate difference in loglikelihood ===== #
             quotient = self._calc_diff_logl(t_filt, filter_)
