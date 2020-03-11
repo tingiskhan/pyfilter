@@ -150,7 +150,7 @@ class SMC2FW(SequentialParticleAlgorithm):
         self._num_iters += 1
 
         # ===== Calculate efficient number of samples ===== #
-        self._logged_ess += (get_ess(self._w_rec),)
+        self._logged_ess.append(get_ess(self._w_rec))
 
         return self
 
