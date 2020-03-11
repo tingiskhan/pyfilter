@@ -164,6 +164,10 @@ class StochasticProcessBase(Module):
         return deepcopy(self)
 
 
+def _view_helper(p, shape):
+    return p.view(*shape, *p._prior.event_shape) if len(shape) > 0 else p.view(p.shape)
+
+
 class StochasticProcess(StochasticProcessBase, ABC):
     def __init__(self, theta, initial_dist, increment_dist):
         """
@@ -298,7 +302,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         params = tuple()
         for param in self.theta:
             if param.trainable:
-                var = param.view(*shape, *param._prior.event_shape) if len(shape) > 0 else param.view(param.shape)
+                var = _view_helper(param, shape)
             else:
                 var = param
 
@@ -312,7 +316,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
             temp.update(self._org_dist[d]._dict)
 
             for k, v in dists.items():
-                temp[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
+                temp[k] = _view_helper(v, shape)
 
             d.__init__(**temp)
 
