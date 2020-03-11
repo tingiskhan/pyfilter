@@ -200,18 +200,25 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         # ===== Parameters ===== #
         self._dist_theta = TensorContainerDict()
-        # TODO: Same here, fix this
-        # TODO: Make sure same keys are same reference
+        self._org_dist = TensorContainerDict()
         for n in [self.initial_dist, self.increment_dist]:
             if n is None:
                 continue
 
-            for k, v in n.__dict__.items():
+            parameters = TensorContainerDict()
+            statics = TensorContainerDict()
+            for k, v in vars(n).items():
                 if k.startswith('_'):
                     continue
 
                 if isinstance(v, Parameter) and n is self.increment_dist:
-                    self._dist_theta[k] = v
+                    parameters[k] = v
+                elif isinstance(v, torch.Tensor):
+                    statics[k] = v
+
+            if not not parameters:
+                self._dist_theta[n] = parameters
+                self._org_dist[n] = statics
 
         self.theta = TensorContainer(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
@@ -254,7 +261,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     @property
     def theta_dists(self):
-        return tuple(p for p in self.theta if p.trainable) + tuple(self.distributional_theta.values())
+        return tuple(p for p in self.theta if p.trainable) + self.distributional_theta.tensors
 
     @property
     def theta_vals(self):
@@ -298,14 +305,14 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._theta_vals = TensorContainer(*params)
 
         # ===== Distributional parameters ===== #
-        # TODO: Improve this...
-        pdict = dict()
-        for k, v in self.distributional_theta.items():
-            pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
+        for d, dists in self.distributional_theta.items():
+            temp = dict()
+            temp.update(self._org_dist[d]._dict)
 
-        if len(pdict) > 0:
-            self.initial_dist.__init__(**pdict)
-            self.increment_dist.__init__(**pdict)
+            for k, v in dists.items():
+                temp[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
+
+            d.__init__(**temp)
 
         return self
 

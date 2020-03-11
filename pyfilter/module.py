@@ -86,13 +86,16 @@ class TensorContainerDict(TensorContainerBase):
 
     @property
     def tensors(self):
-        return tuple(self.values())
+        return flatten(self.values())
 
     def items(self):
         return self._dict.items()
 
     def values(self):
-        return self._dict.values()
+        if all(isinstance(v, TensorContainerBase) for v in self._dict.values()):
+            return tuple(d.values() for d in self._dict.values())
+
+        return tuple(self._dict.values())
 
 
 def _find_types(x, type_):
