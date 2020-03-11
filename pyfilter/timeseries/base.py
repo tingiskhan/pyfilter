@@ -297,6 +297,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._theta_vals = TensorContainer(*params)
 
         # ===== Distributional parameters ===== #
+        # TODO: Improve this...
         pdict = dict()
         for k, v in self.distributional_theta.items():
             pdict[k] = v.view(*shape, *v._prior.event_shape) if len(shape) > 0 else v.view(v.shape)
