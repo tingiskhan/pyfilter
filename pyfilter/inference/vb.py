@@ -9,6 +9,7 @@ from .utils import stacker
 from ..utils import EPS, unflattify
 
 
+# TODO: Shape not working correctly when transformed != untransformed
 class VariationalBayes(BatchAlgorithm):
     def __init__(self, model, num_samples=4, approx=None, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
         """
