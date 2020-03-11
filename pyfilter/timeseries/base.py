@@ -200,6 +200,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         # ===== Parameters ===== #
         self._dist_theta = TensorContainerDict()
+        # TODO: Same here, fix this
         # TODO: Make sure same keys are same reference
         for n in [self.initial_dist, self.increment_dist]:
             if n is None:
