@@ -198,9 +198,10 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._inputdim = self.ndim
         self._event_dim = 0 if self.ndim < 2 else 1
 
-        # ===== Parameters ===== #
+        # ===== Distributional parameters ===== #
         self._dist_theta = TensorContainerDict()
         self._org_dist = TensorContainerDict()
+
         for n in [self.initial_dist, self.increment_dist]:
             if n is None:
                 continue
@@ -220,6 +221,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
                 self._dist_theta[n] = parameters
                 self._org_dist[n] = statics
 
+        # ===== Regular parameters ====== #
         self.theta = TensorContainer(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
         # ===== Check dimensions ===== #
@@ -240,7 +242,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         """
         Returns the parameters of the distribution to re-initialize the distribution with. Mainly a helper for when
         the user passes distributions parameterized by priors.
-        :rtype: dict[str, Parameter]
+        :rtype: TensorContainerDict
         """
 
         return self._dist_theta
