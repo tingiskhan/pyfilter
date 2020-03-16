@@ -43,15 +43,15 @@ class OnlineKernel(BaseKernel):
 
     def _update(self, parameters, filter_, weights):
         # ===== Perform shrinkage ===== #
-        stacked, mask = stacker(parameters, lambda u: u.t_values)
-        kde = self._kde.fit(stacked, weights)
+        stacked = stacker(parameters, lambda u: u.t_values)
+        kde = self._kde.fit(stacked.concated, weights)
 
         inds = self._resample(filter_, weights)
         jittered = kde.sample(inds=inds)
 
         # ===== Mutate parameters ===== #
-        for msk, p in zip(mask, parameters):
-            p.t_values = unflattify(jittered[:, msk], p.c_shape)
+        for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
+            p.t_values = unflattify(jittered[:, msk], ps)
 
         return self._resampled
 
@@ -74,13 +74,13 @@ class AdaptiveKernel(OnlineKernel):
 
     def _update(self, parameters, filter_, weights):
         # ===== Define stacks ===== #
-        stacked, mask = stacker(parameters, lambda u: u.t_values)
+        stacked = stacker(parameters, lambda u: u.t_values)
 
         # ===== Check "convergence" ====== #
-        w = add_dimensions(weights, stacked.dim())
+        w = add_dimensions(weights, stacked.concated.dim())
 
-        mean = (w * stacked).sum(0)
-        var = (w * (stacked - mean) ** 2).sum(0)
+        mean = (w * stacked.concated).sum(0)
+        var = (w * (stacked.concated - mean) ** 2).sum(0)
 
         if self._switched is None:
             self._switched = torch.zeros_like(mean).bool()
@@ -97,19 +97,19 @@ class AdaptiveKernel(OnlineKernel):
         inds = self._resample(filter_, weights)
 
         # ===== Perform shrinkage ===== #
-        jittered = torch.empty_like(stacked)
+        jittered = torch.empty_like(stacked.concated)
 
         if (~self._switched).any():
-            shrink_kde = self._shrink_kde.fit(stacked[:, ~self._switched], weights)
+            shrink_kde = self._shrink_kde.fit(stacked.concated[:, ~self._switched], weights)
             jittered[:, ~self._switched] = shrink_kde.sample(inds=inds)
 
         if self._switched.any():
-            non_shrink = self._non_shrink.fit(stacked[:, self._switched], weights)
+            non_shrink = self._non_shrink.fit(stacked.concated[:, self._switched], weights)
             jittered[:, self._switched] = non_shrink.sample(inds=inds)
 
         # ===== Set new values ===== #
-        for p, msk in zip(parameters, mask):
-            p.t_values = unflattify(jittered[:, msk], p.c_shape)
+        for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
+            p.t_values = unflattify(jittered[:, msk], ps)
 
         return self._resampled
 
@@ -125,10 +125,10 @@ class KernelDensitySampler(BaseKernel):
         self._kde = kde or MultivariateGaussian()
 
     def _update(self, parameters, filter_, weights):
-        values, mask = stacker(parameters, lambda u: u.t_values)
+        stacked = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
-        kde = self._kde.fit(values, weights)
+        kde = self._kde.fit(stacked.concated, weights)
 
         # ===== Resample ===== #
         inds = self._resampler(weights, normalized=True)
@@ -136,7 +136,7 @@ class KernelDensitySampler(BaseKernel):
 
         # ===== Sample params ===== #
         samples = kde.sample(inds=inds)
-        for p, msk in zip(parameters, mask):
-            p.t_values = unflattify(samples[:, msk], p.c_shape)
+        for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
+            p.t_values = unflattify(samples[:, msk], ps)
 
         return True

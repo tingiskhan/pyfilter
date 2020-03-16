@@ -95,11 +95,11 @@ class BaseKernel(object):
         :rtype: BaseKernel
         """
 
-        values, _ = stacker(parameters, lambda u: u.t_values)
+        stacked = stacker(parameters, lambda u: u.t_values)
         weights = weights.unsqueeze(-1)
 
-        mean = (values * weights).sum(0)
-        scale = ((values - mean) ** 2 * weights).sum(0).sqrt()
+        mean = (stacked.concated * weights).sum(0)
+        scale = ((stacked.concated - mean) ** 2 * weights).sum(0).sqrt()
 
         self._recorded_stats['mean'] += (mean,)
         self._recorded_stats['scale'] += (scale,)

@@ -6,6 +6,8 @@ import torch
 from pyfilter.filters import SISR, UKF
 from pyfilter.module import Module, TensorContainer
 from pyfilter.utils import concater
+from pyfilter.inference.utils import stacker
+from pyfilter.timeseries import Parameter
 
 
 class Help2(Module):
@@ -149,3 +151,26 @@ class Tests(unittest.TestCase):
         sd = ukf.state_dict()
 
         assert '_model' in sd and '_model' not in sd['_ut']
+
+    def test_Stacker(self):
+        # ===== Define a mix of parameters ====== #
+        zerod = Parameter(Normal(0., 1.)).sample_((1000,))
+        oned_luring = Parameter(Normal(torch.tensor([0.]), torch.tensor([1.]))).sample_(zerod.shape)
+        oned = Parameter(MultivariateNormal(torch.zeros(2), torch.eye(2))).sample_(zerod.shape)
+
+        mu = torch.zeros((3, 3))
+        norm = Independent(Normal(mu, torch.ones_like(mu)), 2)
+        twod = Parameter(norm).sample_(zerod.shape)
+
+        # ===== Stack ===== #
+        params = (zerod, oned, oned_luring, twod)
+        stacked = stacker(params, lambda u: u.t_values, dim=1)
+
+        # ===== Verify it's recreated correctly ====== #
+        for p, m, ps in zip(params, stacked.mask, stacked.prev_shape):
+            v = stacked.concated[..., m]
+
+            if len(p.c_shape) != 0:
+                v = v.reshape(*v.shape[:-1], *ps)
+
+            assert (p.t_values == v).all()
