@@ -252,7 +252,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_Poisson(self):
-        shape = 1000, 100
+        shape = 10, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
@@ -260,6 +260,34 @@ class Tests(unittest.TestCase):
 
         init = Normal(a, 1.)
         sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+
+        # ===== Initialize ===== #
+        x = sde.i_sample(shape)
+
+        # ===== Propagate ===== #
+        num = 1000
+        samps = [x]
+        for t in range(num):
+            samps.append(sde.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
+
+        # ===== Sample path ===== #
+        path = sde.sample_path(num + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
+    def test_ParameterInDistribution(self):
+        shape = 10, 100
+
+        a = 1e-2 * torch.ones((shape[0], 1))
+        dt = 1e-2
+        dist = Normal(loc=0., scale=Parameter(Exponential(10.)))
+
+        init = Normal(a, 1.)
+        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+
+        sde.sample_params(shape)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
