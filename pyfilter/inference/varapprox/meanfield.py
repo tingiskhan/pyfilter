@@ -41,10 +41,10 @@ class ParameterMeanField(BaseApproximation):
         return self._mean, self._std
 
     def initialize(self, parameters, *args):
-        self._mean = torch.zeros(sum(p.c_numel() for p in parameters))
-        self._std = torch.ones_like(self._mean)
+        stacked = stacker(parameters, lambda u: u.t_values)
 
-        stacked = stacker(parameters)
+        self._mean = torch.zeros_like(stacked.concated)
+        self._std = torch.ones_like(self._mean)
 
         for p, msk in zip(parameters, stacked.mask):
             try:
