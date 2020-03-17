@@ -3,6 +3,7 @@ import torch
 from abc import ABC
 from torch.distributions import Distribution, Normal, Independent
 from ..utils import Empirical
+from .utils import tensor_caster
 
 
 class StochasticDifferentialEquation(AffineProcess, ABC):
@@ -69,7 +70,7 @@ class OrnsteinUhlenbeck(StochasticDifferentialEquation):
         super().__init__((f, g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
 
 
-class EulerMaruyama(OneStepEulerMaruyma):
+class GeneralEulerMaruyama(OneStepEulerMaruyma):
     def __init__(self, dynamics, theta, init_dist, increment_dist, dt, **kwargs):
         """
         The Euler-Maruyama discretization scheme for stochastic differential equations.
@@ -78,15 +79,41 @@ class EulerMaruyama(OneStepEulerMaruyma):
         super().__init__(dynamics, theta, init_dist, increment_dist, dt)
         self._ns = kwargs.pop('num_steps', 1)
 
+    def _propagate_u(self, x, u):
+        raise NotImplementedError()
+
+    @tensor_caster
+    def prop_state(self, x):
+        """
+        Helper method for propagating the state.
+        :param x: The state
+        :type x: torch.Tensor
+        :return: Tensor
+        :rtype: torch.Tensor
+        """
+
+        return self._prop_state(x)
+
+    def _prop_state(self, x):
+        raise NotImplementedError()
+
     def _propagate(self, x, as_dist=False):
         for i in range(self._ns):
-            dist = self._define_transdist(*self.mean_scale(x))
-            x = dist.sample()
+            x = self.prop_state(x)
 
         if not as_dist:
             return x
 
         return Empirical(x)
+
+
+class EulerMaruyama(GeneralEulerMaruyama):
+    """
+    Euler Maruyama method for SDEs of affine nature.
+    """
+
+    def _prop_state(self, x):
+        return self._define_transdist(*self.mean_scale(x)).sample()
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
@@ -94,4 +121,3 @@ class EulerMaruyama(OneStepEulerMaruyma):
             x = m + s * u
 
         return x
-
