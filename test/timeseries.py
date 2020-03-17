@@ -1,8 +1,9 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, EulerMaruyama
+from pyfilter.timeseries import StochasticSIR
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
-from torch.distributions import Normal, Exponential, Independent, Poisson
+from torch.distributions import Normal, Exponential, Independent, Binomial
 import math
 
 
@@ -304,3 +305,11 @@ class Tests(unittest.TestCase):
         # ===== Sample path ===== #
         path = sde.sample_path(num + 1, shape)
         self.assertEqual(samps.shape, path.shape)
+
+    def test_StochasticSIR(self):
+        dist = Independent(Binomial(torch.tensor([1000, 1, 0]), torch.tensor([1, 1, 1e-6])), 1)
+        sir = StochasticSIR((0.1, 0.05, 0.01), dist, 1e-1)
+
+        x = sir.sample_path(1000, 10)
+
+        assert x.shape == torch.Size([1000, 10, 3])
