@@ -3,7 +3,7 @@ import numpy as np
 import pykalman
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
-from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, EulerMaruyama
+from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama
 import torch
 from pyfilter.proposals import Unscented, Linearized, Bootstrap
 from pyfilter.utils import concater
@@ -132,7 +132,7 @@ class Tests(unittest.TestCase):
         def g(x, a, s):
             return s
 
-        em = EulerMaruyama((f, g), (0.02, 0.15), Normal(0., 1.), Normal(0., 1.), dt=1e-2, num_steps=10)
+        em = AffineEulerMaruyama((f, g), (0.02, 0.15), Normal(0., 1.), Normal(0., 1.), dt=1e-2, num_steps=10)
         model = LinearGaussianObservations(em, scale=1e-3)
 
         x, y = model.sample_path(500)
@@ -140,6 +140,11 @@ class Tests(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             SISR(model, 200)
 
-        filt = SISR(model, 500, proposal=Bootstrap()).initialize().longfilter(y)
+        for filt in [SISR(model, 500, proposal=Bootstrap()), UKF(model)]:
+            filt = filt.initialize().longfilter(y)
 
-        self.assertLess(torch.std(x - filt.filtermeans), 5e-2)
+            means = filt.filtermeans
+            if isinstance(filt, UKF):
+                means = means[:, 0]
+
+            self.assertLess(torch.std(x - means), 5e-2)
