@@ -3,7 +3,7 @@ from abc import ABC
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, EulerMaruyama
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, AffineEulerMaruyama
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose, normalize
@@ -363,8 +363,8 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._proposal = proposal.set_model(self._model)    # type: Proposal
 
-        if isinstance(self.ssm.hidden, EulerMaruyama) and not isinstance(proposal, Bootstrap):
-            msg = f'All models of type {EulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
+        if isinstance(self.ssm.hidden, AffineEulerMaruyama) and not isinstance(proposal, Bootstrap):
+            msg = f'All models of type {AffineEulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
             raise NotImplementedError(msg)
 
     @property

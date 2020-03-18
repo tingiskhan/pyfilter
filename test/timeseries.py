@@ -1,9 +1,9 @@
 import unittest
-from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, EulerMaruyama
+from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, AffineEulerMaruyama
 from pyfilter.timeseries import StochasticSIR
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
-from torch.distributions import Normal, Exponential, Independent, Binomial
+from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson
 import math
 
 
@@ -234,7 +234,7 @@ class Tests(unittest.TestCase):
         norm = Normal(0., math.sqrt(dt))
 
         init = Normal(a, 1.)
-        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
@@ -260,7 +260,7 @@ class Tests(unittest.TestCase):
         dist = Poisson(dt * 0.1)
 
         init = Normal(a, 1.)
-        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
@@ -286,7 +286,7 @@ class Tests(unittest.TestCase):
         dist = Normal(loc=0., scale=Parameter(Exponential(10.)))
 
         init = Normal(a, 1.)
-        sde = EulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
 
         sde.sample_params(shape)
 

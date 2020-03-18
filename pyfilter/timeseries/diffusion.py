@@ -28,7 +28,9 @@ class StochasticDifferentialEquation(AffineProcess, ABC):
 class OneStepEulerMaruyma(StochasticDifferentialEquation):
     def __init__(self, funcs, theta, initial_dist, inc_dist, dt):
         """
-        Implements a one-step Euler-Maruyama model, similar to PyMC3.
+        Implements a one-step Euler-Maruyama model, similar to PyMC3. I.e. where we perform one iteration of the
+        following recursion
+            dX[t] = a(X[t-1]) * dt + b(X[t-1]) * dW[t]
         :param dt: The step-size to use in the approximation.
         :type dt: float|torch.Tensor
         """
@@ -70,14 +72,21 @@ class OrnsteinUhlenbeck(StochasticDifferentialEquation):
         super().__init__((f, g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
 
 
-class GeneralEulerMaruyama(OneStepEulerMaruyma):
-    def __init__(self, dynamics, theta, init_dist, increment_dist, dt, **kwargs):
+class GeneralEulerMaruyama(StochasticDifferentialEquation):
+    def __init__(self, dynamics, theta, init_dist, increment_dist, dt, prop_state, **kwargs):
         """
-        The Euler-Maruyama discretization scheme for stochastic differential equations.
+        The Euler-Maruyama discretization scheme for stochastic differential equations of general type. I.e. you have
+        full freedom for specifying the model. The recursion is defined as
+            dX[t] = prop_state(x[t-1], a(X[t-1], dt), b(x[t-1], dt))
+        :param dynamics: A tuple of callable, where the last argument should be `dt`
+        :type dynamics: tuple[callable]
+        :param prop_state: The function for propagating the state. Should take as input (x, f(x), g(x))
+        :type prop_state: callable
         """
 
         super().__init__(dynamics, theta, init_dist, increment_dist, dt)
         self._ns = kwargs.pop('num_steps', 1)
+        self._prop_state = prop_state
 
     def _propagate_u(self, x, u):
         raise NotImplementedError()
@@ -92,10 +101,7 @@ class GeneralEulerMaruyama(OneStepEulerMaruyma):
         :rtype: torch.Tensor
         """
 
-        return self._prop_state(x)
-
-    def _prop_state(self, x):
-        raise NotImplementedError()
+        return self._prop_state(x, self.f(x, *self.theta_vals, self._dt), self.g(x, *self.theta_vals, self._dt))
 
     def _propagate(self, x, as_dist=False):
         for i in range(self._ns):
@@ -107,13 +113,35 @@ class GeneralEulerMaruyama(OneStepEulerMaruyma):
         return Empirical(x)
 
 
-class EulerMaruyama(GeneralEulerMaruyama):
-    """
-    Euler Maruyama method for SDEs of affine nature.
-    """
+class AffineEulerMaruyama(GeneralEulerMaruyama):
+    def __init__(self, dynamics, theta, init_dist, increment_dist, dt, **kwargs):
+        """
+        Euler Maruyama method for SDEs of affine nature. A generalization of OneStepMaruyama that allows multiple
+        recursions. The difference between this class and GeneralEulerMaruyama is that you need not specify prop_state
+        as that is assumed to follow the structure of OneStepEulerMaruyama.
+        :param dynamics: A tuple of callable. Should _not_ include `dt` as the last argument
+        :type dynamics: tuple[callable]
+        """
 
-    def _prop_state(self, x):
-        return self._define_transdist(*self.mean_scale(x)).sample()
+        def _f(x, *args):
+            return x + dynamics[0](x, *args) * self._dt
+
+        super().__init__((_f, dynamics[-1]), theta, init_dist, increment_dist, dt, self._f, **kwargs)
+
+    @tensor_caster
+    def prop_state(self, x):
+        """
+        Helper method for propagating the state.
+        :param x: The state
+        :type x: torch.Tensor
+        :return: Tensor
+        :rtype: torch.Tensor
+        """
+
+        return self._prop_state(x, self.f(x, *self.theta_vals), self.g(x, *self.theta_vals))
+
+    def _f(self, x, f, g):
+        return self._define_transdist(f, g).sample()
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
