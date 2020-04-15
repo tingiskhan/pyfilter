@@ -19,7 +19,7 @@ class StochasticDifferentialEquation(AffineProcess, ABC):
         :type num_steps: int
         """
 
-        self._dt = dt
+        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
         self._ns = num_steps
 
         super().__init__(dynamics, theta, init_dist, increment_dist)
@@ -72,20 +72,20 @@ class OrnsteinUhlenbeck(StochasticDifferentialEquation):
         super().__init__((f, g), (kappa, gamma, sigma), dist, dist, dt=dt, num_steps=1)
 
 
+# TODO: Redo the inheritance - we should have a timeseries class that implements prop_state that Affine inhertis from,
+# not the other way around
 class GeneralEulerMaruyama(StochasticDifferentialEquation):
-    def __init__(self, dynamics, theta, init_dist, increment_dist, dt, prop_state, **kwargs):
+    def __init__(self, theta, init_dist, dt, prop_state, num_steps, **kwargs):
         """
         The Euler-Maruyama discretization scheme for stochastic differential equations of general type. I.e. you have
         full freedom for specifying the model. The recursion is defined as
-            dX[t] = prop_state(x[t-1], a(X[t-1], dt), b(x[t-1], dt))
-        :param dynamics: A tuple of callable, where the last argument should be `dt`
-        :type dynamics: tuple[callable]
-        :param prop_state: The function for propagating the state. Should take as input (x, f(x), g(x))
+            X[t + 1] = prop_state(X[t], *parameters, dt)
+        :param prop_state: The function for propagating the state. Should take as input (x, *parameters, dt)
         :type prop_state: callable
         """
-
-        super().__init__(dynamics, theta, init_dist, increment_dist, dt)
-        self._ns = kwargs.pop('num_steps', 1)
+        # There is no use for the incremental distribution when propagating, as such just use the initial dist as we
+        # only use it for determining the shapes
+        super().__init__((None, None), theta, init_dist, init_dist, dt, num_steps)
         self._prop_state = prop_state
 
     def _propagate_u(self, x, u):
@@ -101,7 +101,7 @@ class GeneralEulerMaruyama(StochasticDifferentialEquation):
         :rtype: torch.Tensor
         """
 
-        return self._prop_state(x, self.f(x, *self.theta_vals, self._dt), self.g(x, *self.theta_vals, self._dt))
+        return self._prop_state(x, *self.theta_vals, dt=self._dt)
 
     def _propagate(self, x, as_dist=False):
         for i in range(self._ns):
@@ -123,25 +123,14 @@ class AffineEulerMaruyama(GeneralEulerMaruyama):
         :type dynamics: tuple[callable]
         """
 
-        def _f(x, *args):
-            return x + dynamics[0](x, *args) * self._dt
+        super().__init__(theta, init_dist, increment_dist=increment_dist, dt=dt, prop_state=self.__prop_state, **kwargs)
+        self.f, self.g = dynamics
 
-        super().__init__((_f, dynamics[-1]), theta, init_dist, increment_dist, dt, self._f, **kwargs)
+    def __prop_state(self, x, *params, dt):
+        f = self.f(x, *params) * dt
+        g = self.g(x, *params)
 
-    @tensor_caster
-    def prop_state(self, x):
-        """
-        Helper method for propagating the state.
-        :param x: The state
-        :type x: torch.Tensor
-        :return: Tensor
-        :rtype: torch.Tensor
-        """
-
-        return self._prop_state(x, self.f(x, *self.theta_vals), self.g(x, *self.theta_vals))
-
-    def _f(self, x, f, g):
-        return self._define_transdist(f, g).sample()
+        return self._define_transdist(x + f, g).sample()
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
