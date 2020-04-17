@@ -85,7 +85,8 @@ class GeneralEulerMaruyama(StochasticDifferentialEquation):
         """
         # There is no use for the incremental distribution when propagating, as such just use the initial dist as we
         # only use it for determining the shapes
-        super().__init__((None, None), theta, init_dist, init_dist, dt, num_steps)
+        inc_dist = kwargs.pop('increment_dist', init_dist)
+        super().__init__((None, None), theta, init_dist, inc_dist, dt, num_steps)
         self._prop_state = prop_state
 
     def _propagate_u(self, x, u):
@@ -135,6 +136,6 @@ class AffineEulerMaruyama(GeneralEulerMaruyama):
     def _propagate_u(self, x, u):
         for i in range(self._ns):
             m, s = self.mean_scale(x)
-            x = m + s * u
+            x = x + m * self._dt + s * u
 
         return x
