@@ -116,7 +116,7 @@ class VariationalBayes(BatchAlgorithm):
             x_t = transformed[:, 1:]
             x_tm1 = transformed[:, :-1]
 
-            if self._model.hidden_ndim < 2:
+            if self._model.hidden_ndim < 1:
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 

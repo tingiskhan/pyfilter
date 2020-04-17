@@ -15,7 +15,6 @@ class Linearized(Proposal):
         :type alpha: None|float
         """
         super().__init__()
-        self._var_chooser = None
         self._alpha = alpha
 
     def set_model(self, model):
@@ -23,7 +22,6 @@ class Linearized(Proposal):
             raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
 
         self._model = model
-        self._var_chooser = (lambda u: u) if self._model.hidden_ndim < 2 else (lambda u: u._statevar)
 
         return self
 
@@ -34,13 +32,11 @@ class Linearized(Proposal):
 
         # ===== Get gradients ===== #
         logl = self._model.observable.log_prob(y, h_loc) + self._model.hidden.log_prob(h_loc, x)
-
-        var = self._var_chooser(h_loc)
-        g = grad(logl, var, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
+        g = grad(logl, h_loc, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
         # ===== Define mean and scale ===== #
         if self._alpha is None:
-            step = -1 / grad(g, var, grad_outputs=torch.ones_like(g))[-1]
+            step = -1 / grad(g, h_loc, grad_outputs=torch.ones_like(g))[-1]
             std = step.sqrt()
         else:
             std = h_scale.detach()
@@ -49,9 +45,9 @@ class Linearized(Proposal):
         mean = h_loc.detach() + step * g.detach()
         x.detach_()
 
-        if self._model.hidden_ndim < 2:
+        if self._model.hidden_ndim == 0:
             self._kernel = Normal(mean, std)
         else:
-            self._kernel = Independent(Normal(mean, std), 1)
+            self._kernel = Independent(Normal(mean, std), self._model.hidden_ndim)
 
         return self

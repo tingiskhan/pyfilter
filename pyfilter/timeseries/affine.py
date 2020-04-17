@@ -1,23 +1,16 @@
 from .base import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
-from .utils import tensor_caster
 
 
-def _get_shape(x, ndim):
-    """
-    Gets the shape to generate samples for.
-    :param x: The tensor
-    :type x: torch.Tensor|float
-    :param ndim: The dimensions
-    :type ndim: int
-    :rtype: tuple[int]
-    """
+def _define_transdist(loc, scale, inc_dist, ndim):
+    loc, scale = torch.broadcast_tensors(loc, scale)
 
-    if not isinstance(x, torch.Tensor):
-        return ()
+    shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
 
-    return x.shape if ndim < 2 else x.shape[:-1]
+    return TransformedDistribution(
+        inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim)
+    )
 
 
 class AffineProcess(StochasticProcess):
@@ -38,7 +31,6 @@ class AffineProcess(StochasticProcess):
 
         return self._define_transdist(loc, scale).log_prob(y)
 
-    @tensor_caster
     def mean_scale(self, x):
         """
         Returns the mean and scale of the process evaluated at x_t
@@ -71,13 +63,7 @@ class AffineProcess(StochasticProcess):
         :rtype: Distribution
         """
 
-        loc, scale = torch.broadcast_tensors(loc, scale)
-
-        shape = _get_shape(loc, self.ndim)
-
-        return TransformedDistribution(
-            self.increment_dist.expand(shape), AffineTransform(loc, scale, event_dim=self._event_dim)
-        )
+        return _define_transdist(loc, scale, self.increment_dist, self.ndim)
 
     def _propagate(self, x, as_dist=False):
         dist = self._define_transdist(*self._mean_scale(x))
