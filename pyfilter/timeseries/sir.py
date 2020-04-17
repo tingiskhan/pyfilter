@@ -65,7 +65,7 @@ def _prop_state(x, beta, gamma, sigma, dt):
     return x + f + g * w
 
 
-class FractionalStochasticSIR(GeneralEulerMaruyama):
+class OneFactorFractionalStochasticSIR(GeneralEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Implements a SIR model where the number of sick has been replaced with the fraction of sick people of the entire
@@ -111,9 +111,9 @@ def _prop_state2(x, beta, gamma, sigma, eps, dt):
 class TwoFactorFractionalStochasticSIR(GeneralEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
-        Implements a SIR model where the number of sick has been replaced with the fraction of sick people of the entire
-        population.
-        :param theta: The parameters (beta, gamma, sigma)
+        Similar as `OneFactorFractionalStochasticSIR`, but we now have two sources of randomness originating from shocks
+        to both paramters `beta` and `gamma`.
+        :param theta: The parameters (beta, gamma, sigma, eta)
         """
 
         if not initial_dist.mean.shape == torch.Size([3]):

@@ -4,4 +4,4 @@ from .parameter import Parameter
 from .linear import LinearGaussianObservations
 from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma, OrnsteinUhlenbeck
-from .sir import StochasticSIR, FractionalStochasticSIR, TwoFactorFractionalStochasticSIR
+from .sir import StochasticSIR, OneFactorFractionalStochasticSIR, TwoFactorFractionalStochasticSIR
