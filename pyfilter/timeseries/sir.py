@@ -109,6 +109,6 @@ class TwoFactorFractionalStochasticSIR(AffineEulerMaruyama):
             f_ = self.f(x, *self.theta_vals) * self._dt
             g = self.g(x, *self.theta_vals)
 
-            x += f_ + torch.matmul(g, u)
+            x += f_ + torch.matmul(g, u.unsqueeze(-1)).squeeze(-1)
 
         return x
