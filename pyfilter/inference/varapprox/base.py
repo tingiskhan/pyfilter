@@ -1,3 +1,4 @@
+import torch
 
 
 class BaseApproximation(object):
@@ -28,7 +29,7 @@ class BaseApproximation(object):
 
         return self._dist.entropy()
 
-    def sample(self, num_samples):
+    def sample(self, num_samples=None):
         """
         Samples from the approximation density
         :param num_samples: The number of samples
@@ -37,7 +38,7 @@ class BaseApproximation(object):
         """
 
         samples = (num_samples,) if isinstance(num_samples, int) else num_samples
-        return self._dist.rsample(samples)
+        return self._dist.rsample(samples or torch.Size([]))
 
     def get_parameters(self):
         """

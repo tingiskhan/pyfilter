@@ -32,12 +32,12 @@ class VariationalBayes(BatchAlgorithm):
         self._model = model
         self._numsamples = num_samples
 
-        self._s_approx = approx or StateMeanField()
+        self._is_ssm = isinstance(model, StateSpaceModel)
+
+        self._s_approx = approx or StateMeanField(model.hidden if self._is_ssm else model)
         self._p_approx = ParameterMeanField()
 
         self._mask = None
-
-        self._is_ssm = isinstance(model, StateSpaceModel)
 
         self._opt_type = optimizer
         self._maxiters = int(maxiters)
@@ -89,12 +89,11 @@ class VariationalBayes(BatchAlgorithm):
 
         # ===== Setup the parameter approximation ===== #
         self._p_approx = self._p_approx.initialize(self._model.theta_dists)
-
         params = self._p_approx.get_parameters()
 
         # ===== Initialize the state approximation ===== #
         if self._is_ssm:
-            self._s_approx.initialize(y, self._model.hidden_ndim)
+            self._s_approx.initialize(y)
             params += self._s_approx.get_parameters()
 
         return params
