@@ -282,7 +282,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         :rtype: int
         """
 
-        return len(self.increment_dist.event_shape)
+        return len((self.initial_dist or self.increment_dist).event_shape)
 
     @property
     @lru_cache()
@@ -293,11 +293,12 @@ class StochasticProcess(StochasticProcessBase, ABC):
         :rtype: int
         """
 
-        if len(self.increment_dist.event_shape) < 1:
+        dist = self.initial_dist or self.increment_dist
+        if len(dist.event_shape) < 1:
             return 1
 
         prod = 1
-        for i in self.increment_dist.event_shape:
+        for i in dist.event_shape:
             prod *= i
 
         return prod
