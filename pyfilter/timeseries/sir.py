@@ -54,7 +54,7 @@ class OneFactorFractionalStochasticSIR(AffineEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Implements a SIR model where the number of sick has been replaced with the fraction of sick people of the entire
-        population.
+        population. Model taken from this article: https://arxiv.org/pdf/2004.06680.pdf
         :param theta: The parameters (beta, gamma, sigma)
         """
 
