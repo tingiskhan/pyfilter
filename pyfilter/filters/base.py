@@ -345,7 +345,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._w_old = None                          # type: torch.Tensor
 
         # ===== Auxiliary variable ===== #
-        self._sumaxis = -1 if self.ssm.hidden_ndim < 2 else -2
+        self._sumaxis = -(1 + self.ssm.hidden_ndim)
         self._rsample = need_grad
 
         # ===== Resampling function ===== #

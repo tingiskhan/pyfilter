@@ -26,8 +26,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x[0] + x[1] / 3
-    x2 = x[1]
+    x1 = alpha * x[..., 0] + x[..., 1] / 3
+    x2 = x[..., 1]
     return concater(x1, x2)
 
 
@@ -63,7 +63,7 @@ class Tests(unittest.TestCase):
                 (UKF, {}),
                 (SISR, {'particles': 500, 'proposal': Linearized(alpha=None)}),
                 (APF, {'particles': 500, 'proposal': Linearized()}),
-                (SISR, {'particles': 500, 'proposal': Unscented()})
+                (SISR, {'particles': 50, 'proposal': Unscented()})
             ]:
                 filt = filter_(model, **props).initialize()
 

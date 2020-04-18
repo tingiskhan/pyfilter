@@ -1,6 +1,6 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, AffineEulerMaruyama
-from pyfilter.timeseries import StochasticSIR
+from pyfilter.timeseries import StochasticSIR, OneFactorFractionalStochasticSIR, TwoFactorFractionalStochasticSIR
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson
@@ -312,4 +312,22 @@ class Tests(unittest.TestCase):
 
         x = sir.sample_path(1000, 10)
 
-        assert x.shape == torch.Size([1000, 10, 3])
+        self.assertEqual(x.shape, torch.Size([1000, 10, 3]))
+
+    def test_OneFactorFractionalSIR(self):
+        dist = Independent(Normal(torch.tensor([0.99, 0.01, 0.]), 1e-16 * torch.ones(3)), 1)
+
+        sir = OneFactorFractionalStochasticSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
+
+        x = sir.sample_path(1000)
+
+        self.assertEqual(x.shape, torch.Size([1000, 3]))
+
+    def test_TwoFactorFractionalSIR(self):
+        dist = Independent(Normal(torch.tensor([0.99, 0.01, 0.]), 1e-16 * torch.ones(3)), 1)
+
+        sir = TwoFactorFractionalStochasticSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
+
+        x = sir.sample_path(1000)
+
+        self.assertEqual(x.shape, torch.Size([1000, 3]))

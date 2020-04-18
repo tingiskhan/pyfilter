@@ -37,7 +37,7 @@ class LinearGaussianObservations(Proposal):
         return kernel
 
     def _kernel_2d(self, y, loc, h_var_inv, o_var_inv, c):
-        tc = c if self._model.obs_ndim > 1 else c.unsqueeze(-2)
+        tc = c if self._model.obs_ndim > 0 else c.unsqueeze(-2)
 
         # ===== Define covariance ===== #
         ttc = tc.transpose(-2, -1)
@@ -65,7 +65,7 @@ class LinearGaussianObservations(Proposal):
         c, y = self._get_mat_and_fix_y(x, y)
         o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
 
-        if self._model.hidden_ndim < 2:
+        if self._model.hidden_ndim == 0:
             self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
         else:
             self._kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)

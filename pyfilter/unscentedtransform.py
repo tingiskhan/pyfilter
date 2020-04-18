@@ -19,7 +19,7 @@ def _propagate_sps(spx, spn, process, temp_params):
     :rtype: torch.Tensor
     """
 
-    is_md = process.ndim > 1
+    is_md = process.ndim > 0
 
     if not is_md:
         spx = spx.squeeze(-1)
@@ -80,7 +80,7 @@ class UnscentedTransform(Module):
 
         # ===== Model ===== #
         self._model = model
-        self._ndim = 2 * model.hidden_ndim + model.obs_ndim
+        self._ndim = 2 * model.hidden.num_vars + model.observable.num_vars
 
         if self._model.hidden.distributional_theta or self._model.observable.distributional_theta:
             raise ValueError('Cannot currently handle case when distribution is parameterized!')
@@ -107,9 +107,9 @@ class UnscentedTransform(Module):
         :rtype: UnscentedTransform
         """
 
-        self._sslc = slice(self._model.hidden_ndim)
-        self._hslc = slice(self._model.hidden_ndim, 2 * self._model.hidden_ndim)
-        self._oslc = slice(2 * self._model.hidden_ndim, None)
+        self._sslc = slice(self._model.hidden.num_vars)
+        self._hslc = slice(self._model.hidden.num_vars, 2 * self._model.hidden.num_vars)
+        self._oslc = slice(2 * self._model.hidden.num_vars, None)
 
         return self
 
@@ -141,7 +141,7 @@ class UnscentedTransform(Module):
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x)
 
-        parts = x.shape[:-1] if self._model.hidden_ndim > 1 else x.shape
+        parts = x.shape if self._model.hidden_ndim < 1 else x.shape[:-self._model.hidden_ndim]
 
         self._mean = torch.zeros((*parts, self._ndim))
         self._cov = torch.zeros((*parts, self._ndim, self._ndim))
@@ -180,11 +180,11 @@ class UnscentedTransform(Module):
         self._set_weights()._set_slices()._set_arrays(x)
 
         # ==== Set mean ===== #
-        self._mean[..., self._sslc] = x if self._model.hidden_ndim > 1 else x.unsqueeze(-1)
+        self._mean[..., self._sslc] = x if self._model.hidden_ndim > 0 else x.unsqueeze(-1)
 
         # ==== Set state covariance ===== #
         var = self._model.hidden.initial_dist.variance
-        if self._model.hidden_ndim < 2:
+        if self._model.hidden_ndim < 1:
             var.unsqueeze_(-1)
 
         self._cov[..., self._sslc, self._sslc] = construct_diag(var)
@@ -293,7 +293,7 @@ class UnscentedTransform(Module):
         :rtype: Normal|MultivariateNormal
         """
 
-        if self._model.hidden_ndim < 2:
+        if self._model.hidden_ndim < 1:
             return Normal(self.xmean[..., 0], self.xcov[..., 0, 0].sqrt())
 
         return MultivariateNormal(self.xmean, scale_tril=torch.cholesky(self.xcov))
@@ -305,7 +305,7 @@ class UnscentedTransform(Module):
         :rtype: Normal|MultivariateNormal
         """
 
-        if self._model.hidden_ndim < 2:
+        if self._model.hidden_ndim < 1:
             return self.x_dist
 
         dist = Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt())
@@ -317,7 +317,7 @@ class UnscentedTransform(Module):
         Returns the current Y-distribution.
         :rtype: Normal|MultivariateNormal
         """
-        if self._model.obs_ndim < 2:
+        if self._model.obs_ndim < 1:
             return Normal(self.ymean[..., 0], self.ycov[..., 0, 0].sqrt())
 
         return MultivariateNormal(self.ymean, scale_tril=torch.cholesky(self.ycov))

@@ -4,7 +4,6 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter
 from copy import deepcopy
-from .utils import tensor_caster, tensor_caster_mult
 from ..module import Module, TensorContainer, TensorContainerDict
 
 
@@ -53,7 +52,6 @@ class StochasticProcessBase(Module):
 
         return self
 
-    @tensor_caster_mult
     def log_prob(self, y, x):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
@@ -71,7 +69,6 @@ class StochasticProcessBase(Module):
     def _log_prob(self, y, x):
         raise NotImplementedError()
 
-    @tensor_caster
     def propagate(self, x, as_dist=False):
         """
         Propagates the model forward conditional on the previous state and current parameters.
@@ -200,7 +197,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._viewshape = None
 
         self._inputdim = self.ndim
-        self._event_dim = 0 if self.ndim < 2 else 1
 
         # ===== Distributional parameters ===== #
         self._dist_theta = TensorContainerDict()
@@ -281,18 +277,30 @@ class StochasticProcess(StochasticProcessBase, ABC):
     @lru_cache()
     def ndim(self):
         """
-        Returns the dimension of the process.
+        Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
         :return: Dimension of process
         :rtype: int
         """
-        shape = self.increment_dist.event_shape
-        if len(shape) < 1:
+
+        return len(self.increment_dist.event_shape)
+
+    @property
+    @lru_cache()
+    def num_vars(self):
+        """
+        Returns the number of variables of the stochastic process. E.g. if it's a univariate process, it returns 1, and
+        the number of elements in the vector/matrix.
+        :rtype: int
+        """
+
+        if len(self.increment_dist.event_shape) < 1:
             return 1
 
-        if len(shape) > 1:
-            raise Exception('Timeseries model can at most be 1 dimensional (i.e. vector)!')
+        prod = 1
+        for i in self.increment_dist.event_shape:
+            prod *= i
 
-        return tuple(shape)[-1]
+        return prod
 
     def viewify_params(self, shape):
         shape = size_getter(shape)
@@ -350,7 +358,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return out
 
-    @tensor_caster
     def propagate_u(self, x, u):
         """
         Propagate the process conditional on both state and draws from incremental distribution.

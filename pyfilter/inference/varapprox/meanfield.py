@@ -5,20 +5,24 @@ from ..utils import stacker
 
 
 class StateMeanField(BaseApproximation):
-    def __init__(self):
+    def __init__(self, model):
         """
         Implements a mean field approximation of the state space.
+        :param model: The model
+        :type model: pyfilter.timeseries.base.StochasticProcess
         """
+
         super().__init__()
         self._mean = None
         self._std = None
+        self._model = model
 
-    def initialize(self, data, ndim):
-        self._mean = torch.zeros((data.shape[0] + 1, ndim), requires_grad=True)
+    def initialize(self, data, *args):
+        self._mean = torch.zeros((data.shape[0] + 1, *self._model.increment_dist.event_shape), requires_grad=True)
         self._std = torch.ones_like(self._mean, requires_grad=True)
 
         # ===== Start optimization ===== #
-        self._dist = Independent(Normal(self._mean, self._std), 2)
+        self._dist = Independent(Normal(self._mean, self._std), self._model.ndim + 1)
 
         return self
 
@@ -43,7 +47,7 @@ class ParameterMeanField(BaseApproximation):
     def initialize(self, parameters, *args):
         stacked = stacker(parameters, lambda u: u.t_values)
 
-        self._mean = torch.zeros_like(stacked.concated)
+        self._mean = torch.zeros(stacked.concated.shape[1:], device=stacked.concated.device)
         self._std = torch.ones_like(self._mean)
 
         for p, msk in zip(parameters, stacked.mask):

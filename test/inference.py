@@ -81,8 +81,8 @@ class MyTestCase(unittest.TestCase):
 
                 w = normalize(alg._w_rec if hasattr(alg, '_w_rec') else torch.ones(particles))
 
-                tru_params = trumod.hidden.theta + trumod.observable.theta
-                inf_params = alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta
+                tru_params = trumod.hidden.theta._cont + trumod.observable.theta._cont
+                inf_params = alg.filter.ssm.hidden.theta._cont + alg.filter.ssm.observable.theta._cont
 
                 for trup, p in zip(tru_params, inf_params):
                     if not p.trainable:
