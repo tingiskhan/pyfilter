@@ -64,6 +64,7 @@ def _get_meancov(spxy, wm, wc):
     return x, _covcalc(centered, centered, wc)
 
 
+# TODO: Rewrite this one to not save state
 class UnscentedTransform(Module):
     def __init__(self, model, a=1, b=2, k=0):
         """
@@ -78,12 +79,18 @@ class UnscentedTransform(Module):
         :type k: float
         """
 
+        if len(model.hidden.increment_dist.event_shape) > 1:
+            raise ValueError('Can at most handle vector valued processes!')
+
+        if model.hidden.distributional_theta or model.observable.distributional_theta:
+            raise ValueError('Cannot currently handle case when distribution is parameterized!')
+
         # ===== Model ===== #
         self._model = model
-        self._ndim = 2 * model.hidden.num_vars + model.observable.num_vars
+        self._trans_dim = 1 if len(model.hidden.increment_dist.event_shape) == 0 else \
+            model.hidden.increment_dist.event_shape[0]
 
-        if self._model.hidden.distributional_theta or self._model.observable.distributional_theta:
-            raise ValueError('Cannot currently handle case when distribution is parameterized!')
+        self._ndim = model.hidden.num_vars + self._trans_dim + model.observable.num_vars
 
         # ===== Parameters =====#
         self._a = a
@@ -107,9 +114,11 @@ class UnscentedTransform(Module):
         :rtype: UnscentedTransform
         """
 
-        self._sslc = slice(self._model.hidden.num_vars)
-        self._hslc = slice(self._model.hidden.num_vars, 2 * self._model.hidden.num_vars)
-        self._oslc = slice(2 * self._model.hidden.num_vars, None)
+        hidden_dim = self._model.hidden.num_vars
+
+        self._sslc = slice(hidden_dim)
+        self._hslc = slice(hidden_dim, hidden_dim + self._trans_dim)
+        self._oslc = slice(hidden_dim + self._trans_dim, None)
 
         return self
 
