@@ -94,7 +94,7 @@ class TwoFactorFractionalStochasticSIR(AffineEulerMaruyama):
             return s
 
         f_ = lambda u, beta, gamma, sigma, eps: f(u, beta, gamma, sigma)
-        inc_dist = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
+        inc_dist = Independent(Normal(torch.zeros(2), math.sqrt(dt) * torch.ones(2)), 1)
 
         super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
