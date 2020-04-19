@@ -1,6 +1,15 @@
 import unittest
-from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, OrnsteinUhlenbeck, Parameter, AffineEulerMaruyama
-from pyfilter.timeseries import StochasticSIR, OneFactorFractionalStochasticSIR, TwoFactorFractionalStochasticSIR
+from pyfilter.timeseries import (
+    AffineProcess,
+    OneStepEulerMaruyma,
+    OrnsteinUhlenbeck,
+    Parameter,
+    AffineEulerMaruyama,
+    StochasticSIR,
+    OneFactorFractionalStochasticSIR,
+    TwoFactorFractionalStochasticSIR,
+    TwoFactorSEIRD
+)
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson
@@ -331,3 +340,18 @@ class Tests(unittest.TestCase):
         x = sir.sample_path(1000)
 
         self.assertEqual(x.shape, torch.Size([1000, 3]))
+
+    def test_TwoFactorSEIRD(self):
+        dist = Independent(
+            Normal(
+                torch.tensor([0.99, 0., 0.01, 0., 0.]),
+                1e-16 * torch.ones(5)
+            ),
+            1
+        )
+
+        seird = TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
+
+        x = seird.sample_path(1000)
+
+        self.assertEqual(x.shape, torch.Size([1000, 5]))

@@ -16,7 +16,9 @@ def _define_transdist(loc, scale, inc_dist, ndim):
 class AffineProcess(StochasticProcess):
     def __init__(self, funcs, theta, initial_dist, increment_dist):
         """
-        Class for defining model with affine dynamics.
+        Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
+        that is, given a base distribution X we get a new distribution Y as
+            Y = loc + scale * X
         :param funcs: The functions governing the dynamics of the process
         :type funcs: tuple[callable]
         """

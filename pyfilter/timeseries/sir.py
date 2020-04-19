@@ -72,7 +72,24 @@ class OneFactorFractionalStochasticSIR(AffineEulerMaruyama):
         super().__init__((f, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
 
-class TwoFactorFractionalStochasticSIR(AffineEulerMaruyama):
+class Mixin(object):
+    def _prop(self, x, *params, dt):
+        f_ = self.f(x, *params) * dt
+        g = self.g(x, *params)
+
+        return x + f_ + torch.matmul(g, self.increment_dist.sample(x.shape[:-1]))
+
+    def _propagate_u(self, x, u):
+        for i in range(self._ns):
+            f_ = self.f(x, *self.theta_vals) * self._dt
+            g = self.g(x, *self.theta_vals)
+
+            x += f_ + torch.matmul(g, u.unsqueeze(-1)).squeeze(-1)
+
+        return x
+
+
+class TwoFactorFractionalStochasticSIR(Mixin, AffineEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Similar as `OneFactorFractionalStochasticSIR`, but we now have two sources of randomness originating from shocks
@@ -98,17 +115,39 @@ class TwoFactorFractionalStochasticSIR(AffineEulerMaruyama):
 
         super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
-    def _prop(self, x, *params, dt):
-        f_ = self.f(x, *params) * dt
-        g = self.g(x, *params)
 
-        return x + f_ + torch.matmul(g, self.increment_dist.sample(x.shape[:-1]))
+class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
+    def __init__(self, theta, init_dist, dt, num_steps=10):
+        """
+        Implements a three factor stochastic SEIRD model, inspired by the blog:
+            https://towardsdatascience.com/infectious-disease-modelling-beyond-the-basic-sir-model-216369c584c4
+        and models above.
+        :param theta: The parameters of the model. Corresponds to (beta, gamma, delta, alpha, rho, sigma, eta)
+        """
 
-    def _propagate_u(self, x, u):
-        for i in range(self._ns):
-            f_ = self.f(x, *self.theta_vals) * self._dt
-            g = self.g(x, *self.theta_vals)
+        def f(x, beta, gamma, delta, alpha, rho, sigma, eps):
+            s = -beta * x[..., 0] * x[..., 2]
+            e = -s - delta * x[..., 1]
+            r = (1 - alpha) * gamma * x[..., 2]
+            i = delta * x[..., 1] - r - alpha * rho * x[..., 2]
+            d = alpha * rho * x[..., 2]
 
-            x += f_ + torch.matmul(g, u.unsqueeze(-1)).squeeze(-1)
+            return concater(s, e, i, r, d)
 
-        return x
+        def g(x, beta, gamma, delta, alpha, rho, sigma, eps):
+            s = torch.zeros((*x.shape[:-1], 5, 2), device=x.device)
+
+            s[..., 0, 0] = -sigma * x[..., 0] * x[..., 2]
+            s[..., 1, 0] = -s[..., 0, 0]
+            s[..., 2, 1] = -eps * (1 - alpha) * x[..., 2]
+            s[..., 3, 1] = -s[..., 2, 1]
+            s[..., 4, 1] = alpha * eps * x[..., 2]
+
+            return s
+
+        if not init_dist.mean.shape == torch.Size([5]):
+            raise NotImplementedError('Must be of size 5!')
+
+        inc_dist = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
+
+        super().__init__((f, g), theta, init_dist, inc_dist, dt, num_steps=num_steps)
