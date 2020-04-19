@@ -33,7 +33,7 @@ class StochasticSIR(GeneralEulerMaruyama):
         Implements the stochastic SIR model.
         """
 
-        if not initial_dist.mean.shape == torch.Size([3]):
+        if not initial_dist.event_shape == torch.Size([3]):
             raise NotImplementedError('Must be of size 3!')
 
         super().__init__(theta, initial_dist, dt=dt, prop_state=prop_state, num_steps=num_steps)
@@ -58,7 +58,7 @@ class OneFactorFractionalStochasticSIR(AffineEulerMaruyama):
         :param theta: The parameters (beta, gamma, sigma)
         """
 
-        if not initial_dist.mean.shape == torch.Size([3]):
+        if not initial_dist.event_shape == torch.Size([3]):
             raise NotImplementedError('Must be of size 3!')
 
         def g(x, beta, gamma, sigma):
@@ -74,17 +74,17 @@ class OneFactorFractionalStochasticSIR(AffineEulerMaruyama):
 
 class Mixin(object):
     def _prop(self, x, *params, dt):
-        f_ = self.f(x, *params) * dt
-        g = self.g(x, *params)
+        return self._helper(x, self.increment_dist.sample(x.shape[:-1]))
 
-        return x + f_ + torch.matmul(g, self.increment_dist.sample(x.shape[:-1]))
+    def _helper(self, x, u):
+        f_ = self.f(x, *self.theta_vals) * self._dt
+        g = self.g(x, *self.theta_vals)
+
+        return x + f_ + torch.matmul(g, u.unsqueeze(-1)).squeeze(-1)
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
-            f_ = self.f(x, *self.theta_vals) * self._dt
-            g = self.g(x, *self.theta_vals)
-
-            x += f_ + torch.matmul(g, u.unsqueeze(-1)).squeeze(-1)
+            x = self._helper(x, u)
 
         return x
 
@@ -97,7 +97,7 @@ class TwoFactorFractionalStochasticSIR(Mixin, AffineEulerMaruyama):
         :param theta: The parameters (beta, gamma, sigma, eta)
         """
 
-        if not initial_dist.mean.shape == torch.Size([3]):
+        if not initial_dist.event_shape == torch.Size([3]):
             raise NotImplementedError('Must be of size 3!')
 
         def g(x, gamma, beta, sigma, eps):
@@ -145,9 +145,9 @@ class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
 
             return s
 
-        if not init_dist.mean.shape == torch.Size([5]):
+        if not init_dist.event_shape == torch.Size([5]):
             raise NotImplementedError('Must be of size 5!')
 
-        inc_dist = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
+        inc_dist = Independent(Normal(torch.zeros(2), math.sqrt(dt) * torch.ones(2)), 1)
 
         super().__init__((f, g), theta, init_dist, inc_dist, dt, num_steps=num_steps)
