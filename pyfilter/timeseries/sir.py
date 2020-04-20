@@ -139,8 +139,8 @@ class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
 
             s[..., 0, 0] = -sigma * x[..., 0] * x[..., 2]
             s[..., 1, 0] = -s[..., 0, 0]
-            s[..., 2, 1] = -eps * (1 - alpha) * x[..., 2]
-            s[..., 3, 1] = -s[..., 2, 1]
+            s[..., 3, 1] = eps * (1 - alpha) * x[..., 2]
+            s[..., 2, 1] = -s[..., 3, 1] - alpha * eps * x[..., 2]
             s[..., 4, 1] = alpha * eps * x[..., 2]
 
             return s
