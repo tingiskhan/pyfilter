@@ -6,7 +6,8 @@ from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma, OrnsteinUhlenbeck
 from .sir import (
     StochasticSIR,
-    OneFactorFractionalStochasticSIR,
-    TwoFactorFractionalStochasticSIR,
-    TwoFactorSEIRD
+    OneFactorSIR,
+    TwoFactorSIR,
+    TwoFactorSEIRD,
+    ThreeFactorSIRD
 )

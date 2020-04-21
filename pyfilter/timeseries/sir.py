@@ -50,7 +50,7 @@ def f(x, beta, gamma, sigma):
     return concater(f1, f2, f3)
 
 
-class OneFactorFractionalStochasticSIR(AffineEulerMaruyama):
+class OneFactorSIR(AffineEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Implements a SIR model where the number of sick has been replaced with the fraction of sick people of the entire
@@ -89,7 +89,7 @@ class Mixin(object):
         return x
 
 
-class TwoFactorFractionalStochasticSIR(Mixin, AffineEulerMaruyama):
+class TwoFactorSIR(Mixin, AffineEulerMaruyama):
     def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Similar as `OneFactorFractionalStochasticSIR`, but we now have two sources of randomness originating from shocks
@@ -116,10 +116,45 @@ class TwoFactorFractionalStochasticSIR(Mixin, AffineEulerMaruyama):
         super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
 
+class ThreeFactorSIRD(Mixin, AffineEulerMaruyama):
+    def __init__(self, theta, initial_dist, dt, num_steps=10):
+        """
+        Similar as `TwoFactorSIR`, but we now have three sources of randomness, as well as incorporating death rates.
+        :param theta: The parameters (beta, gamma, alpha, rho, sigma, eta, nu)
+        """
+
+        if not initial_dist.event_shape == torch.Size([4]):
+            raise NotImplementedError('Must be of size 4!')
+
+        def f_(x, beta, gamma, alpha, rho, sigma, eps, nu):
+            s = -beta * x[..., 0] * x[..., 1]
+            r = (1 - alpha) * gamma * x[..., 1]
+            i = -s - r - alpha * rho * x[..., 1]
+            d = alpha * rho * x[..., 1]
+
+            return concater(s, i, r, d)
+
+        def g(x, gamma, beta, alpha, rho, sigma, eps, nu):
+            s = torch.zeros((*x.shape[:-1], 4, 3), device=x.device)
+
+            s[..., 0, 0] = -sigma * x[..., 0] * x[..., 1]
+            s[..., 1, 0] = -s[..., 0, 0]
+            s[..., 1, 1] = -eps * (1 - alpha) * x[..., 1]
+            s[..., 1, 2] = -alpha * nu * x[..., 1]
+            s[..., 2, 1] = -s[..., 1, 1]
+            s[..., 3, 2] = -s[..., 1, 2]
+
+            return s
+
+        inc_dist = Independent(Normal(torch.zeros(3), math.sqrt(dt) * torch.ones(3)), 1)
+
+        super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
+
+
 class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
     def __init__(self, theta, init_dist, dt, num_steps=10):
         """
-        Implements a three factor stochastic SEIRD model, inspired by the blog:
+        Implements a two factor stochastic SEIRD model, inspired by the blog:
             https://towardsdatascience.com/infectious-disease-modelling-beyond-the-basic-sir-model-216369c584c4
         and models above.
         :param theta: The parameters of the model. Corresponds to (beta, gamma, delta, alpha, rho, sigma, eta)

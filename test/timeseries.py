@@ -6,13 +6,14 @@ from pyfilter.timeseries import (
     Parameter,
     AffineEulerMaruyama,
     StochasticSIR,
-    OneFactorFractionalStochasticSIR,
-    TwoFactorFractionalStochasticSIR,
-    TwoFactorSEIRD
+    OneFactorSIR,
+    TwoFactorSIR,
+    TwoFactorSEIRD,
+    ThreeFactorSIRD
 )
 from pyfilter.timeseries.statevariable import StateVariable
 import torch
-from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson
+from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
 import math
 
 
@@ -324,34 +325,33 @@ class Tests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([1000, 10, 3]))
 
     def test_OneFactorFractionalSIR(self):
-        dist = Independent(Normal(torch.tensor([0.99, 0.01, 0.]), 1e-16 * torch.ones(3)), 1)
-
-        sir = OneFactorFractionalStochasticSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
+        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        sir = OneFactorSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
 
         self.assertEqual(x.shape, torch.Size([1000, 3]))
 
     def test_TwoFactorFractionalSIR(self):
-        dist = Independent(Normal(torch.tensor([0.99, 0.01, 0.]), 1e-16 * torch.ones(3)), 1)
-
-        sir = TwoFactorFractionalStochasticSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
+        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        sir = TwoFactorSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
 
         self.assertEqual(x.shape, torch.Size([1000, 3]))
 
     def test_TwoFactorSEIRD(self):
-        dist = Independent(
-            Normal(
-                torch.tensor([0.99, 0., 0.01, 0., 0.]),
-                1e-16 * torch.ones(5)
-            ),
-            1
-        )
-
+        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
         seird = TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
 
         x = seird.sample_path(1000)
 
         self.assertEqual(x.shape, torch.Size([1000, 5]))
+
+    def test_TwoFactorSIRD(self):
+        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        sird = ThreeFactorSIRD((0.1, 0.05, 0.05, 0.01, 0.05, 0.05, 0.05), dist, dt=1e-1)
+
+        x = sird.sample_path(1000)
+
+        self.assertEqual(x.shape, torch.Size([1000, 4]))
