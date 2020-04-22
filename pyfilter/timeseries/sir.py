@@ -134,7 +134,7 @@ class ThreeFactorSIRD(Mixin, AffineEulerMaruyama):
 
             return concater(s, i, r, d)
 
-        def g(x, gamma, beta, alpha, rho, sigma, eps, nu):
+        def g(x, beta, gamma, alpha, rho, sigma, eps, nu):
             s = torch.zeros((*x.shape[:-1], 4, 3), device=x.device)
 
             s[..., 0, 0] = -sigma * x[..., 0] * x[..., 1]

@@ -1,8 +1,9 @@
-from .timeseries import StateSpaceModel, AffineProcess
+from .timeseries import StateSpaceModel
+from .timeseries.base import StochasticProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal, Independent
-from .utils import construct_diag, TempOverride
+from .utils import construct_diag, TempOverride, concater
 from .module import Module, TensorContainer
 
 
@@ -14,7 +15,7 @@ def _propagate_sps(spx, spn, process, temp_params):
     :param spn: The noise Sigma points
     :type spn: torch.Tensor
     :param process: The process
-    :type process: AffineProcess
+    :type process: StochasticProcess
     :return: Translated and scaled sigma points
     :rtype: torch.Tensor
     """
@@ -154,7 +155,6 @@ class UnscentedTransform(Module):
 
         self._mean = torch.zeros((*parts, self._ndim))
         self._cov = torch.zeros((*parts, self._ndim, self._ndim))
-        self._sps = torch.zeros((*parts, 1 + 2 * self._ndim, self._ndim))
 
         # TODO: Perhaps move this to Timeseries?
         self._views = TensorContainer()
@@ -204,28 +204,38 @@ class UnscentedTransform(Module):
 
         return self
 
-    def get_sps(self):
+    def get_sps(self, mean=None, cov=None):
         """
         Constructs the Sigma points used for propagation.
         :return: Sigma points
         :rtype: torch.Tensor
         """
-        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
+        m = self._mean
+        c = self._cov
 
-        self._sps[..., 0, :] = self._mean
-        self._sps[..., 1:self._ndim+1, :] = self._mean[..., None, :] + cholcov
-        self._sps[..., self._ndim+1:, :] = self._mean[..., None, :] - cholcov
+        if mean is not None and cov is not None:
+            m = m.clone()
+            m[..., self._sslc] = mean
 
-        return self._sps
+            c = c.clone()
+            c[..., self._sslc, self._sslc] = cov
 
-    def propagate_sps(self, only_x=False):
+        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(c)
+
+        spx = m.unsqueeze(-2)
+        sph = m[..., None, :] + cholcov
+        spy = m[..., None, :] - cholcov
+
+        return torch.cat((spx, sph, spy), -2)
+
+    def propagate_sps(self, mean=None, cov=None, only_x=False):
         """
         Propagate the Sigma points through the given process.
         :return: Sigma points of x and y
         :rtype: tuple of torch.Tensor
         """
 
-        sps = self.get_sps()
+        sps = self.get_sps(mean, cov)
 
         spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
         if only_x:
@@ -351,7 +361,7 @@ class UnscentedTransform(Module):
 
         return self
 
-    def get_meancov(self):
+    def get_meancov(self, spx=None, spy=None):
         """
         Constructs the mean and covariance for the hidden and observable process respectively.
         :return: The mean and covariance
@@ -359,7 +369,8 @@ class UnscentedTransform(Module):
         """
 
         # ==== Propagate Sigma points ==== #
-        spx, spy = self.propagate_sps()
+        if spx is None or spy is None:
+            spx, spy = self.propagate_sps()
 
         # ==== Construct mean and covariance ==== #
         xmean, xcov = _get_meancov(spx, self._wm, self._wc)
