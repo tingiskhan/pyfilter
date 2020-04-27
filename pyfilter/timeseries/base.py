@@ -191,6 +191,13 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self.initial_dist = initial_dist
         self.increment_dist = increment_dist
 
+        self._mapper = {
+            f'increment/{increment_dist.__class__.__name__}': self.increment_dist
+        }
+
+        if self.initial_dist is not None:
+            self._mapper[f'initial/{initial_dist.__class__.__name__}'] = self.initial_dist
+
         # ===== Some helpers ===== #
         self._theta = None
         self._theta_vals = None
@@ -202,7 +209,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._dist_theta = TensorContainerDict()
         self._org_dist = TensorContainerDict()
 
-        for n in [self.initial_dist, self.increment_dist]:
+        for t, n in [('initial', self.initial_dist), ('increment', self.increment_dist)]:
             if n is None:
                 continue
 
@@ -218,8 +225,8 @@ class StochasticProcess(StochasticProcessBase, ABC):
                     statics[k] = v
 
             if not not parameters:
-                self._dist_theta[n] = parameters
-                self._org_dist[n] = statics
+                self._dist_theta[f'{t}/{n.__class__.__name__}'] = parameters
+                self._org_dist[f'{t}/{n.__class__.__name__}'] = statics
 
         # ===== Regular parameters ====== #
         self.theta = TensorContainer(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
@@ -327,7 +334,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
             for k, v in dists.items():
                 temp[k] = _view_helper(v, shape)
 
-            d.__init__(**temp)
+            self._mapper[d].__init__(**temp)
 
         return self
 
