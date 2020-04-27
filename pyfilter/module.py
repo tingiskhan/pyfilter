@@ -229,7 +229,7 @@ class Module(object):
         res.update(tens)
 
         # ===== Tensor containers ===== #
-        conts = self._find_obj_helper(TensorContainer)
+        conts = self._find_obj_helper(TensorContainerBase)
         res.update(conts)
 
         # ===== Modules ===== #
