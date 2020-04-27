@@ -201,8 +201,8 @@ class StochasticProcess(StochasticProcessBase, ABC):
         # ===== Some helpers ===== #
         self._theta = None
         self._theta_vals = None
-        self._viewshape = None
 
+        self._viewshape = None
         self._inputdim = self.ndim
 
         # ===== Distributional parameters ===== #

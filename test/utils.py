@@ -55,7 +55,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return concater(x[0], x[1])
+    return concater(x[..., 0], x[..., 1])
 
 
 def f0mvn(a, sigma):
@@ -63,7 +63,7 @@ def f0mvn(a, sigma):
 
 
 def fomvn(x, sigma):
-    return x[0] + x[1] / 2
+    return x[..., 0] + x[..., 1] / 2
 
 
 def gomvn(x, sigma):

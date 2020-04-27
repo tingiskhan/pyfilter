@@ -23,7 +23,7 @@ class NESS(SequentialParticleAlgorithm):
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._w_rec += self.filter.result._loglikelihood[-1]
 
         # ===== Log ESS ===== #
         self._logged_ess.append(get_ess(self._w_rec))

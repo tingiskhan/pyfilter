@@ -65,13 +65,8 @@ class Tests(unittest.TestCase):
                 (APF, {'particles': 500, 'proposal': Linearized()}),
                 (SISR, {'particles': 50, 'proposal': Unscented()})
             ]:
-                filt = filter_(model, **props).initialize()
-
-                filt = filt.longfilter(y)
-
-                assert len(filt.s_mx) > 0
-
-                filtmeans = filt.filtermeans.numpy()
+                filt = filter_(model, **props).initialize().longfilter(y)
+                filtmeans = filt.result.filter_means.numpy()
 
                 # ===== Run Kalman ===== #
                 if model is self.model:
@@ -87,7 +82,7 @@ class Tests(unittest.TestCase):
                 rel_error = np.median(np.abs((filtmeans - filterestimates[0]) / filterestimates[0]))
 
                 ll = kf.loglikelihood(y.numpy())
-                rel_ll_error = np.abs((ll - np.array(filt.s_ll).sum()) / ll)
+                rel_ll_error = np.abs((ll - filt.result.loglikelihood.sum().numpy()) / ll)
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
@@ -101,7 +96,7 @@ class Tests(unittest.TestCase):
 
         filt = SISR(self.model, 1000).set_nparallel(shape).initialize().longfilter(y)
 
-        filtermeans = filt.filtermeans
+        filtermeans = filt.result.filter_means
 
         x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
@@ -118,7 +113,7 @@ class Tests(unittest.TestCase):
 
         filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).initialize().longfilter(y)
 
-        filtermeans = filt.filtermeans
+        filtermeans = filt.result.filter_means
 
         x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
@@ -137,13 +132,10 @@ class Tests(unittest.TestCase):
 
         x, y = model.sample_path(500)
 
-        with self.assertRaises(NotImplementedError):
-            SISR(model, 200)
-
         for filt in [SISR(model, 500, proposal=Bootstrap()), UKF(model)]:
             filt = filt.initialize().longfilter(y)
 
-            means = filt.filtermeans
+            means = filt.result.filter_means
             if isinstance(filt, UKF):
                 means = means[:, 0]
 

@@ -30,7 +30,7 @@ class SMC2(SequentialParticleAlgorithm):
     def _update(self, y):
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._w_rec += self.filter.result._loglikelihood[-1]
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
@@ -76,7 +76,7 @@ class SMC2(SequentialParticleAlgorithm):
             raise ValueError(f'Configuration only allows {self._max_increases}!')
 
         # ===== Create new filter with double the state particles ===== #
-        oldlogl = self.filter.loglikelihood
+        oldlogl = self.filter.result.loglikelihood.sum(dim=0)
         oldparts = self.filter.particles[-1]
 
         self.filter.reset()
@@ -89,7 +89,7 @@ class SMC2(SequentialParticleAlgorithm):
         self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-        self._w_rec = self.filter.loglikelihood - oldlogl
+        self._w_rec = self.filter.result.loglikelihood.sum(dim=0) - oldlogl
         self._increases += 1
 
         return self
@@ -143,7 +143,7 @@ class SMC2FW(SequentialParticleAlgorithm):
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._w_rec += self.filter.result.loglikelihood[-1]
         self._num_iters += 1
 
         # ===== Calculate efficient number of samples ===== #
