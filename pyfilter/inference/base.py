@@ -178,7 +178,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         :rtype: torch.Tensor
         """
 
-        return torch.tensor(self._logged_ess)
+        return torch.stack(self._logged_ess.tensors)
 
     def predict(self, steps, aggregate=True, **kwargs):
         px, py = self.filter.predict(steps, aggregate=aggregate, **kwargs)
