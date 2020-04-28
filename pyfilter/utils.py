@@ -230,7 +230,7 @@ class TempOverride(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         setattr(self._obj, self._attr, self._old_vals)
 
-        return self
+        return False
 
 
 class Empirical(Distribution):
