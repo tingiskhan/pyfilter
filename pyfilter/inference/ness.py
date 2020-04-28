@@ -1,19 +1,20 @@
 from .base import SequentialParticleAlgorithm
 from ..utils import get_ess
 from .kernels import OnlineKernel
-from ..kde import ShrinkingKernel
+from ..kde import NonShrinkingKernel, KernelDensityEstimate
 
 
 class NESS(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, kernel=None):
+    def __init__(self, filter_, particles, threshold=0.9, kde=None):
         """
         Implements the NESS algorithm by Miguez and Crisan.
-        :param kernel: The kernel to use when propagating the parameter particles
-        :type kernel: OnlineKernel
+        :param kde: The kernel density estimator
+        :type kde: KernelDensityEstimate
         """
+
         super().__init__(filter_, particles)
 
-        self._kernel = kernel or OnlineKernel(kde=ShrinkingKernel())
+        self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel())
         self._threshold = threshold
 
         if not isinstance(self._kernel, OnlineKernel):
