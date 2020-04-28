@@ -291,7 +291,7 @@ class ParticleFilter(BaseFilter, ABC):
     def particles(self, x):
         """
         Sets the number of particles.
-        :type x: torch.Tensor|int
+        :type x: tuple[int]|int
         """
 
         self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
@@ -304,19 +304,6 @@ class ParticleFilter(BaseFilter, ABC):
         """
 
         return self._proposal
-
-    @proposal.setter
-    def proposal(self, x):
-        """
-        Sets the proposal
-        :param x: The new proposal
-        :type x: Proposal
-        """
-
-        if not isinstance(x, Proposal):
-            raise ValueError('`x` must be {:s}!'.format(Proposal.__name__))
-
-        self._proposal = x
 
     def _resample_state(self, weights):
         """
@@ -347,13 +334,11 @@ class ParticleFilter(BaseFilter, ABC):
         return out, mask
 
     def set_nparallel(self, n):
-        self._n_parallel = torch.Size([n])
+        if len(self.particles) > 1:
+            raise NotImplementedError('Currently only supports at most one level of nesting!')
 
-        temp = self.particles[-1] if len(self.particles) > 0 else self.particles
-        if n is not None:
-            self.particles = (*self._n_parallel, temp)
-        else:
-            self.particles = temp
+        self._n_parallel = torch.Size([n])
+        self.particles = (*self._n_parallel, *self.particles)
 
         if self._x_cur is not None:
             return self.initialize()
