@@ -44,7 +44,7 @@ class Tests(unittest.TestCase):
     # ===== Simple 2D model ===== #
     mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
     mvn = AffineProcess((fmvn, gmvn), (0.5, 1.), mvn, mvn)
-    a = torch.Tensor([1., 2.])
+    a = torch.tensor([1., 2.])
 
     mvnmodel = LinearGaussianObservations(mvn, a, 1.)
 

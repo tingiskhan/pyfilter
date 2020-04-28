@@ -4,6 +4,7 @@ from ..utils import get_ess
 from ..filters.base import ParticleFilter
 from ..kde import KernelDensityEstimate
 import torch
+from ..module import TensorContainer
 
 
 class SMC2(SequentialParticleAlgorithm):
@@ -18,16 +19,24 @@ class SMC2(SequentialParticleAlgorithm):
 
         super().__init__(filter_, particles)
 
+        # ===== When and how to update ===== #
         self._th = threshold
         self._kernel = kernel or SymmetricMH()
-
-        self._max_increases = max_increases
-        self._increases = 0
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
 
+        # ===== Some helpers to figure out whether to raise ===== #
+        self._max_increases = max_increases
+        self._increases = 0
+
+        # ===== Save data ===== #
+        self._y = TensorContainer()
+
     def _update(self, y):
+        # ===== Save data ===== #
+        self._y.append(y)
+
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
         self._w_rec += self.filter.result._loglikelihood[-1]
@@ -56,7 +65,7 @@ class SMC2(SequentialParticleAlgorithm):
         if self._iterator is not None:
             self._iterator.set_description(desc='{:s} - Rejuvenating particles'.format(str(self)))
 
-        self._kernel.set_data(self._y)
+        self._kernel.set_data(self._y.tensors)
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
@@ -86,7 +95,7 @@ class SMC2(SequentialParticleAlgorithm):
             msg = f'{str(self)} - Increasing particles from {oldparts} -> {self.filter.particles[-1]}'
             self._iterator.set_description(desc=msg)
 
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
+        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y.tensors, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = self.filter.result.loglikelihood.sum(dim=0) - oldlogl
@@ -107,6 +116,7 @@ class SMC2FW(SequentialParticleAlgorithm):
         :type kde: KernelDensityEstimate
         :param kwargs: Kwargs to SMC2
         """
+
         super().__init__(filter_, particles)
         self._smc2 = SMC2(self.filter, particles, **kwargs)
 
@@ -123,7 +133,8 @@ class SMC2FW(SequentialParticleAlgorithm):
         return self
 
     def _update(self, y):
-        if len(self._y) < self._switch:
+        # ===== Whether to use SMC2 or new ===== #
+        if len(self._smc2._y) < self._switch:
             # TODO: Better to do this on instantiation instead
             self._smc2._iterator = self._iterator
             return self._smc2.update(y)

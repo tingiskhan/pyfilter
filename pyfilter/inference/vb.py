@@ -3,7 +3,6 @@ import torch
 from torch import optim
 import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
-from ..filters.base import BaseFilter
 from ..timeseries import StateSpaceModel
 from .utils import stacker
 from ..utils import EPS, unflattify
@@ -28,23 +27,28 @@ class VariationalBayes(BatchAlgorithm):
         :type optkwargs: dict
         """
 
-        super().__init__(None)
+        super().__init__()
         self._model = model
         self._numsamples = num_samples
 
+        # ===== Approximations ===== #
         self._is_ssm = isinstance(model, StateSpaceModel)
+        self._s_approx = None
 
-        self._s_approx = approx or StateMeanField(model.hidden if self._is_ssm else model)
+        if self._is_ssm:
+            self._s_approx = approx or StateMeanField(model.hidden)
+
         self._p_approx = ParameterMeanField()
 
+        # ===== Helpers ===== #
         self._mask = None
+        self._runavg = 0.
+        self._decay = 0.975
 
+        # ===== Optimization stuff ===== #
         self._opt_type = optimizer
         self._maxiters = int(maxiters)
         self.optkwargs = optkwargs or dict()
-
-        self._runavg = 0.
-        self._decay = 0.975
 
     @property
     def s_approximation(self):
@@ -52,8 +56,6 @@ class VariationalBayes(BatchAlgorithm):
         Returns the resulting variational approximation of the states.
         :rtype: BaseApproximation
         """
-        if not self._is_ssm:
-            raise ValueError('There is no state approximation!')
 
         return self._s_approx
 
@@ -157,40 +159,3 @@ class VariationalBayes(BatchAlgorithm):
             it += 1
 
         return self
-
-
-class VariationalSMC(VariationalBayes):
-    def __init__(self, filter_, maxiters=100, **kwargs):
-        """
-        Implementation of variational smc
-        :param filter_: The filter to use
-        :type filter_: BaseFilter
-        """
-        raise NotImplementedError('Currently does not work')
-
-        super().__init__(model=filter_.ssm, maxiters=maxiters, **kwargs)
-        self._filter = filter_.set_nparallel(self._numsamples)
-
-    def _initialize(self, y):
-        self.filter._rsample = True
-
-        # ===== Sample model in place for a primitive version of initialization ===== #
-        self._model.sample_params(self._numsamples)
-        _, self._mask = stacker(self._model.theta_dists)  # NB: We create a mask once
-
-        # ===== Setup the parameter approximation ===== #
-        self._p_approx = self._p_approx.initialize(self._model.theta_dists)
-
-        return self._p_approx.get_parameters()
-
-    def loss(self, y):
-        self.filter.reset()
-
-        # ===== Sample parameters ===== #
-        self.sample_params()
-
-        # ===== Loss function ===== #
-        self.filter.initialize().longfilter(y, bar=False)
-        ll = self.filter.loglikelihood.mean()
-
-        return -(ll + self._model.p_prior(transformed=True).mean() + self._p_approx.entropy())

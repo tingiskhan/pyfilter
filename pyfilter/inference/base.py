@@ -8,51 +8,33 @@ from ..utils import normalize
 
 
 class BaseAlgorithm(Module, ABC):
-    def __init__(self, filter_):
+    def __init__(self):
         """
         Implements a base class for inference, i.e. inference for inferring parameters.
-        :param filter_: The filter
-        :type filter_: BaseFilter
         """
 
         super().__init__()
 
-        self._filter = filter_      # type: BaseFilter
-        self._y = tuple()           # type: tuple[torch.Tensor]
         self._iterator = None
 
-    @property
-    def filter(self):
-        """
-        Returns the filter
-        :rtype: BaseFilter
-        """
-
-        return self._filter
-
-    @filter.setter
-    def filter(self, x):
-        """
-        Sets the filter
-        :param x: The new filter
-        :type x: BaseFilter
-        """
-
-        if not isinstance(x, type(self.filter)):
-            raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
-
-        self._filter = x
-
+    @enforce_tensor
     def fit(self, y):
         """
         Fits the algorithm to data.
         :param y: The data to fit
-        :type y: numpy.ndarray|pandas.DataFrame|torch.Tensor
+        :type y: torch.Tensor
         :return: Self
         :rtype: BaseAlgorithm
         """
 
-        self._y = y
+        self._fit(y)
+
+        return self
+
+    def _fit(self, y):
+        """
+        Method to be overridden by user.
+        """
 
         raise NotImplementedError()
 
@@ -81,7 +63,42 @@ class BaseAlgorithm(Module, ABC):
         return str(self.__class__.__name__)
 
 
-class SequentialAlgorithm(BaseAlgorithm, ABC):
+class BaseFilterAlgorithm(BaseAlgorithm, ABC):
+    def __init__(self, filter_):
+        """
+        Base class for algorithms utilizing filters for inference.
+        :param filter_: The filter
+        :type filter_: BaseFilter
+        """
+
+        super().__init__()
+
+        self._filter = filter_
+
+    @property
+    def filter(self):
+        """
+        Returns the filter
+        :rtype: BaseFilter
+        """
+
+        return self._filter
+
+    @filter.setter
+    def filter(self, x):
+        """
+        Sets the filter
+        :param x: The new filter
+        :type x: BaseFilter
+        """
+
+        if not isinstance(x, type(self.filter)):
+            raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
+
+        self._filter = x
+
+
+class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
     """
     Algorithm for online inference.
     """
@@ -106,10 +123,10 @@ class SequentialAlgorithm(BaseAlgorithm, ABC):
         :return: Self
         :rtype: SequentialAlgorithm
         """
-        self._y += (y.clone(),)
+
         return self._update(y)
 
-    def fit(self, y, bar=True):
+    def _fit(self, y, bar=True):
         iterator = y
         if bar:
             self._iterator = iterator = tqdm(y, desc=str(self))
@@ -129,8 +146,8 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         :param particles: The number of particles to use
         :type particles: int
         """
+
         super().__init__(filter_)
-        self._filter.set_nparallel(particles)
 
         # ===== Weights ===== #
         self._w_rec = None
@@ -143,7 +160,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
     def particles(self):
         """
         Returns the number of particles.
-        :rtype: torch.Tensor
+        :rtype: torch.Size
         """
 
         return self._particles
@@ -160,8 +177,10 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         """
         Overwrites the initialization.
         :return: Self
-        :rtype: NESS
+        :rtype: SequentialParticleAlgorithm
         """
+
+        self._filter.set_nparallel(*self.particles)
 
         self.filter.ssm.sample_params(self.particles)
         self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
@@ -200,23 +219,14 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
     Algorithm for batch inference.
     """
 
-    def _fit(self, y):
+
+class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
+    def __init__(self, filter_):
         """
-        The method to override by sub-classes.
-        :param y: The data in iterator format
-        :type y: iterator
-        :return: Self
-        :rtype: BatchAlgorithm
+        Implements a class of inference algorithms using filters for inference.
         """
 
-        raise NotImplementedError()
-
-    @enforce_tensor
-    def fit(self, y):
-        self._y = y
-        self.initialize()._fit(y)
-
-        return self
+        super().__init__(filter_)
 
 
 def experimental(func):

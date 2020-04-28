@@ -33,6 +33,12 @@ class NESSMC2(SequentialParticleAlgorithm):
     def logged_ess(self):
         return torch.cat((self._smc2.logged_ess, self._ness.logged_ess))
 
+    def modules(self):
+        return {
+            '_smc2': self._smc2,
+            '_ness': self._ness
+        }
+
     def initialize(self):
         self._smc2.initialize()
         return self
@@ -48,7 +54,7 @@ class NESSMC2(SequentialParticleAlgorithm):
     def _w_rec(self, x):
         return
 
-    def fit(self, y, bar=True):
+    def _fit(self, y, bar=True):
         iterator = y
         if bar:
             self._iterator = self._smc2._iterator = self._ness._iterator = iterator = tqdm(y, desc=str(self))
@@ -68,7 +74,7 @@ class NESSMC2(SequentialParticleAlgorithm):
             self._switched = True
 
             threshold = self._ness._kernel._th * self._smc2._w_rec.shape[0]
-            if get_ess(self._smc2._w_rec) <  threshold and self._updateonhandshake:
+            if get_ess(self._smc2._w_rec) < threshold and self._updateonhandshake:
                 self._smc2.rejuvenate()
 
             self._ness._w_rec = self._smc2._w_rec

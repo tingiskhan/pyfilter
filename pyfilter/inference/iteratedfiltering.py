@@ -1,4 +1,4 @@
-from .base import BatchAlgorithm, preliminary
+from .base import BatchFilterAlgorithm, preliminary
 from ..filters.base import ParticleFilter
 from ..filters import SISR
 from ..resampling import residual
@@ -8,7 +8,7 @@ from math import log, exp
 import torch
 
 
-class IteratedFilteringV2(BatchAlgorithm):
+class IteratedFilteringV2(BatchFilterAlgorithm):
     @preliminary
     def __init__(self, filter_, iterations=30, resampler=residual, cooling=0.1):
         """
@@ -22,12 +22,9 @@ class IteratedFilteringV2(BatchAlgorithm):
         """
 
         if not isinstance(filter_, SISR):
-            raise NotImplementedError('Only works for filters of type {}!'.format(SISR.__class__.__name__))
+            raise NotImplementedError(f'Only works for filters of type {SISR.__name__}!')
 
         super().__init__(filter_)
-
-        self._particles = self.filter._particles
-        self.filter._ess = 0.
 
         self._iters = iterations
         self._resampler = resampler
@@ -38,14 +35,14 @@ class IteratedFilteringV2(BatchAlgorithm):
         self._cooling = log(1 / cooling) / iterations
 
     def initialize(self):
-        self.filter.ssm.sample_params(self._particles)
+        self.filter.ssm.sample_params(self.filter.particles)
         return self
 
     def _fit(self, y):
         iterator = tqdm(range(self._iters))
         for m in iterator:
             # ===== Iterate over data ===== #
-            iterator.set_description('{:s} - Iteration {:d}'.format(str(self), m + 1))
+            iterator.set_description(f'{str(self)} - Iteration {m + 1:d}')
 
             self.filter.reset().initialize()
 
