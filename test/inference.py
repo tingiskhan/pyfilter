@@ -54,7 +54,7 @@ class MyTestCase(unittest.TestCase):
         oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
 
         hidden2d = AffineProcess((fmvn, gmvn), priors, mvn, mvn)
-        twod = LinearGaussianObservations(hidden2d, torch.eye(2), scale=0.1)
+        twod = LinearGaussianObservations(hidden2d, torch.eye(2), scale=0.1 * torch.ones(2))
 
         particles = 1000
         # ====== Run inference ===== #
