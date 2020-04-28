@@ -41,7 +41,7 @@ class LinearGaussianObservations(Proposal):
 
         # ===== Define covariance ===== #
         ttc = tc.transpose(-2, -1)
-        diag_o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 1 else o_var_inv.unsqueeze(-1))
+        diag_o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 0 else o_var_inv.unsqueeze(-1))
         t2 = torch.matmul(ttc, torch.matmul(diag_o_var_inv, tc))
 
         cov = (construct_diag(h_var_inv) + t2).inverse()
