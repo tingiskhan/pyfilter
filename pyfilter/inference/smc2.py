@@ -1,8 +1,8 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
+from .kernels import ParticleMetropolisHastings, SymmetricMH, OnlineKernel
 from ..utils import get_ess
 from ..filters.base import ParticleFilter
-from ..kde import KernelDensityEstimate
+from ..kde import KernelDensityEstimate, MultivariateGaussian
 import torch
 from ..module import TensorContainer
 
@@ -125,7 +125,7 @@ class SMC2FW(SequentialParticleAlgorithm):
         self._num_iters = 0
 
         # ===== Resampling related ===== #
-        self._kernel = KernelDensitySampler(kde=kde)
+        self._kernel = OnlineKernel(kde=kde or MultivariateGaussian())
         self._bl = block_len
 
     def initialize(self):
