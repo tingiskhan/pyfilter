@@ -43,7 +43,7 @@ class BaseKernel(object):
 
         return self
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, log_weights):
         """
         Defines the function for updating the parameters for the user to override. Should return whether it resampled or
         not.
@@ -51,8 +51,10 @@ class BaseKernel(object):
         :type parameters: tuple[Parameter]
         :param filter_: The filter
         :type filter_: BaseFilter
-        :param weights: The weights to be passed
+        :param weights: The weights to be passed. A normalized copy of log_weights
         :type weights: torch.Tensor
+        :param log_weights: The log weights to manipulate in place if resampling
+        :type log_weights: torch.Tensor
         :return: Self
         :rtype: BaseKernel
         """
@@ -67,7 +69,7 @@ class BaseKernel(object):
         :type parameters: tuple[Parameter]
         :param filter_: The filter
         :type filter_: BaseFilter
-        :param weights: The weights to be passed
+        :param weights: The weights to use for propagating.
         :type weights: torch.Tensor
         :return: Self
         :rtype: BaseKernel
@@ -78,9 +80,7 @@ class BaseKernel(object):
         if self._record_stats:
             self.record_stats(parameters, w)
 
-        resampled = self._update(parameters, filter_, w)
-        if resampled:
-            weights[:] = 0.
+        self._update(parameters, filter_, w, weights)
 
         return self
 

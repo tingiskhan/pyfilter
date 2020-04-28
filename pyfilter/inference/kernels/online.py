@@ -17,43 +17,42 @@ class OnlineKernel(BaseKernel):
         super().__init__(**kwargs)
 
         self._kde = kde or ShrinkingKernel()
-        self._resampled = None
         self._th = ess
 
-    def _resample(self, filter_, weights):
+    def _resample(self, filter_, weights, log_weights):
         """
         Helper method for performing resampling.
         :param filter_: The filter to resample
         :type filter_: BaseFilter
         :param weights: The weights
         :type weights: torch.Tensor
+        :param log_weights: The log-weights to update if resampling
+        :type log_weights: torch.Tensor
         :rtype: torch.Tensor
         """
-
-        self._resampled = False
 
         if get_ess(weights, normalized=True) > self._th * weights.numel() and not (weights == 0.).any():
             return torch.arange(weights.numel())
 
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
-        self._resampled = True
+        log_weights[:] = 0.
 
         return inds
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, log_weights):
         # ===== Perform shrinkage ===== #
         stacked = stacker(parameters, lambda u: u.t_values)
         kde = self._kde.fit(stacked.concated, weights)
 
-        inds = self._resample(filter_, weights)
+        inds = self._resample(filter_, weights, log_weights)
         jittered = kde.sample(inds=inds)
 
         # ===== Mutate parameters ===== #
         for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
             p.t_values = unflattify(jittered[:, msk], ps)
 
-        return self._resampled
+        return self
 
 
 # TODO: The eps is completely arbitrary... but kinda influences the posterior
@@ -72,7 +71,7 @@ class AdaptiveKernel(OnlineKernel):
         self._shrink_kde = ShrinkingKernel()
         self._non_shrink = NonShrinkingKernel()
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, log_weights):
         # ===== Define stacks ===== #
         stacked = stacker(parameters, lambda u: u.t_values)
 
@@ -94,7 +93,7 @@ class AdaptiveKernel(OnlineKernel):
         self._switched = (var_diff.abs() < self._eps) & ~self._switched
 
         # ===== Resample ===== #
-        inds = self._resample(filter_, weights)
+        inds = self._resample(filter_, weights, log_weights)
 
         # ===== Perform shrinkage ===== #
         jittered = torch.empty_like(stacked.concated)
@@ -111,7 +110,7 @@ class AdaptiveKernel(OnlineKernel):
         for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
             p.t_values = unflattify(jittered[:, msk], ps)
 
-        return self._resampled
+        return self
 
 
 class KernelDensitySampler(BaseKernel):
@@ -124,7 +123,7 @@ class KernelDensitySampler(BaseKernel):
         super().__init__(**kwargs)
         self._kde = kde or MultivariateGaussian()
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, weights, log_weights):
         stacked = stacker(parameters, lambda u: u.t_values)
 
         # ===== Calculate covariance ===== #
@@ -139,4 +138,6 @@ class KernelDensitySampler(BaseKernel):
         for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
             p.t_values = unflattify(samples[:, msk], ps)
 
-        return True
+        log_weights[:] = 0.
+
+        return self
