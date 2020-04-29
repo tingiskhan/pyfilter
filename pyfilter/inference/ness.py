@@ -1,7 +1,7 @@
 from .base import SequentialParticleAlgorithm
 from ..utils import get_ess
 from .kernels import OnlineKernel
-from ..kde import ShrinkingKernel, KernelDensityEstimate
+from ..kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 
 
@@ -15,7 +15,7 @@ class NESS(SequentialParticleAlgorithm):
 
         super().__init__(filter_, particles)
 
-        self._kernel = OnlineKernel(kde=kde or ShrinkingKernel())
+        self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel())
         self._threshold = threshold * particles
 
         if not isinstance(self._kernel, OnlineKernel):
