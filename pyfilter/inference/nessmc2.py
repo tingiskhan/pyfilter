@@ -2,7 +2,6 @@ from .base import SequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 from tqdm import tqdm
-from ..utils import get_ess
 import torch
 from ..module import TensorContainer
 
@@ -73,11 +72,10 @@ class NESSMC2(SequentialParticleAlgorithm):
         if not self._switched:
             self._switched = True
 
-            threshold = self._ness._threshold * self._smc2._w_rec.shape[0]
-            if get_ess(self._smc2._w_rec) < threshold and self._updateonhandshake:
+            if self._smc2._logged_ess[-1] < self._ness._threshold and self._updateonhandshake:
                 self._smc2.rejuvenate()
             else:
-                self._ness._logged_ess = TensorContainer(self._smc2.logged_ess[-1])
+                self._ness._logged_ess = TensorContainer(self._smc2._logged_ess[-1])
 
             self._ness._w_rec = self._smc2._w_rec
             self._iterator.set_description(desc=str(self._ness))
