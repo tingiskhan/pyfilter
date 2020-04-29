@@ -42,9 +42,9 @@ def searchsorted2d(a, b):
     """
     m, n = a.shape
     max_num = max(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * torch.arange(a.shape[0], dtype=max_num.dtype)[:, None]
-    p = np.searchsorted((a + r).view(-1), (b + r).view(-1)).reshape(m, -1)
-    return p - n * torch.arange(m, dtype=p.dtype)[:, None]
+    r = max_num * torch.arange(a.shape[0], dtype=max_num.dtype, device=a.device)[:, None]
+    p = torch.bucketize((a + r).view(-1), (b + r).view(-1)).reshape(m, -1)
+    return p - n * torch.arange(m, dtype=p.dtype, device=a.device)[:, None]
 
 
 def choose(array, indices):
