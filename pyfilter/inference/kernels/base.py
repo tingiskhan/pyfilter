@@ -1,7 +1,7 @@
 from ...utils import normalize
 from ..utils import stacker
 import numpy as np
-from ...resampling import residual
+from ...resampling import residual, systematic
 import torch
 
 
@@ -16,7 +16,7 @@ def finite_decorator(func):
 
 
 class BaseKernel(object):
-    def __init__(self, record_stats=False, resampling=residual):
+    def __init__(self, record_stats=False, resampling=systematic):
         """
         The base kernel used for propagating parameters.
         :param record_stats: Whether to record the statistics
