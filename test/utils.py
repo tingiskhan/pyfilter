@@ -115,7 +115,7 @@ class Tests(unittest.TestCase):
         temp += 1
 
         for p, v in zip(obj._params, obj._views):
-            assert (p == v).all()
+            assert (p == v).all() and v._base is p
 
         # ===== Check state dict ===== #
         sd = obj.state_dict()
