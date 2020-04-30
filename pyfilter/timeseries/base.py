@@ -380,3 +380,14 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     def _propagate_u(self, x, u):
         raise NotImplementedError()
+
+    def prop_apf(self, x):
+        """
+        Method used by APF. Propagates the state one step forward.
+        :param x: The previous state
+        :type x: torch.Tensor
+        :return: The new state
+        :rtype: torch.Tensor
+        """
+
+        raise NotImplementedError()

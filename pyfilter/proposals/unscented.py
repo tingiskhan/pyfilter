@@ -14,9 +14,6 @@ class Unscented(Proposal):
         self._initialized = False
 
     def set_model(self, model):
-        if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
-            raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
-
         self._model = model
         self._ut = UnscentedTransform(self._model)
 
