@@ -3,12 +3,10 @@ from collections import Iterable
 from .normalization import normalize
 import torch
 from torch.distributions import Distribution
-import numbers
 from math import sqrt
 from scipy.stats import chi2
 
 
-_NATIVE = (bool, str, numbers.Number)
 EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
