@@ -10,7 +10,7 @@ from ..utils import normalize
 class BaseAlgorithm(Module, ABC):
     def __init__(self):
         """
-        Implements a base class for inference, i.e. inference for inferring parameters.
+        Implements a base class for inference.
         """
 
         super().__init__()
@@ -100,7 +100,7 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
 
 class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
     """
-    Algorithm for online inference.
+    Algorithm for sequential inference.
     """
 
     def _update(self, y):

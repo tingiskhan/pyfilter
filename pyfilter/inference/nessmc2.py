@@ -7,7 +7,7 @@ from ..module import TensorContainer
 
 
 class NESSMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, switch=500, smc2_th=0.5, update_switch=True, smc2_kernel=None, **nesskwargs):
+    def __init__(self, filter_, particles, switch=500, update_switch=True, smc2kw=None, nk=None):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
@@ -16,6 +16,10 @@ class NESSMC2(SequentialParticleAlgorithm):
         :type switch: int
         :param update_switch: Whether to perform MCMC move on switch if ESS is below threshold of NESS
         :type update_switch: bool
+        :param smc2kw: Any key worded arguments to SMC2
+        :type smc2kw: dict[str, object]
+        :param nk: Any key worded arguments for NESS
+        :type nk: dict[str, object]
         """
 
         super().__init__(filter_, particles)
@@ -25,8 +29,8 @@ class NESSMC2(SequentialParticleAlgorithm):
         self._updateonhandshake = update_switch
 
         # ===== Set some key-worded arguments ===== #
-        self._smc2 = SMC2(self.filter, particles, threshold=smc2_th, kernel=smc2_kernel)
-        self._ness = NESS(self.filter, particles, **nesskwargs)
+        self._smc2 = SMC2(self.filter, particles, **(smc2kw or dict()))
+        self._ness = NESS(self.filter, particles, **(nk or dict()))
 
     @property
     def logged_ess(self):

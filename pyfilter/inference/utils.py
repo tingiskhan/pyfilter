@@ -6,7 +6,7 @@ from ..utils import unflattify
 class StackedObject(object):
     def __init__(self, concated, mask, prev_shape):
         """
-        Helper object
+        Object for storing the results of stacking tensors from `stacker`.
         """
 
         self.concated = concated

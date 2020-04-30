@@ -4,6 +4,7 @@ from torch import optim
 import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..timeseries import StateSpaceModel
+from ..timeseries.base import StochasticProcess
 from .utils import stacker
 from ..utils import EPS, unflattify
 
@@ -12,9 +13,10 @@ from ..utils import EPS, unflattify
 class VariationalBayes(BatchAlgorithm):
     def __init__(self, model, num_samples=4, approx=None, optimizer=optim.Adam, maxiters=30e3, optkwargs=None):
         """
-        Implements Variational Bayes.
+        Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
+        `StochasticProcess`.
         :param model: The model
-        :type model: StateSpaceModel|pyfilter.timeseries.base.StochasticProcess
+        :type model: StateSpaceModel|StochasticProcess
         :param num_samples: The number of samples
         :type num_samples: int
         :param approx: The variational approximation to use for the latent space
