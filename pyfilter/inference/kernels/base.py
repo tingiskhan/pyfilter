@@ -18,7 +18,7 @@ def finite_decorator(func):
 class BaseKernel(object):
     def __init__(self, record_stats=False, resampling=systematic):
         """
-        The base kernel used for propagating parameters.
+        The base kernel used for updating the collection of particles approximating the posterior.
         :param record_stats: Whether to record the statistics
         :type record_stats: bool
         """
@@ -43,18 +43,15 @@ class BaseKernel(object):
 
         return self
 
-    def _update(self, parameters, filter_, weights, log_weights):
+    def _update(self, parameters, filter_, weights):
         """
-        Defines the function for updating the parameters for the user to override. Should return whether it resampled or
-        not.
+        The method for the user to override.
         :param parameters: The parameters of the model to update
         :type parameters: tuple[Parameter]
         :param filter_: The filter
         :type filter_: BaseFilter
         :param weights: The weights to be passed. A normalized copy of log_weights
         :type weights: torch.Tensor
-        :param log_weights: The log weights to manipulate in place if resampling
-        :type log_weights: torch.Tensor
         :return: Self
         :rtype: BaseKernel
         """
@@ -80,7 +77,7 @@ class BaseKernel(object):
         if self._record_stats:
             self.record_stats(parameters, w)
 
-        self._update(parameters, filter_, w, weights)
+        self._update(parameters, filter_, w)
 
         return self
 

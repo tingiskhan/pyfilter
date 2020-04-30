@@ -72,7 +72,7 @@ class ParticleMetropolisHastings(BaseKernel):
         """
         return self
 
-    def _update(self, parameters, filter_, weights, log_weights):
+    def _update(self, parameters, filter_, weights):
         for i in range(self._nsteps):
             # ===== Construct distribution ===== #
             stacked = stacker(parameters, lambda u: u.t_values)
@@ -110,8 +110,6 @@ class ParticleMetropolisHastings(BaseKernel):
                 filter_.ssm.exchange(toaccept, t_filt.ssm)
 
             weights = normalize(filter_.result.loglikelihood.sum(dim=0))
-
-        log_weights[:] = 0.
 
         return self
 

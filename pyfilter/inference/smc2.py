@@ -13,7 +13,7 @@ class SMC2(SequentialParticleAlgorithm):
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :type threshold: float
-        :param kernel: The kernel to use
+        :param kernel: The kernel to use when updating the parameters
         :type kernel: ParticleMetropolisHastings
         """
 
@@ -51,6 +51,8 @@ class SMC2(SequentialParticleAlgorithm):
 
             if self._iterator is not None:
                 self._iterator.set_description(desc=str(self))
+
+            self._w_rec[:] = 0.
 
         return self
 
@@ -153,6 +155,7 @@ class SMC2FW(SequentialParticleAlgorithm):
         if self._num_iters >= self._bl or (~isfinite(self._w_rec)).any():
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._num_iters = 0
+            self._w_rec[:] = 0.
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)

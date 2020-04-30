@@ -9,7 +9,7 @@ class NESS(SequentialParticleAlgorithm):
     def __init__(self, filter_, particles, threshold=0.9, kde=None):
         """
         Implements the NESS algorithm by Miguez and Crisan.
-        :param kde: The kernel density estimator
+        :param kde: The kernel density estimator to use for sampling new parameters.
         :type kde: KernelDensityEstimate
         """
 
@@ -25,6 +25,7 @@ class NESS(SequentialParticleAlgorithm):
         # ===== Jitter ===== #
         if (any(self._logged_ess) and self._logged_ess[-1] < self._threshold) or (~isfinite(self._w_rec)).any():
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
+            self._w_rec[:] = 0.
 
         # ===== Propagate filter ===== #
         self.filter.filter(y)
