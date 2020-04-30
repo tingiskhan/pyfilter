@@ -21,13 +21,21 @@ class BaseApproximation(object):
 
         return self
 
+    def dist(self):
+        """
+        Returns the distribution.
+        :rtype: torch.distributions.Distribution
+        """
+
+        raise NotImplementedError()
+
     def entropy(self):
         """
         Returns the entropy of the variational approximation
         :rtype: torch.Tensor
         """
 
-        return self._dist.entropy()
+        return self.dist().entropy()
 
     def sample(self, num_samples=None):
         """
@@ -38,7 +46,7 @@ class BaseApproximation(object):
         """
 
         samples = (num_samples,) if isinstance(num_samples, int) else num_samples
-        return self._dist.rsample(samples or torch.Size([]))
+        return self.dist().rsample(samples or torch.Size([]))
 
     def get_parameters(self):
         """
