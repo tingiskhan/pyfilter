@@ -16,9 +16,6 @@ class LinearGaussianObservations(Proposal):
         super().__init__()
         self._mat = None
 
-    def _get_mat_and_fix_y(self, x, y):
-        return self._model.observable._theta_vals[0], y
-
     def set_model(self, model):
         if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
             raise ValueError('Model combination not supported!')
@@ -62,7 +59,7 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = 1 / scale ** 2
 
         # ===== Observable ===== #
-        c, y = self._get_mat_and_fix_y(x, y)
+        c = self._model.observable.theta_vals[0]
         o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
 
         if self._model.hidden_ndim == 0:
