@@ -101,7 +101,7 @@ class AffineEulerMaruyama(GeneralEulerMaruyama):
         """
         Euler Maruyama method for SDEs of affine nature. A generalization of OneStepMaruyama that allows multiple
         recursions. The difference between this class and GeneralEulerMaruyama is that you need not specify prop_state
-        as that is assumed to follow the structure of OneStepEulerMaruyama.
+        as it is assumed to follow the structure of OneStepEulerMaruyama.
         :param dynamics: A tuple of callable. Should _not_ include `dt` as the last argument
         :type dynamics: tuple[callable]
         """
