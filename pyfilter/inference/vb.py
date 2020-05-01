@@ -1,13 +1,13 @@
 from .base import BatchAlgorithm
 import torch
-from torch.optim import Adam
+from torch.optim import Adadelta as Adam
 import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..timeseries import StateSpaceModel
 from ..timeseries.base import StochasticProcess
 from .utils import stacker
 from ..utils import EPS, unflattify
-from ..filters import SISR
+from ..filters import UKF
 
 
 # TODO: Shape not working correctly when transformed != untransformed
@@ -103,7 +103,7 @@ class VariationalBayes(BatchAlgorithm):
 
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
-                filt = SISR(self._model.copy(), 1000).viewify_params((self._ns, 1)).set_nparallel(self._ns)
+                filt = UKF(self._model.copy()).viewify_params((self._ns, 1)).set_nparallel(self._ns)
                 filt.initialize().longfilter(y, bar=False)
 
                 maxind = filt.result.loglikelihood.sum(0).argmax()
