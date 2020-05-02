@@ -25,7 +25,7 @@ class UKF(BaseKalmanFilter):
         self._ut_res = None
 
     def initialize(self):
-        self._ut_res = self._ut.initialize()
+        self._ut_res = self._ut.initialize(self._n_parallel)
 
         return self
 
