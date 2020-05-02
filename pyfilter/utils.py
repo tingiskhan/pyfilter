@@ -25,24 +25,6 @@ def get_ess(w, normalized=False):
     return w.sum(-1) ** 2 / (w ** 2).sum(-1)
 
 
-def searchsorted2d(a, b):
-    """
-    Searches a sorted 2D array along the second axis. Basically performs a vectorized digitize. Solution provided here:
-    https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy.
-    :param a: The array to take the elements from
-    :type a: torch.Tensor
-    :param b: The indices of the elements in `a`.
-    :type b: torch.Tensor
-    :return: An array of indices
-    :rtype: torch.Tensor
-    """
-    m, n = a.shape
-    max_num = max(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * torch.arange(a.shape[0], dtype=max_num.dtype, device=a.device)[:, None]
-    p = torch.bucketize((a + r).view(-1), (b + r).view(-1)).reshape(m, -1)
-    return p - n * torch.arange(m, dtype=p.dtype, device=a.device)[:, None]
-
-
 def choose(array, indices):
     """
     Function for choosing on either columns or index.

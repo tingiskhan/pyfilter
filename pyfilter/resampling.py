@@ -1,6 +1,4 @@
-import numpy as np
 from .normalization import normalize
-from .utils import searchsorted2d
 import torch
 
 
@@ -20,7 +18,9 @@ def _matrix(weights, u):
     probs = (index_range + u) / n
     cumsum = weights.cumsum(-1)
 
-    return searchsorted2d(probs, cumsum)
+    cumsum[..., -1] = 1.
+
+    return torch.searchsorted(cumsum, probs)
 
 
 def _vector(weights, u):
@@ -35,8 +35,9 @@ def _vector(weights, u):
     probs = (torch.arange(n, dtype=u.dtype, device=weights.device) + u) / n
 
     cumsum = weights.cumsum(0)
+    cumsum[..., -1] = 1.
 
-    return torch.bucketize(probs, cumsum)
+    return torch.searchsorted(cumsum, probs)
 
 
 def systematic(w, normalized=False, u=None):
