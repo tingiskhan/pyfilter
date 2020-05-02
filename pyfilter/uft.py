@@ -264,7 +264,7 @@ class UnscentedFilterTransform(Module):
         xmean, xcov = _get_meancov(uft_pred.spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(uft_pred.spy, self._wm, self._wc)
 
-        return (xmean, xcov), (ymean, ycov)
+        return UFTCorrectionResult(xmean, xcov, ymean, ycov)
 
     def correct(self, y, uft_pred):
         """
@@ -278,7 +278,8 @@ class UnscentedFilterTransform(Module):
         """
 
         # ===== Calculate mean and covariance ====== #
-        (xmean, xcov), (ymean, ycov) = self.calc_mean_cov(uft_pred)
+        correction = self.calc_mean_cov(uft_pred)
+        xmean, xcov, ymean, ycov = correction.xm, correction.xc, correction.ym, correction.yc
 
         # ==== Calculate cross covariance ==== #
         if xmean.dim() > 1:

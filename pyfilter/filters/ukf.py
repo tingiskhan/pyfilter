@@ -1,6 +1,5 @@
 from .base import BaseKalmanFilter
-from ..unscentedtransform import UnscentedTransform
-from ..uft import UnscentedFilterTransform
+from ..uft import UnscentedFilterTransform, UFTCorrectionResult
 from ..utils import choose
 import torch
 
@@ -43,19 +42,19 @@ class UKF(BaseKalmanFilter):
 
     def predict(self, steps, *args, **kwargs):
         p = self._ut.predict(self._ut_res)
-        (xm, xc), (ym, yc) = self._ut.calc_mean_cov(p)
+        c = self._ut.calc_mean_cov(p)
 
-        xres = torch.empty((steps, *xm.shape))
-        yres = torch.empty((steps, *ym.shape))
+        xres = torch.empty((steps, *c.xm.shape))
+        yres = torch.empty((steps, *c.ym.shape))
 
-        xres[0] = xm
-        yres[0] = ym
+        xres[0] = c.xm
+        yres[0] = c.ym
 
         for i in range(steps - 1):
-            spx, spy = self._ut.propagate_sps(xm, xc)
-            (xm, xc, _), (ym, yc, _) = self._ut.get_meancov(spx, spy)
+            p = self._ut.predict(c)
+            c = self._ut.calc_mean_cov(p)
 
-            xres[i + 1] = xm
-            yres[i + 1] = ym
+            xres[i + 1] = c.xm
+            yres[i + 1] = c.ym
 
         return xres, yres
