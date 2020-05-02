@@ -1,10 +1,8 @@
-import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
 from torch.distributions import Distribution
 from math import sqrt
-from scipy.stats import chi2
 
 
 EPS = sqrt(torch.finfo(torch.float32).eps)
