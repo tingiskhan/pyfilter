@@ -1,7 +1,6 @@
 from .base import Proposal
-from ..unscentedtransform import UnscentedTransform
+from ..uft import UnscentedFilterTransform, UFTCorrectionResult
 from ..utils import choose
-from ..timeseries import AffineProcess
 
 
 class Unscented(Proposal):
@@ -10,12 +9,12 @@ class Unscented(Proposal):
         Implements the unscented proposal by van der Merwe et al.
         """
         super().__init__()
-        self._ut = None
-        self._initialized = False
+        self._ut = None         # type: UnscentedFilterTransform
+        self._ut_res = None     # type: UFTCorrectionResult
 
     def set_model(self, model):
         self._model = model
-        self._ut = UnscentedTransform(self._model)
+        self._ut = UnscentedFilterTransform(self._model)
 
         return self
 
@@ -23,19 +22,20 @@ class Unscented(Proposal):
         return {'_ut': self._ut} if self._ut is not None else {}
 
     def construct(self, y, x):
-        if not self._initialized:
-            self._ut.initialize(x)
+        if self._ut_res is None:
+            self._ut_res = self._ut.initialize(x.shape[:-1] if self._model.hidden_ndim > 0 else x.shape)
 
-        self._ut = self._ut.construct(y)
-        self._kernel = self._ut.x_dist
+        p = self._ut.predict(self._ut_res)
+        self._ut_res = self._ut.correct(y, p)
+        self._kernel = self._ut_res.x_dist()
 
         return self
 
     def resample(self, inds):
-        if not self._initialized:
+        if self._ut_res is None:
             return self
 
-        self._ut.xmean = choose(self._ut.xmean, inds)
-        self._ut.xcov = choose(self._ut.xcov, inds)
+        self._ut_res.xm = choose(self._ut_res.xm, inds)
+        self._ut_res.xc = choose(self._ut_res.xc, inds)
 
         return self
