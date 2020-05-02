@@ -234,10 +234,6 @@ class UnscentedFilterTransform(Module):
         """
 
         self._mean[..., self._sslc] = mean
-
-        # if self._model.hidden_ndim > 0:
-        #     cov = construct_diag(cov)
-
         self._cov[..., self._sslc, self._sslc] = cov
 
         cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
@@ -304,6 +300,6 @@ class UnscentedFilterTransform(Module):
         txmean = xmean + torch.matmul(gain, (y - ymean).unsqueeze(-1))[..., 0]
 
         temp = torch.matmul(ycov, gain.transpose(-1, -2))
-        txcov = ycov - torch.matmul(gain, temp)
+        txcov = xcov - torch.matmul(gain, temp)
 
         return UFTCorrectionResult(txmean, txcov, ymean, ycov)
