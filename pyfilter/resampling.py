@@ -12,8 +12,7 @@ def _matrix(weights, u):
     :rtype: torch.Tensor
     """
     n = weights.shape[1]
-    d = weights.device
-    index_range = torch.arange(n, dtype=u.dtype, device=d).unsqueeze(0)
+    index_range = torch.arange(n, dtype=u.dtype, device=weights.device).unsqueeze(0)
 
     probs = (index_range + u) / n
     cumsum = weights.cumsum(-1)
