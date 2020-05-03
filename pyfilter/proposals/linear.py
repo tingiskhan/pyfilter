@@ -69,3 +69,31 @@ class LinearGaussianObservations(Proposal):
 
         return self
 
+    def pre_weight(self, y, x):
+        hloc, hscale = self._model.hidden.mean_scale(x)
+        oloc, oscale = self._model.observable.mean_scale(hloc)
+
+        c = self._model.observable.theta_vals[0]
+        ovar = oscale ** 2
+        hvar = hscale ** 2
+
+        if self._model.obs_ndim < 1:
+            if self._model.hidden_ndim < 1:
+                cov = ovar + c ** 2 * hvar
+            else:
+                tc = c.unsqueeze(-2)
+                cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+
+            return Normal(oloc, cov.sqrt()).log_prob(y)
+
+        tc = c.unsqueeze(-2)
+        if self._model.hidden_ndim < 1:
+            cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+        else:
+            diag_ovar = construct_diag(ovar)
+            diag_hvar = construct_diag(hvar)
+            cov = diag_ovar + tc.matmul(diag_hvar).matmul(tc.transpose(-2, -1))
+
+        return MultivariateNormal(oloc, cov)
+
+

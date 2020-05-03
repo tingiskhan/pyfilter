@@ -12,7 +12,7 @@ class APF(ParticleFilter):
     def _filter(self, y):
         # ===== Perform auxiliary sampling ===== #
         self.proposal.construct(y, self._x_cur)
-        pre_weights = self.ssm.log_prob(y, self.ssm.hidden.prop_apf(self._x_cur))
+        pre_weights = self.proposal.pre_weight(y, self._x_cur)
 
         resamp_w = pre_weights + self._w_old
         normalized = normalize(self._w_old)

@@ -89,3 +89,16 @@ class Proposal(Module):
         """
 
         return self
+
+    def pre_weight(self, y, x):
+        """
+        Pre-weights the sample, used in APF.
+        :param y: The next observed value
+        :type y: torch.Tensor
+        :param x: The previous state
+        :type x: torch.Tensor
+        :return: The pre-weights
+        :rtype: torch.Tensor
+        """
+
+        return self._model.log_prob(y, self._model.hidden.prop_apf(x))
