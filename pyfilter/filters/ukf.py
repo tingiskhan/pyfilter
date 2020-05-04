@@ -1,5 +1,5 @@
 from .base import BaseKalmanFilter
-from ..unscentedtransform import UnscentedTransform
+from ..uft import UnscentedFilterTransform, UFTCorrectionResult
 from ..utils import choose
 import torch
 
@@ -20,39 +20,41 @@ class UKF(BaseKalmanFilter):
 
         super().__init__(model)
 
-        self._ut = UnscentedTransform(model, **kwargs)
+        self._ut = UnscentedFilterTransform(model, **kwargs)
+        self._ut_res = None
 
     def initialize(self):
-        self._ut.initialize(self._model.hidden.i_sample(self._n_parallel))
+        self._ut_res = self._ut.initialize(self._n_parallel)
 
         return self
 
     def _filter(self, y):
-        self._ut = self._ut.construct(y)    # type: UnscentedTransform
+        p = self._ut.predict(self._ut_res)
+        self._ut_res = self._ut.correct(y, p)
 
-        return self._ut.xmean, self._ut.y_dist.log_prob(y)
+        return self._ut_res.xm, self._ut_res.y_dist().log_prob(y)
 
     def _resample(self, inds):
-        self._ut.xmean = choose(self._ut.xmean, inds)
-        self._ut.xcov = choose(self._ut.xcov, inds)
+        self._ut_res.xm = choose(self._ut_res.xm, inds)
+        self._ut_res.xc = choose(self._ut_res.xc, inds)
 
         return self
 
     def predict(self, steps, *args, **kwargs):
-        spx, spy = self._ut.propagate_sps()
-        (xm, xc, _), (ym, yc, _) = self._ut.get_meancov(spx, spy)
+        p = self._ut.predict(self._ut_res)
+        c = self._ut.calc_mean_cov(p)
 
-        xres = torch.empty((steps, *xm.shape))
-        yres = torch.empty((steps, *ym.shape))
+        xres = torch.empty((steps, *c.xm.shape))
+        yres = torch.empty((steps, *c.ym.shape))
 
-        xres[0] = xm
-        yres[0] = ym
+        xres[0] = c.xm
+        yres[0] = c.ym
 
         for i in range(steps - 1):
-            spx, spy = self._ut.propagate_sps(xm, xc)
-            (xm, xc, _), (ym, yc, _) = self._ut.get_meancov(spx, spy)
+            p = self._ut.predict(c)
+            c = self._ut.calc_mean_cov(p)
 
-            xres[i + 1] = xm
-            yres[i + 1] = ym
+            xres[i + 1] = c.xm
+            yres[i + 1] = c.ym
 
         return xres, yres

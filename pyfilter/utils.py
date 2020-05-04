@@ -1,14 +1,10 @@
-import numpy as np
 from collections import Iterable
 from .normalization import normalize
 import torch
 from torch.distributions import Distribution
-import numbers
 from math import sqrt
-from scipy.stats import chi2
 
 
-_NATIVE = (bool, str, numbers.Number)
 EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
@@ -27,24 +23,6 @@ def get_ess(w, normalized=False):
         w = normalize(w)
 
     return w.sum(-1) ** 2 / (w ** 2).sum(-1)
-
-
-def searchsorted2d(a, b):
-    """
-    Searches a sorted 2D array along the second axis. Basically performs a vectorized digitize. Solution provided here:
-    https://stackoverflow.com/questions/40588403/vectorized-searchsorted-numpy.
-    :param a: The array to take the elements from
-    :type a: torch.Tensor
-    :param b: The indices of the elements in `a`.
-    :type b: torch.Tensor
-    :return: An array of indices
-    :rtype: torch.Tensor
-    """
-    m, n = a.shape
-    max_num = max(a.max() - a.min(), b.max() - b.min()) + 1
-    r = max_num * torch.arange(a.shape[0], dtype=max_num.dtype)[:, None]
-    p = np.searchsorted((a + r).view(-1), (b + r).view(-1)).reshape(m, -1)
-    return p - n * torch.arange(m, dtype=p.dtype)[:, None]
 
 
 def choose(array, indices):
@@ -164,31 +142,6 @@ def flatten(*args):
     return tuple(out)
 
 
-def normal_test(x, alpha=0.05):
-    """
-    Implements a basic Jarque-Bera test for normality.
-    :param x: The data
-    :type x: torch.Tensor
-    :param alpha: The level of confidence
-    :type alpha: float
-    :return: Whether a normal distribution or not
-    :rtype: bool
-    """
-    mean = x.mean(0)
-    var = ((x - mean) ** 2).mean(0)
-
-    # ===== Skew ===== #
-    skew = ((x - mean) ** 3).mean(0) / var ** 1.5
-
-    # ===== Kurtosis ===== #
-    kurt = ((x - mean) ** 4).mean(0) / var ** 2
-
-    # ===== Statistic ===== #
-    jb = x.shape[0] / 6 * (skew ** 2 + 1 / 4 * (kurt - 3) ** 2)
-
-    return chi2(2).ppf(1 - alpha) >= jb
-
-
 def unflattify(values, shape):
     """
     Unflattifies parameter values.
@@ -230,7 +183,7 @@ class TempOverride(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         setattr(self._obj, self._attr, self._old_vals)
 
-        return self
+        return False
 
 
 class Empirical(Distribution):

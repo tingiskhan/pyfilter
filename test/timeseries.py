@@ -325,7 +325,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([1000, 10, 3]))
 
     def test_OneFactorFractionalSIR(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        dist = Dirichlet(torch.tensor([10000., 1., 1.]))
         sir = OneFactorSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
@@ -333,7 +333,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([1000, 3]))
 
     def test_TwoFactorFractionalSIR(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        dist = Dirichlet(torch.tensor([10000., 1., 1.]))
         sir = TwoFactorSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
@@ -341,7 +341,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([1000, 3]))
 
     def test_TwoFactorSEIRD(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
+        dist = Dirichlet(torch.tensor([10000., 1., 1., 1., 1.]))
         seird = TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
 
         x = seird.sample_path(1000)

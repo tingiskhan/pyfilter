@@ -79,6 +79,9 @@ class AffineProcess(StochasticProcess):
         loc, scale = self._mean_scale(x)
         return loc + scale * u
 
+    def prop_apf(self, x):
+        return self.f(x, *self.theta_vals)
+
 
 def _f(x, s):
     return x

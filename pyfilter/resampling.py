@@ -1,6 +1,4 @@
-import numpy as np
 from .normalization import normalize
-from .utils import searchsorted2d
 import torch
 
 
@@ -14,12 +12,14 @@ def _matrix(weights, u):
     :rtype: torch.Tensor
     """
     n = weights.shape[1]
-    index_range = torch.arange(n, dtype=u.dtype)[None, :] * torch.ones(weights.shape, dtype=u.dtype)
+    index_range = torch.arange(n, dtype=u.dtype, device=weights.device).unsqueeze(0)
 
     probs = (index_range + u) / n
     cumsum = weights.cumsum(-1)
 
-    return searchsorted2d(cumsum, probs)
+    cumsum[..., -1] = 1.
+
+    return torch.searchsorted(cumsum, probs)
 
 
 def _vector(weights, u):
@@ -31,11 +31,12 @@ def _vector(weights, u):
     :rtype: torch.Tensor
     """
     n = weights.shape[0]
-    probs = (torch.arange(n, dtype=u.dtype) + u) / n
+    probs = (torch.arange(n, dtype=u.dtype, device=weights.device) + u) / n
 
     cumsum = weights.cumsum(0)
+    cumsum[..., -1] = 1.
 
-    return np.searchsorted(cumsum, probs)
+    return torch.searchsorted(cumsum, probs)
 
 
 def systematic(w, normalized=False, u=None):
@@ -51,7 +52,8 @@ def systematic(w, normalized=False, u=None):
     :rtype: torch.Tensor
     """
 
-    u = u if u is not None else (torch.empty(1) if w.dim() < 2 else torch.empty((w.shape[0], 1))).uniform_()
+    shape = (1,) if w.dim() < 2 else (w.shape[0], 1)
+    u = u if u is not None else (torch.empty(shape, device=w.device)).uniform_()
     w = normalize(w) if not normalized else w
 
     if w.dim() > 1:
