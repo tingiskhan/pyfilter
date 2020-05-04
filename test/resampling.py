@@ -29,21 +29,25 @@ def filterpy_systematic_resample(weights, u):
 
 
 class ResamplingTests(TestCase):
-    def test_Systematic(self):
-        weights = torch.tensor(np.random.normal(size=(1000, 300)))
+    def test_SystematicVector(self):
+        weights = torch.tensor(np.random.normal(size=300))
+
+        u = np.random.uniform()
+
+        pyfilter_inds = systematic(weights, u=torch.tensor(u))
+
+        filterpy_inds = filterpy_systematic_resample(normalize(weights), u)
+        assert (pyfilter_inds.numpy() == filterpy_inds).all()
+
+    def test_SystematicMatrix(self):
+        weights = torch.tensor(np.random.normal(size=(10000, 300)))
 
         u = np.random.uniform(size=(weights.shape[0], 1))
 
-        pyfilter_inds = systematic(weights, torch.tensor(u))
-
-        assert isinstance(pyfilter_inds, torch.Tensor)
+        pyfilter_inds = systematic(weights, u=torch.tensor(u))
 
         for i in range(weights.shape[0]):
-            filterpy_inds = filterpy_systematic_resample(normalize(weights[i]), u[i, 0])
+            filterpy_inds = filterpy_systematic_resample(normalize(weights[i]), u[i])
             assert (pyfilter_inds[i].numpy() == filterpy_inds).all()
 
-    def test_Residual(self):
-        weights = torch.tensor(np.random.normal(size=1000))
-
-        resinds = residual(weights)
 

@@ -14,20 +14,20 @@ class StateMeanField(BaseApproximation):
 
         super().__init__()
         self._mean = None
-        self._std = None
+        self._log_std = None
         self._model = model
 
     def initialize(self, data, *args):
         self._mean = torch.zeros((data.shape[0] + 1, *self._model.increment_dist.event_shape), requires_grad=True)
-        self._std = torch.ones_like(self._mean, requires_grad=True)
-
-        # ===== Start optimization ===== #
-        self._dist = Independent(Normal(self._mean, self._std), self._model.ndim + 1)
+        self._log_std = torch.ones_like(self._mean, requires_grad=True)
 
         return self
 
+    def dist(self):
+        return Independent(Normal(self._mean, self._log_std.exp()), self._model.ndim + 1)
+
     def get_parameters(self):
-        return self._mean, self._std
+        return self._mean, self._log_std
 
 
 # TODO: Only supports 1D parameters currently
@@ -39,16 +39,16 @@ class ParameterMeanField(BaseApproximation):
 
         super().__init__()
         self._mean = None
-        self._std = None
+        self._log_std = None
 
     def get_parameters(self):
-        return self._mean, self._std
+        return self._mean, self._log_std
 
     def initialize(self, parameters, *args):
         stacked = stacker(parameters, lambda u: u.t_values)
 
         self._mean = torch.zeros(stacked.concated.shape[1:], device=stacked.concated.device)
-        self._std = torch.ones_like(self._mean)
+        self._log_std = torch.ones_like(self._mean)
 
         for p, msk in zip(parameters, stacked.mask):
             try:
@@ -57,8 +57,9 @@ class ParameterMeanField(BaseApproximation):
                 pass
 
         self._mean.requires_grad_(True)
-        self._std.requires_grad_(True)
-
-        self._dist = Independent(Normal(self._mean, self._std), 1)
+        self._log_std.requires_grad_(True)
 
         return self
+
+    def dist(self):
+        return Independent(Normal(self._mean, self._log_std.exp()), 1)

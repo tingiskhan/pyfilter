@@ -1,7 +1,7 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceModel
 from torch.distributions import Normal, MultivariateNormal, Independent
-from pyfilter.unscentedtransform import UnscentedTransform
+from pyfilter.uft import UnscentedFilterTransform
 import torch
 from pyfilter.filters import SISR, UKF
 from pyfilter.module import Module, TensorContainer
@@ -55,7 +55,7 @@ def goo(x1, x2, alpha, sigma):
 
 
 def fmvn(x, a, sigma):
-    return concater(x[0], x[1])
+    return concater(x[..., 0], x[..., 1])
 
 
 def f0mvn(a, sigma):
@@ -63,7 +63,7 @@ def f0mvn(a, sigma):
 
 
 def fomvn(x, sigma):
-    return x[0] + x[1] / 2
+    return x[..., 0] + x[..., 1] / 2
 
 
 def gomvn(x, sigma):
@@ -79,11 +79,12 @@ class Tests(unittest.TestCase):
         model = StateSpaceModel(linear, linearobs)
 
         # ===== Perform unscented transform ===== #
-        x = model.hidden.i_sample(shape=3000)
+        uft = UnscentedFilterTransform(model)
+        res = uft.initialize(3000)
+        p = uft.predict(res)
+        c = uft.correct(0., p)
 
-        ut = UnscentedTransform(model).initialize(x).construct(0.)
-
-        assert isinstance(ut.x_dist, Normal)
+        assert isinstance(c.x_dist(), Normal) and c.x_dist().mean.shape == torch.Size([3000])
 
     def test_UnscentedTransform2D(self):
         # ===== 2D model ===== #
@@ -98,12 +99,12 @@ class Tests(unittest.TestCase):
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
         # ===== Perform unscented transform ===== #
-        x = mvnmodel.hidden.i_sample(shape=3000)
+        uft = UnscentedFilterTransform(mvnmodel)
+        res = uft.initialize(3000)
+        p = uft.predict(res)
+        c = uft.correct(0., p)
 
-        ut = UnscentedTransform(mvnmodel).initialize(x).construct(0.)
-
-        assert isinstance(ut.x_dist, MultivariateNormal) and isinstance(ut.y_dist, Normal)
-        assert isinstance(ut.x_dist_indep, Independent)
+        assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
 
     def test_HelperMixin(self):
         obj = Help(torch.empty(3000).normal_())
@@ -115,7 +116,7 @@ class Tests(unittest.TestCase):
         temp += 1
 
         for p, v in zip(obj._params, obj._views):
-            assert (p == v).all()
+            assert (p == v).all() and v._base is p
 
         # ===== Check state dict ===== #
         sd = obj.state_dict()

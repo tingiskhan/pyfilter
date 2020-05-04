@@ -3,21 +3,12 @@ from abc import ABC
 from ..proposals import LinearGaussianObservations
 from ..resampling import systematic, multinomial
 from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO, AffineEulerMaruyama
+from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
 import torch
 from ..utils import get_ess, choose, normalize
 from ..module import Module, TensorContainer
-
-
-def enforce_tensor(func):
-    def wrapper(obj, y, **kwargs):
-        if not isinstance(y, torch.Tensor):
-            raise ValueError('The observation must be of type Tensor!')
-
-        return func(obj, y, **kwargs)
-
-    return wrapper
+from .utils import enforce_tensor, FilterResult, _construct_empty
 
 
 class BaseFilter(Module, ABC):
@@ -28,6 +19,8 @@ class BaseFilter(Module, ABC):
         :type model: StateSpaceModel
         """
 
+        self._dummy = torch.tensor(0.)
+
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -35,71 +28,16 @@ class BaseFilter(Module, ABC):
 
         self._model = model
         self._n_parallel = None
-
-        self._dummy = torch.tensor(0.)
-
-        # ===== Some helpers ===== #
-        self.s_ll = TensorContainer()
-        self.s_mx = TensorContainer()
+        self._filter_res = FilterResult()
 
     @property
-    def s_loglikelihood(self):
+    def result(self):
         """
-        Returns the saved loglikelihood.
-        :rtype: torch.Tensor
-        """
-
-        if bool(self.s_ll):
-            return torch.stack(self.s_ll.tensors, dim=0)
-
-        return torch.empty((1,))
-
-    @s_loglikelihood.setter
-    def s_loglikelihood(self, x):
-        """
-        Sets the loglikelihood.
-        :param x: The new loglikelihood
-        :type x: torch.Tensor
+        Returns the filtering result object.
+        :rtype: FilterResult
         """
 
-        if not isinstance(x, torch.Tensor) or x.shape != self.s_loglikelihood.shape:
-            raise ValueError('Either wrong type or wrong dimensions!')
-
-        self.s_ll = TensorContainer(xt.clone() for xt in x)
-
-    @property
-    def filtermeans(self):
-        """
-        Calculates the filter means and returns a timeseries.
-        :rtype: torch.Tensor
-        """
-
-        if bool(self.s_mx):
-            return torch.stack(self.s_mx.tensors, dim=0)
-
-        return torch.empty((1,))
-
-    @filtermeans.setter
-    def filtermeans(self, x):
-        """
-        Sets the filter means.
-        :param x: The new filter means
-        :type x: torch.Tensor
-        """
-
-        if not isinstance(x, torch.Tensor) or x.shape != self.filtermeans.shape:
-            raise ValueError('Either wrong type or wrong dimensions!')
-
-        self.s_mx = TensorContainer(xt.clone() for xt in x)
-
-    @property
-    def loglikelihood(self):
-        """
-        Returns the total loglikelihood
-        :rtype: torch.Tensor
-        """
-
-        return sum(self.s_ll)
+        return self._filter_res
 
     @property
     def ssm(self):
@@ -151,10 +89,7 @@ class BaseFilter(Module, ABC):
         :rtype: BaseFilter
         """
 
-        xm, ll = self._filter(y)
-
-        self.s_mx.append(xm)
-        self.s_ll.append(ll)
+        self._filter_res.append(*self._filter(y))
 
         return self
 
@@ -222,8 +157,7 @@ class BaseFilter(Module, ABC):
         :rtype: BaseFilter
         """
         if entire_history:
-            for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
-                setattr(self, name, obj[:, inds])
+            self._filter_res.resample(inds)
 
         # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: choose(u.values, inds))
@@ -249,9 +183,7 @@ class BaseFilter(Module, ABC):
         :rtype: BaseFilter
         """
 
-        self.s_mx = TensorContainer()
-        self.s_ll = TensorContainer()
-
+        self._filter_res = FilterResult()
         self._reset()
 
         return self
@@ -277,12 +209,7 @@ class BaseFilter(Module, ABC):
         """
 
         self._model.exchange(inds, filter_.ssm)
-
-        for obj, name in [(self.filtermeans, 'filtermeans'), (self.s_loglikelihood, 's_loglikelihood')]:
-            obj[:, inds] = getattr(filter_, name)[:, inds]
-
-            setattr(self, name, obj)
-
+        self._filter_res.exchange(filter_._filter_res, inds)
         self._exchange(filter_, inds)
 
         return self
@@ -306,20 +233,8 @@ _PROPOSAL_MAPPING = {
 }
 
 
-def _construct_empty(array):
-    """
-    Constructs an empty array based on the shape.
-    :param array: The array to reshape after
-    :type array: torch.Tensor
-    :rtype: torch.Tensor
-    """
-
-    temp = torch.arange(array.shape[-1], device=array.device)
-    return temp * torch.ones_like(array, dtype=temp.dtype)
-
-
 class ParticleFilter(BaseFilter, ABC):
-    def __init__(self, model, particles, resampling=multinomial, proposal='auto', ess=0.9, need_grad=False):
+    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9, need_grad=False):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
@@ -363,10 +278,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._proposal = proposal.set_model(self._model)    # type: Proposal
 
-        if isinstance(self.ssm.hidden, AffineEulerMaruyama) and not isinstance(proposal, Bootstrap):
-            msg = f'All models of type {AffineEulerMaruyama.__class__.__name__} may only use {Bootstrap.__class__.__name__}'
-            raise NotImplementedError(msg)
-
     @property
     def particles(self):
         """
@@ -380,7 +291,7 @@ class ParticleFilter(BaseFilter, ABC):
     def particles(self, x):
         """
         Sets the number of particles.
-        :type x: torch.Tensor|int
+        :type x: tuple[int]|int
         """
 
         self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
@@ -393,19 +304,6 @@ class ParticleFilter(BaseFilter, ABC):
         """
 
         return self._proposal
-
-    @proposal.setter
-    def proposal(self, x):
-        """
-        Sets the proposal
-        :param x: The new proposal
-        :type x: Proposal
-        """
-
-        if not isinstance(x, Proposal):
-            raise ValueError('`x` must be {:s}!'.format(Proposal.__name__))
-
-        self._proposal = x
 
     def _resample_state(self, weights):
         """
@@ -436,13 +334,11 @@ class ParticleFilter(BaseFilter, ABC):
         return out, mask
 
     def set_nparallel(self, n):
-        self._n_parallel = torch.Size([n])
+        if len(self.particles) > 1:
+            raise NotImplementedError('Currently only supports at most one level of nesting!')
 
-        temp = self.particles[-1] if len(self.particles) > 0 else self.particles
-        if n is not None:
-            self.particles = (*self._n_parallel, temp)
-        else:
-            self.particles = temp
+        self._n_parallel = torch.Size([n])
+        self.particles = (*self._n_parallel, *self.particles)
 
         if self._x_cur is not None:
             return self.initialize()

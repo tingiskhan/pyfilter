@@ -16,9 +16,6 @@ class LinearGaussianObservations(Proposal):
         super().__init__()
         self._mat = None
 
-    def _get_mat_and_fix_y(self, x, y):
-        return self._model.observable._theta_vals[0], y
-
     def set_model(self, model):
         if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
             raise ValueError('Model combination not supported!')
@@ -41,7 +38,7 @@ class LinearGaussianObservations(Proposal):
 
         # ===== Define covariance ===== #
         ttc = tc.transpose(-2, -1)
-        diag_o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 1 else o_var_inv.unsqueeze(-1))
+        diag_o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 0 else o_var_inv.unsqueeze(-1))
         t2 = torch.matmul(ttc, torch.matmul(diag_o_var_inv, tc))
 
         cov = (construct_diag(h_var_inv) + t2).inverse()
@@ -62,7 +59,7 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = 1 / scale ** 2
 
         # ===== Observable ===== #
-        c, y = self._get_mat_and_fix_y(x, y)
+        c = self._model.observable.theta_vals[0]
         o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
 
         if self._model.hidden_ndim == 0:
@@ -71,4 +68,32 @@ class LinearGaussianObservations(Proposal):
             self._kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
 
         return self
+
+    def pre_weight(self, y, x):
+        hloc, hscale = self._model.hidden.mean_scale(x)
+        oloc, oscale = self._model.observable.mean_scale(hloc)
+
+        c = self._model.observable.theta_vals[0]
+        ovar = oscale ** 2
+        hvar = hscale ** 2
+
+        if self._model.obs_ndim < 1:
+            if self._model.hidden_ndim < 1:
+                cov = ovar + c ** 2 * hvar
+            else:
+                tc = c.unsqueeze(-2)
+                cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+
+            return Normal(oloc, cov.sqrt()).log_prob(y)
+
+        tc = c.unsqueeze(-2)
+        if self._model.hidden_ndim < 1:
+            cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+        else:
+            diag_ovar = construct_diag(ovar)
+            diag_hvar = construct_diag(hvar)
+            cov = diag_ovar + tc.matmul(diag_hvar).matmul(tc.transpose(-2, -1))
+
+        return MultivariateNormal(oloc, cov)
+
 

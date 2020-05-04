@@ -1,6 +1,7 @@
 import torch
 from .resampling import residual
 from .utils import get_ess
+from math import sqrt
 
 
 def _jitter(values, scale):
@@ -121,11 +122,14 @@ class KernelDensityEstimate(object):
 
         raise NotImplementedError()
 
+    def get_ess(self, w):
+        return get_ess(w, normalized=True)
+
 
 class ShrinkingKernel(KernelDensityEstimate):
     def fit(self, x, w):
         # ===== Calculate bandwidth ===== #
-        ess = get_ess(w)
+        ess = self.get_ess(w)
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
         # ===== Calculate variance ===== #
@@ -133,7 +137,7 @@ class ShrinkingKernel(KernelDensityEstimate):
         self._cov = robust_var(x, w, mean)
 
         # ===== Calculate shrinkage and shrink ===== #
-        beta = (1. - self._bw_fac ** 2).sqrt()
+        beta = sqrt(1. - self._bw_fac ** 2)
         self._means = mean + beta * (x - mean)
 
         return self
@@ -146,7 +150,7 @@ class ShrinkingKernel(KernelDensityEstimate):
 class NonShrinkingKernel(ShrinkingKernel):
     def fit(self, x, w):
         # ===== Calculate bandwidth ===== #
-        ess = get_ess(w)
+        ess = self.get_ess(w)
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
         # ===== Calculate variance ===== #
@@ -171,7 +175,7 @@ class IndependentGaussian(KernelDensityEstimate):
 
     def fit(self, x, w):
         # ===== Calculate bandwidth ===== #
-        ess = get_ess(w)
+        ess = self.get_ess(w)
         self._bw_fac = self._fac(x.shape[-1], ess)
 
         # ===== Calculate covariance ===== #
@@ -198,7 +202,7 @@ class MultivariateGaussian(IndependentGaussian):
 
     def fit(self, x, w):
         # ===== Calculate bandwidth ===== #
-        ess = get_ess(w)
+        ess = self.get_ess(w)
         self._bw_fac = self._fac(x.shape[-1], ess)
 
         # ===== Calculate statistics ===== #
@@ -219,7 +223,7 @@ class MultivariateGaussian(IndependentGaussian):
         return self._post_mean + jittered.matmul(self._cov.T)
 
 
-class ConstantKernel(MultivariateGaussian):
+class ConstantKernel(KernelDensityEstimate):
     def __init__(self, bw):
         """
         Kernel with constant, prespecified bandwidth.
@@ -228,14 +232,17 @@ class ConstantKernel(MultivariateGaussian):
         """
         super().__init__()
         self._bw_fac = bw
+        self._w = None
+        self._x = None
 
     def fit(self, x, w):
-        # ===== Calculate statistics ===== #
         self._w = w
-
-        self._post_mean = (x * w.unsqueeze(-1)).sum(0)
-        self._cov = torch.eye(x.shape[-1], device=x.device) * self._bw_fac
-
-        self._means = x - self._post_mean
+        self._x = x
 
         return self
+
+    def sample(self, inds=None):
+        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
+
+        return _jitter(self._x[inds], self._bw_fac)
+

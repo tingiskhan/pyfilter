@@ -58,7 +58,7 @@ class ParticleMetropolisHastings(BaseKernel):
         """
 
         t_filt.reset().initialize().longfilter(self._y, bar=False)
-        return t_filt.loglikelihood - filter_.loglikelihood
+        return t_filt.result.loglikelihood.sum(dim=0) - filter_.result.loglikelihood.sum(dim=0)
 
     def _before_resampling(self, filter_, stacked):
         """
@@ -109,9 +109,9 @@ class ParticleMetropolisHastings(BaseKernel):
             else:
                 filter_.ssm.exchange(toaccept, t_filt.ssm)
 
-            weights = normalize(filter_.loglikelihood)
+            weights = normalize(filter_.result.loglikelihood.sum(dim=0))
 
-        return True
+        return self
 
 
 class SymmetricMH(ParticleMetropolisHastings):

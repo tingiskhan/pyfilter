@@ -1,9 +1,10 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH, KernelDensitySampler
+from .kernels import ParticleMetropolisHastings, SymmetricMH, OnlineKernel
 from ..utils import get_ess
 from ..filters.base import ParticleFilter
-from ..kde import KernelDensityEstimate
-import torch
+from ..kde import KernelDensityEstimate, NonShrinkingKernel
+from ..module import TensorContainer
+from torch import isfinite, zeros_like
 
 
 class SMC2(SequentialParticleAlgorithm):
@@ -12,36 +13,46 @@ class SMC2(SequentialParticleAlgorithm):
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :type threshold: float
-        :param kernel: The kernel to use
+        :param kernel: The kernel to use when updating the parameters
         :type kernel: ParticleMetropolisHastings
         """
 
         super().__init__(filter_, particles)
 
-        self._th = threshold
+        # ===== When and how to update ===== #
+        self._threshold = threshold * particles
         self._kernel = kernel or SymmetricMH()
-
-        self._max_increases = max_increases
-        self._increases = 0
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
 
+        # ===== Some helpers to figure out whether to raise ===== #
+        self._max_increases = max_increases
+        self._increases = 0
+
+        # ===== Save data ===== #
+        self._y = TensorContainer()
+
     def _update(self, y):
+        # ===== Save data ===== #
+        self._y.append(y)
+
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._w_rec += self.filter.result._loglikelihood[-1]
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
         self._logged_ess.append(ess)
 
         # ===== Rejuvenate if there are too few samples ===== #
-        if ess < self._th * self._w_rec.shape[0] or (~torch.isfinite(self._w_rec)).any():
+        if ess < self._threshold or (~isfinite(self._w_rec)).any():
             self.rejuvenate()
 
             if self._iterator is not None:
                 self._iterator.set_description(desc=str(self))
+
+            self._w_rec[:] = 0.
 
         return self
 
@@ -54,9 +65,9 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Update the description ===== #
         if self._iterator is not None:
-            self._iterator.set_description(desc='{:s} - Rejuvenating particles'.format(str(self)))
+            self._iterator.set_description(desc=f'{str(self):s} - Rejuvenating particles')
 
-        self._kernel.set_data(self._y)
+        self._kernel.set_data(self._y.tensors)
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
@@ -73,10 +84,10 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         if self._increases >= self._max_increases:
-            raise ValueError(f'Configuration only allows {self._max_increases}!')
+            raise Exception(f'Configuration only allows {self._max_increases}!')
 
         # ===== Create new filter with double the state particles ===== #
-        oldlogl = self.filter.loglikelihood
+        oldlogl = self.filter.result.loglikelihood.sum(dim=0)
         oldparts = self.filter.particles[-1]
 
         self.filter.reset()
@@ -86,10 +97,10 @@ class SMC2(SequentialParticleAlgorithm):
             msg = f'{str(self)} - Increasing particles from {oldparts} -> {self.filter.particles[-1]}'
             self._iterator.set_description(desc=msg)
 
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y, bar=False)
+        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y.tensors, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-        self._w_rec = self.filter.loglikelihood - oldlogl
+        self._w_rec = self.filter.result.loglikelihood.sum(dim=0) - oldlogl
         self._increases += 1
 
         return self
@@ -107,43 +118,48 @@ class SMC2FW(SequentialParticleAlgorithm):
         :type kde: KernelDensityEstimate
         :param kwargs: Kwargs to SMC2
         """
+
         super().__init__(filter_, particles)
         self._smc2 = SMC2(self.filter, particles, **kwargs)
 
+        # ===== Some helpers for switching ====== #
         self._switch = int(switch)
         self._switched = False
         self._num_iters = 0
 
         # ===== Resampling related ===== #
-        self._kernel = KernelDensitySampler(kde=kde)
+        self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel())
         self._bl = block_len
 
     def initialize(self):
         self._smc2.initialize()
+        self._w_rec = zeros_like(self._smc2._w_rec)
         return self
 
     def _update(self, y):
-        if len(self._y) < self._switch:
-            # TODO: Better to do this on instantiation instead
-            self._smc2._iterator = self._iterator
+        # ===== Whether to use SMC2 or new ===== #
+        if len(self._smc2._y) < self._switch:
+            if self._smc2._iterator is None:
+                self._smc2._iterator = self._iterator
+
             return self._smc2.update(y)
 
         # ===== Perform switch ===== #
         if not self._switched:
-            self._w_rec = self._smc2._w_rec
+            self._smc2.rejuvenate()
             self._switched = True
             self._logged_ess = self._smc2._logged_ess
             self._iterator.set_description(str(self))
 
         # ===== Check if to propagate ===== #
-        force_rejuv = self._logged_ess[-1] < 0.1 * self._particles[0] or (~torch.isfinite(self._w_rec)).any()
-        if self._num_iters % self._bl == 0 or force_rejuv:
+        if self._num_iters >= self._bl or (~isfinite(self._w_rec)).any():
             self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
             self._num_iters = 0
+            self._w_rec[:] = 0.
 
         # ===== Perform a filtering move ===== #
         self.filter.filter(y)
-        self._w_rec += self.filter.s_ll[-1]
+        self._w_rec += self.filter.result._loglikelihood[-1]
         self._num_iters += 1
 
         # ===== Calculate efficient number of samples ===== #

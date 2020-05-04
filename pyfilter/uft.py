@@ -2,9 +2,10 @@ from .timeseries import StateSpaceModel
 from .timeseries.base import StochasticProcess
 import torch
 from math import sqrt
-from torch.distributions import Normal, MultivariateNormal, Independent
-from .utils import construct_diag, TempOverride, concater
+from torch.distributions import Normal, MultivariateNormal
+from .utils import construct_diag, TempOverride
 from .module import Module, TensorContainer
+from .timeseries.parameter import size_getter
 
 
 def _propagate_sps(spx, spn, process, temp_params):
@@ -65,8 +66,36 @@ def _get_meancov(spxy, wm, wc):
     return x, _covcalc(centered, centered, wc)
 
 
+class UFTCorrectionResult(object):
+    def __init__(self, xm, xc, ym, yc):
+        self.xm = xm
+        self.xc = xc
+
+        self.ym = ym
+        self.yc = yc
+
+    @staticmethod
+    def _helper(m, c):
+        if m.shape[-1] > 1:
+            return MultivariateNormal(m, c)
+
+        return Normal(m[..., 0], c[..., 0, 0].sqrt())
+
+    def x_dist(self):
+        return self._helper(self.xm, self.xc)
+
+    def y_dist(self):
+        return self._helper(self.ym, self.yc)
+
+
+class UFTPredictionResult(object):
+    def __init__(self, spx, spy):
+        self.spx = spx
+        self.spy = spy
+
+
 # TODO: Rewrite this one to not save state
-class UnscentedTransform(Module):
+class UnscentedFilterTransform(Module):
     def __init__(self, model, a=1, b=2, k=0):
         """
         Implements the Unscented Transform for a state space model.
@@ -138,36 +167,28 @@ class UnscentedTransform(Module):
 
         return self
 
-    def _set_arrays(self, x):
+    def _set_arrays(self, shape):
         """
         Sets the mean and covariance arrays.
-        :param x: The initial state.
-        :type x: torch.Tensor
+        :param shape: The shape
+        :type shape: torch.Shape
         :return: Instance of self
         :rtype: UnscentedTransform
         """
 
         # ==== Define empty arrays ===== #
-        if not isinstance(x, torch.Tensor):
-            x = torch.tensor(x)
-
-        parts = x.shape if self._model.hidden_ndim < 1 else x.shape[:-self._model.hidden_ndim]
-
-        self._mean = torch.zeros((*parts, self._ndim))
-        self._cov = torch.zeros((*parts, self._ndim, self._ndim))
+        self._mean = torch.zeros((*shape, self._ndim))
+        self._cov = torch.zeros((*shape, self._ndim, self._ndim))
 
         # TODO: Perhaps move this to Timeseries?
         self._views = TensorContainer()
-        shape = (parts[0], 1) if len(parts) > 0 else parts
-
-        if len(parts) > 1:
-            shape += (1,)
+        view_shape = (shape[0], 1) if len(shape) > 0 else shape
 
         for model in [self._model.hidden, self._model.observable]:
             params = tuple()
             for p in model.theta:
                 if p.trainable:
-                    view = p.view(*shape, *p.shape[1:])
+                    view = p.view(*view_shape, *p.shape[1:])
                 else:
                     view = p
 
@@ -177,228 +198,99 @@ class UnscentedTransform(Module):
 
         return self
 
-    def initialize(self, x):
+    def initialize(self, shape=None):
         """
         Initializes UnscentedTransform class.
-        :param x: The initial values of the mean of the distribution.
-        :type x: torch.Tensor
+        :param shape: Shape of the state
+        :type shape: int|tuple|torch.Size
         :return: Instance of self
         :rtype: UnscentedTransform
         """
 
-        self._set_weights()._set_slices()._set_arrays(x)
+        self._set_weights()._set_slices()._set_arrays(size_getter(shape))
 
         # ==== Set mean ===== #
-        self._mean[..., self._sslc] = x if self._model.hidden_ndim > 0 else x.unsqueeze(-1)
+        self._mean[..., self._sslc] = self._model.hidden.i_sample(1000).mean(0)
 
         # ==== Set state covariance ===== #
-        var = self._model.hidden.initial_dist.variance
-        if self._model.hidden_ndim < 1:
-            var.unsqueeze_(-1)
+        var = cov = self._model.hidden.initial_dist.variance
 
-        self._cov[..., self._sslc, self._sslc] = construct_diag(var)
+        if self._model.hidden_ndim > 0:
+            cov = construct_diag(var)
+
+        self._cov[..., self._sslc, self._sslc] = cov
 
         # ==== Set noise covariance ===== #
         self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
         self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
 
-        return self
+        return UFTCorrectionResult(self._mean[..., self._sslc], self._cov[..., self._sslc, self._sslc], None, None)
 
-    def get_sps(self, mean=None, cov=None):
+    def _get_sps(self, mean, cov):
         """
         Constructs the Sigma points used for propagation.
         :return: Sigma points
         :rtype: torch.Tensor
         """
-        m = self._mean
-        c = self._cov
 
-        if mean is not None and cov is not None:
-            m = m.clone()
-            m[..., self._sslc] = mean
+        self._mean[..., self._sslc] = mean
+        self._cov[..., self._sslc, self._sslc] = cov
 
-            c = c.clone()
-            c[..., self._sslc, self._sslc] = cov
+        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
 
-        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(c)
-
-        spx = m.unsqueeze(-2)
-        sph = m[..., None, :] + cholcov
-        spy = m[..., None, :] - cholcov
+        spx = self._mean.unsqueeze(-2)
+        sph = self._mean[..., None, :] + cholcov
+        spy = self._mean[..., None, :] - cholcov
 
         return torch.cat((spx, sph, spy), -2)
 
-    def propagate_sps(self, mean=None, cov=None, only_x=False):
+    def predict(self, utf):
         """
-        Propagate the Sigma points through the given process.
-        :return: Sigma points of x and y
-        :rtype: tuple of torch.Tensor
+        Performs a prediction step using previous result from
+        :param utf:
+        :type utf: UFTCorrectionResult
+        :return:
         """
 
-        sps = self.get_sps(mean, cov)
+        # ===== Propagate sigma points ===== #
+        sps = self._get_sps(utf.xm, utf.xc)
 
         spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
-        if only_x:
-            return spx
-
         spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._views[1])
 
-        return spx, spy
+        return UFTPredictionResult(spx, spy)
 
-    @property
-    def xmean(self):
-        """
-        Returns the mean of the latest state.
-        :return: The mean of state
-        :rtype: torch.Tensor
-        """
+    def calc_mean_cov(self, uft_pred):
+        xmean, xcov = _get_meancov(uft_pred.spx, self._wm, self._wc)
+        ymean, ycov = _get_meancov(uft_pred.spy, self._wm, self._wc)
 
-        return self._mean[..., self._sslc].clone()
+        return UFTCorrectionResult(xmean, xcov, ymean, ycov)
 
-    @xmean.setter
-    def xmean(self, x):
-        """
-        Sets the mean of the latest state.
-        :param x: The mean state to use for overriding
-        :type x: torch.Tensor
-        """
-
-        self._mean[..., self._sslc] = x
-
-    @property
-    def xcov(self):
-        """
-        Returns the covariance of the latest state.
-        :return: The state covariance
-        :rtype: torch.Tensor
-        """
-
-        return self._cov[..., self._sslc, self._sslc]
-
-    @xcov.setter
-    def xcov(self, x):
-        """
-        Sets the covariance of the latest state
-        :param x: The state covariance to use for overriding
-        :type x: torch.Tensor
-        """
-
-        self._cov[..., self._sslc, self._sslc] = x
-
-    @property
-    def ymean(self):
-        """
-        Returns the mean of the observation.
-        :return: The mean of the observational process
-        :rtype: torch.Tensor
-        """
-
-        return self._ymean
-
-    @property
-    def ycov(self):
-        """
-        Returns the covariance of the observation.
-        :return: The covariance of the observational process
-        :rtype: torch.Tensor
-        """
-
-        return self._ycov
-
-    @property
-    def x_dist(self):
-        """
-        Returns the current X-distribution.
-        :rtype: Normal|MultivariateNormal
-        """
-
-        if self._model.hidden_ndim < 1:
-            return Normal(self.xmean[..., 0], self.xcov[..., 0, 0].sqrt())
-
-        return MultivariateNormal(self.xmean, scale_tril=torch.cholesky(self.xcov))
-
-    @property
-    def x_dist_indep(self):
-        """
-        Returns the current X-distribution but independent.
-        :rtype: Normal|MultivariateNormal
-        """
-
-        if self._model.hidden_ndim < 1:
-            return self.x_dist
-
-        dist = Normal(self.xmean, self.xcov[..., self._diaginds, self._diaginds].sqrt())
-        return Independent(dist, 1)
-
-    @property
-    def y_dist(self):
-        """
-        Returns the current Y-distribution.
-        :rtype: Normal|MultivariateNormal
-        """
-        if self._model.obs_ndim < 1:
-            return Normal(self.ymean[..., 0], self.ycov[..., 0, 0].sqrt())
-
-        return MultivariateNormal(self.ymean, scale_tril=torch.cholesky(self.ycov))
-
-    def construct(self, y):
+    def correct(self, y, uft_pred):
         """
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
-        :type y: torch.Tensor|float
+        :type y: torch.Tensor
+        :param uft_pred:
+        :type uft_pred: UFTPredictionResult
         :return: Self
         :rtype: UnscentedTransform
         """
 
-        # ==== Get mean and covariance ===== #
-        txmean, txcov, ymean, ycov = self._get_m_and_p(y)
-
-        # ==== Overwrite mean and covariance ==== #
-        self._ymean = ymean
-        self._ycov = ycov
-        self._mean[..., self._sslc] = txmean
-        self._cov[..., self._sslc, self._sslc] = txcov
-
-        return self
-
-    def get_meancov(self, spx=None, spy=None):
-        """
-        Constructs the mean and covariance for the hidden and observable process respectively.
-        :return: The mean and covariance
-        :rtype: tuple
-        """
-
-        # ==== Propagate Sigma points ==== #
-        if spx is None or spy is None:
-            spx, spy = self.propagate_sps()
-
-        # ==== Construct mean and covariance ==== #
-        xmean, xcov = _get_meancov(spx, self._wm, self._wc)
-        ymean, ycov = _get_meancov(spy, self._wm, self._wc)
-
-        return (xmean, xcov, spx), (ymean, ycov, spy)
-
-    def _get_m_and_p(self, y):
-        """
-        Helper method for generating the mean and covariance.
-        :param y: The latest observation
-        :type y: float|torch.Tensor
-        :return: The estimated mean and covariances of state and observation
-        :rtype: tuple of torch.Tensor
-        """
-
-        (xmean, xcov, spx), (ymean, ycov, spy) = self.get_meancov()
+        # ===== Calculate mean and covariance ====== #
+        correction = self.calc_mean_cov(uft_pred)
+        xmean, xcov, ymean, ycov = correction.xm, correction.xc, correction.ym, correction.yc
 
         # ==== Calculate cross covariance ==== #
         if xmean.dim() > 1:
-            tx = spx - xmean.unsqueeze(-2)
+            tx = uft_pred.spx - xmean.unsqueeze(-2)
         else:
-            tx = spx - xmean
+            tx = uft_pred.spx - xmean
 
         if ymean.dim() > 1:
-            ty = spy - ymean.unsqueeze(-2)
+            ty = uft_pred.spy - ymean.unsqueeze(-2)
         else:
-            ty = spy - ymean
+            ty = uft_pred.spy - ymean
 
         xycov = _covcalc(tx, ty, self._wc)
 
@@ -411,4 +303,4 @@ class UnscentedTransform(Module):
         temp = torch.matmul(ycov, gain.transpose(-1, -2))
         txcov = xcov - torch.matmul(gain, temp)
 
-        return txmean, txcov, ymean, ycov
+        return UFTCorrectionResult(txmean, txcov, ymean, ycov)
