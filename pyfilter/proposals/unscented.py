@@ -1,6 +1,7 @@
 from .base import Proposal
 from ..uft import UnscentedFilterTransform, UFTCorrectionResult
 from ..utils import choose
+import torch
 
 
 class Unscented(Proposal):
@@ -39,3 +40,14 @@ class Unscented(Proposal):
         self._ut_res.xc = choose(self._ut_res.xc, inds)
 
         return self
+
+    def pre_weight(self, y, x):
+        p = self._ut.predict(self._ut_res)
+        m = self._ut.calc_mean_cov(p)
+
+        logprob = self._model.log_prob(y, m.xm)
+
+        if self._model.hidden_ndim < 1:
+            return logprob[..., 0]
+
+        return logprob
