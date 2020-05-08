@@ -249,6 +249,8 @@ class Module(object):
         :rtype: Module
         """
 
+        from .timeseries.base import StochasticProcess
+
         if state[_OBJTYPENAME] != self.__class__.__name__:
             raise ValueError(f'Cannot cast {state[_OBJTYPENAME]} as {self.__class__.__name__}!')
 
@@ -257,6 +259,15 @@ class Module(object):
 
             if isinstance(attr, Module):
                 attr.load_state_dict(v)
+
+                if isinstance(attr, StochasticProcess):
+                    attr.viewify_params(torch.Size([]))
+
+            elif isinstance(v, TensorContainerBase) and all(isinstance(i, Parameter) for i in v.tensors):
+                for new, old in zip(v.tensors, getattr(self, k).tensors):
+                    new._prior = old._prior
+
+                setattr(self, k, v)
             else:
                 setattr(self, k, v)
 
