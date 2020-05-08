@@ -36,7 +36,7 @@ class FilterResult(TensorContainerBase):
 
     @property
     def tensors(self):
-        return tuple(*self._loglikelihood.tensors, *self._filter_means.tensors)
+        return self._loglikelihood.tensors + self._filter_means.tensors
 
     @property
     def loglikelihood(self):
