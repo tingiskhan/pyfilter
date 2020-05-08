@@ -247,5 +247,5 @@ class Parameter(torch.Tensor):
     def __reduce_ex__(self, protocol):
         return (
             _rebuild_parameter,
-            (self.data, self.requires_grad, self._prior, OrderedDict())
+            (self.data, self.requires_grad, None, OrderedDict())
         )
