@@ -202,7 +202,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._theta = None
         self._theta_vals = None
 
-        self._viewshape = None
         self._inputdim = self.ndim
 
         # ===== Distributional parameters ===== #
@@ -266,7 +265,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
             raise ValueError(f'Not all items are of instance {Parameter.__class__.__name__}')
 
         self._theta = x
-        self.viewify_params(self._viewshape)
+        self.viewify_params(torch.Size([]))
 
     @property
     def theta_dists(self):
@@ -312,7 +311,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     def viewify_params(self, shape):
         shape = size_getter(shape)
-        self._viewshape = shape
 
         # ===== Regular parameters ===== #
         params = tuple()
