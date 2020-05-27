@@ -13,13 +13,9 @@ class NESSMC2(SequentialParticleAlgorithm):
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
         demanding to use the SMC2.
         :param switch: At which point to switch inference, in number of observations
-        :type switch: int
         :param update_switch: Whether to perform MCMC move on switch if ESS is below threshold of NESS
-        :type update_switch: bool
         :param smc2kw: Any key worded arguments to SMC2
-        :type smc2kw: dict[str, object]
         :param nkw: Any key worded arguments for NESS
-        :type nkw: dict[str, object]
         """
 
         super().__init__(filter_, particles)

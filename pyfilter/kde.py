@@ -2,60 +2,48 @@ import torch
 from .resampling import residual
 from .utils import get_ess
 from math import sqrt
+from typing import Union
 
 
-def _jitter(values, scale):
+def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]):
     """
     Jitters the parameters.
     :param values: The values
-    :type values: torch.Tensor
     :param scale: The scaling to use for the variance of the proposal
-    :type scale: float|torch.Tensor
     :return: Proposed values
-    :rtype: torch.Tensor
     """
 
     return values + scale * torch.empty_like(values).normal_()
 
 
-def silverman(n, ess):
+def silverman(n: int, ess: float):
     """
     Returns Silverman's factor.
     :param n: The dimension
-    :type n: int
     :param ess: The ess
-    :type ess: float
     :return: Bandwidth factor
-    :rtype: float
     """
 
     return (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
 
-def scott(n, ess):
+def scott(n: int, ess: float):
     """
     Returns Silverman's factor.
     :param n: The dimension
-    :type n: int
     :param ess: The ess
-    :type ess: float
     :return: Bandwidth factor
-    :rtype: float
     """
 
     return 1.059 * ess ** (-1 / (n + 4))
 
 
-def robust_var(x, w, mean=None):
+def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     """
     Calculates the scale robustly
     :param x: The values
-    :type x: torch.Tensor
     :param w: The weights
-    :type w: torch.Tensor
     :param mean: The mean
-    :type mean: torch.Tensor
-    :rtype: torch.Tensor
     """
 
     # ===== IQR ===== #
@@ -90,7 +78,6 @@ class KernelDensityEstimate(object):
         """
         Implements the base class for KDEs.
         :param resampling: The resampler function
-        :type resampling: callable
         """
 
         self._resampling = resampling
@@ -98,26 +85,21 @@ class KernelDensityEstimate(object):
         self._bw_fac = None
         self._means = None
 
-    def fit(self, x, w):
+    def fit(self, x: torch.Tensor, w: torch.Tensor):
         """
         Fits the KDE.
         :param x: The samples
-        :type x: torch.Tensor
         :param w: The weights
-        :type w: torch.Tensor
         :return: Self
-        :rtype: KernelDensityEstimate
         """
 
         raise NotImplementedError()
 
-    def sample(self, inds=None):
+    def sample(self, inds: torch.Tensor = None):
         """
         Samples from the KDE.
         :param inds: Whether to manually specify the samples chosen
-        :type inds: torch.Tensor
         :return: New samples
-        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
@@ -167,7 +149,6 @@ class IndependentGaussian(KernelDensityEstimate):
         """
         Implements a Gaussian KDE.
         :param factor: How to calculate the factor bandwidth
-        :type factor: callable
         """
         super().__init__()
         self._fac = factor
@@ -224,11 +205,10 @@ class MultivariateGaussian(IndependentGaussian):
 
 
 class ConstantKernel(KernelDensityEstimate):
-    def __init__(self, bw):
+    def __init__(self, bw: Union[float, torch.Tensor]):
         """
         Kernel with constant, prespecified bandwidth.
         :param bw: The bandwidth to use
-        :type bw: float|torch.Tensor
         """
         super().__init__()
         self._bw_fac = bw

@@ -8,13 +8,11 @@ from torch import isfinite, zeros_like
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.2, kernel=None, max_increases=5):
+    def __init__(self, filter_, particles, threshold=0.2, kernel: ParticleMetropolisHastings = None, max_increases=5):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
-        :type threshold: float
         :param kernel: The kernel to use when updating the parameters
-        :type kernel: ParticleMetropolisHastings
         """
 
         super().__init__(filter_, particles)
@@ -60,7 +58,6 @@ class SMC2(SequentialParticleAlgorithm):
         """
         Rejuvenates the particles using a PMCMC move.
         :return: Self
-        :rtype: SMC2
         """
 
         # ===== Update the description ===== #
@@ -80,7 +77,6 @@ class SMC2(SequentialParticleAlgorithm):
         """
         Increases the number of states.
         :return: Self
-        :rtype: SMC2
         """
 
         if self._increases >= self._max_increases:
@@ -107,15 +103,12 @@ class SMC2(SequentialParticleAlgorithm):
 
 
 class SMC2FW(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, switch=200, block_len=125, kde=None, **kwargs):
+    def __init__(self, filter_, particles, switch=200, block_len=125, kde: KernelDensityEstimate = None, **kwargs):
         """
         Implements the SMC2 FW algorithm of Ajay Jasra and Yan Zhou.
         :param block_len: The minimum block length to use
-        :type block_len: int
         :param switch: When to switch to using fixed width sampling
-        :type switch: int
         :param kde: The KDE approximation to use for parameters
-        :type kde: KernelDensityEstimate
         :param kwargs: Kwargs to SMC2
         """
 

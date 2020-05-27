@@ -5,6 +5,7 @@ import warnings
 from ..module import Module, TensorContainer
 import torch
 from ..utils import normalize
+from typing import Tuple
 
 
 class BaseAlgorithm(Module, ABC):
@@ -18,20 +19,18 @@ class BaseAlgorithm(Module, ABC):
         self._iterator = None
 
     @enforce_tensor
-    def fit(self, y):
+    def fit(self, y: torch.Tensor):
         """
         Fits the algorithm to data.
         :param y: The data to fit
-        :type y: torch.Tensor
         :return: Self
-        :rtype: BaseAlgorithm
         """
 
         self._fit(y)
 
         return self
 
-    def _fit(self, y):
+    def _fit(self, y: torch.Tensor):
         """
         Method to be overridden by user.
         """
@@ -42,19 +41,16 @@ class BaseAlgorithm(Module, ABC):
         """
         Initializes the chosen algorithm.
         :return: Self
-        :rtype: BaseAlgorithm
         """
 
         return self
 
-    def predict(self, steps, *args, **kwargs):
+    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead.
         :param steps: The number of steps
-        :type steps: int
         :param args: Any arguments
         :param kwargs: Any keyworded arguments
-        :rtype: tuple[torch.Tensor]
         """
 
         raise NotImplementedError()
@@ -64,7 +60,7 @@ class BaseAlgorithm(Module, ABC):
 
 
 class BaseFilterAlgorithm(BaseAlgorithm, ABC):
-    def __init__(self, filter_):
+    def __init__(self, filter_: BaseFilter):
         """
         Base class for algorithms utilizing filters for inference.
         :param filter_: The filter
@@ -76,20 +72,18 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         self._filter = filter_
 
     @property
-    def filter(self):
+    def filter(self) -> BaseFilter:
         """
         Returns the filter
-        :rtype: BaseFilter
         """
 
         return self._filter
 
     @filter.setter
-    def filter(self, x):
+    def filter(self, x: BaseFilter):
         """
         Sets the filter
         :param x: The new filter
-        :type x: BaseFilter
         """
 
         if not isinstance(x, type(self.filter)):
@@ -103,25 +97,21 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
     Algorithm for sequential inference.
     """
 
-    def _update(self, y):
+    def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         """
         The function to override by the inherited algorithm.
         :param y: The observation
-        :type y: torch.Tensor
         :return: Self
-        :rtype: SequentialAlgorithm
         """
 
         raise NotImplementedError()
 
     @enforce_tensor
-    def update(self, y):
+    def update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         """
         Performs an update using a single observation `y`.
         :param y: The observation
-        :type y: numpy.ndarray|float|torch.Tensor
         :return: Self
-        :rtype: SequentialAlgorithm
         """
 
         return self._update(y)
@@ -140,11 +130,10 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
 
 
 class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
-    def __init__(self, filter_, particles):
+    def __init__(self, filter_, particles: int):
         """
         Implements a base class for sequential particle inference.
         :param particles: The number of particles to use
-        :type particles: int
         """
 
         super().__init__(filter_)
@@ -157,27 +146,25 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         self.particles = particles
 
     @property
-    def particles(self):
+    def particles(self) -> torch.Size:
         """
         Returns the number of particles.
-        :rtype: torch.Size
         """
 
         return self._particles
 
     @particles.setter
-    def particles(self, x):
+    def particles(self, x: int):
         """
         Sets the particles.
         """
 
         self._particles = torch.Size([x])
 
-    def initialize(self):
+    def initialize(self) -> BaseFilterAlgorithm:
         """
         Overwrites the initialization.
         :return: Self
-        :rtype: SequentialParticleAlgorithm
         """
 
         self._filter.set_nparallel(*self.particles)
@@ -191,10 +178,9 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         return self
 
     @property
-    def logged_ess(self):
+    def logged_ess(self) -> torch.Tensor:
         """
         Returns the logged ESS.
-        :rtype: torch.Tensor
         """
 
         return torch.stack(self._logged_ess.tensors)

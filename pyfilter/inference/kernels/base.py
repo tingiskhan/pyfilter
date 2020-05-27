@@ -1,8 +1,11 @@
 from ...utils import normalize
 from ..utils import stacker
 import numpy as np
-from ...resampling import residual, systematic
+from ...resampling import systematic
 import torch
+from typing import Iterable, Callable, Union
+from ...timeseries import Parameter
+from ...filters.base import BaseFilter
 
 
 def finite_decorator(func):
@@ -19,8 +22,6 @@ class BaseKernel(object):
     def __init__(self, record_stats=False, resampling=systematic):
         """
         The base kernel used for updating the collection of particles approximating the posterior.
-        :param record_stats: Whether to record the statistics
-        :type record_stats: bool
         """
 
         self._record_stats = record_stats
@@ -32,44 +33,34 @@ class BaseKernel(object):
 
         self._resampler = resampling
 
-    def set_resampler(self, resampler):
+    def set_resampler(self, resampler: Callable[[torch.Tensor, bool, Union[float, torch.Tensor]], torch.Tensor]):
         """
         Sets the resampler to use if necessary for kernel.
-        :param resampler: The resampler
-        :type resampler: callable
-        :rtype: BaseKernel
         """
+
         self._resampler = resampler
 
         return self
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters: Iterable[Parameter], filter_: BaseFilter, weights: torch.Tensor):
         """
         The method for the user to override.
         :param parameters: The parameters of the model to update
-        :type parameters: tuple[Parameter]
         :param filter_: The filter
-        :type filter_: BaseFilter
         :param weights: The weights to be passed. A normalized copy of log_weights
-        :type weights: torch.Tensor
         :return: Self
-        :rtype: BaseKernel
         """
 
         raise NotImplementedError()
 
     @finite_decorator
-    def update(self, parameters, filter_, weights):
+    def update(self, parameters: Iterable[Parameter], filter_: BaseFilter, weights: torch.Tensor):
         """
         Defines the function for updating the parameters.
         :param parameters: The parameters of the model to update
-        :type parameters: tuple[Parameter]
         :param filter_: The filter
-        :type filter_: BaseFilter
         :param weights: The weights to use for propagating.
-        :type weights: torch.Tensor
         :return: Self
-        :rtype: BaseKernel
         """
 
         w = normalize(weights)
@@ -81,15 +72,12 @@ class BaseKernel(object):
 
         return self
 
-    def record_stats(self, parameters, weights):
+    def record_stats(self, parameters: Iterable[Parameter], weights: torch.Tensor):
         """
         Records the stats of the parameters.
         :param parameters: The parameters of the model to update
-        :type parameters: tuple[Parameter]
         :param weights: The weights to be passed
-        :type weights: torch.Tensor
         :return: Self
-        :rtype: BaseKernel
         """
 
         stacked = stacker(parameters, lambda u: u.t_values)
@@ -106,7 +94,6 @@ class BaseKernel(object):
     def get_as_numpy(self):
         """
         Returns the stats numpy arrays instead of torch tensor.
-        :rtype: dict[str,np.ndarray]
         """
 
         res = dict()

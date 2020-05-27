@@ -1,16 +1,15 @@
 from ..utils import flatten
 import torch
 from .base import StochasticProcess, StochasticProcessBase
+from typing import Tuple
 
 
 class StateSpaceModel(StochasticProcessBase):
-    def __init__(self, hidden, observable):
+    def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         """
         Combines a hidden and observable processes to constitute a state-space model.
         :param hidden: The hidden process(es) constituting the SSM
-        :type hidden: StochasticProcess
         :param observable: The observable process(es) constituting the SSM
-        :type observable: StochasticProcess
         """
 
         self.hidden = hidden
@@ -22,21 +21,17 @@ class StateSpaceModel(StochasticProcessBase):
         return flatten(self.hidden.theta_dists, self.observable.theta_dists)
 
     @property
-    def hidden_ndim(self):
+    def hidden_ndim(self) -> int:
         """
         Returns the dimension of the hidden process.
-        :return: The dimension of the hidden process
-        :rtype: int
         """
 
         return self.hidden.ndim
 
     @property
-    def obs_ndim(self):
+    def obs_ndim(self) -> int:
         """
         Returns the dimension of the observable process
-        :return: The dimension of the observable process
-        :rtype: int
         """
 
         return self.observable.ndim
@@ -53,20 +48,17 @@ class StateSpaceModel(StochasticProcessBase):
 
         return self
 
-    def h_weight(self, y, x):
+    def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
         :param y: The current hidden state
-        :type y: torch.Tensor
         :param x: The previous hidden state
-        :type x: torch.Tensor
         :return: The corresponding log-weights
-        :rtype: torch.Tensor
         """
 
         return self.hidden.log_prob(y, x)
 
-    def sample_path(self, steps, x_s=None, samples=None):
+    def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
 
         hidden = self.hidden.sample_path(steps, x_s=x)
@@ -74,15 +66,13 @@ class StateSpaceModel(StochasticProcessBase):
 
         return hidden, obs
 
-    def exchange(self, indices, newmodel):
+    def exchange(self, indices: torch.Tensor, newmodel):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
         :param indices: The indices to exchange
-        :type indices: torch.Tensor
         :param newmodel: The model which to exchange with
         :type newmodel: StateSpaceModel
         :return: Self
-        :rtype: StateSpaceModel
         """
 
         procs = (

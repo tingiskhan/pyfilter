@@ -14,11 +14,8 @@ class IteratedFilteringV2(BatchFilterAlgorithm):
         """
         Implements the Iterated Filtering version 2 (IF2) algorithm by Ionides et al.
         :param filter_: The filter to use.
-        :type filter_: ParticleFilter
         :param iterations: The number of iterations
-        :type iterations: int
         :param cooling: How much of the scale to remain after all the iterations
-        :type cooling: float
         """
 
         if not isinstance(filter_, SISR):

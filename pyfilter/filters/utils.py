@@ -12,12 +12,10 @@ def enforce_tensor(func):
     return wrapper
 
 
-def _construct_empty(array):
+def _construct_empty(array: torch.Tensor) -> torch.Tensor:
     """
     Constructs an empty array based on the shape.
     :param array: The array to reshape after
-    :type array: torch.Tensor
-    :rtype: torch.Tensor
     """
 
     temp = torch.arange(array.shape[-1], device=array.device)
@@ -39,21 +37,19 @@ class FilterResult(TensorContainerBase):
         return self._loglikelihood.tensors + self._filter_means.tensors
 
     @property
-    def loglikelihood(self):
+    def loglikelihood(self) -> torch.Tensor:
         return torch.stack(self._loglikelihood.tensors)
 
     @property
-    def filter_means(self):
+    def filter_means(self) -> torch.Tensor:
         return torch.stack(self._filter_means.tensors)
 
-    def exchange(self, res, inds):
+    def exchange(self, res, inds: torch.Tensor):
         """
         Exchanges the specified indices of self with res.
         :param res: The other filter result
         :type res: FilterResult
         :param inds: The indices
-        :type inds: torch.Tensor
-        :rtype: Self
         """
 
         # ===== Loglikelihood ===== #
@@ -70,12 +66,10 @@ class FilterResult(TensorContainerBase):
 
         return self
 
-    def resample(self, inds):
+    def resample(self, inds: torch.Tensor):
         """
         Resamples the specified indices of self with res.
         :param inds: The indices
-        :type inds: torch.Tensor
-        :rtype: Self
         """
 
         self._loglikelihood = TensorContainer(*self.loglikelihood[:, inds])

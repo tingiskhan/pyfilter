@@ -1,7 +1,7 @@
 import copy
 from abc import ABC
 from ..proposals import LinearGaussianObservations
-from ..resampling import systematic, multinomial
+from ..resampling import systematic
 from ..proposals.bootstrap import Bootstrap, Proposal
 from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
 from tqdm import tqdm
@@ -9,14 +9,14 @@ import torch
 from ..utils import get_ess, choose, normalize
 from ..module import Module, TensorContainer
 from .utils import enforce_tensor, FilterResult, _construct_empty
+from typing import Tuple, Union
 
 
 class BaseFilter(Module, ABC):
-    def __init__(self, model):
+    def __init__(self, model: StateSpaceModel):
         """
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
-        :type model: StateSpaceModel
         """
 
         self._dummy = torch.tensor(0.)
@@ -31,19 +31,17 @@ class BaseFilter(Module, ABC):
         self._filter_res = FilterResult()
 
     @property
-    def result(self):
+    def result(self) -> FilterResult:
         """
         Returns the filtering result object.
-        :rtype: FilterResult
         """
 
         return self._filter_res
 
     @property
-    def ssm(self):
+    def ssm(self) -> StateSpaceModel:
         """
         Returns the SSM as an object.
-        :rtype: StateSpaceModel
         """
         return self._model
 
@@ -53,19 +51,16 @@ class BaseFilter(Module, ABC):
         :param shape: The shape to use. Please note that
         :type shape: tuple|torch.Size
         :return: Self
-        :rtype: BaseFilter
         """
 
         self.ssm.viewify_params(shape)
 
         return self
 
-    def set_nparallel(self, n):
+    def set_nparallel(self, n: int):
         """
         Sets the number of parallel filters to use
         :param n: The number of parallel filters
-        :type n: int
-        :rtype: BaseFilter
         """
 
         raise NotImplementedError()
@@ -74,45 +69,37 @@ class BaseFilter(Module, ABC):
         """
         Initializes the filter.
         :return: Self
-        :rtype: BaseFilter
         """
 
         return self
 
     @enforce_tensor
-    def filter(self, y):
+    def filter(self, y: Union[float, torch.Tensor]):
         """
         Performs a filtering the model for the observation `y`.
         :param y: The observation
-        :type y: float|torch.Tensor
         :return: Self
-        :rtype: BaseFilter
         """
 
         self._filter_res.append(*self._filter(y))
 
         return self
 
-    def _filter(self, y):
+    def _filter(self, y: Union[float, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         The actual filtering procedure. Overwrite this.
         :param y: The observation
-        :type y: float|torch.Tensor
-        :return: Mean of state, likelihood
-        :rtype: torch.Tensor, torch.Tensor
+        :return: Mean of state, log-likelihood
         """
 
         raise NotImplementedError()
 
-    def longfilter(self, y, bar=True):
+    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True):
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
-        :type y: torch.Tensor|tuple[torch.Tensor]
         :param bar: Whether to print a progressbar
-        :type bar: bool
         :return: Self
-        :rtype: BaseFilter
         """
 
         astuple = tuple(y) if not isinstance(y, tuple) else y
@@ -130,31 +117,26 @@ class BaseFilter(Module, ABC):
         """
         Returns a copy of itself.
         :return: Copy of self
-        :rtype: BaseFilter
         """
 
         # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
 
-    def predict(self, steps, *args, **kwargs):
+    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead using the latest available information.
         :param steps: The number of steps forward to predict
-        :type steps: int
         :param kwargs: Any key worded arguments
-        :rtype: tuple[torch.Tensor]
         """
+
         raise NotImplementedError()
 
-    def resample(self, inds, entire_history=False):
+    def resample(self, inds: torch.Tensor, entire_history: bool = False):
         """
         Resamples the filter, used in cases where we use nested filters.
         :param inds: The indices
-        :type inds: torch.Tensor
         :param entire_history: Whether to resample entire history
-        :type entire_history: bool
         :return: Self
-        :rtype: BaseFilter
         """
         if entire_history:
             self._filter_res.resample(inds)
@@ -165,13 +147,11 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def _resample(self, inds):
+    def _resample(self, inds: torch.Tensor):
         """
         Implements resampling unique for the filter.
         :param inds: The indices
-        :type inds: torch.Tensor
         :return: Self
-        :rtype: BaseFilter
         """
 
         return self
@@ -180,7 +160,6 @@ class BaseFilter(Module, ABC):
         """
         Resets the filter by nullifying the filter specific attributes.
         :return: Self
-        :rtype: BaseFilter
         """
 
         self._filter_res = FilterResult()
@@ -192,20 +171,17 @@ class BaseFilter(Module, ABC):
         """
         Any filter specific resets.
         :return: Self
-        :rtype: BaseFilter
         """
 
         return self
 
-    def exchange(self, filter_, inds):
+    def exchange(self, filter_, inds: torch.Tensor):
         """
         Exchanges the filters.
         :param filter_: The new filter
         :type filter_: BaseFilter
         :param inds: The indices
-        :type inds: torch.Tensor
         :return: Self
-        :rtype: BaseFilter
         """
 
         self._model.exchange(inds, filter_.ssm)
@@ -214,15 +190,13 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def _exchange(self, filter_, inds):
+    def _exchange(self, filter_, inds: torch.Tensor):
         """
         Filter specific exchanges.
         :param filter_: The new filter
         :type filter_: BaseFilter
         :param inds: The indices
-        :type inds: torch.Tensor
         :return: Self
-        :rtype: BaseFilter
         """
 
         return self
@@ -234,19 +208,15 @@ _PROPOSAL_MAPPING = {
 
 
 class ParticleFilter(BaseFilter, ABC):
-    def __init__(self, model, particles, resampling=systematic, proposal='auto', ess=0.9, need_grad=False):
+    def __init__(self, model, particles: int, resampling=systematic, proposal: Union[str, Proposal] = 'auto', ess=0.9,
+                 need_grad=False):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
-        :type particles: int
         :param resampling: Which resampling method to use
-        :type resampling: callable
         :param proposal: Which proposal to use, set to `auto` to let algorithm decide
-        :type proposal: Proposal|str
         :param ess: At which level to resample
-        :type ess: float
         :param need_grad: Whether we need the gradient
-        :type need_grad: bool
         """
 
         super().__init__(model)
@@ -279,61 +249,56 @@ class ParticleFilter(BaseFilter, ABC):
         self._proposal = proposal.set_model(self._model)    # type: Proposal
 
     @property
-    def particles(self):
+    def particles(self) -> torch.Size:
         """
         Returns the number of particles.
-        :rtype: torch.Size
         """
 
         return self._particles
 
     @particles.setter
-    def particles(self, x):
+    def particles(self, x: Tuple[int, int] or int):
         """
         Sets the number of particles.
-        :type x: tuple[int]|int
         """
 
         self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
 
     @property
-    def proposal(self):
+    def proposal(self) -> Proposal:
         """
         Returns the proposal.
-        :rtype: Proposal
         """
 
         return self._proposal
 
-    def _resample_state(self, weights):
+    def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
         """
         Resamples the state in accordance with the weigths.
-        :param weights: The weights
-        :type weights: torch.Tensor
+        :param w: The weights
         :return: The indices and mask
-        :rtype: tuple[torch.Tensor]
         """
 
         # ===== Get the ones requiring resampling ====== #
-        ess = get_ess(weights) / weights.shape[-1]
+        ess = get_ess(w) / w.shape[-1]
         mask = ess < self._th
 
         self.logged_ess.append(ess)
 
         # ===== Create a default array for resampling ===== #
-        out = _construct_empty(weights)
+        out = _construct_empty(w)
 
         # ===== Return based on if it's nested or not ===== #
         if not mask.any():
             return out, mask
         elif not isinstance(self._particles, tuple):
-            return self._resampler(weights), mask
+            return self._resampler(w), mask
 
-        out[mask] = self._resampler(weights[mask])
+        out[mask] = self._resampler(w[mask])
 
         return out, mask
 
-    def set_nparallel(self, n):
+    def set_nparallel(self, n: int):
         if len(self.particles) > 1:
             raise NotImplementedError('Currently only supports at most one level of nesting!')
 
@@ -351,7 +316,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return self
 
-    def predict(self, steps, aggregate=True, **kwargs):
+    def predict(self, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps + 1, x_s=self._x_cur, **kwargs)
 
         if not aggregate:

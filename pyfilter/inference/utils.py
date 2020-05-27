@@ -1,10 +1,12 @@
 import torch
-from torch.distributions import MultivariateNormal
+from torch.distributions import MultivariateNormal, Distribution
 from ..utils import unflattify
+from typing import Iterable
+from ..timeseries import Parameter
 
 
 class StackedObject(object):
-    def __init__(self, concated, mask, prev_shape):
+    def __init__(self, concated: torch.Tensor, mask: torch.Tensor, prev_shape: torch.Size):
         """
         Object for storing the results of stacking tensors from `stacker`.
         """
@@ -14,15 +16,13 @@ class StackedObject(object):
         self.prev_shape = prev_shape
 
 
-def stacker(parameters, selector=lambda u: u.values, dim=1):
+def stacker(parameters: Iterable[Parameter], selector=lambda u: u.values, dim=1):
     """
     Stacks the parameters and returns a n-tuple containing the mask for each parameter.
     :param parameters: The parameters
     :type parameters: tuple[Parameter]|list[Parameter]
     :param selector: The selector
     :param dim: The dimension to start flattening from
-    :type dim: int
-    :rtype: StackedObject
     """
 
     to_conc = tuple()
@@ -49,14 +49,11 @@ def stacker(parameters, selector=lambda u: u.values, dim=1):
     return StackedObject(torch.cat(to_conc, dim=-1), mask, prev_shape)
 
 
-def _construct_mvn(x, w):
+def _construct_mvn(x: torch.Tensor, w: torch.Tensor):
     """
     Constructs a multivariate normal distribution of weighted samples.
     :param x: The samples
-    :type x: torch.Tensor
     :param w: The weights
-    :type w: torch.Tensor
-    :rtype: MultivariateNormal
     """
 
     mean = (x * w.unsqueeze(-1)).sum(0)
@@ -66,19 +63,14 @@ def _construct_mvn(x, w):
     return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
 
 
-def _mcmc_move(params, dist, stacked, shape):
+def _mcmc_move(params: Iterable[Parameter], dist: Distribution, stacked: StackedObject, shape: int):
     """
     Performs an MCMC move to rejuvenate parameters.
     :param params: The parameters to use for defining the distribution
-    :type params: tuple[Parameter]
     :param dist: The distribution to use for sampling
-    :type dist: MultivariateNormal
     :param stacked: The mask to apply for parameters
-    :type stacked: StackedObject
     :param shape: The shape to sample
-    :type shape: int
     :return: Samples from a multivariate normal distribution
-    :rtype: torch.Tensor
     """
 
     rvs = dist.sample((shape,))
@@ -89,17 +81,13 @@ def _mcmc_move(params, dist, stacked, shape):
     return True
 
 
-def _eval_kernel(params, dist, n_params):
+def _eval_kernel(params: Iterable[Parameter], dist: Distribution, n_params: Iterable[Parameter]):
     """
     Evaluates the kernel used for performing the MCMC move.
     :param params: The current parameters
-    :type params: tuple[Distribution]
     :param dist: The distribution to use for evaluating the prior
-    :type dist: MultivariateNormal
     :param n_params: The new parameters to evaluate against
-    :type n_params: tuple of Distribution
     :return: The log difference in priors
-    :rtype: torch.Tensor
     """
 
     p_vals = stacker(params, lambda u: u.t_values)

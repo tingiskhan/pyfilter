@@ -5,44 +5,40 @@ from functools import lru_cache
 from .parameter import Parameter, size_getter
 from copy import deepcopy
 from ..module import Module, TensorContainer, TensorContainerDict
+from typing import Tuple, Union, Callable
 
 
 class StochasticProcessBase(Module):
     @property
-    def theta(self):
+    def theta(self) -> Tuple[Parameter, ...]:
         """
         Returns the parameters of the model.
-        :rtype: tuple[Parameter]
         """
 
         raise NotImplementedError()
 
     @property
-    def theta_dists(self):
+    def theta_dists(self) -> Tuple[Parameter, ...]:
         """
         Returns the parameters that are distributions.
-        :rtype: tuple[Parameter]
         """
 
         raise NotImplementedError()
 
-    def viewify_params(self, shape):
+    def viewify_params(self, shape: Union[Tuple[int, ...], torch.Size]):
         """
         Makes views of the parameters.
         :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
-        :type shape: tuple|torch.Size
         :return: Self
-        :rtype: StochasticProcessBase
         """
 
         raise NotImplementedError()
 
-    def sample_params(self, shape=None):
+    def sample_params(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
         """
         Samples the parameters of the model in place.
         :param shape: The shape to use
         :return: Self
-        :rtype: StochasticProcessBase
         """
 
         for param in self.theta_dists:
@@ -52,32 +48,26 @@ class StochasticProcessBase(Module):
 
         return self
 
-    def log_prob(self, y, x):
+    def log_prob(self, y: torch.Tensor, x: torch.Tensor):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.
         :param y: The value at x_t
-        :type y: torch.Tensor
         :param x: The value at x_{t-1}
-        :type x: torch.Tensor
         :return: The log-weights
-        :rtype: torch.Tensor
         """
 
         return self._log_prob(y, x)
 
-    def _log_prob(self, y, x):
+    def _log_prob(self, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
 
-    def propagate(self, x, as_dist=False):
+    def propagate(self, x: torch.Tensor, as_dist=False) -> Union[Distribution, torch.Tensor]:
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
-        :type x: torch.Tensor
         :param as_dist: Whether to return the new value as a distribution
-        :type as_dist: bool
         :return: Samples from the model
-        :rtype: torch.Tensor|Distribution
         """
 
         return self._propagate(x, as_dist)
@@ -85,28 +75,24 @@ class StochasticProcessBase(Module):
     def _propagate(self, x, as_dist=False):
         raise NotImplementedError()
 
-    def sample_path(self, steps, samples=None):
+    def sample_path(self, steps: int, samples: Union[int, Tuple[int, ...]] = None,
+                    x_s: torch.Tensor = None) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """
         Samples a trajectory from the model.
         :param steps: The number of steps
-        :type steps: int
         :param samples: Number of sample paths
-        :type samples: int
+        :param x_s: The start value for the latent process
         :return: An array of sampled values
-        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
 
-    def p_apply(self, func, transformed=False):
+    def p_apply(self, func: Callable[[Parameter], Parameter], transformed=False):
         """
         Applies `func` to each parameter of the model "inplace", i.e. manipulates `self.theta`.
         :param func: Function to apply, must be of the structure func(param)
-        :type func: callable
         :param transformed: Whether or not results from applied function are transformed variables
-        :type transformed: bool
-        :return: Instance of self
-        :rtype: StochasticProcessBase
+        :return: Self
         """
 
         for p in self.theta_dists:
@@ -117,13 +103,11 @@ class StochasticProcessBase(Module):
 
         return self
 
-    def p_prior(self, transformed=True):
+    def p_prior(self, transformed=True) -> torch.Tensor:
         """
         Calculates the prior log-likelihood of the current values.
         :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
-        :type transformed: bool
         :return: The prior of the current parameter values
-        :rtype: torch.Tensor
         """
 
         if transformed:
@@ -135,14 +119,12 @@ class StochasticProcessBase(Module):
 
         return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2))))
 
-    def p_map(self, func):
+    def p_map(self, func: Callable[[Parameter], object]) -> Tuple[object, ...]:
         """
         Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
         that are distributions.
         :param func: The function to apply to parameters.
-        :type func: callable
         :return: Returns tuple of values
-        :rtype: tuple[Parameter]
         """
 
         out = tuple()
@@ -155,7 +137,6 @@ class StochasticProcessBase(Module):
         """
         Returns a deep copy of the object.
         :return: Copy of current instance
-        :rtype: StochasticProcessBase
         """
 
         return deepcopy(self)
@@ -166,15 +147,13 @@ def _view_helper(p, shape):
 
 
 class StochasticProcess(StochasticProcessBase, ABC):
-    def __init__(self, theta, initial_dist, increment_dist):
+    def __init__(self, theta: Tuple[object, ...], initial_dist: Union[Distribution, None],
+                 increment_dist: Distribution):
         """
         The base class for time series.
         :param theta: The parameters governing the dynamics
-        :type theta: tuple[Distribution]|tuple[torch.Tensor]|tuple[float]
         :param initial_dist: The initial distribution
-        :type initial_dist: Distribution
         :param increment_dist: The distribution of the increments
-        :type increment_dist: Distribution
         """
 
         super().__init__()
@@ -236,8 +215,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
     def _verify_dimensions(self):
         """
         Helper method for verifying that all return values are congruent.
-        :return: Self
-        :rtype: AffineModel
         """
 
         # TODO: Implement
@@ -248,7 +225,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
         """
         Returns the parameters of the distribution to re-initialize the distribution with. Mainly a helper for when
         the user passes distributions parameterized by priors.
-        :rtype: TensorContainerDict
         """
 
         return self._dist_theta
@@ -258,7 +234,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
         return self._theta
 
     @theta.setter
-    def theta(self, x):
+    def theta(self, x: Tuple[Parameter, ...]):
         if self._theta is not None and len(x) != len(self._theta):
             raise ValueError('The number of parameters must be same!')
         if not all(isinstance(p, Parameter) for p in x):
@@ -272,10 +248,9 @@ class StochasticProcess(StochasticProcessBase, ABC):
         return tuple(p for p in self.theta if p.trainable) + self.distributional_theta.tensors
 
     @property
-    def theta_vals(self):
+    def theta_vals(self) -> Tuple[Parameter, ...]:
         """
         Returns the values of the parameters.
-        :rtype: tuple[torch.Tensor]
         """
         return self._theta_vals
 
@@ -284,8 +259,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
     def ndim(self):
         """
         Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
-        :return: Dimension of process
-        :rtype: int
         """
 
         return len((self.initial_dist or self.increment_dist).event_shape)
@@ -296,7 +269,6 @@ class StochasticProcess(StochasticProcessBase, ABC):
         """
         Returns the number of variables of the stochastic process. E.g. if it's a univariate process, it returns 1, and
         the number of elements in the vector/matrix.
-        :rtype: int
         """
 
         dist = self.initial_dist or self.increment_dist
@@ -336,15 +308,12 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return self
 
-    def i_sample(self, shape=None, as_dist=False):
+    def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> torch.Tensor:
         """
         Samples from the initial distribution.
         :param shape: The number of samples
-        :type shape: int|tuple[int]
         :param as_dist: Whether to return the new value as a distribution
-        :type as_dist: bool
         :return: Samples from the initial distribution
-        :rtype: torch.Tensor
         """
 
         dist = self.initial_dist.expand(size_getter(shape))
@@ -354,7 +323,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return dist.sample()
 
-    def sample_path(self, steps, samples=None, x_s=None):
+    def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
         x_s = self.i_sample(samples) if x_s is None else x_s
         out = torch.zeros(steps, *x_s.shape, device=x_s.device, dtype=x_s.dtype)
         out[0] = x_s
@@ -364,28 +333,23 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return out
 
-    def propagate_u(self, x, u):
+    def propagate_u(self, x: torch.Tensor, u: torch.Tensor):
         """
         Propagate the process conditional on both state and draws from incremental distribution.
         :param x: The previous state
-        :type x: torch.Tensor
         :param u: The current draws from the incremental distribution
-        :type u: torch.Tensor
-        :rtype: torch.Tensor
         """
 
         return self._propagate_u(x, u)
 
-    def _propagate_u(self, x, u):
+    def _propagate_u(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError()
 
-    def prop_apf(self, x):
+    def prop_apf(self, x: torch.Tensor) -> torch.Tensor:
         """
         Method used by APF. Propagates the state one step forward.
         :param x: The previous state
-        :type x: torch.Tensor
         :return: The new state
-        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()

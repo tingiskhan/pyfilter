@@ -6,11 +6,10 @@ from torch import isfinite
 
 
 class NESS(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.9, kde=None):
+    def __init__(self, filter_, particles, threshold=0.9, kde: KernelDensityEstimate = None):
         """
         Implements the NESS algorithm by Miguez and Crisan.
         :param kde: The kernel density estimator to use for sampling new parameters.
-        :type kde: KernelDensityEstimate
         """
 
         super().__init__(filter_, particles)

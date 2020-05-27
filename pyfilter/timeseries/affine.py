@@ -1,9 +1,11 @@
 from .base import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
+from .parameter import Parameter
+from typing import Tuple, Callable, Iterable, Union
 
 
-def _define_transdist(loc, scale, inc_dist, ndim):
+def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
     loc, scale = torch.broadcast_tensors(loc, scale)
 
     shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
@@ -14,13 +16,13 @@ def _define_transdist(loc, scale, inc_dist, ndim):
 
 
 class AffineProcess(StochasticProcess):
-    def __init__(self, funcs, theta, initial_dist, increment_dist):
+    def __init__(self, funcs: Tuple[Callable[[torch.Tensor, Tuple[object, ...]], torch.Tensor], ...], theta,
+                 initial_dist, increment_dist):
         """
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
         that is, given a base distribution X we get a new distribution Y as
             Y = loc + scale * X
         :param funcs: The functions governing the dynamics of the process
-        :type funcs: tuple[callable]
         """
 
         super().__init__(theta, initial_dist, increment_dist)
@@ -33,36 +35,28 @@ class AffineProcess(StochasticProcess):
 
         return self._define_transdist(loc, scale).log_prob(y)
 
-    def mean_scale(self, x):
+    def mean_scale(self, x: torch.Tensor):
         """
         Returns the mean and scale of the process evaluated at x_t
         :param x: The previous state
-        :type x: torch.Tensor
-        :rtype: tuple[torch.Tensor]
         """
 
         return self._mean_scale(x)
 
-    def _mean_scale(self, x):
+    def _mean_scale(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the mean and scale of the process.
         :param x: The previous state
-        :type x: torch.Tensor
         :return: (mean, scale)
-        :rtype: tuple[torch.Tensor]
         """
 
         return self.f(x, *self.theta_vals), self.g(x, *self.theta_vals)
 
-    def _define_transdist(self, loc, scale):
+    def _define_transdist(self, loc: torch.Tensor, scale: torch.Tensor):
         """
         Helper method for defining the transition density
         :param loc: The mean
-        :type loc: torch.Tensor
         :param scale: The scale
-        :type scale: torch.Tensor
-        :return: Distribution
-        :rtype: Distribution
         """
 
         return _define_transdist(loc, scale, self.increment_dist, self.ndim)
@@ -92,7 +86,7 @@ def _g(x, s):
 
 
 class RandomWalk(AffineProcess):
-    def __init__(self, std):
+    def __init__(self, std: Union[torch.Tensor, float, Distribution]):
         """
         Defines a random walk.
         :param std: The vector of standard deviations

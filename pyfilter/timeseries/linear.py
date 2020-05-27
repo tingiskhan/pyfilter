@@ -3,6 +3,7 @@ from .base import StochasticProcess
 from .observable import AffineObservations
 import torch
 from torch import distributions as dists
+from typing import Union
 
 
 def f_0d(x, a, scale):
@@ -39,17 +40,14 @@ def _get_shape(a):
 
 
 class LinearObservations(StateSpaceModel):
-    def __init__(self, hidden, a, scale, base_dist):
+    def __init__(self, hidden, a: Union[torch.Tensor, float, dists.Distribution],
+                 scale: Union[torch.Tensor, float, dists.Distribution], base_dist):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.
         :param hidden: The hidden dynamics
-        :type hidden: StochasticProcess
         :param a: The A-matrix
-        :type a: torch.Tensor|float|dists.Distribution
         :param scale: The variance of the observations
-        :type scale: torch.Tensor|dists.Distribution|float
         :param base_dist: The base distribution
-        :type base_dist: dists.Distribution
         """
 
         # ===== Convoluted way to decide number of dimensions ===== #
@@ -78,11 +76,8 @@ class LinearGaussianObservations(LinearObservations):
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
         :param hidden: The hidden dynamics
-        :type hidden: StochasticProcess
         :param a: The A-matrix
-        :type a: torch.Tensor|float|dists.Distribution
         :param scale: The variance of the observations
-        :type scale: torch.Tensor|dists.Distribution|float
         """
 
         # ===== Convoluted way to decide number of dimensions ===== #

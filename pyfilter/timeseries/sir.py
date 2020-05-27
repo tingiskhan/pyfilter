@@ -152,7 +152,7 @@ class ThreeFactorSIRD(Mixin, AffineEulerMaruyama):
 
 
 class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
-    def __init__(self, theta, init_dist, dt, num_steps=10):
+    def __init__(self, theta, initial_dist, dt, num_steps=10):
         """
         Implements a two factor stochastic SEIRD model, inspired by the blog:
             https://towardsdatascience.com/infectious-disease-modelling-beyond-the-basic-sir-model-216369c584c4
@@ -180,9 +180,9 @@ class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
 
             return s
 
-        if init_dist.event_shape != torch.Size([5]):
+        if initial_dist.event_shape != torch.Size([5]):
             raise NotImplementedError('Must be of size 5!')
 
         inc_dist = Independent(Normal(torch.zeros(2), math.sqrt(dt) * torch.ones(2)), 1)
 
-        super().__init__((f, g), theta, init_dist, inc_dist, dt, num_steps=num_steps)
+        super().__init__((f, g), theta, initial_dist, inc_dist, dt, num_steps=num_steps)
