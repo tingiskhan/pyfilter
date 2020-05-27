@@ -1,5 +1,5 @@
 import torch
-from .resampling import residual
+from .resampling import systematic
 from .utils import get_ess
 from math import sqrt
 from typing import Union
@@ -74,7 +74,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
 
 
 class KernelDensityEstimate(object):
-    def __init__(self, resampling=residual):
+    def __init__(self, resampling=systematic):
         """
         Implements the base class for KDEs.
         :param resampling: The resampler function
