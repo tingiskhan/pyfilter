@@ -22,7 +22,7 @@ class BaseFilter(Module, ABC):
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
-            raise ValueError('`model` must be `{:s}`!'.format(StateSpaceModel.__name__))
+            raise ValueError(f'`model` must be `{StateSpaceModel.__name__:s}`!')
 
         self._model = model
         self._n_parallel = None
