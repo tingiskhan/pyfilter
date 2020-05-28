@@ -1,22 +1,20 @@
 import copy
 from abc import ABC
-from ..proposals import LinearGaussianObservations
-from ..resampling import systematic
-from ..proposals.bootstrap import Bootstrap, Proposal
-from ..timeseries import StateSpaceModel, LinearGaussianObservations as LGO
+from ..timeseries import StateSpaceModel
 from tqdm import tqdm
 import torch
-from ..utils import get_ess, choose, normalize
-from ..module import Module, TensorContainer
-from .utils import enforce_tensor, FilterResult, _construct_empty
+from ..utils import choose
+from ..module import Module
+from .utils import enforce_tensor, FilterResult
 from typing import Tuple, Union
 
 
 class BaseFilter(Module, ABC):
-    def __init__(self, model: StateSpaceModel):
+    def __init__(self, model: StateSpaceModel, save_means=True):
         """
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
+        :param save_means: Whether to record the means, or to ignore
         """
 
         self._dummy = torch.tensor(0.)
@@ -29,6 +27,7 @@ class BaseFilter(Module, ABC):
         self._model = model
         self._n_parallel = None
         self._filter_res = FilterResult()
+        self._save_means = save_means
 
     @property
     def result(self) -> FilterResult:
@@ -78,12 +77,17 @@ class BaseFilter(Module, ABC):
         """
         Performs a filtering the model for the observation `y`.
         :param y: The observation
-        :return: Self
+        :return: Self and log-likelihood
         """
 
-        self._filter_res.append(*self._filter(y))
+        xm, ll = self._filter(y)
 
-        return self
+        if self._save_means:
+            self._filter_res.append(xm, ll)
+        else:
+            self._filter_res.append(None, ll)
+
+        return self, ll
 
     def _filter(self, y: Union[float, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -199,151 +203,6 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        return self
-
-
-_PROPOSAL_MAPPING = {
-    LGO: LinearGaussianObservations
-}
-
-
-class ParticleFilter(BaseFilter, ABC):
-    def __init__(self, model, particles: int, resampling=systematic, proposal: Union[str, Proposal] = 'auto', ess=0.9,
-                 need_grad=False):
-        """
-        Implements the base functionality of a particle filter.
-        :param particles: How many particles to use
-        :param resampling: Which resampling method to use
-        :param proposal: Which proposal to use, set to `auto` to let algorithm decide
-        :param ess: At which level to resample
-        :param need_grad: Whether we need the gradient
-        """
-
-        super().__init__(model)
-
-        self.particles = particles
-        self._th = ess
-
-        # ===== State variables ===== #
-        self._x_cur = None                          # type: torch.Tensor
-        self._inds = None                           # type: torch.Tensor
-        self._w_old = None                          # type: torch.Tensor
-
-        # ===== Auxiliary variable ===== #
-        self._sumaxis = -(1 + self.ssm.hidden_ndim)
-        self._rsample = need_grad
-
-        # ===== Resampling function ===== #
-        self._resampler = resampling
-
-        # ===== Logged ESS ===== #
-        self.logged_ess = TensorContainer()
-
-        # ===== Proposal ===== #
-        if proposal == 'auto':
-            try:
-                proposal = _PROPOSAL_MAPPING[type(self._model)]()
-            except KeyError:
-                proposal = Bootstrap()
-
-        self._proposal = proposal.set_model(self._model)    # type: Proposal
-
-    @property
-    def particles(self) -> torch.Size:
-        """
-        Returns the number of particles.
-        """
-
-        return self._particles
-
-    @particles.setter
-    def particles(self, x: Tuple[int, int] or int):
-        """
-        Sets the number of particles.
-        """
-
-        self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
-
-    @property
-    def proposal(self) -> Proposal:
-        """
-        Returns the proposal.
-        """
-
-        return self._proposal
-
-    def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
-        """
-        Resamples the state in accordance with the weigths.
-        :param w: The weights
-        :return: The indices and mask
-        """
-
-        # ===== Get the ones requiring resampling ====== #
-        ess = get_ess(w) / w.shape[-1]
-        mask = ess < self._th
-
-        self.logged_ess.append(ess)
-
-        # ===== Create a default array for resampling ===== #
-        out = _construct_empty(w)
-
-        # ===== Return based on if it's nested or not ===== #
-        if not mask.any():
-            return out, mask
-        elif not isinstance(self._particles, tuple):
-            return self._resampler(w), mask
-
-        out[mask] = self._resampler(w[mask])
-
-        return out, mask
-
-    def set_nparallel(self, n: int):
-        if len(self.particles) > 1:
-            raise NotImplementedError('Currently only supports at most one level of nesting!')
-
-        self._n_parallel = torch.Size([n])
-        self.particles = (*self._n_parallel, *self.particles)
-
-        if self._x_cur is not None:
-            return self.initialize()
-
-        return self
-
-    def initialize(self):
-        self._x_cur = self._model.hidden.i_sample(self.particles)
-        self._w_old = torch.zeros(self.particles, device=self._x_cur.device)
-
-        return self
-
-    def predict(self, steps, aggregate: bool = True, **kwargs):
-        x, y = self._model.sample_path(steps + 1, x_s=self._x_cur, **kwargs)
-
-        if not aggregate:
-            return x[1:], y[1:]
-
-        w = normalize(self._w_old)
-        wsqd = w.unsqueeze(-1)
-
-        xm = (x * (wsqd if self.ssm.hidden_ndim > 1 else w)).sum(self._sumaxis)
-        ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
-
-        return xm[1:], ym[1:]
-
-    def _resample(self, inds):
-        self._x_cur = self._x_cur[inds]
-        self._w_old = self._w_old[inds]
-
-        return self
-
-    def _exchange(self, filter_, inds):
-        self._x_cur[inds] = filter_._x_cur[inds]
-        self._w_old[inds] = filter_._w_old[inds]
-
-        return self
-
-    def _reset(self):
-        self.logged_ess = TensorContainer()
         return self
 
 

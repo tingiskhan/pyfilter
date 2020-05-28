@@ -1,5 +1,4 @@
 from .base import BatchFilterAlgorithm, preliminary
-from ..filters.base import ParticleFilter
 from ..filters import SISR
 from ..resampling import residual
 from tqdm import tqdm

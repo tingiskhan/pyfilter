@@ -1,5 +1,5 @@
 from abc import ABC
-from ..filters.base import BaseFilter, enforce_tensor, ParticleFilter
+from ..filters import BaseFilter, ParticleFilter, utils as u
 from tqdm import tqdm
 import warnings
 from ..module import Module, TensorContainer
@@ -18,7 +18,7 @@ class BaseAlgorithm(Module, ABC):
 
         self._iterator = None
 
-    @enforce_tensor
+    @u.enforce_tensor
     def fit(self, y: torch.Tensor):
         """
         Fits the algorithm to data.
@@ -106,7 +106,7 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    @enforce_tensor
+    @u.enforce_tensor
     def update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         """
         Performs an update using a single observation `y`.

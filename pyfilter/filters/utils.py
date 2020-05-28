@@ -25,24 +25,30 @@ def _construct_empty(array: torch.Tensor) -> torch.Tensor:
 class FilterResult(TensorContainerBase):
     def __init__(self):
         """
-        Implements a basic object for storing likelihoods and filtered means of a filter.
+        Implements a basic object for storing log likelihoods and the filtered means of a filter.
         """
         super().__init__()
 
-        self._loglikelihood = TensorContainer()
+        self._loglikelihood = None    # type: torch.Tensor
         self._filter_means = TensorContainer()
 
     @property
     def tensors(self):
-        return self._loglikelihood.tensors + self._filter_means.tensors
+        if not isinstance(self._loglikelihood, torch.Tensor):
+            return self._filter_means.tensors
+
+        return (self._loglikelihood,) + self._filter_means.tensors
 
     @property
     def loglikelihood(self) -> torch.Tensor:
-        return torch.stack(self._loglikelihood.tensors)
+        return self._loglikelihood
 
     @property
     def filter_means(self) -> torch.Tensor:
-        return torch.stack(self._filter_means.tensors)
+        if len(self._filter_means) > 0:
+            return torch.stack(self._filter_means.tensors)
+
+        return torch.empty(0)
 
     def exchange(self, res, inds: torch.Tensor):
         """
@@ -53,16 +59,14 @@ class FilterResult(TensorContainerBase):
         """
 
         # ===== Loglikelihood ===== #
-        old_ll = self.loglikelihood
-        old_ll[:, inds] = res.loglikelihood[:, inds]
-
-        self._loglikelihood = TensorContainer(*old_ll)
+        self._loglikelihood[inds] = res.loglikelihood[inds]
 
         # ===== Filter means ====== #
-        old_fm = self.filter_means
-        old_fm[:, inds] = res.filter_means[:, inds]
+        if len(self._filter_means) > 0:
+            old_fm = self.filter_means
+            old_fm[:, inds] = res.filter_means[:, inds]
 
-        self._filter_means = TensorContainer(*old_fm)
+            self._filter_means = TensorContainer(*old_fm)
 
         return self
 
@@ -72,13 +76,19 @@ class FilterResult(TensorContainerBase):
         :param inds: The indices
         """
 
-        self._loglikelihood = TensorContainer(*self.loglikelihood[:, inds])
-        self._filter_means = TensorContainer(*self.filter_means[:, inds])
+        self._loglikelihood = self.loglikelihood[inds]
+
+        if len(self._filter_means) > 0:
+            self._filter_means = TensorContainer(*self.filter_means[:, inds])
 
         return self
 
     def append(self, xm, ll):
         self._filter_means.append(xm)
-        self._loglikelihood.append(ll)
+
+        if self._loglikelihood is None:
+            self._loglikelihood = torch.zeros_like(ll)
+
+        self._loglikelihood += ll
 
         return self
