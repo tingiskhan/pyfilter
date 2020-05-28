@@ -38,7 +38,10 @@ class TensorContainer(TensorContainerBase):
     def tensors(self):
         return flatten(self._cont)
 
-    def append(self, x: Union[torch.Tensor, TensorContainerBase]):
+    def append(self, x: Union[torch.Tensor, TensorContainerBase, None]):
+        if x is None:
+            return
+
         if not isinstance(x, (torch.Tensor, TensorContainerBase)):
             raise NotImplementedError()
 
