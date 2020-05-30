@@ -1,5 +1,4 @@
 from .model import StateSpaceModel
-from .base import StochasticProcess
 from .observable import AffineObservations
 import torch
 from torch import distributions as dists
