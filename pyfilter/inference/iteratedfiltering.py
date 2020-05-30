@@ -1,10 +1,11 @@
-from .base import BatchFilterAlgorithm, preliminary
+from .base import BatchFilterAlgorithm
 from ..filters import SISR
 from ..resampling import residual
 from tqdm import tqdm
 from ..kde import _jitter as jittering
 from math import log, exp
 import torch
+from .utils import preliminary
 
 
 class IteratedFilteringV2(BatchFilterAlgorithm):

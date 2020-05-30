@@ -3,6 +3,7 @@ from torch.distributions import MultivariateNormal, Distribution
 from ..utils import unflattify
 from typing import Iterable
 from ..timeseries import Parameter
+import warnings
 
 
 class StackedObject(object):
@@ -94,3 +95,21 @@ def _eval_kernel(params: Iterable[Parameter], dist: Distribution, n_params: Iter
     n_p_vals = stacker(n_params, lambda u: u.t_values)
 
     return dist.log_prob(p_vals.concated) - dist.log_prob(n_p_vals.concated)
+
+
+def experimental(func):
+    def wrapper(obj, *args, **kwargs):
+        warnings.warn(f'{obj:s} is an experimental algorithm, use at own risk')
+
+        return func(obj, *args, **kwargs)
+
+    return wrapper
+
+
+def preliminary(func):
+    def wrapper(obj, *args, **kwargs):
+        warnings.warn(f'{obj:s} is only a preliminary version algorithm, use at own risk')
+
+        return func(obj, *args, **kwargs)
+
+    return wrapper
