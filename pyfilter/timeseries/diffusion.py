@@ -4,7 +4,6 @@ import torch
 from abc import ABC
 from torch.distributions import Distribution, Normal, Independent
 from ..utils import Empirical
-from .parameter import Parameter
 from typing import Callable, Tuple
 
 
@@ -33,10 +32,10 @@ class OneStepEulerMaruyma(AffineProcess):
         :param dt: The step-size to use in the approximation.
         """
 
-        def f(x: torch.Tensor, *args: Parameter) -> torch.Tensor:
+        def f(x: torch.Tensor, *args: object) -> torch.Tensor:
             return x + dynamics[0](x, *args) * dt
 
-        def g(x: torch.Tensor, *args: Parameter) -> torch.Tensor:
+        def g(x: torch.Tensor, *args: object) -> torch.Tensor:
             return dynamics[1](x, *args)
 
         super().__init__((f, g), theta, initial_dist, increment_dist)
@@ -52,10 +51,10 @@ class OrnsteinUhlenbeck(AffineProcess):
         :param ndim: The number of dimensions for the Brownian motion
         """
 
-        def f(x, reversion, level, std):
+        def f(x: torch.Tensor, reversion: object, level: object, std: object):
             return level + (x - level) * torch.exp(-reversion * dt)
 
-        def g(x, reversion, level, std):
+        def g(x: torch.Tensor, reversion: object, level: object, std: object):
             return std / (2 * reversion).sqrt() * (1 - torch.exp(-2 * reversion * dt)).sqrt()
 
         if ndim > 1:
