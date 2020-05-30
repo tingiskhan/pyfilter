@@ -86,14 +86,14 @@ class LinearGaussianObservations(Proposal):
 
             return Normal(oloc, cov.sqrt()).log_prob(y)
 
-        tc = c.unsqueeze(-2)
         if self._model.hidden_ndim < 1:
+            tc = c.unsqueeze(-2)
             cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
         else:
             diag_ovar = construct_diag(ovar)
             diag_hvar = construct_diag(hvar)
-            cov = diag_ovar + tc.matmul(diag_hvar).matmul(tc.transpose(-2, -1))
+            cov = diag_ovar + c.matmul(diag_hvar).matmul(c.transpose(-2, -1))
 
-        return MultivariateNormal(oloc, cov)
+        return MultivariateNormal(oloc, cov).log_prob(y)
 
 
