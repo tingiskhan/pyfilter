@@ -3,7 +3,7 @@ from ...utils import normalize
 from .base import BaseKernel
 from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
 import torch
-from torch.distributions import MultivariateNormal, Independent, Distribution
+from torch.distributions import Distribution
 from typing import Iterable
 
 
