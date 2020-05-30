@@ -3,6 +3,7 @@ from ...kde import KernelDensityEstimate, NonShrinkingKernel
 from ..utils import stacker
 from ...utils import unflattify
 import torch
+from ...filters.base import BaseFilter
 
 
 class OnlineKernel(BaseKernel):
@@ -16,14 +17,11 @@ class OnlineKernel(BaseKernel):
 
         self._kde = kde or NonShrinkingKernel()
 
-    def _resample(self, filter_, weights):
+    def _resample(self, filter_: BaseFilter, weights: torch.Tensor):
         """
         Helper method for performing resampling.
         :param filter_: The filter to resample
-        :type filter_: BaseFilter
         :param weights: The weights
-        :type weights: torch.Tensor
-        :rtype: torch.Tensor
         """
 
         inds = self._resampler(weights, normalized=True)

@@ -11,7 +11,6 @@ setup(
     install_requires=[
         'scipy>=0.18.1',
         'torch>1.5.0',
-        'tqdm>=4.26',
-        'numpy>=1.16.4'
+        'tqdm>=4.26'
     ]
 )

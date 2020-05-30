@@ -1,22 +1,19 @@
-from collections import Iterable
 from .normalization import normalize
 import torch
 from torch.distributions import Distribution
 from math import sqrt
+from typing import Union, Tuple, Iterable
 
 
 EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
-def get_ess(w, normalized=False):
+def get_ess(w: torch.Tensor, normalized=False):
     """
     Calculates the ESS from an array of log weights.
     :param w: The log weights
-    :type w: torch.Tensor
     :param normalized: Whether input is normalized
-    :type normalized: bool
     :return: The effective sample size
-    :rtype: torch.Tensor
     """
 
     if not normalized:
@@ -25,15 +22,12 @@ def get_ess(w, normalized=False):
     return w.sum(-1) ** 2 / (w ** 2).sum(-1)
 
 
-def choose(array, indices):
+def choose(array: torch.Tensor, indices: torch.Tensor):
     """
     Function for choosing on either columns or index.
     :param array: The array to choose on
-    :type array: torch.Tensor
     :param indices: The indices to choose from `array`
-    :type indices: torch.Tensor
     :return: Returns the chosen elements from `array`
-    :rtype: torch.Tensor
     """
 
     if indices.dim() < 2:
@@ -42,15 +36,12 @@ def choose(array, indices):
     return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
 
 
-def loglikelihood(w, weights=None):
+def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None):
     """
     Calculates the estimated loglikehood given weights.
     :param w: The log weights, corresponding to likelihood
-    :type w: torch.Tensor
     :param weights: Whether to weight the log-likelihood.
-    :type weights: torch.Tensor
     :return: The log-likelihood
-    :rtype: torch.Tensor
     """
 
     maxw, _ = w.max(-1)
@@ -72,43 +63,24 @@ def loglikelihood(w, weights=None):
     return maxw + temp
 
 
-def add_dimensions(x, ndim):
-    """
-    Adds the required dimensions to `x`.
-    :param x: The array
-    :type x: torch.Tensor
-    :param ndim: The dimension
-    :type ndim: int
-    :rtype: torch.Tensor
-    """
-
-    if not isinstance(x, torch.Tensor):
-        return x
-
-    return x.view(*x.shape, *((ndim - x.dim()) * (1,)))
-
-
-def concater(*x):
+def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
     """
     Concatenates output.
     :type x: tuple[torch.Tensor]|torch.Tensor
-    :rtype: torch.Tensor
     """
 
-    if not isinstance(x, tuple):
+    if isinstance(x, torch.Tensor):
         return x
 
     return torch.stack(torch.broadcast_tensors(*x), dim=-1)
 
 
-def construct_diag(x):
+def construct_diag(x: torch.Tensor):
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
     Do note that it only considers the last axis.
     :param x: The tensor
-    :type x: torch.Tensor
-    :rtype: torch.Tensor
     """
 
     if x.dim() < 1:
@@ -124,13 +96,13 @@ def construct_diag(x):
     return c * b
 
 
-def flatten(*args):
+def flatten(*args: Iterable[Iterable]) -> Tuple:
     """
     Flattens an array comprised of an arbitrary number of lists. Solution found at:
         https://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists
     :param args: The iterable you wish to flatten.
     :type args: collections.Iterable
-    :return:
+    :return: Flattened iterable
     """
     out = list()
     for el in args:
@@ -142,14 +114,11 @@ def flatten(*args):
     return tuple(out)
 
 
-def unflattify(values, shape):
+def unflattify(values: torch.Tensor, shape: torch.Size):
     """
     Unflattifies parameter values.
     :param values: The flattened array of values that are to be unflattified
-    :type values: torch.Tensor
     :param shape: The shape of the parameter prior
-    :type shape: torch.Size
-    :rtype: torch.Tensor
     """
 
     if len(shape) < 1 or values.shape[1:] == shape:
@@ -159,15 +128,12 @@ def unflattify(values, shape):
 
 
 class TempOverride(object):
-    def __init__(self, obj, attr, new_vals):
+    def __init__(self, obj: object, attr: str, new_vals: object):
         """
         Implements a temporary override of attribute of an object.
         :param obj: An object
-        :type obj: object
         :param attr: The attribute to override
-        :type attr: str
         :param new_vals: The new values
-        :type new_vals: object
         """
         self._obj = obj
         self._attr = attr
@@ -187,11 +153,10 @@ class TempOverride(object):
 
 
 class Empirical(Distribution):
-    def __init__(self, samples):
+    def __init__(self, samples: torch.Tensor):
         """
         Helper class for timeseries without an analytical expression.
         :param samples: The sample
-        :type samples: torch.Tensor
         """
         super().__init__()
         self.loc = self._samples = samples

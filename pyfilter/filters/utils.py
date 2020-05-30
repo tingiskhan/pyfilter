@@ -12,12 +12,10 @@ def enforce_tensor(func):
     return wrapper
 
 
-def _construct_empty(array):
+def _construct_empty(array: torch.Tensor) -> torch.Tensor:
     """
     Constructs an empty array based on the shape.
     :param array: The array to reshape after
-    :type array: torch.Tensor
-    :rtype: torch.Tensor
     """
 
     temp = torch.arange(array.shape[-1], device=array.device)
@@ -27,64 +25,70 @@ def _construct_empty(array):
 class FilterResult(TensorContainerBase):
     def __init__(self):
         """
-        Implements a basic object for storing likelihoods and filtered means of a filter.
+        Implements a basic object for storing log likelihoods and the filtered means of a filter.
         """
         super().__init__()
 
-        self._loglikelihood = TensorContainer()
+        self._loglikelihood = None    # type: torch.Tensor
         self._filter_means = TensorContainer()
 
     @property
     def tensors(self):
-        return self._loglikelihood.tensors + self._filter_means.tensors
+        if not isinstance(self._loglikelihood, torch.Tensor):
+            return self._filter_means.tensors
+
+        return (self._loglikelihood,) + self._filter_means.tensors
 
     @property
-    def loglikelihood(self):
-        return torch.stack(self._loglikelihood.tensors)
+    def loglikelihood(self) -> torch.Tensor:
+        return self._loglikelihood
 
     @property
-    def filter_means(self):
-        return torch.stack(self._filter_means.tensors)
+    def filter_means(self) -> torch.Tensor:
+        if len(self._filter_means) > 0:
+            return torch.stack(self._filter_means.tensors)
 
-    def exchange(self, res, inds):
+        return torch.empty(0)
+
+    def exchange(self, res, inds: torch.Tensor):
         """
         Exchanges the specified indices of self with res.
         :param res: The other filter result
         :type res: FilterResult
         :param inds: The indices
-        :type inds: torch.Tensor
-        :rtype: Self
         """
 
         # ===== Loglikelihood ===== #
-        old_ll = self.loglikelihood
-        old_ll[:, inds] = res.loglikelihood[:, inds]
-
-        self._loglikelihood = TensorContainer(*old_ll)
+        self._loglikelihood[inds] = res.loglikelihood[inds]
 
         # ===== Filter means ====== #
-        old_fm = self.filter_means
-        old_fm[:, inds] = res.filter_means[:, inds]
+        if len(self._filter_means) > 0:
+            old_fm = self.filter_means
+            old_fm[:, inds] = res.filter_means[:, inds]
 
-        self._filter_means = TensorContainer(*old_fm)
+            self._filter_means = TensorContainer(*old_fm)
 
         return self
 
-    def resample(self, inds):
+    def resample(self, inds: torch.Tensor):
         """
         Resamples the specified indices of self with res.
         :param inds: The indices
-        :type inds: torch.Tensor
-        :rtype: Self
         """
 
-        self._loglikelihood = TensorContainer(*self.loglikelihood[:, inds])
-        self._filter_means = TensorContainer(*self.filter_means[:, inds])
+        self._loglikelihood = self.loglikelihood[inds]
+
+        if len(self._filter_means) > 0:
+            self._filter_means = TensorContainer(*self.filter_means[:, inds])
 
         return self
 
     def append(self, xm, ll):
         self._filter_means.append(xm)
-        self._loglikelihood.append(ll)
+
+        if self._loglikelihood is None:
+            self._loglikelihood = torch.zeros_like(ll)
+
+        self._loglikelihood += ll
 
         return self

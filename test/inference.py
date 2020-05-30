@@ -1,6 +1,6 @@
 import unittest
-from pyfilter.inference import NESS, SMC2, NESSMC2, IteratedFilteringV2, SMC2FW
-from torch.distributions import Normal, Exponential, Independent, Gamma, LogNormal
+from pyfilter.inference import NESS, SMC2, NESSMC2, SMC2FW
+from torch.distributions import Normal, Exponential, Independent, LogNormal
 from pyfilter.filters import SISR, UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
@@ -62,7 +62,7 @@ class MyTestCase(unittest.TestCase):
             x, y = trumod.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': particles, 'filter_': SISR(model.copy(), 200)}),
+                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),

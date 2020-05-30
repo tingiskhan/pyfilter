@@ -82,7 +82,7 @@ class Tests(unittest.TestCase):
         uft = UnscentedFilterTransform(model)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(0., p)
+        c = uft.correct(torch.tensor(0.), p)
 
         assert isinstance(c.x_dist(), Normal) and c.x_dist().mean.shape == torch.Size([3000])
 

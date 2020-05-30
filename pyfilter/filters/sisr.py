@@ -1,4 +1,4 @@
-from .base import ParticleFilter
+from .pf import ParticleFilter
 from ..utils import loglikelihood, choose
 from ..normalization import normalize
 import torch

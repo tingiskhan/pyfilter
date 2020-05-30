@@ -1,7 +1,6 @@
 from .base import Proposal
 from ..uft import UnscentedFilterTransform, UFTCorrectionResult
 from ..utils import choose
-import torch
 
 
 class Unscented(Proposal):

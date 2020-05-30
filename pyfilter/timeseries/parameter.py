@@ -1,19 +1,18 @@
-from torch import Tensor, distributions as dist
 import numpy as np
 import torch
 from functools import lru_cache
 from scipy.stats import gaussian_kde
 from collections import OrderedDict
 from copy import deepcopy
+from torch.distributions import Distribution, TransformedDistribution, Transform, biject_to
+from typing import Union, Tuple
 
 
-def size_getter(shape):
+def size_getter(shape: Union[int, Tuple[int, ...], torch.Size]) -> torch.Size:
     """
     Helper function for defining a size object.
     :param shape: The shape
-    :type shape: int|tuple[int]
     :return: Size object
-    :rtype: torch.Size
     """
 
     if shape is None:
@@ -39,12 +38,12 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
 
 
 class Parameter(torch.Tensor):
-    def __new__(cls, parameter=None, requires_grad=False):
+    def __new__(cls, parameter: Union[torch.Tensor, Distribution] = None, requires_grad=False):
         if isinstance(parameter, Parameter):
             raise ValueError('The input cannot be of instance `{}`!'.format(parameter.__class__.__name__))
         elif isinstance(parameter, torch.Tensor):
             _data = parameter
-        elif not isinstance(parameter, dist.Distribution):
+        elif not isinstance(parameter, Distribution):
             _data = torch.tensor(parameter) if not isinstance(parameter, np.ndarray) else torch.from_numpy(parameter)
         else:
             # This is just a place holder
@@ -52,12 +51,11 @@ class Parameter(torch.Tensor):
 
         return torch.Tensor._make_subclass(cls, _data, requires_grad)
 
-    def __init__(self, parameter=None, requires_grad=False):
+    def __init__(self, parameter: Union[torch.Tensor, Distribution] = None, requires_grad=False):
         """
         The parameter class.
-        :param parameter: The parameter value.
         """
-        self._prior = parameter if isinstance(parameter, dist.Distribution) else None
+        self._prior = parameter if isinstance(parameter, Distribution) else None
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
@@ -73,7 +71,6 @@ class Parameter(torch.Tensor):
     def c_shape(self):
         """
         Returns the dimension of the prior.
-        :rtype: torch.Size
         """
 
         return self.distr.event_shape
@@ -81,7 +78,6 @@ class Parameter(torch.Tensor):
     def c_numel(self):
         """
         Custom 'numel' function for the number of elements in the prior's event shape.
-        :rtype: int
         """
 
         res = 1
@@ -95,41 +91,36 @@ class Parameter(torch.Tensor):
     def transformed_dist(self):
         """
         Returns the unconstrained distribution.
-        :return: Transformed distribution
-        :rtype: dist.TransformedDistribution
         """
 
         if not self.trainable:
             raise ValueError('Is not of `Distribution` instance!')
 
-        return dist.TransformedDistribution(self._prior, [self.bijection.inv])
+        return TransformedDistribution(self._prior, [self.bijection.inv])
 
     @property
-    def bijection(self):
+    def bijection(self) -> Transform:
         """
         Returns a bijected function for transforms from unconstrained to constrained space.
-        :rtype: callable
         """
         if not self.trainable:
             raise ValueError('Is not of `Distribution` instance!')
 
-        return dist.biject_to(self._prior.support)
+        return biject_to(self._prior.support)
 
     @property
-    def values(self):
+    def values(self) -> torch.Tensor:
         """
         Returns the actual values of the parameters.
-        :rtype: float|Tensor
         """
 
         return self.data
 
     @values.setter
-    def values(self, x):
+    def values(self, x: torch.Tensor):
         """
         Sets the values of x.
         :param x: The values
-        :type x: Tensor
         """
         if not isinstance(x, torch.Tensor):
             raise ValueError('Is not the same type!')
@@ -147,10 +138,9 @@ class Parameter(torch.Tensor):
         self.data[:] = x
 
     @property
-    def t_values(self):
+    def t_values(self) -> torch.Tensor:
         """
         Returns the transformed values.
-        :rtype: torch.Tensor
         """
 
         if not self.trainable:
@@ -159,11 +149,10 @@ class Parameter(torch.Tensor):
         return self.bijection.inv(self.data)
 
     @t_values.setter
-    def t_values(self, x):
+    def t_values(self, x: torch.Tensor):
         """
         Sets transformed values.
         :param x: The values
-        :type x: Tensor
         """
 
         self.values = self.bijection(x)
@@ -172,7 +161,6 @@ class Parameter(torch.Tensor):
     def distr(self):
         """
         Returns the distribution.
-        :rtype: torch.distributions.Distribution
         """
 
         if self.trainable:
@@ -180,12 +168,10 @@ class Parameter(torch.Tensor):
 
         raise ValueError('Does not have a distribution!')
 
-    def sample_(self, shape=None):
+    def sample_(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
         """
         Samples the variable from prior distribution in place.
         :param shape: The shape to use
-        :type shape: int|tuple[int]|torch.Size
-        :rtype: Parameter
         """
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
@@ -198,18 +184,15 @@ class Parameter(torch.Tensor):
     def trainable(self):
         """
         Boolean of whether parameter is trainable.
-        :rtype: bool
         """
 
-        return isinstance(self._prior, dist.Distribution)
+        return isinstance(self._prior, Distribution)
 
-    def get_kde(self, weights=None):
+    def get_kde(self, weights: torch.Tensor = None):
         """
         Constructs KDE of the discrete representation on the transformed space.
         :param weights: The weights to use
-        :type weights: torch.Tensor
         :return: KDE object
-        :rtype: gaussian_kde
         """
         array = self.t_values
 
@@ -219,11 +202,10 @@ class Parameter(torch.Tensor):
 
         return gaussian_kde(array.cpu().numpy(), weights=weights)
 
-    def get_plottable(self, num=100, **kwargs):
+    def get_plottable(self, num=100, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Gets the range and likelihood of the parameter as a `numpy.ndarray`. Used for plotting.
         :return: Range, likelihood
-        :rtype: tuple[np.ndarray]
         """
 
         kde = self.get_kde(**kwargs)

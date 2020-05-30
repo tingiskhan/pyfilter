@@ -6,19 +6,17 @@ from torch.distributions import Normal, MultivariateNormal
 from .utils import construct_diag, TempOverride
 from .module import Module, TensorContainer
 from .timeseries.parameter import size_getter
+from typing import Tuple, Union
 
 
-def _propagate_sps(spx, spn, process, temp_params):
+def _propagate_sps(spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess,
+                   temp_params: Tuple[torch.Tensor, ...]):
     """
     Propagate the Sigma points through the given process.
     :param spx: The state Sigma points
-    :type spx: torch.Tensor
     :param spn: The noise Sigma points
-    :type spn: torch.Tensor
     :param process: The process
-    :type process: StochasticProcess
     :return: Translated and scaled sigma points
-    :rtype: torch.Tensor
     """
 
     is_md = process.ndim > 0
@@ -32,32 +30,25 @@ def _propagate_sps(spx, spn, process, temp_params):
         return out if is_md else out.unsqueeze(-1)
 
 
-def _covcalc(a, b, wc):
+def _covcalc(a: torch.Tensor, b: torch.Tensor, wc: torch.Tensor):
     """
     Calculates the covariance from a * b^t
     :param a: The `a` matrix
-    :type a: torch.Tensor
     :param b: The `b` matrix
-    :type b: torch.Tensor
     :return: The covariance
-    :rtype: torch.Tensor
     """
     cov = a.unsqueeze(-1) * b.unsqueeze(-2)
 
     return (wc[:, None, None] * cov).sum(-3)
 
 
-def _get_meancov(spxy, wm, wc):
+def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
     """
     Calculates the mean and covariance given sigma points for 2D processes.
     :param spxy: The state/observation sigma points
-    :type spxy: torch.Tensor
     :param wm: The W^m
-    :type wm: torch.Tensor
     :param wc: The W^c
-    :type wc: torch.Tensor
     :return: Mean and covariance
-    :rtype: tuple of torch.Tensor
     """
 
     x = (wm.unsqueeze(-1) * spxy).sum(-2)
@@ -67,7 +58,7 @@ def _get_meancov(spxy, wm, wc):
 
 
 class UFTCorrectionResult(object):
-    def __init__(self, xm, xc, ym, yc):
+    def __init__(self, xm: torch.Tensor, xc: torch.Tensor, ym: torch.Tensor, yc: torch.Tensor):
         self.xm = xm
         self.xc = xc
 
@@ -89,24 +80,20 @@ class UFTCorrectionResult(object):
 
 
 class UFTPredictionResult(object):
-    def __init__(self, spx, spy):
+    def __init__(self, spx: torch.Tensor, spy: torch.Tensor):
         self.spx = spx
         self.spy = spy
 
 
 # TODO: Rewrite this one to not save state
 class UnscentedFilterTransform(Module):
-    def __init__(self, model, a=1, b=2, k=0):
+    def __init__(self, model: StateSpaceModel, a=1., b=2., k=0.):
         """
         Implements the Unscented Transform for a state space model.
         :param model: The model
-        :type model: StateSpaceModel
         :param a: The alpha parameter. Defined on the interval [0, 1]
-        :type a: float
         :param b: The beta parameter. Optimal value for Gaussian models is 2
-        :type b: float
         :param k: The kappa parameter. To control the semi-definiteness
-        :type k: float
         """
 
         if len(model.hidden.increment_dist.event_shape) > 1:
@@ -140,8 +127,7 @@ class UnscentedFilterTransform(Module):
     def _set_slices(self):
         """
         Sets the different slices for selecting states and noise.
-        :return: Instance of self
-        :rtype: UnscentedTransform
+        :return: Self
         """
 
         hidden_dim = self._model.hidden.num_vars
@@ -155,8 +141,7 @@ class UnscentedFilterTransform(Module):
     def _set_weights(self):
         """
         Generates the weights used for sigma point construction.
-        :return: Instance of self
-        :rtype: UnscentedTransform
+        :return: Self
         """
 
         self._wm = torch.zeros(1 + 2 * self._ndim)
@@ -167,13 +152,11 @@ class UnscentedFilterTransform(Module):
 
         return self
 
-    def _set_arrays(self, shape):
+    def _set_arrays(self, shape: torch.Size):
         """
         Sets the mean and covariance arrays.
         :param shape: The shape
-        :type shape: torch.Shape
-        :return: Instance of self
-        :rtype: UnscentedTransform
+        :return: Self
         """
 
         # ==== Define empty arrays ===== #
@@ -198,13 +181,12 @@ class UnscentedFilterTransform(Module):
 
         return self
 
-    def initialize(self, shape=None):
+    def initialize(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
         """
         Initializes UnscentedTransform class.
         :param shape: Shape of the state
         :type shape: int|tuple|torch.Size
-        :return: Instance of self
-        :rtype: UnscentedTransform
+        :return: Self
         """
 
         self._set_weights()._set_slices()._set_arrays(size_getter(shape))
@@ -226,11 +208,10 @@ class UnscentedFilterTransform(Module):
 
         return UFTCorrectionResult(self._mean[..., self._sslc], self._cov[..., self._sslc, self._sslc], None, None)
 
-    def _get_sps(self, mean, cov):
+    def _get_sps(self, mean: torch.Tensor, cov: torch.Tensor):
         """
         Constructs the Sigma points used for propagation.
         :return: Sigma points
-        :rtype: torch.Tensor
         """
 
         self._mean[..., self._sslc] = mean
@@ -244,37 +225,33 @@ class UnscentedFilterTransform(Module):
 
         return torch.cat((spx, sph, spy), -2)
 
-    def predict(self, utf):
+    def predict(self, utf_corr: UFTCorrectionResult):
         """
         Performs a prediction step using previous result from
-        :param utf:
-        :type utf: UFTCorrectionResult
-        :return:
+        :param utf_corr: The correction result to use for predicting
+        :return: Prediction
         """
 
         # ===== Propagate sigma points ===== #
-        sps = self._get_sps(utf.xm, utf.xc)
+        sps = self._get_sps(utf_corr.xm, utf_corr.xc)
 
         spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
         spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._views[1])
 
         return UFTPredictionResult(spx, spy)
 
-    def calc_mean_cov(self, uft_pred):
+    def calc_mean_cov(self, uft_pred: UFTPredictionResult):
         xmean, xcov = _get_meancov(uft_pred.spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(uft_pred.spy, self._wm, self._wc)
 
         return UFTCorrectionResult(xmean, xcov, ymean, ycov)
 
-    def correct(self, y, uft_pred):
+    def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult):
         """
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
-        :type y: torch.Tensor
-        :param uft_pred:
-        :type uft_pred: UFTPredictionResult
+        :param uft_pred: The prediction result to correct
         :return: Self
-        :rtype: UnscentedTransform
         """
 
         # ===== Calculate mean and covariance ====== #

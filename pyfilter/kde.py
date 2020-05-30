@@ -1,61 +1,48 @@
 import torch
-from .resampling import residual
 from .utils import get_ess
 from math import sqrt
+from typing import Union
 
 
-def _jitter(values, scale):
+def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]):
     """
     Jitters the parameters.
     :param values: The values
-    :type values: torch.Tensor
     :param scale: The scaling to use for the variance of the proposal
-    :type scale: float|torch.Tensor
     :return: Proposed values
-    :rtype: torch.Tensor
     """
 
     return values + scale * torch.empty_like(values).normal_()
 
 
-def silverman(n, ess):
+def silverman(n: int, ess: float):
     """
     Returns Silverman's factor.
     :param n: The dimension
-    :type n: int
     :param ess: The ess
-    :type ess: float
     :return: Bandwidth factor
-    :rtype: float
     """
 
     return (ess * (n + 2) / 4) ** (-1 / (n + 4))
 
 
-def scott(n, ess):
+def scott(n: int, ess: float):
     """
     Returns Silverman's factor.
     :param n: The dimension
-    :type n: int
     :param ess: The ess
-    :type ess: float
     :return: Bandwidth factor
-    :rtype: float
     """
 
     return 1.059 * ess ** (-1 / (n + 4))
 
 
-def robust_var(x, w, mean=None):
+def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     """
     Calculates the scale robustly
     :param x: The values
-    :type x: torch.Tensor
     :param w: The weights
-    :type w: torch.Tensor
     :param mean: The mean
-    :type mean: torch.Tensor
-    :rtype: torch.Tensor
     """
 
     # ===== IQR ===== #
@@ -86,38 +73,30 @@ def robust_var(x, w, mean=None):
 
 
 class KernelDensityEstimate(object):
-    def __init__(self, resampling=residual):
+    def __init__(self):
         """
         Implements the base class for KDEs.
-        :param resampling: The resampler function
-        :type resampling: callable
         """
 
-        self._resampling = resampling
         self._cov = None
         self._bw_fac = None
         self._means = None
 
-    def fit(self, x, w):
+    def fit(self, x: torch.Tensor, w: torch.Tensor):
         """
         Fits the KDE.
         :param x: The samples
-        :type x: torch.Tensor
         :param w: The weights
-        :type w: torch.Tensor
         :return: Self
-        :rtype: KernelDensityEstimate
         """
 
         raise NotImplementedError()
 
-    def sample(self, inds=None):
+    def sample(self, inds: torch.Tensor = None):
         """
         Samples from the KDE.
         :param inds: Whether to manually specify the samples chosen
-        :type inds: torch.Tensor
         :return: New samples
-        :rtype: torch.Tensor
         """
 
         raise NotImplementedError()
@@ -143,7 +122,7 @@ class ShrinkingKernel(KernelDensityEstimate):
         return self
 
     def sample(self, inds=None):
-        inds = inds if inds is not None else torch.ones_like(self._means)
+        inds = inds if inds is not None else torch.arange(self._means.shape[0], device=self._means.device)
         return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
 
 
@@ -162,12 +141,11 @@ class NonShrinkingKernel(ShrinkingKernel):
         return self
 
 
-class IndependentGaussian(KernelDensityEstimate):
+class IndependentGaussian(ShrinkingKernel):
     def __init__(self, factor=silverman):
         """
         Implements a Gaussian KDE.
         :param factor: How to calculate the factor bandwidth
-        :type factor: callable
         """
         super().__init__()
         self._fac = factor
@@ -185,50 +163,12 @@ class IndependentGaussian(KernelDensityEstimate):
 
         return self
 
-    def sample(self, inds=None):
-        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
 
-        return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
-
-
-class MultivariateGaussian(IndependentGaussian):
-    def __init__(self, **kwargs):
-        """
-        Constructs a multivariate Gaussian kernel.
-        :param kwargs: Any kwargs
-        """
-        super().__init__(**kwargs)
-        self._post_mean = None
-
-    def fit(self, x, w):
-        # ===== Calculate bandwidth ===== #
-        ess = self.get_ess(w)
-        self._bw_fac = self._fac(x.shape[-1], ess)
-
-        # ===== Calculate statistics ===== #
-        self._w = w
-
-        self._post_mean = mean = (x * w.unsqueeze(-1)).sum(0)
-        centralized = x - mean
-        self._cov = torch.matmul(w * centralized.t(), centralized).cholesky()
-
-        self._means = torch.solve((x - self._post_mean).T, self._cov).solution.T
-
-        return self
-
-    def sample(self, inds=None):
-        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
-        jittered = _jitter(self._means[inds], self._bw_fac)
-
-        return self._post_mean + jittered.matmul(self._cov.T)
-
-
-class ConstantKernel(KernelDensityEstimate):
-    def __init__(self, bw):
+class ConstantKernel(ShrinkingKernel):
+    def __init__(self, bw: Union[float, torch.Tensor]):
         """
         Kernel with constant, prespecified bandwidth.
         :param bw: The bandwidth to use
-        :type bw: float|torch.Tensor
         """
         super().__init__()
         self._bw_fac = bw
@@ -238,11 +178,8 @@ class ConstantKernel(KernelDensityEstimate):
     def fit(self, x, w):
         self._w = w
         self._x = x
+        self._cov = torch.ones_like(self._bw_fac, device=w.device)
 
         return self
 
-    def sample(self, inds=None):
-        inds = inds if inds is not None else self._resampling(self._w, normalized=True)
-
-        return _jitter(self._x[inds], self._bw_fac)
 

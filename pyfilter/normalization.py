@@ -1,14 +1,7 @@
 import torch
 
 
-def _vector(w):
-    """
-    Normalizes a 1D array of log weights.
-    :param w: The weights
-    :type w: torch.Tensor
-    :return: Normalized weights
-    :rtype: torch.Tensor
-    """
+def _vector(w: torch.Tensor):
     mask = torch.isfinite(w)
     w[~mask] = float('-inf')
 
@@ -21,14 +14,7 @@ def _vector(w):
     return normalized
 
 
-def _matrix(w):
-    """
-    Normalizes a 2D array of log weights along the second axis.
-    :param w: The weights
-    :type w: torch.Tensor
-    :return: Normalized weights
-    :rtype: torch.Tensor
-    """
+def _matrix(w: torch.Tensor):
     mask = torch.isfinite(w)
     w[~mask] = float('-inf')
 
@@ -39,13 +25,11 @@ def _matrix(w):
     return normalized
 
 
-def normalize(w):
+def normalize(w: torch.Tensor):
     """
     Normalizes a 1D or 2D array of log weights.
     :param w: The weights
-    :type w: torch.Tensor
     :return: Normalized weights
-    :rtype: torch.Tensor
     """
 
     if w.dim() > 1:

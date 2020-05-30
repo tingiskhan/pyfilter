@@ -4,6 +4,7 @@ from .timeseries.parameter import Parameter
 from torch.distributions import Distribution, TransformedDistribution
 from copy import deepcopy
 from .utils import flatten
+from typing import Union, Tuple, Type, Dict, Callable
 
 
 _OBJTYPENAME = 'objtype'
@@ -11,12 +12,7 @@ _OBJTYPENAME = 'objtype'
 
 class TensorContainerBase(object):
     @property
-    def tensors(self):
-        """
-        Returns the tensors
-        :rtype: tuple[torch.Tensor]
-        """
-
+    def tensors(self) -> Tuple[torch.Tensor, ...]:
         raise NotImplementedError()
 
     # SEE: https://stackoverflow.com/questions/1500718/how-to-override-the-copy-deepcopy-operations-for-a-python-object
@@ -32,7 +28,7 @@ class TensorContainerBase(object):
 
 
 class TensorContainer(TensorContainerBase):
-    def __init__(self, *args):
+    def __init__(self, *args: torch.Tensor):
         if len(args) == 0:
             self._cont = tuple()
         else:
@@ -42,7 +38,10 @@ class TensorContainer(TensorContainerBase):
     def tensors(self):
         return flatten(self._cont)
 
-    def append(self, x):
+    def append(self, x: Union[torch.Tensor, TensorContainerBase, None]):
+        if x is None:
+            return
+
         if not isinstance(x, (torch.Tensor, TensorContainerBase)):
             raise NotImplementedError()
 
@@ -50,7 +49,7 @@ class TensorContainer(TensorContainerBase):
 
         return self
 
-    def extend(self, *x):
+    def extend(self, *x: torch.Tensor):
         if not (isinstance(x, tuple) and all(isinstance(t, torch.Tensor) for t in x)):
             raise NotImplementedError()
 
@@ -98,25 +97,21 @@ class TensorContainerDict(TensorContainerBase):
         return tuple(self._dict.values())
 
 
-def _find_types(x, type_):
+def _find_types(x, type_: Type) -> Dict[str, object]:
     """
     Helper method for finding all type_ in x.
     :param x: The object
-    :param type_: The type
     :return: Dictionary
-    :rtype: dict
     """
 
     return {k: v for k, v in vars(x).items() if isinstance(v, type_)}
 
 
 # TODO: Wait for pytorch to implement moving entire distributions
-def _iterate_distribution(d):
+def _iterate_distribution(d: Distribution) -> Tuple[Distribution, ...]:
     """
     Helper method for iterating over distributions.
     :param d: The distribution
-    :type d: Distribution
-    :rtype: tuple[Distribution]
     """
 
     res = tuple()
@@ -136,12 +131,10 @@ def _iterate_distribution(d):
 
 
 class Module(object):
-    def _find_obj_helper(self, type_):
+    def _find_obj_helper(self, type_: Type):
         """
         Helper object for finding a specific type of objects in self.
         :param type_: The type to filter on
-        :type type_: object
-        :rtype: dict[str, object]
         """
 
         return _find_types(self, type_)
@@ -149,15 +142,13 @@ class Module(object):
     def modules(self):
         """
         Finds and returns all instances of type module.
-        :rtype: tuple[Module]
         """
 
         return self._find_obj_helper(Module)
 
-    def tensors(self):
+    def tensors(self) -> Tuple[torch.Tensor, ...]:
         """
         Finds and returns all instances of type module.
-        :rtype: tuple[torch.Tensor]
         """
 
         res = tuple()
@@ -181,13 +172,11 @@ class Module(object):
 
         return res
 
-    def apply(self, f):
+    def apply(self, f: Callable[[torch.Tensor], torch.Tensor]):
         """
         Applies function f to all tensors.
         :param f: The callable
-        :type f: callable
         :return: Self
-        :rtype: Module
         """
 
         for t in (t_ for t_ in self.tensors() if t_._base is None):
@@ -205,21 +194,18 @@ class Module(object):
 
         return self
 
-    def to_(self, device):
+    def to_(self, device: str):
         """
         Move to device.
         :param device: The device to move to
-        :type device: str
         :return: Self
-        :rtype: Module
         """
 
         return self.apply(lambda u: u.to(device))
 
-    def state_dict(self):
+    def state_dict(self) -> Dict[str, object]:
         """
         Returns the state dictionary.
-        :rtype: dict[str, object]
         """
         res = dict()
         res[_OBJTYPENAME] = self.__class__.__name__
@@ -240,13 +226,11 @@ class Module(object):
 
         return res
 
-    def load_state_dict(self, state):
+    def load_state_dict(self, state: Dict[str, object]):
         """
         Loads the state dictionary.
         :param state: The state dictionary
-        :type state: dict
         :return: Self
-        :rtype: Module
         """
 
         from .timeseries.base import StochasticProcess

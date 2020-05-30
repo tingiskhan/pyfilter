@@ -3,7 +3,8 @@ from ...utils import normalize
 from .base import BaseKernel
 from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
 import torch
-from torch.distributions import MultivariateNormal, Independent
+from torch.distributions import Distribution
+from typing import Iterable
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -11,8 +12,8 @@ class ParticleMetropolisHastings(BaseKernel):
         """
         Implements a base class for the particle Metropolis Hastings class.
         :param nsteps: The number of steps to perform
-        :type nsteps: int
         """
+
         super().__init__(**kwargs)
 
         self._nsteps = nsteps
@@ -20,56 +21,46 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
         self._entire_hist = True
 
-    def set_data(self, y):
+    def set_data(self, y: Iterable[torch.Tensor]):
         """
         Sets the data to be used when calculating acceptance probabilities.
         :param y: The data
-        :type y: tuple[torch.Tensor]
         :return: Self
-        :rtype: ParticleMetropolisHastings
         """
         self._y = y
 
         return self
 
-    def define_pdf(self, values, weights):
+    def define_pdf(self, values: torch.Tensor, weights: torch.Tensor) -> Distribution:
         """
         The method to be overridden by the user for defining the kernel to propagate the parameters. Note that the
         parameters are propagated in the transformed space.
         :param values: The parameters as a single Tensor
-        :type values: torch.Tensor
         :param weights: The normalized weights of the particles
-        :type weights: torch.Tensor
         :return: A distribution
-        :rtype: MultivariateNormal|Independent
         """
 
         raise NotImplementedError()
 
-    def _calc_diff_logl(self, t_filt, filter_):
+    def _calc_diff_logl(self, t_filt: BaseFilter, filter_: BaseFilter):
         """
         Helper method for calculating the difference in log likelihood between proposed and existing parameters.
         :param t_filt: The new filter
-        :type t_filt: BaseFilter
         :param filter_: The old filter
-        :type filter_: BaseFilter
         :return: Difference in loglikelihood
-        :rtype: torch.Tensor
         """
 
         t_filt.reset().initialize().longfilter(self._y, bar=False)
-        return t_filt.result.loglikelihood.sum(dim=0) - filter_.result.loglikelihood.sum(dim=0)
+        return t_filt.result.loglikelihood - filter_.result.loglikelihood
 
-    def _before_resampling(self, filter_, stacked):
+    def _before_resampling(self, filter_: BaseFilter, stacked: torch.Tensor):
         """
         Helper method for carrying out operations before resampling.
         :param filter_: The filter
-        :type filter_: BaseFilter
-        :param stacked: The stacked parameters
-        :type stacked: torch.Tensor
+        :param stacked: The stacked parameterss
         :return: Self
-        :rtype: ParticleMetropolisHastings
         """
+
         return self
 
     def _update(self, parameters, filter_, weights):
@@ -109,7 +100,7 @@ class ParticleMetropolisHastings(BaseKernel):
             else:
                 filter_.ssm.exchange(toaccept, t_filt.ssm)
 
-            weights = normalize(filter_.result.loglikelihood.sum(dim=0))
+            weights = normalize(filter_.result.loglikelihood)
 
         return self
 

@@ -1,6 +1,6 @@
 from .base import BatchAlgorithm
 import torch
-from torch.optim import Adadelta as Adam
+from torch.optim import Adadelta as Adam, Optimizer
 import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..timeseries import StateSpaceModel
@@ -8,26 +8,21 @@ from ..timeseries.base import StochasticProcess
 from .utils import stacker
 from ..utils import EPS, unflattify
 from ..filters import UKF
+from typing import Type, Union
 
 
-# TODO: Shape not working correctly when transformed != untransformed
 class VariationalBayes(BatchAlgorithm):
-    def __init__(self, model, samples=4, approx=None, optimizer=Adam, maxiter=30e3, optkwargs=None, use_filter=True):
+    def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, approx: BaseApproximation = None,
+                 optimizer: Type[Optimizer] = Adam, maxiter=30e3, optkwargs=None, use_filter=True):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.
         :param model: The model
-        :type model: StateSpaceModel|StochasticProcess
         :param samples: The number of samples
-        :type samples: int
         :param approx: The variational approximation to use for the latent space
-        :type approx: BaseApproximation
         :param optimizer: The optimizer
-        :type optimizer: optim.Optimizer
         :param maxiter: The maximum number of iterations
-        :type maxiter: int|float
         :param optkwargs: Any optimizer specific kwargs
-        :type optkwargs: dict
         """
 
         super().__init__()
@@ -55,10 +50,9 @@ class VariationalBayes(BatchAlgorithm):
         self.optkwargs = optkwargs or dict()
 
     @property
-    def s_approximation(self):
+    def s_approximation(self) -> Union[None, StateMeanField]:
         """
         Returns the resulting variational approximation of the states.
-        :rtype: BaseApproximation
         """
 
         return self._s_approx
@@ -67,7 +61,6 @@ class VariationalBayes(BatchAlgorithm):
     def p_approximation(self):
         """
         Returns the resulting variational approximation of the parameters.
-        :rtype: BaseApproximation
         """
 
         return self._p_approx
@@ -76,7 +69,6 @@ class VariationalBayes(BatchAlgorithm):
         """
         Samples parameters from the variational approximation.
         :return: Self
-        :rtype: VariationalBayes
         """
 
         params = self._p_approx.sample(self._ns)
@@ -114,10 +106,9 @@ class VariationalBayes(BatchAlgorithm):
 
         return params
 
-    def loss(self, y):
+    def loss(self, y: torch.Tensor):
         """
         The loss function, i.e. ELBO.
-        :rtype: torch.Tensor
         """
         # ===== Sample parameters ===== #
         self.sample_params()

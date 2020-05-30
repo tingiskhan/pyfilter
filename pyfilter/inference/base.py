@@ -1,10 +1,11 @@
 from abc import ABC
-from ..filters.base import BaseFilter, enforce_tensor, ParticleFilter
+from ..filters import BaseFilter, ParticleFilter, utils as u
 from tqdm import tqdm
 import warnings
 from ..module import Module, TensorContainer
 import torch
 from ..utils import normalize
+from typing import Tuple
 
 
 class BaseAlgorithm(Module, ABC):
@@ -17,21 +18,19 @@ class BaseAlgorithm(Module, ABC):
 
         self._iterator = None
 
-    @enforce_tensor
-    def fit(self, y):
+    @u.enforce_tensor
+    def fit(self, y: torch.Tensor):
         """
         Fits the algorithm to data.
         :param y: The data to fit
-        :type y: torch.Tensor
         :return: Self
-        :rtype: BaseAlgorithm
         """
 
         self._fit(y)
 
         return self
 
-    def _fit(self, y):
+    def _fit(self, y: torch.Tensor):
         """
         Method to be overridden by user.
         """
@@ -42,19 +41,16 @@ class BaseAlgorithm(Module, ABC):
         """
         Initializes the chosen algorithm.
         :return: Self
-        :rtype: BaseAlgorithm
         """
 
         return self
 
-    def predict(self, steps, *args, **kwargs):
+    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead.
         :param steps: The number of steps
-        :type steps: int
         :param args: Any arguments
         :param kwargs: Any keyworded arguments
-        :rtype: tuple[torch.Tensor]
         """
 
         raise NotImplementedError()
@@ -64,7 +60,7 @@ class BaseAlgorithm(Module, ABC):
 
 
 class BaseFilterAlgorithm(BaseAlgorithm, ABC):
-    def __init__(self, filter_):
+    def __init__(self, filter_: BaseFilter):
         """
         Base class for algorithms utilizing filters for inference.
         :param filter_: The filter
@@ -76,20 +72,18 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         self._filter = filter_
 
     @property
-    def filter(self):
+    def filter(self) -> BaseFilter:
         """
         Returns the filter
-        :rtype: BaseFilter
         """
 
         return self._filter
 
     @filter.setter
-    def filter(self, x):
+    def filter(self, x: BaseFilter):
         """
         Sets the filter
         :param x: The new filter
-        :type x: BaseFilter
         """
 
         if not isinstance(x, type(self.filter)):
@@ -103,25 +97,21 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
     Algorithm for sequential inference.
     """
 
-    def _update(self, y):
+    def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         """
         The function to override by the inherited algorithm.
         :param y: The observation
-        :type y: torch.Tensor
         :return: Self
-        :rtype: SequentialAlgorithm
         """
 
         raise NotImplementedError()
 
-    @enforce_tensor
-    def update(self, y):
+    @u.enforce_tensor
+    def update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         """
         Performs an update using a single observation `y`.
         :param y: The observation
-        :type y: numpy.ndarray|float|torch.Tensor
         :return: Self
-        :rtype: SequentialAlgorithm
         """
 
         return self._update(y)
@@ -140,44 +130,41 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
 
 
 class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
-    def __init__(self, filter_, particles):
+    def __init__(self, filter_, particles: int):
         """
         Implements a base class for sequential particle inference.
         :param particles: The number of particles to use
-        :type particles: int
         """
 
         super().__init__(filter_)
 
         # ===== Weights ===== #
-        self._w_rec = None
+        self._w_rec = None  # type: torch.Tensor
 
         # ===== ESS related ===== #
         self._logged_ess = TensorContainer()
         self.particles = particles
 
     @property
-    def particles(self):
+    def particles(self) -> torch.Size:
         """
         Returns the number of particles.
-        :rtype: torch.Size
         """
 
         return self._particles
 
     @particles.setter
-    def particles(self, x):
+    def particles(self, x: int):
         """
         Sets the particles.
         """
 
         self._particles = torch.Size([x])
 
-    def initialize(self):
+    def initialize(self) -> BaseFilterAlgorithm:
         """
         Overwrites the initialization.
         :return: Self
-        :rtype: SequentialParticleAlgorithm
         """
 
         self._filter.set_nparallel(*self.particles)
@@ -191,10 +178,9 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         return self
 
     @property
-    def logged_ess(self):
+    def logged_ess(self) -> torch.Tensor:
         """
         Returns the logged ESS.
-        :rtype: torch.Tensor
         """
 
         return torch.stack(self._logged_ess.tensors)
@@ -229,19 +215,77 @@ class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
         super().__init__(filter_)
 
 
-def experimental(func):
-    def wrapper(obj, *args, **kwargs):
-        warnings.warn('{:s} is an experimental algorithm, use at own risk'.format(str(obj)))
+class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
+    def __init__(self, filter_, particles, switch: int, first_kw, second_kw):
+        """
+        Algorithm combining two other algorithms.
+        :param switch: After how many observations to perform switch
+        """
 
-        return func(obj, *args, **kwargs)
+        super().__init__(filter_, particles)
+        self._first = self.make_first(filter_, particles, **(first_kw or dict()))
+        self._second = self.make_second(filter_, particles, **(second_kw or dict()))
+        self._when_to_switch = switch
+        self._is_switched = torch.tensor(False, dtype=torch.bool)
 
-    return wrapper
+    def make_first(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
+        raise NotImplementedError()
 
+    def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
+        raise NotImplementedError()
 
-def preliminary(func):
-    def wrapper(obj, *args, **kwargs):
-        warnings.warn('{:s} is only a preliminary version algorithm, use at own risk'.format(str(obj)))
+    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm):
+        raise NotImplementedError()
 
-        return func(obj, *args, **kwargs)
+    def initialize(self) -> BaseFilterAlgorithm:
+        self._first.initialize()
+        return self
 
-    return wrapper
+    def modules(self):
+        return {
+            '_first': self._first,
+            '_second': self._second
+        }
+
+    @property
+    def logged_ess(self):
+        return torch.cat((self._first.logged_ess, self._second.logged_ess))
+
+    @property
+    def _w_rec(self):
+        if self._is_switched:
+            return self._first._w_rec
+
+        return self._second._w_rec
+
+    @_w_rec.setter
+    def _w_rec(self, x):
+        return
+
+    def _fit(self, y, bar=True):
+        iterator = y
+        if bar:
+            self._iterator = self._first._iterator = self._second._iterator = iterator = tqdm(y, desc=str(self))
+
+        for yt in iterator:
+            self.update(yt)
+
+        self._iterator = self._first._iterator = self._second._iterator = None
+
+        return self
+
+    def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
+        if not self._is_switched:
+            if len(self._first._logged_ess) < self._when_to_switch:
+                return self._first.update(y)
+
+            self._is_switched = True
+            self.do_on_switch(self._first, self._second)
+
+        return self._second.update(y)
+
+    def predict(self, steps, aggregate=True, **kwargs):
+        if not self._is_switched:
+            return self._first.predict(steps, aggregate=aggregate, **kwargs)
+
+        return self._second.predict(steps, aggregate=aggregate, **kwargs)

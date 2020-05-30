@@ -2,14 +2,16 @@ from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal
 from ..utils import stacker
+from ...timeseries.base import StochasticProcess
+from ...timeseries import Parameter
+from typing import Tuple
 
 
 class StateMeanField(BaseApproximation):
-    def __init__(self, model):
+    def __init__(self, model: StochasticProcess):
         """
         Implements a mean field approximation of the state space.
         :param model: The model
-        :type model: pyfilter.timeseries.base.StochasticProcess
         """
 
         super().__init__()
@@ -44,7 +46,7 @@ class ParameterMeanField(BaseApproximation):
     def get_parameters(self):
         return self._mean, self._log_std
 
-    def initialize(self, parameters, *args):
+    def initialize(self, parameters: Tuple[Parameter, ...], *args):
         stacked = stacker(parameters, lambda u: u.t_values)
 
         self._mean = torch.zeros(stacked.concated.shape[1:], device=stacked.concated.device)

@@ -1,11 +1,11 @@
-from .base import BatchFilterAlgorithm, preliminary
-from ..filters.base import ParticleFilter
+from .base import BatchFilterAlgorithm
 from ..filters import SISR
 from ..resampling import residual
 from tqdm import tqdm
 from ..kde import _jitter as jittering
 from math import log, exp
 import torch
+from .utils import preliminary
 
 
 class IteratedFilteringV2(BatchFilterAlgorithm):
@@ -14,11 +14,8 @@ class IteratedFilteringV2(BatchFilterAlgorithm):
         """
         Implements the Iterated Filtering version 2 (IF2) algorithm by Ionides et al.
         :param filter_: The filter to use.
-        :type filter_: ParticleFilter
         :param iterations: The number of iterations
-        :type iterations: int
         :param cooling: How much of the scale to remain after all the iterations
-        :type cooling: float
         """
 
         if not isinstance(filter_, SISR):

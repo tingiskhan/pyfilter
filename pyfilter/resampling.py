@@ -1,15 +1,14 @@
 from .normalization import normalize
 import torch
+from typing import Union
 
 
-def _matrix(weights, u):
+def _matrix(weights: torch.Tensor, u: torch.Tensor):
     """
     Performs systematic resampling of a 2D array of log weights along the second axis.
     independent of the others.
     :param weights: The weights to use for resampling
-    :type weights: torch.Tensor
     :return: Resampled indices
-    :rtype: torch.Tensor
     """
     n = weights.shape[1]
     index_range = torch.arange(n, dtype=u.dtype, device=weights.device).unsqueeze(0)
@@ -22,13 +21,11 @@ def _matrix(weights, u):
     return torch.searchsorted(cumsum, probs)
 
 
-def _vector(weights, u):
+def _vector(weights: torch.Tensor, u: torch.Tensor):
     """
     Performs systematic resampling of a 1D array log weights.
     :param weights: The weights to use for resampling
-    :type weights: torch.Tensor
     :return: Resampled indices
-    :rtype: torch.Tensor
     """
     n = weights.shape[0]
     probs = (torch.arange(n, dtype=u.dtype, device=weights.device) + u) / n
@@ -39,17 +36,13 @@ def _vector(weights, u):
     return torch.searchsorted(cumsum, probs)
 
 
-def systematic(w, normalized=False, u=None):
+def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None):
     """
     Performs systematic resampling on either a 1D or 2D array.
     :param w: The weights to use for resampling
-    :type w: torch.Tensor
     :param normalized: Whether the data is normalized
-    :type normalized: bool
     :param u: Parameter for overriding the sampled index, for testing
-    :type u: float|torch.Tensor
     :return: Resampled indices
-    :rtype: torch.Tensor
     """
 
     shape = (1,) if w.dim() < 2 else (w.shape[0], 1)
@@ -62,30 +55,24 @@ def systematic(w, normalized=False, u=None):
     return _vector(w, u)
 
 
-def multinomial(w, normalized=False):
+def multinomial(w: torch.Tensor, normalized=False):
     """
     Performs multinomial sampling.
     :param w: The weights to use for resampling
-    :type w: torch.Tensor
     :param normalized: Whether the data is normalized
-    :type normalized: bool
     :return: Resampled indices
-    :rtype: torch.Tensor
     """
 
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
 
 
-def residual(w, normalized=False):
+def residual(w: torch.Tensor, normalized=False):
     """
     Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
     :param w: The weights to use for resampling
-    :type w: torch.Tensor
     :param normalized: Whether the data is normalized
-    :type normalized: bool
     :return: Resampled indices
-    :rtype: torch.Tensor
     """
 
     if w.dim() > 1:
