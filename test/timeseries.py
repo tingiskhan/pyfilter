@@ -11,7 +11,6 @@ from pyfilter.timeseries import (
     TwoFactorSEIRD,
     ThreeFactorSIRD
 )
-from pyfilter.timeseries.statevariable import StateVariable
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
 import math
@@ -34,20 +33,6 @@ def g_sde(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    def test_StateVariable(self):
-        # ===== Emulate last value ===== #
-        rands = torch.empty((300, 3)).normal_()
-        rands.requires_grad_(True)
-
-        # ===== Pass through function ===== #
-        sv = StateVariable(rands)
-        agg = sv.sum(-1)
-
-        # ===== Get gradient ===== #
-        agg.backward(torch.ones_like(agg))
-
-        assert rands.grad is not None
-
     def test_Parameter(self):
         # ===== Start stuff ===== #
         param = Parameter(Normal(0., 1.))
@@ -186,7 +171,6 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_OneStepEuler(self):
-
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
