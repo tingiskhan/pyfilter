@@ -1,8 +1,7 @@
 from .base import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
-from .parameter import Parameter
-from typing import Tuple, Callable, Iterable, Union
+from typing import Tuple, Callable, Union
 
 
 def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
