@@ -2,14 +2,9 @@ import unittest
 from pyfilter.timeseries import (
     AffineProcess,
     OneStepEulerMaruyma,
-    OrnsteinUhlenbeck,
     Parameter,
     AffineEulerMaruyama,
-    StochasticSIR,
-    OneFactorSIR,
-    TwoFactorSIR,
-    TwoFactorSEIRD,
-    ThreeFactorSIRD
+    models as m
 )
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
@@ -202,7 +197,7 @@ class Tests(unittest.TestCase):
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
-        sde = OrnsteinUhlenbeck(a, 0., 0.15, 1, dt=1.)
+        sde = m.OrnsteinUhlenbeck(a, 0., 0.15, 1, dt=1.)
 
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
@@ -302,7 +297,7 @@ class Tests(unittest.TestCase):
 
     def test_StochasticSIR(self):
         dist = Independent(Binomial(torch.tensor([1000, 1, 0]), torch.tensor([1, 1, 1e-6])), 1)
-        sir = StochasticSIR((0.1, 0.05, 0.01), dist, 1e-1)
+        sir = m.StochasticSIR((0.1, 0.05, 0.01), dist, 1e-1)
 
         x = sir.sample_path(1000, 10)
 
@@ -310,7 +305,7 @@ class Tests(unittest.TestCase):
 
     def test_OneFactorFractionalSIR(self):
         dist = Dirichlet(torch.tensor([10000., 1., 1.]))
-        sir = OneFactorSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
+        sir = m.OneFactorSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
 
@@ -318,7 +313,7 @@ class Tests(unittest.TestCase):
 
     def test_TwoFactorFractionalSIR(self):
         dist = Dirichlet(torch.tensor([10000., 1., 1.]))
-        sir = TwoFactorSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
+        sir = m.TwoFactorSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
 
         x = sir.sample_path(1000)
 
@@ -326,7 +321,7 @@ class Tests(unittest.TestCase):
 
     def test_TwoFactorSEIRD(self):
         dist = Dirichlet(torch.tensor([10000., 1., 1., 1., 1.]))
-        seird = TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
+        seird = m.TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
 
         x = seird.sample_path(1000)
 
@@ -334,7 +329,7 @@ class Tests(unittest.TestCase):
 
     def test_TwoFactorSIRD(self):
         dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
-        sird = ThreeFactorSIRD((0.1, 0.05, 0.05, 0.01, 0.05, 0.05, 0.05), dist, dt=1e-1)
+        sird = m.ThreeFactorSIRD((0.1, 0.05, 0.05, 0.01, 0.05, 0.05, 0.05), dist, dt=1e-1)
 
         x = sird.sample_path(1000)
 

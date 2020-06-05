@@ -1,5 +1,5 @@
 from ..diffusion import AffineEulerMaruyama
-from torch.distributions import Normal
+from torch.distributions import Normal, LogNormal
 
 
 class Verhulst(AffineEulerMaruyama):
@@ -17,6 +17,4 @@ class Verhulst(AffineEulerMaruyama):
         def g_(x, k, g, s):
             return s * x
 
-        dist = Normal(0., 1.)
-
-        super().__init__((f, g_), (kappa, gamma, sigma), dist, dist, **kwargs)
+        super().__init__((f, g_), (kappa, gamma, sigma), LogNormal(0., 1.), Normal(0., 1.), **kwargs)
