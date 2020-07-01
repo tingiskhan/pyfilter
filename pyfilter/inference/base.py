@@ -1,7 +1,6 @@
 from abc import ABC
 from ..filters import BaseFilter, ParticleFilter, utils as u
 from tqdm import tqdm
-import warnings
 from ..module import Module, TensorContainer
 import torch
 from ..utils import normalize
@@ -19,18 +18,18 @@ class BaseAlgorithm(Module, ABC):
         self._iterator = None
 
     @u.enforce_tensor
-    def fit(self, y: torch.Tensor):
+    def fit(self, y: torch.Tensor, **kwargs):
         """
         Fits the algorithm to data.
         :param y: The data to fit
         :return: Self
         """
 
-        self._fit(y)
+        self._fit(y, **kwargs)
 
         return self
 
-    def _fit(self, y: torch.Tensor):
+    def _fit(self, y: torch.Tensor, **kwargs):
         """
         Method to be overridden by user.
         """
