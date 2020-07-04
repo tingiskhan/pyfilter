@@ -33,18 +33,12 @@ class DefaultLogger(LoggingWrapper):
 
 
 class TqdmWrapper(LoggingWrapper):
-    _num_wrappers = -1
-
-    def __new__(cls, *args, **kwargs):
-        cls._num_wrappers += 1
-        return super(TqdmWrapper, cls).__new__(cls, *args, **kwargs)
-
     def __init__(self, max_iter: int = None):
         """
         Wrapper for tqdm that prints and displays a status bar
         """
         super(TqdmWrapper, self).__init__(self.func, 1)
-        self._tqdm = tqdm(total=max_iter, position=self._num_wrappers)
+        self._tqdm = tqdm(total=max_iter)
         self._initialized = False
 
     def set_num_iter(self, iters):
