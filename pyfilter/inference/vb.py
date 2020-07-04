@@ -1,7 +1,6 @@
 from .base import BatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
-import tqdm
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ..timeseries import StateSpaceModel
 from ..timeseries.base import StochasticProcess
@@ -13,7 +12,7 @@ from typing import Type, Union
 
 class VariationalBayes(BatchAlgorithm):
     def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, approx: BaseApproximation = None,
-                 optimizer: Type[Optimizer] = Adam, maxiter=30e3, optkwargs=None, use_filter=True):
+                 optimizer: Type[Optimizer] = Adam, max_iter=30e3, optkwargs=None, use_filter=True):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.
@@ -21,11 +20,11 @@ class VariationalBayes(BatchAlgorithm):
         :param samples: The number of samples
         :param approx: The variational approximation to use for the latent space
         :param optimizer: The optimizer
-        :param maxiter: The maximum number of iterations
+        :param max_iter: The maximum number of iterations
         :param optkwargs: Any optimizer specific kwargs
         """
 
-        super().__init__()
+        super().__init__(max_iter)
         self._model = model
         self._ns = samples
 
@@ -46,7 +45,7 @@ class VariationalBayes(BatchAlgorithm):
 
         # ===== Optimization stuff ===== #
         self._opt_type = optimizer
-        self._maxiters = int(maxiter)
+        self._optimizer = None
         self.optkwargs = optkwargs or dict()
 
     @property
@@ -134,33 +133,18 @@ class VariationalBayes(BatchAlgorithm):
 
         return -(logl.sum(1).mean(0) + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
 
-    def _fit(self, y):
-        optparams = self._initialize(y)
+    def is_converged(self, old_loss, new_loss):
+        return (new_loss - old_loss).abs() < EPS
 
-        elbo_old = -torch.tensor(float('inf'))
-        elbo = -elbo_old
-
-        optimizer = self._opt_type(optparams, **self.optkwargs)
-
-        it = 0
-        bar = tqdm.tqdm(total=self._maxiters)
-        while (elbo - elbo_old).abs() > EPS and it < self._maxiters:
-            elbo_old = elbo
-
-            # ===== Perform optimization ===== #
-            optimizer.zero_grad()
-            elbo = self.loss(y)
-            elbo.backward()
-            optimizer.step()
-
-            bar.update(1)
-
-            if it > 0:
-                self._runavg = self._runavg * self._decay - elbo * (1 - self._decay)
-            else:
-                self._runavg = -elbo
-
-            bar.set_description(f'{str(self)} - Avg. ELBO: {self._runavg:.2f}')
-            it += 1
+    def initialize(self, y):
+        self._optimizer = self._opt_type(self._initialize(y), **self.optkwargs)
 
         return self
+
+    def _step(self, y):
+        self._optimizer.zero_grad()
+        elbo = self.loss(y)
+        elbo.backward()
+        self._optimizer.step()
+
+        return elbo

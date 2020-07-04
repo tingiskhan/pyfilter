@@ -1,10 +1,10 @@
 from abc import ABC
 from ..filters import BaseFilter, ParticleFilter, utils as u
-from tqdm import tqdm
 from ..module import Module, TensorContainer
 import torch
 from ..utils import normalize
 from typing import Tuple
+from ..logging import LoggingWrapper, DefaultLogger, TqdmWrapper
 
 
 class BaseAlgorithm(Module, ABC):
@@ -15,28 +15,27 @@ class BaseAlgorithm(Module, ABC):
 
         super().__init__()
 
-        self._iterator = None
-
     @u.enforce_tensor
-    def fit(self, y: torch.Tensor, **kwargs):
+    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs):
         """
         Fits the algorithm to data.
         :param y: The data to fit
+        :param logging: The logging wrapper
         :return: Self
         """
 
-        self._fit(y, **kwargs)
+        self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
 
         return self
 
-    def _fit(self, y: torch.Tensor, **kwargs):
+    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
         """
         Method to be overridden by user.
         """
 
         raise NotImplementedError()
 
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         """
         Initializes the chosen algorithm.
         :return: Self
@@ -67,7 +66,6 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         """
 
         super().__init__()
-
         self._filter = filter_
 
     @property
@@ -115,15 +113,12 @@ class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
 
         return self._update(y)
 
-    def _fit(self, y, bar=True):
-        iterator = y
-        if bar:
-            self._iterator = iterator = tqdm(y, desc=str(self))
+    def _fit(self, y, logging_wrapper=None, **kwargs):
+        logging_wrapper.set_num_iter(y.shape[0])
 
-        for yt in iterator:
+        for i, yt in enumerate(y):
             self.update(yt)
-
-        self._iterator = None
+            logging_wrapper.do_log(i, self, y)
 
         return self
 
@@ -200,9 +195,32 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
 
 
 class BatchAlgorithm(BaseAlgorithm, ABC):
-    """
-    Algorithm for batch inference.
-    """
+    def __init__(self, max_iter: int):
+        """
+        Algorithm for batch inference.
+        """
+        super(BatchAlgorithm, self).__init__()
+        self._max_iter = int(max_iter)
+
+    def is_converged(self, old_loss, new_loss):
+        raise NotImplementedError()
+
+    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
+        old_loss = torch.tensor(float('inf'))
+        logging_wrapper.set_num_iter(self._max_iter)
+        loss = -old_loss
+        it = 0
+
+        while not self.is_converged(old_loss, loss) and it < self._max_iter:
+            old_loss = loss
+            loss = self._step(y)
+            logging_wrapper.do_log(it, self, y)
+            it += 1
+
+        return self
+
+    def _step(self, y) -> float:
+        raise NotImplementedError()
 
 
 class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
@@ -260,18 +278,6 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     @_w_rec.setter
     def _w_rec(self, x):
         return
-
-    def _fit(self, y, bar=True):
-        iterator = y
-        if bar:
-            self._iterator = self._first._iterator = self._second._iterator = iterator = tqdm(y, desc=str(self))
-
-        for yt in iterator:
-            self.update(yt)
-
-        self._iterator = self._first._iterator = self._second._iterator = None
-
-        return self
 
     def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
         if not self._is_switched:

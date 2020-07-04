@@ -1,5 +1,5 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH, OnlineKernel
+from .kernels import ParticleMetropolisHastings, SymmetricMH
 from ..utils import get_ess
 from ..filters import ParticleFilter
 from ..module import TensorContainer
@@ -45,10 +45,6 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._threshold or (~isfinite(self._w_rec)).any():
             self.rejuvenate()
-
-            if self._iterator is not None:
-                self._iterator.set_description(desc=str(self))
-
             self._w_rec[:] = 0.
 
         return self
@@ -60,9 +56,6 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         # ===== Update the description ===== #
-        if self._iterator is not None:
-            self._iterator.set_description(desc=f'{str(self):s} - Rejuvenating particles')
-
         self._kernel.set_data(self._y.tensors)
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
 
@@ -83,15 +76,9 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Create new filter with double the state particles ===== #
         oldlogl = self.filter.result.loglikelihood
-        oldparts = self.filter.particles[-1]
 
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
-
-        if self._iterator is not None:
-            msg = f'{str(self)} - Increasing particles from {oldparts} -> {self.filter.particles[-1]}'
-            self._iterator.set_description(desc=msg)
-
         self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y.tensors, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
