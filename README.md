@@ -27,9 +27,8 @@ For filters 1. and 2. there exist different proposals, s.a.
 The currently implemented algorithms are
 1. [NESS](https://arxiv.org/abs/1308.1883)
 2. [SMC2](https://arxiv.org/abs/1101.1528) (see [here](https://github.com/nchopin/particles) for one of the original authors' implementation)
-3. A preliminary version of Iterated Filter (IF2) by Ionides et al.
-4. Variational Bayes - currently only `MeanField` is implemented
-5. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
+3. Variational Bayes - currently only `MeanField` is implemented
+4. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
 
 ## Caveats
 Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
