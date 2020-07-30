@@ -334,3 +334,10 @@ class Tests(unittest.TestCase):
         x = sird.sample_path(1000)
 
         self.assertEqual(x.shape, torch.Size([1000, 4]))
+
+    def test_AR(self):
+        ar = m.AR(0., 0.99, 0.08)
+
+        x = ar.sample_path(100)
+
+        self.assertEqual(x.shape, torch.Size([100]))

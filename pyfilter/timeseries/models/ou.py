@@ -3,6 +3,7 @@ from ..affine import AffineProcess
 import torch
 
 
+# TODO: Fix s.t. initial distribution is function of parameters
 class OrnsteinUhlenbeck(AffineProcess):
     def __init__(self, kappa, gamma, sigma, ndim: int, dt: float):
         """
