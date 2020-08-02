@@ -173,11 +173,10 @@ class ConstantKernel(ShrinkingKernel):
         super().__init__()
         self._bw_fac = bw
         self._w = None
-        self._x = None
 
     def fit(self, x, w):
         self._w = w
-        self._x = x
+        self._means = x
         self._cov = torch.ones_like(self._bw_fac, device=w.device)
 
         return self
