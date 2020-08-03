@@ -2,6 +2,7 @@ import torch
 from .utils import get_ess
 from math import sqrt
 from typing import Union
+from .inference.utils import _construct_mvn
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]):
@@ -182,3 +183,18 @@ class ConstantKernel(ShrinkingKernel):
         return self
 
 
+# TODO: Not really a KDE...
+class MultivariateNormal(KernelDensityEstimate):
+    def __init__(self):
+        super().__init__()
+        self._mvn = None
+        self._shape = None
+
+    def fit(self, x, w):
+        self._mvn = _construct_mvn(x, w)
+        self._shape = (x.shape[0],)
+
+        return self
+
+    def sample(self, inds=None):
+        return self._mvn.sample(self._shape)

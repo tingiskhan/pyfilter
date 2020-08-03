@@ -6,8 +6,24 @@ import torch
 from ...filters.base import BaseFilter
 
 
+def _cont_jitter(parameters, stacked, jittered):
+    for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
+        p.t_values = unflattify(jittered[:, msk], ps)
+
+    return
+
+
+def _disc_jitter(parameters, stacked, jittered):
+    to_jitter = torch.empty(jittered.shape[0], device=jittered.device).bernoulli_(1 / jittered.shape[0] ** 0.5)
+
+    for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
+        p.t_values = (1 - to_jitter) * p.t_values + to_jitter * unflattify(jittered[:, msk], ps)
+
+    return
+
+
 class OnlineKernel(BaseKernel):
-    def __init__(self, kde=None, **kwargs):
+    def __init__(self, kde=None, discrete=False, **kwargs):
         """
         Base class for kernels being used in an online manner.
         :param kde: The kernel density estimator to use
@@ -16,6 +32,7 @@ class OnlineKernel(BaseKernel):
         super().__init__(**kwargs)
 
         self._kde = kde or NonShrinkingKernel()
+        self._mutater = _cont_jitter if not discrete else _disc_jitter
 
     def _resample(self, filter_: BaseFilter, weights: torch.Tensor):
         """
@@ -37,8 +54,6 @@ class OnlineKernel(BaseKernel):
         inds = self._resample(filter_, weights)
         jittered = kde.sample(inds=inds)
 
-        # ===== Mutate parameters ===== #
-        for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
-            p.t_values = unflattify(jittered[:, msk], ps)
+        self._mutater(parameters, stacked, jittered)
 
         return self

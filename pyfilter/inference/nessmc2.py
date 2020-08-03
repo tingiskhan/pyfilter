@@ -2,7 +2,7 @@ from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 import torch
-from ..kde import ConstantKernel, robust_var
+from ..kde import ConstantKernel, robust_var, MultivariateNormal
 from .utils import stacker
 from ..normalization import normalize
 
@@ -24,8 +24,9 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         return SMC2(filter_, particles, threshold=threshold, **kwargs)
 
     def make_second(self, filter_, particles, **kwargs):
-        kde = kwargs.pop('kde', ConstantKernel(1.))
-        return NESS(filter_, particles, kde=kde, **kwargs)
+        kde = kwargs.pop('kde', MultivariateNormal())
+        disc = kwargs.pop('discrete', True)
+        return NESS(filter_, particles, kde=kde, discrete=disc, **kwargs)
 
     def do_on_switch(self, first: SMC2, second: NESS):
         if isinstance(self._second._kernel._kde, ConstantKernel):
