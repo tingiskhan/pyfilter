@@ -2,8 +2,9 @@ from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 import torch
-from ..kde import ConstantKernel
-from ..utils import concater
+from ..kde import ConstantKernel, robust_var
+from .utils import stacker
+from ..normalization import normalize
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
@@ -27,9 +28,12 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         return NESS(filter_, particles, kde=kde, **kwargs)
 
     def do_on_switch(self, first: SMC2, second: NESS):
+        if isinstance(self._second._kernel._kde, ConstantKernel):
+            stacked = stacker(first.filter.ssm.theta_dists, lambda u: u.t_values)
+            var = robust_var(stacked.concated, normalize(self._w_rec))
+
+            bw = (1 / self._particles[0] ** 1.5 * var).sqrt()
+            second._kernel._kde._bw_fac = bw
+
         self._first.rejuvenate()
         second._w_rec = torch.zeros_like(first._w_rec)
-
-        variances = concater(*(p.t_values.var(dim=0) for p in first.filter.ssm.theta_dists))
-        bw = (1 / self._particles[0] ** 1.5 * variances).sqrt()
-        second._kernel._kde._bw_fac = bw
