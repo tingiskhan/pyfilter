@@ -193,6 +193,8 @@ class NormalApproximation(KernelDensityEstimate):
         self._shape = None
 
     def fit(self, x, w):
+        self._shape = (x.shape[0],)
+
         if not self._indep:
             self._dist = _construct_mvn(x, w)
             return self
@@ -201,7 +203,6 @@ class NormalApproximation(KernelDensityEstimate):
         var = robust_var(x, w, mean)
 
         self._dist = Independent(Normal(mean, var.sqrt()), 1)
-        self._shape = (x.shape[0],)
 
         return self
 
