@@ -1,20 +1,20 @@
 from .base import BaseKernel
 from ...kde import KernelDensityEstimate, NonShrinkingKernel
 from ..utils import stacker
-from ...utils import unflattify
+from ...utils import unflattify, get_ess
 import torch
 from ...filters.base import BaseFilter
 
 
-def _cont_jitter(parameters, stacked, jittered):
+def _cont_jitter(parameters, stacked, jittered, ess):
     for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
         p.t_values = unflattify(jittered[:, msk], ps)
 
     return
 
 
-def _disc_jitter(parameters, stacked, jittered):
-    to_jitter = torch.empty(jittered.shape[0], device=jittered.device).bernoulli_(1 / jittered.shape[0] ** 0.5)
+def _disc_jitter(parameters, stacked, jittered, ess):
+    to_jitter = torch.empty(jittered.shape[0], device=jittered.device).bernoulli_(1 / ess ** 0.5)
 
     for p, msk, ps in zip(parameters, stacked.mask, stacked.prev_shape):
         p.t_values = (1 - to_jitter) * p.t_values + to_jitter * unflattify(jittered[:, msk], ps)
@@ -54,6 +54,6 @@ class OnlineKernel(BaseKernel):
         inds = self._resample(filter_, weights)
         jittered = kde.sample(inds=inds)
 
-        self._mutater(parameters, stacked, jittered)
+        self._mutater(parameters, stacked, jittered, get_ess(weights, normalized=True))
 
         return self
