@@ -116,7 +116,7 @@ class SymmetricMH(ParticleMetropolisHastings):
         return _construct_mvn(values, weights)
 
 
-# Inspired by: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py
+# Same as: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py
 class AdaptiveRandomWalk(ParticleMetropolisHastings):
     def define_pdf(self, values, weights, inds):
         mvn = _construct_mvn(values, weights)
