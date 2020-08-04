@@ -18,7 +18,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== When and how to update ===== #
         self._threshold = threshold * particles
-        self._kernel = kernel or AdaptiveRandomWalk()
+        self._kernel = kernel or SymmetricMH()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
