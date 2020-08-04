@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import MultivariateNormal, Distribution
+from torch.distributions import MultivariateNormal, Distribution, Independent
 from ..utils import unflattify
 from typing import Iterable
 from ..timeseries import Parameter
@@ -74,7 +74,7 @@ def _mcmc_move(params: Iterable[Parameter], dist: Distribution, stacked: Stacked
     :return: Samples from a multivariate normal distribution
     """
 
-    rvs = dist.sample((shape,))
+    rvs = dist.sample(() if shape is None else (shape,))
 
     for p, msk, ps in zip(params, stacked.mask, stacked.prev_shape):
         p.t_values = unflattify(rvs[:, msk], ps)

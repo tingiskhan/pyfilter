@@ -1,5 +1,5 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH, AdaptiveRandomWalk
 from ..utils import get_ess
 from ..filters import ParticleFilter
 from ..module import TensorContainer
@@ -18,7 +18,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== When and how to update ===== #
         self._threshold = threshold * particles
-        self._kernel = kernel or SymmetricMH()
+        self._kernel = kernel or AdaptiveRandomWalk()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
