@@ -7,10 +7,10 @@ from abc import ABC
 
 
 class BaseNESS(SequentialParticleAlgorithm, ABC):
-    def __init__(self, filter_, particles, kde: KernelDensityEstimate = None):
+    def __init__(self, filter_, particles, kde: KernelDensityEstimate = None, discrete=False):
         super().__init__(filter_, particles)
 
-        self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel())
+        self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel(), discrete=discrete)
 
         if not isinstance(self._kernel, OnlineKernel):
             raise ValueError(f'Kernel must be of instance {OnlineKernel.__class__.__name__}!')

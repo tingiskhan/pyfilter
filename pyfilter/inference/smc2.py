@@ -1,5 +1,5 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH, AdaptiveRandomWalk
 from ..utils import get_ess
 from ..filters import ParticleFilter
 from ..module import TensorContainer

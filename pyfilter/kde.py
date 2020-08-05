@@ -2,6 +2,8 @@ import torch
 from .utils import get_ess
 from math import sqrt
 from typing import Union
+from .inference.utils import _construct_mvn
+from torch.distributions import Normal, Independent
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]):
@@ -182,3 +184,27 @@ class ConstantKernel(ShrinkingKernel):
         return self
 
 
+# TODO: Not really a KDE...
+class NormalApproximation(KernelDensityEstimate):
+    def __init__(self, independent=True):
+        super().__init__()
+        self._dist = None   # type: torch.distributions.Distribution
+        self._indep = independent
+        self._shape = None
+
+    def fit(self, x, w):
+        self._shape = (x.shape[0],)
+
+        if not self._indep:
+            self._dist = _construct_mvn(x, w)
+            return self
+
+        mean = (w.unsqueeze(-1) * x).sum(0)
+        var = robust_var(x, w, mean)
+
+        self._dist = Independent(Normal(mean, var.sqrt()), 1)
+
+        return self
+
+    def sample(self, inds=None):
+        return self._dist.sample(self._shape)
