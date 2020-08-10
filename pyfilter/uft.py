@@ -165,7 +165,7 @@ class UnscentedFilterTransform(Module):
 
         # TODO: Perhaps move this to Timeseries?
         self._views = TensorContainer()
-        view_shape = (shape[0], 1) if len(shape) > 0 else shape
+        view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
         for model in [self._model.hidden, self._model.observable]:
             params = tuple()
