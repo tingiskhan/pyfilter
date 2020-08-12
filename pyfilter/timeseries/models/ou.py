@@ -1,6 +1,10 @@
-from torch.distributions import Normal, Independent
+from torch.distributions import Normal, Independent, AffineTransform, TransformedDistribution
 from ..affine import AffineProcess
 import torch
+
+
+def init_trans(dist, kappa, gamma, sigma):
+    return TransformedDistribution(dist, AffineTransform(gamma, sigma / (2 * kappa).sqrt()))
 
 
 # TODO: Fix s.t. initial distribution is function of parameters
@@ -19,7 +23,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         else:
             dist = Normal(0., 1)
 
-        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist)
+        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans)
         self._dt = torch.tensor(dt)
 
     def _f(self, x, k, g, s):
