@@ -23,7 +23,7 @@ class StochasticDifferentialEquation(StochasticProcess, ABC):
 
 
 class OneStepEulerMaruyma(AffineProcess):
-    def __init__(self, dynamics, theta, initial_dist, increment_dist, dt: float):
+    def __init__(self, dynamics, theta, initial_dist, increment_dist, dt: float, initial_transform=None):
         """
         Implements a one-step Euler-Maruyama model, similar to PyMC3. I.e. where we perform one iteration of the
         following recursion
@@ -38,7 +38,7 @@ class OneStepEulerMaruyma(AffineProcess):
         def g(x: torch.Tensor, *args: object) -> torch.Tensor:
             return dynamics[1](x, *args)
 
-        super().__init__((f, g), theta, initial_dist, increment_dist)
+        super().__init__((f, g), theta, initial_dist, increment_dist, initial_transform=initial_transform)
 
 
 class GeneralEulerMaruyama(StochasticDifferentialEquation):

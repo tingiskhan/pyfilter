@@ -148,7 +148,8 @@ def _view_helper(p, shape):
 
 class StochasticProcess(StochasticProcessBase, ABC):
     def __init__(self, theta: Tuple[object, ...], initial_dist: Union[Distribution, None],
-                 increment_dist: Distribution):
+                 increment_dist: Distribution,
+                 initial_transform: Union[Callable[[Distribution, Tuple[Parameter, ...]], Distribution], None] = None):
         """
         The base class for time series.
         :param theta: The parameters governing the dynamics
@@ -169,6 +170,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         self.initial_dist = initial_dist
         self.increment_dist = increment_dist
+        self.init_transform = initial_transform
 
         self._mapper = {
             f'increment/{increment_dist.__class__.__name__}': self.increment_dist
@@ -317,6 +319,9 @@ class StochasticProcess(StochasticProcessBase, ABC):
         """
 
         dist = self.initial_dist.expand(size_getter(shape))
+
+        if self.init_transform is not None:
+            dist = self.init_transform(dist, *self.theta_vals)
 
         if as_dist:
             return dist
