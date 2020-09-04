@@ -154,6 +154,13 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         """
 
         self._particles = torch.Size([x])
+        self.filter.set_nparallel(x)
+
+    def viewify_params(self):
+        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
+        self.filter.viewify_params(shape).initialize()
+
+        return self
 
     def initialize(self) -> BaseFilterAlgorithm:
         """
@@ -161,13 +168,10 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         :return: Self
         """
 
-        self._filter.set_nparallel(*self.particles)
-
         self.filter.ssm.sample_params(self.particles)
         self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
-        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.viewify_params(shape).initialize()
+        self.viewify_params()
 
         return self
 
