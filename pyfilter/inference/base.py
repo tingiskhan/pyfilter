@@ -168,6 +168,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         :return: Self
         """
 
+        self.filter.set_nparallel(*self.particles)  # Need this line when reinitializing, not optimal...
         self.filter.ssm.sample_params(self.particles)
         self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
