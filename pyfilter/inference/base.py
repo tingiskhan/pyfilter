@@ -157,7 +157,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
 
     def viewify_params(self):
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.viewify_params(shape).initialize()
+        self.filter.viewify_params(shape)
 
         return self
 
@@ -172,6 +172,7 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
         self.viewify_params()
+        self.filter.initialize()
 
         return self
 
