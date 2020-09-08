@@ -114,9 +114,6 @@ class ParticleFilter(BaseFilter, ABC):
         self._n_parallel = torch.Size([n])
         self.particles = (*self._n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:]))
 
-        if self._x_cur is not None:
-            return self.initialize()
-
         return self
 
     def initialize(self):
