@@ -94,6 +94,7 @@ class BaseFilter(Module, ABC):
     def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
+    # TODO: Return latest state here instead
     def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True):
         """
         Filters the entire data set `y`.

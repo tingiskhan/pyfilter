@@ -44,17 +44,6 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def _calc_diff_logl(self, t_filt: BaseFilter, filter_: BaseFilter):
-        """
-        Helper method for calculating the difference in log likelihood between proposed and existing parameters.
-        :param t_filt: The new filter
-        :param filter_: The old filter
-        :return: Difference in loglikelihood
-        """
-
-        t_filt.reset().initialize().longfilter(self._y, bar=False)
-        return t_filt.result.loglikelihood - filter_.result.loglikelihood
-
     def _before_resampling(self, filter_: BaseFilter, stacked: torch.Tensor):
         """
         Helper method for carrying out operations before resampling.
@@ -65,7 +54,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
         return self
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
             stacked = stacker(parameters, lambda u: u.t_values)
@@ -82,6 +71,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Choose particles ===== #
             filter_.resample(inds, entire_history=self._entire_hist)
+            state.resample(inds)
 
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
@@ -89,7 +79,8 @@ class ParticleMetropolisHastings(BaseKernel):
             _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, None if indep_kernel else stacked.concated.shape[0])
 
             # ===== Calculate difference in loglikelihood ===== #
-            quotient = self._calc_diff_logl(t_filt, filter_)
+            t_filt.reset().longfilter(self._y, bar=False)
+            quotient = t_filt.result.loglikelihood - filter_.result.loglikelihood
 
             # ===== Calculate acceptance ratio ===== #
             plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()

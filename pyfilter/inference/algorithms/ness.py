@@ -1,7 +1,7 @@
 from .base import SequentialParticleAlgorithm
-from ..utils import get_ess
-from .kernels import OnlineKernel
-from ..kde import NonShrinkingKernel, KernelDensityEstimate
+from ...utils import get_ess
+from ..kernels import OnlineKernel
+from pyfilter.kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
 
@@ -18,20 +18,20 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
     def do_update(self) -> bool:
         raise NotImplementedError()
 
-    def _update(self, y):
+    def _update(self, y, state):
         # ===== Jitter ===== #
         if self.do_update():
-            self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
+            self._kernel.update(self.filter.ssm.theta_dists, self.filter, state, self._w_rec)
             self._w_rec[:] = 0.
 
         # ===== Propagate filter ===== #
-        _, ll = self.filter.filter(y)
-        self._w_rec += ll
+        state = self.filter.filter(y, state)
+        self._w_rec += state.get_loglikelihood()
 
         # ===== Log ESS ===== #
         self._logged_ess.append(get_ess(self._w_rec))
 
-        return self
+        return state
 
 
 class NESS(BaseNESS):

@@ -1,10 +1,10 @@
 from abc import ABC
-from ..filters import BaseFilter, ParticleFilter, utils as u
-from ..module import Module, TensorContainer
+from ...filters import BaseFilter, ParticleFilter, utils as u, BaseState
+from ...module import Module, TensorContainer
 import torch
-from ..utils import normalize
+from ...utils import normalize
 from typing import Tuple
-from ..logging import LoggingWrapper, DefaultLogger, TqdmWrapper
+from ...logging import LoggingWrapper, DefaultLogger, TqdmWrapper
 
 
 class BaseAlgorithm(Module, ABC):
@@ -89,41 +89,37 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         self._filter = x
 
 
-class SequentialAlgorithm(BaseFilterAlgorithm, ABC):
+class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     """
     Algorithm for sequential inference.
     """
 
-    def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
-        """
-        The function to override by the inherited algorithm.
-        :param y: The observation
-        :return: Self
-        """
-
+    def _update(self, y: torch.Tensor, state: BaseState) -> BaseState:
         raise NotImplementedError()
 
     @u.enforce_tensor
-    def update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
+    def update(self, y: torch.Tensor, state: BaseState) -> BaseState:
         """
         Performs an update using a single observation `y`.
         :param y: The observation
+        :param state: The previous state
         :return: Self
         """
 
-        return self._update(y)
+        return self._update(y, state)
 
     def _fit(self, y, logging_wrapper=None, **kwargs):
         logging_wrapper.set_num_iter(y.shape[0])
 
+        state = self.filter.initialize()
         for i, yt in enumerate(y):
-            self.update(yt)
+            state = self.update(yt, state)
             logging_wrapper.do_log(i, self, y)
 
         return self
 
 
-class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
+class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     def __init__(self, filter_, particles: int):
         """
         Implements a base class for sequential particle inference.
@@ -172,7 +168,6 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
         self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
         self.viewify_params()
-        self.filter.initialize()
 
         return self
 
@@ -184,8 +179,8 @@ class SequentialParticleAlgorithm(SequentialAlgorithm, ABC):
 
         return torch.stack(self._logged_ess.tensors)
 
-    def predict(self, steps, aggregate=True, **kwargs):
-        px, py = self.filter.predict(steps, aggregate=aggregate, **kwargs)
+    def predict(self, steps, state: BaseState, aggregate=True, **kwargs):
+        px, py = self.filter.predict(state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py
@@ -256,7 +251,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         raise NotImplementedError()
 
-    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm):
+    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm, state: BaseState):
         raise NotImplementedError()
 
     def initialize(self) -> BaseFilterAlgorithm:
@@ -284,18 +279,18 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def _w_rec(self, x):
         return
 
-    def _update(self, y: torch.Tensor) -> BaseFilterAlgorithm:
+    def _update(self, y: torch.Tensor, state):
         if not self._is_switched:
             if len(self._first._logged_ess) < self._when_to_switch:
-                return self._first.update(y)
+                return self._first.update(y, state)
 
             self._is_switched = True
-            self.do_on_switch(self._first, self._second)
+            self.do_on_switch(self._first, self._second, state)
 
-        return self._second.update(y)
+        return self._second.update(y, state)
 
-    def predict(self, steps, aggregate=True, **kwargs):
+    def predict(self, steps, state, aggregate=True, **kwargs):
         if not self._is_switched:
-            return self._first.predict(steps, aggregate=aggregate, **kwargs)
+            return self._first.predict(steps, state, aggregate=aggregate, **kwargs)
 
-        return self._second.predict(steps, aggregate=aggregate, **kwargs)
+        return self._second.predict(steps, state, aggregate=aggregate, **kwargs)

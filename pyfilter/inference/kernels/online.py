@@ -3,7 +3,7 @@ from ...kde import KernelDensityEstimate, NonShrinkingKernel
 from ..utils import stacker
 from ...utils import unflattify, get_ess
 import torch
-from ...filters.base import BaseFilter
+from ...filters import BaseFilter, BaseState
 
 
 def _cont_jitter(parameters, stacked, jittered, ess):
@@ -34,7 +34,7 @@ class OnlineKernel(BaseKernel):
         self._kde = kde or NonShrinkingKernel()
         self._mutater = _cont_jitter if not discrete else _disc_jitter
 
-    def _resample(self, filter_: BaseFilter, weights: torch.Tensor):
+    def _resample(self, filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
         """
         Helper method for performing resampling.
         :param filter_: The filter to resample
@@ -43,15 +43,16 @@ class OnlineKernel(BaseKernel):
 
         inds = self._resampler(weights, normalized=True)
         filter_.resample(inds, entire_history=False)
+        state.resample(inds)
 
         return inds
 
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, state, weights):
         # ===== Perform shrinkage ===== #
         stacked = stacker(parameters, lambda u: u.t_values)
         kde = self._kde.fit(stacked.concated, weights)
 
-        inds = self._resample(filter_, weights)
+        inds = self._resample(filter_, state, weights)
         jittered = kde.sample(inds=inds)
 
         self._mutater(parameters, stacked, jittered, get_ess(weights, normalized=True))

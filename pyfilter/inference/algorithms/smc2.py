@@ -1,8 +1,8 @@
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH, AdaptiveRandomWalk
-from ..utils import get_ess
-from ..filters import ParticleFilter
-from ..module import TensorContainer
+from ..kernels import ParticleMetropolisHastings, SymmetricMH
+from ...utils import get_ess
+from ...filters import ParticleFilter
+from ...module import TensorContainer
 from torch import isfinite
 
 
@@ -30,13 +30,13 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Save data ===== #
         self._y = TensorContainer()
 
-    def _update(self, y):
+    def _update(self, y, state):
         # ===== Save data ===== #
         self._y.append(y)
 
         # ===== Perform a filtering move ===== #
-        _, ll = self.filter.filter(y)
-        self._w_rec += ll
+        state = self.filter.filter(y, state)
+        self._w_rec += state.get_loglikelihood()
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(self._w_rec)
@@ -44,12 +44,12 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._threshold or (~isfinite(self._w_rec)).any():
-            self.rejuvenate()
+            state = self.rejuvenate(state)
             self._w_rec[:] = 0.
 
-        return self
+        return state
 
-    def rejuvenate(self):
+    def rejuvenate(self, state):
         """
         Rejuvenates the particles using a PMCMC move.
         :return: Self
@@ -57,13 +57,13 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Update the description ===== #
         self._kernel.set_data(self._y.tensors)
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, self._w_rec)
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, state, self._w_rec)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
-            self._increase_states()
+            state = self._increase_states()
 
-        return self
+        return state
 
     def _increase_states(self):
         """

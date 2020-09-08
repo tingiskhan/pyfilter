@@ -1,8 +1,8 @@
 import torch
 from torch.distributions import MultivariateNormal, Distribution, Independent
-from ..utils import unflattify
+from pyfilter.utils import unflattify
 from typing import Iterable
-from ..timeseries import Parameter
+from pyfilter.timeseries import Parameter
 import warnings
 
 

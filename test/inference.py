@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.inference import NESS, SMC2, NESSMC2, SMC2FW
+from pyfilter.inference import algorithms as a
 from torch.distributions import Normal, Exponential, Independent, LogNormal
 from pyfilter.filters import SISR, UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
@@ -62,11 +62,11 @@ class MyTestCase(unittest.TestCase):
             x, y = trumod.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
-                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
+                (a.NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (a.NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (a.SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (a.SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (a.NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
             ]
 
             for alg, props in algs:

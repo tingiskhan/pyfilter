@@ -2,9 +2,9 @@ from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
 import torch
-from ..kde import ConstantKernel, robust_var, ShrinkingKernel
-from .utils import stacker
-from ..normalization import normalize
+from pyfilter.kde import ConstantKernel, robust_var, ShrinkingKernel
+from pyfilter.inference.utils import stacker
+from pyfilter.normalization import normalize
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
