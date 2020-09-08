@@ -3,11 +3,11 @@ from ..module import TensorContainerBase, TensorContainer
 
 
 def enforce_tensor(func):
-    def wrapper(obj, y, **kwargs):
+    def wrapper(obj, y, *args, **kwargs):
         if not isinstance(y, torch.Tensor):
             raise ValueError('The observation must be of type Tensor!')
 
-        return func(obj, y, **kwargs)
+        return func(obj, y, *args, **kwargs)
 
     return wrapper
 

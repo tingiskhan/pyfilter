@@ -7,6 +7,7 @@ from ..utils import choose
 from ..module import Module
 from .utils import enforce_tensor, FilterResult
 from typing import Tuple, Union
+from .state import BaseState
 
 
 class BaseFilter(Module, ABC):
@@ -64,38 +65,33 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def initialize(self):
+    def initialize(self) -> BaseState:
         """
         Initializes the filter.
         :return: Self
         """
 
-        return self
+        raise NotImplementedError()
 
     @enforce_tensor
-    def filter(self, y: Union[float, torch.Tensor]):
+    def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         """
         Performs a filtering the model for the observation `y`.
         :param y: The observation
+        :param state: The previous state
         :return: Self and log-likelihood
         """
 
-        xm, ll = self._filter(y)
+        state = self._filter(y, state)
 
         if self._save_means:
-            self._filter_res.append(xm, ll)
+            self._filter_res.append(state.get_mean(), state.get_loglikelihood())
         else:
-            self._filter_res.append(None, ll)
+            self._filter_res.append(None, state.get_loglikelihood())
 
-        return self, ll
+        return state
 
-    def _filter(self, y: Union[float, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        The actual filtering procedure. Overwrite this.
-        :param y: The observation
-        :return: Mean of state, log-likelihood
-        """
-
+    def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
     def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True):
@@ -107,13 +103,11 @@ class BaseFilter(Module, ABC):
         """
 
         astuple = tuple(y) if not isinstance(y, tuple) else y
-        if bar:
-            iterator = tqdm(astuple, desc=str(self.__class__.__name__))
-        else:
-            iterator = astuple
+        iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
 
+        state = self.initialize()
         for yt in iterator:
-            self.filter(yt)
+            state = self.filter(yt, state)
 
         return self
 
@@ -126,9 +120,10 @@ class BaseFilter(Module, ABC):
         # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
         return copy.deepcopy(self)
 
-    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead using the latest available information.
+        :param state: The state to go from
         :param steps: The number of steps forward to predict
         :param kwargs: Any key worded arguments
         """
@@ -145,18 +140,7 @@ class BaseFilter(Module, ABC):
         if entire_history:
             self._filter_res.resample(inds)
 
-        # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: choose(u.values, inds))
-        self._resample(inds)
-
-        return self
-
-    def _resample(self, inds: torch.Tensor):
-        """
-        Implements resampling unique for the filter.
-        :param inds: The indices
-        :return: Self
-        """
 
         return self
 
@@ -167,15 +151,6 @@ class BaseFilter(Module, ABC):
         """
 
         self._filter_res = FilterResult()
-        self._reset()
-
-        return self
-
-    def _reset(self):
-        """
-        Any filter specific resets.
-        :return: Self
-        """
 
         return self
 
@@ -190,18 +165,6 @@ class BaseFilter(Module, ABC):
 
         self._model.exchange(inds, filter_.ssm)
         self._filter_res.exchange(filter_._filter_res, inds)
-        self._exchange(filter_, inds)
-
-        return self
-
-    def _exchange(self, filter_, inds: torch.Tensor):
-        """
-        Filter specific exchanges.
-        :param filter_: The new filter
-        :type filter_: BaseFilter
-        :param inds: The indices
-        :return: Self
-        """
 
         return self
 

@@ -9,6 +9,7 @@ from ..module import TensorContainer
 from .utils import _construct_empty
 from typing import Tuple, Union
 from ..proposals import LinearGaussianObservations
+from .state import ParticleState
 
 
 _PROPOSAL_MAPPING = {
@@ -33,11 +34,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         self.particles = particles
         self._th = ess
-
-        # ===== State variables ===== #
-        self._x_cur = None                          # type: torch.Tensor
-        self._inds = None                           # type: torch.Tensor
-        self._w_old = None                          # type: torch.Tensor
 
         # ===== Auxiliary variable ===== #
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
@@ -116,19 +112,19 @@ class ParticleFilter(BaseFilter, ABC):
 
         return self
 
-    def initialize(self):
-        self._x_cur = self._model.hidden.i_sample(self.particles)
-        self._w_old = torch.zeros(self.particles, device=self._x_cur.device)
+    def initialize(self) -> ParticleState:
+        x = self._model.hidden.i_sample(self.particles)
+        w = torch.zeros(self.particles, device=x.device)
 
-        return self
+        return ParticleState(x, w, torch.tensor(0., device=x.device))
 
-    def predict(self, steps, aggregate: bool = True, **kwargs):
-        x, y = self._model.sample_path(steps + 1, x_s=self._x_cur, **kwargs)
+    def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
+        x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)
 
         if not aggregate:
             return x[1:], y[1:]
 
-        w = normalize(self._w_old)
+        w = normalize(state.w)
         wsqd = w.unsqueeze(-1)
 
         xm = (x * (wsqd if self.ssm.hidden_ndim > 1 else w)).sum(self._sumaxis)
@@ -136,18 +132,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return xm[1:], ym[1:]
 
-    def _resample(self, inds):
-        self._x_cur = self._x_cur[inds]
-        self._w_old = self._w_old[inds]
-
-        return self
-
-    def _exchange(self, filter_, inds):
-        self._x_cur[inds] = filter_._x_cur[inds]
-        self._w_old[inds] = filter_._w_old[inds]
-
-        return self
-
     def _reset(self):
+        super(ParticleFilter, self).reset()
         self.logged_ess = TensorContainer()
         return self
