@@ -132,9 +132,8 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
                      state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
-    def initialize(self) -> BaseFilterAlgorithm:
-        self._first.initialize()
-        return self
+    def initialize(self):
+        return self._first.initialize()
 
     def modules(self):
         return {
