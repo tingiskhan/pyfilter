@@ -4,7 +4,7 @@ import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from .utils import construct_diag, TempOverride
-from .module import Module, TensorContainer
+from .module import Module
 from .timeseries.parameter import size_getter
 from typing import Tuple, Union
 
@@ -163,21 +163,8 @@ class UnscentedFilterTransform(Module):
         self._mean = torch.zeros((*shape, self._ndim))
         self._cov = torch.zeros((*shape, self._ndim, self._ndim))
 
-        # TODO: Perhaps move this to Timeseries?
-        self._views = TensorContainer()
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
-
-        for model in [self._model.hidden, self._model.observable]:
-            params = tuple()
-            for p in model.theta:
-                if p.trainable:
-                    view = p.view(*view_shape, *p.shape[1:])
-                else:
-                    view = p
-
-                params += (view,)
-
-            self._views.append(TensorContainer(*params))
+        self._views = self._model.viewify_params(view_shape)
 
         return self
 

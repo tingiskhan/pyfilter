@@ -1,6 +1,5 @@
 from abc import ABC
 from ....filters import ParticleFilter, utils as u
-from ....module import TensorContainer
 import torch
 from ....utils import normalize
 from ..base import BaseFilterAlgorithm
@@ -47,7 +46,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         super().__init__(filter_)
 
         # ===== ESS related ===== #
-        self._logged_ess = TensorContainer()
+        self._logged_ess = tuple()
         self.particles = particles
 
     @property
@@ -82,9 +81,10 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         self.filter.ssm.sample_params(self.particles)
 
         self.viewify_params()
-        init_weights = torch.zeros(self.particles, device=self.filter._dummy.device)
+        init_state = self.filter.initialize()
+        init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
-        return FilteringAlgorithmState(init_weights, self.filter.initialize())
+        return FilteringAlgorithmState(init_weights, init_state)
 
     @property
     def logged_ess(self) -> torch.Tensor:
@@ -92,7 +92,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         Returns the logged ESS.
         """
 
-        return torch.stack(self._logged_ess.tensors)
+        return torch.stack(self._logged_ess)
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict(state.filter_state, steps, aggregate=aggregate, **kwargs)

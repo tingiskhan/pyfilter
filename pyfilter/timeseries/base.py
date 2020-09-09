@@ -4,8 +4,9 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter
 from copy import deepcopy
-from ..module import Module, TensorContainer, TensorContainerDict
-from typing import Tuple, Union, Callable
+from ..module import Module
+from typing import Tuple, Union, Callable, Dict
+from ..utils import flatten
 
 
 class StochasticProcessBase(Module):
@@ -186,15 +187,15 @@ class StochasticProcess(StochasticProcessBase, ABC):
         self._inputdim = self.ndim
 
         # ===== Distributional parameters ===== #
-        self._dist_theta = TensorContainerDict()
-        self._org_dist = TensorContainerDict()
+        self._dist_theta = dict()
+        self._org_dist = dict()
 
         for t, n in [('initial', self.initial_dist), ('increment', self.increment_dist)]:
             if n is None:
                 continue
 
-            parameters = TensorContainerDict()
-            statics = TensorContainerDict()
+            parameters = dict()
+            statics = dict()
             for k, v in vars(n).items():
                 if k.startswith('_'):
                     continue
@@ -209,21 +210,10 @@ class StochasticProcess(StochasticProcessBase, ABC):
                 self._org_dist[f'{t}/{n.__class__.__name__}'] = statics
 
         # ===== Regular parameters ====== #
-        self.theta = TensorContainer(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
-
-        # ===== Check dimensions ===== #
-        self._verify_dimensions()
-
-    def _verify_dimensions(self):
-        """
-        Helper method for verifying that all return values are congruent.
-        """
-
-        # TODO: Implement
-        return self
+        self.theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
 
     @property
-    def distributional_theta(self):
+    def distributional_theta(self) -> Dict[str, Dict[str, Parameter]]:
         """
         Returns the parameters of the distribution to re-initialize the distribution with. Mainly a helper for when
         the user passes distributions parameterized by priors.
@@ -247,7 +237,7 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     @property
     def theta_dists(self):
-        return tuple(p for p in self.theta if p.trainable) + self.distributional_theta.tensors
+        return tuple(p for p in self.theta if p.trainable) + flatten((v.values() for v in self._dist_theta.values()))
 
     @property
     def theta_vals(self) -> Tuple[Parameter, ...]:
@@ -283,32 +273,30 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return prod
 
-    def viewify_params(self, shape):
+    def viewify_params(self, shape) -> Tuple[Parameter, ...]:
         shape = size_getter(shape)
 
         # ===== Regular parameters ===== #
-        params = tuple()
+        self._theta_vals = tuple()
         for param in self.theta:
             if param.trainable:
                 var = _view_helper(param, shape)
             else:
                 var = param
 
-            params += (var,)
-
-        self._theta_vals = TensorContainer(*params)
+            self._theta_vals += (var,)
 
         # ===== Distributional parameters ===== #
         for d, dists in self.distributional_theta.items():
             temp = dict()
-            temp.update(self._org_dist[d]._dict)
+            temp.update(self._org_dist[d])
 
             for k, v in dists.items():
                 temp[k] = _view_helper(v, shape)
 
             self._mapper[d].__init__(**temp)
 
-        return self
+        return self._theta_vals
 
     def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> torch.Tensor:
         """

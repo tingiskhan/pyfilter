@@ -2,6 +2,7 @@ from ..utils import flatten
 import torch
 from .base import StochasticProcess, StochasticProcessBase
 from typing import Tuple
+from .parameter import Parameter
 
 
 class StateSpaceModel(StochasticProcessBase):
@@ -42,11 +43,8 @@ class StateSpaceModel(StochasticProcessBase):
     def log_prob(self, y, x):
         return self.observable.log_prob(y, x)
 
-    def viewify_params(self, shape):
-        for mod in [self.hidden, self.observable]:
-            mod.viewify_params(shape)
-
-        return self
+    def viewify_params(self, shape) -> Tuple[Tuple[Parameter, ...], ...]:
+        return tuple(ssm.viewify_params(shape) for ssm in [self.hidden, self.observable])
 
     def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """

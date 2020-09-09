@@ -5,7 +5,6 @@ from ..timeseries import LinearGaussianObservations as LGO
 from ..proposals.bootstrap import Bootstrap, Proposal
 import torch
 from ..utils import get_ess, normalize
-from ..module import TensorContainer
 from .utils import _construct_empty
 from typing import Tuple, Union
 from ..proposals import LinearGaussianObservations
@@ -44,7 +43,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         # ===== Logged ESS ===== #
-        self.logged_ess = TensorContainer()
+        self.logged_ess = tuple()
 
         # ===== Proposal ===== #
         if proposal == 'auto':
@@ -91,7 +90,7 @@ class ParticleFilter(BaseFilter, ABC):
         mask = ess < self._th
 
         if self._log_ess:
-            self.logged_ess.append(ess)
+            self.logged_ess += (ess,)
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(w)
@@ -134,5 +133,5 @@ class ParticleFilter(BaseFilter, ABC):
 
     def _reset(self):
         super(ParticleFilter, self).reset()
-        self.logged_ess = TensorContainer()
+        self.logged_ess = tuple()
         return self

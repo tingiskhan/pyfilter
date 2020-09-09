@@ -93,7 +93,8 @@ class VariationalBayes(BatchAlgorithm):
 
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
-                filt = UKF(self._model.copy()).viewify_params((self._ns, 1)).set_nparallel(self._ns)
+                filt = UKF(self._model.copy()).set_nparallel(self._ns)
+                filt.viewify_params((self._ns, 1))
                 filt.initialize().longfilter(y, bar=False)
 
                 maxind = filt.result.loglikelihood.sum(0).argmax()
