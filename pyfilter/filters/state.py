@@ -37,11 +37,11 @@ class KalmanState(BaseState):
         return self.ll
 
     def exchange(self, inds: Tensor, state):
-        self.utf.xm[inds] = state.xm[inds]
-        self.utf.xc[inds] = state.xc[inds]
+        self.utf.xm[inds] = state.utf.xm[inds]
+        self.utf.xc[inds] = state.utf.xc[inds]
 
-        self.utf.ym[inds] = state.ym[inds]
-        self.utf.yc[inds] = state.yc[inds]
+        self.utf.ym[inds] = state.utf.ym[inds]
+        self.utf.yc[inds] = state.utf.yc[inds]
 
 
 class ParticleState(BaseState):
