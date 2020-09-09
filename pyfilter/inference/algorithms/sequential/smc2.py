@@ -46,7 +46,6 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._threshold or (~isfinite(state.w)).any():
             state = self.rejuvenate(state)
-            state.w[:] = 0.
 
         return state
 
@@ -63,6 +62,7 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
             state = self._increase_states()
+            state.w[:] = 0.
 
         return state
 
