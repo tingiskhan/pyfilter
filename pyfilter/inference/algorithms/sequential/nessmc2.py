@@ -27,13 +27,12 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         kde = kwargs.pop('kde', ShrinkingKernel())
         return NESS(filter_, particles, kde=kde, **kwargs)
 
-    def do_on_switch(self, first: SMC2, second: NESS):
+    def do_on_switch(self, first: SMC2, second: NESS, state):
         if isinstance(self._second._kernel._kde, ConstantKernel):
             stacked = stacker(first.filter.ssm.theta_dists, lambda u: u.t_values)
-            var = robust_var(stacked.concated, normalize(self._w_rec))
+            var = robust_var(stacked.concated, normalize(state.w))
 
             bw = (1 / self._particles[0] ** 1.5 * var).sqrt()
             second._kernel._kde._bw_fac = bw
 
-        self._first.rejuvenate()
-        second._w_rec = torch.zeros_like(first._w_rec)
+        return self._first.rejuvenate()

@@ -16,7 +16,7 @@ class BaseAlgorithm(Module, ABC):
         super().__init__()
 
     @u.enforce_tensor
-    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs):
+    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs) -> AlgorithmState:
         """
         Fits the algorithm to data.
         :param y: The data to fit
@@ -26,7 +26,7 @@ class BaseAlgorithm(Module, ABC):
 
         return self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
 
-    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
+    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> AlgorithmState:
         raise NotImplementedError()
 
     def initialize(self, *args, **kwargs):

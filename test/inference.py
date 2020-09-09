@@ -70,9 +70,8 @@ class MyTestCase(unittest.TestCase):
             ]
 
             for alg, props in algs:
-                alg = alg(**props).initialize()
-
-                alg = alg.fit(y)
+                alg = alg(**props)
+                alg.fit(y)
 
                 w = normalize(alg._w_rec if hasattr(alg, '_w_rec') else torch.ones(particles))
 

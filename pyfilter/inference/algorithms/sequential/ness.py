@@ -4,6 +4,7 @@ from ...kernels import OnlineKernel
 from ....kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
+from .state import FilteringAlgorithmState
 
 
 class BaseNESS(SequentialParticleAlgorithm, ABC):
@@ -15,21 +16,21 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         if not isinstance(self._kernel, OnlineKernel):
             raise ValueError(f'Kernel must be of instance {OnlineKernel.__class__.__name__}!')
 
-    def do_update(self) -> bool:
+    def do_update(self, state: FilteringAlgorithmState) -> bool:
         raise NotImplementedError()
 
     def _update(self, y, state):
         # ===== Jitter ===== #
-        if self.do_update():
-            self._kernel.update(self.filter.ssm.theta_dists, self.filter, state, self._w_rec)
-            self._w_rec[:] = 0.
+        if self.do_update(state):
+            self._kernel.update(self.filter.ssm.theta_dists, self.filter, state.filter_state, state.w)
+            state.w[:] = 0.
 
         # ===== Propagate filter ===== #
-        state = self.filter.filter(y, state)
-        self._w_rec += state.get_loglikelihood()
+        state.filter_state = self.filter.filter(y, state.filter_state)
+        state.w += state.filter_state.get_loglikelihood()
 
         # ===== Log ESS ===== #
-        self._logged_ess.append(get_ess(self._w_rec))
+        self._logged_ess.append(get_ess(state.w))
 
         return state
 
@@ -44,8 +45,8 @@ class NESS(BaseNESS):
         super().__init__(filter_, particles, **kwargs)
         self._threshold = threshold * particles
 
-    def do_update(self):
-        return (any(self._logged_ess) and self._logged_ess[-1] < self._threshold) or (~isfinite(self._w_rec)).any()
+    def do_update(self, state):
+        return (any(self._logged_ess) and self._logged_ess[-1] < self._threshold) or (~isfinite(state.w)).any()
 
 
 class FixedWidthNESS(BaseNESS):
@@ -59,5 +60,5 @@ class FixedWidthNESS(BaseNESS):
         super().__init__(filter_, particles, **kwargs)
         self._bl = block_len
 
-    def do_update(self):
-        return (any(self._logged_ess) and len(self._logged_ess) % self._bl == 0) or (~isfinite(self._w_rec)).any()
+    def do_update(self, state):
+        return (any(self._logged_ess) and len(self._logged_ess) % self._bl == 0) or (~isfinite(state.w)).any()

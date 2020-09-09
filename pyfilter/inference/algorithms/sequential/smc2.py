@@ -1,9 +1,10 @@
 from .base import SequentialParticleAlgorithm
 from ...kernels import ParticleMetropolisHastings, SymmetricMH
 from ....utils import get_ess
-from ....filters import ParticleFilter, BaseState
+from ....filters import ParticleFilter
 from ....module import TensorContainer
 from torch import isfinite
+from .state import FilteringAlgorithmState
 
 
 class SMC2(SequentialParticleAlgorithm):
@@ -35,21 +36,21 @@ class SMC2(SequentialParticleAlgorithm):
         self._y.append(y)
 
         # ===== Perform a filtering move ===== #
-        state = self.filter.filter(y, state)
-        self._w_rec += state.get_loglikelihood()
+        state.filter_state = self.filter.filter(y, state.filter_state)
+        state.w += state.filter_state.get_loglikelihood()
 
         # ===== Calculate efficient number of samples ===== #
-        ess = get_ess(self._w_rec)
+        ess = get_ess(state.w)
         self._logged_ess.append(ess)
 
         # ===== Rejuvenate if there are too few samples ===== #
-        if ess < self._threshold or (~isfinite(self._w_rec)).any():
+        if ess < self._threshold or (~isfinite(state.w)).any():
             state = self.rejuvenate(state)
-            self._w_rec[:] = 0.
+            state.w[:] = 0.
 
         return state
 
-    def rejuvenate(self, state):
+    def rejuvenate(self, state: FilteringAlgorithmState):
         """
         Rejuvenates the particles using a PMCMC move.
         :return: Self
@@ -57,7 +58,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Update the description ===== #
         self._kernel.set_data(self._y.tensors)
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, state, self._w_rec)
+        self._kernel.update(self.filter.ssm.theta_dists, self.filter, state.filter_state, state.w)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
@@ -65,7 +66,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         return state
 
-    def _increase_states(self) -> BaseState:
+    def _increase_states(self) -> FilteringAlgorithmState:
         """
         Increases the number of states.
         :return: Self
@@ -79,12 +80,12 @@ class SMC2(SequentialParticleAlgorithm):
 
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize()
+        self.filter.reset().set_nparallel(self._particles)
 
         state = self.filter.longfilter(self._y.tensors, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-        self._w_rec = self.filter.result.loglikelihood - oldlogl
+        w = self.filter.result.loglikelihood - oldlogl
         self._increases += 1
 
-        return state
+        return FilteringAlgorithmState(w, state)

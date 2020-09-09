@@ -1,9 +1,10 @@
 from abc import ABC
-from ....filters import ParticleFilter, utils as u, BaseState
+from ....filters import ParticleFilter, utils as u
 from ....module import TensorContainer
 import torch
 from ....utils import normalize
 from ..base import BaseFilterAlgorithm
+from .state import FilteringAlgorithmState
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
@@ -11,11 +12,11 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     Algorithm for sequential inference.
     """
 
-    def _update(self, y: torch.Tensor, state: BaseState) -> BaseState:
+    def _update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
     @u.enforce_tensor
-    def update(self, y: torch.Tensor, state: BaseState) -> BaseState:
+    def update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         """
         Performs an update using a single observation `y`.
         :param y: The observation
@@ -25,15 +26,15 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         return self._update(y, state)
 
-    def _fit(self, y, logging_wrapper=None, **kwargs):
+    def _fit(self, y, logging_wrapper=None, **kwargs) -> FilteringAlgorithmState:
         logging_wrapper.set_num_iter(y.shape[0])
 
-        state = self.filter.initialize()
+        state = self.initialize()
         for i, yt in enumerate(y):
             state = self.update(yt, state)
             logging_wrapper.do_log(i, self, y)
 
-        return self
+        return state
 
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
@@ -44,9 +45,6 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         """
 
         super().__init__(filter_)
-
-        # ===== Weights ===== #
-        self._w_rec = None  # type: torch.Tensor
 
         # ===== ESS related ===== #
         self._logged_ess = TensorContainer()
@@ -74,7 +72,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         return self
 
-    def initialize(self) -> BaseFilterAlgorithm:
+    def initialize(self) -> FilteringAlgorithmState:
         """
         Overwrites the initialization.
         :return: Self
@@ -82,11 +80,11 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         self.filter.set_nparallel(*self.particles)
         self.filter.ssm.sample_params(self.particles)
-        self._w_rec = torch.zeros(self.particles, device=self.filter._dummy.device)
 
         self.viewify_params()
+        init_weights = torch.zeros(self.particles, device=self.filter._dummy.device)
 
-        return self
+        return FilteringAlgorithmState(init_weights, self.filter.initialize())
 
     @property
     def logged_ess(self) -> torch.Tensor:
@@ -96,13 +94,13 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         return torch.stack(self._logged_ess.tensors)
 
-    def predict(self, steps, state: BaseState, aggregate=True, **kwargs):
-        px, py = self.filter.predict(state, steps, aggregate=aggregate, **kwargs)
+    def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
+        px, py = self.filter.predict(state.filter_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py
 
-        w = normalize(self._w_rec)
+        w = normalize(state.w)
         wsqd = w.unsqueeze(-1)
 
         xm = (px * (wsqd if self.filter.ssm.hidden_ndim > 1 else w)).sum(1)
@@ -130,7 +128,8 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         raise NotImplementedError()
 
-    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm, state: BaseState):
+    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm,
+                     state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
     def initialize(self) -> BaseFilterAlgorithm:
@@ -147,24 +146,13 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def logged_ess(self):
         return torch.cat((self._first.logged_ess, self._second.logged_ess))
 
-    @property
-    def _w_rec(self):
-        if self._is_switched:
-            return self._first._w_rec
-
-        return self._second._w_rec
-
-    @_w_rec.setter
-    def _w_rec(self, x):
-        return
-
     def _update(self, y: torch.Tensor, state):
         if not self._is_switched:
             if len(self._first._logged_ess) < self._when_to_switch:
                 return self._first.update(y, state)
 
             self._is_switched = True
-            self.do_on_switch(self._first, self._second, state)
+            state = self.do_on_switch(self._first, self._second, state)
 
         return self._second.update(y, state)
 
