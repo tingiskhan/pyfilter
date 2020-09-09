@@ -51,8 +51,8 @@ class ParticleState(BaseState):
         raise NotImplementedError()
 
     def resample(self, inds):
-        self.x[inds] = choose(self.x, inds)
-        self.w[inds] = choose(self.w, inds)
+        self.x = choose(self.x, inds)
+        self.w = choose(self.w, inds)
 
     def get_loglikelihood(self):
         return self.ll
