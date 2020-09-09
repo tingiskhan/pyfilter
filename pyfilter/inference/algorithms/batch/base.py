@@ -2,6 +2,7 @@ from abc import ABC
 import torch
 from pyfilter.logging import LoggingWrapper
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
+from ..state import AlgorithmState
 
 
 class BatchAlgorithm(BaseAlgorithm, ABC):
@@ -27,7 +28,7 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
             logging_wrapper.do_log(it, self, y)
             it += 1
 
-        return self
+        return AlgorithmState()
 
     def _step(self, y) -> float:
         raise NotImplementedError()
