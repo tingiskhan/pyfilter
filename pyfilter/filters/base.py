@@ -94,8 +94,7 @@ class BaseFilter(Module, ABC):
     def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
-    # TODO: Return latest state here instead
-    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True):
+    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True) -> BaseState:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
@@ -110,7 +109,7 @@ class BaseFilter(Module, ABC):
         for yt in iterator:
             state = self.filter(yt, state)
 
-        return self
+        return state
 
     def copy(self):
         """

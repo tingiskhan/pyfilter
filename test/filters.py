@@ -63,7 +63,8 @@ class Tests(unittest.TestCase):
                 (UKF, {}),
                 (SISR, {'particles': 50, 'proposal': Unscented()})
             ]:
-                filt = filter_(model, **props).longfilter(y)
+                filt = filter_(model, **props)
+                filt.longfilter(y)
                 filtmeans = filt.result.filter_means.numpy()
 
                 # ===== Run Kalman ===== #
@@ -92,7 +93,8 @@ class Tests(unittest.TestCase):
         linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
         self.model.hidden = linear
 
-        filt = SISR(self.model, 1000).set_nparallel(shape).longfilter(y)
+        filt = SISR(self.model, 1000).set_nparallel(shape)
+        filt.longfilter(y)
 
         filtermeans = filt.result.filter_means
 
@@ -109,7 +111,8 @@ class Tests(unittest.TestCase):
         linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
         self.model.hidden = linear
 
-        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape).longfilter(y)
+        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape)
+        filt.longfilter(y)
 
         filtermeans = filt.result.filter_means
 
@@ -131,7 +134,7 @@ class Tests(unittest.TestCase):
         x, y = model.sample_path(500)
 
         for filt in [SISR(model, 500, proposal=Bootstrap()), UKF(model)]:
-            filt = filt.longfilter(y)
+            filt.longfilter(y)
 
             means = filt.result.filter_means
             if isinstance(filt, UKF):

@@ -1,4 +1,3 @@
-from ...filters.base import BaseFilter
 from ...utils import normalize
 from .base import BaseKernel
 from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
@@ -44,23 +43,10 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def _before_resampling(self, filter_: BaseFilter, stacked: torch.Tensor):
-        """
-        Helper method for carrying out operations before resampling.
-        :param filter_: The filter
-        :param stacked: The stacked parameterss
-        :return: Self
-        """
-
-        return self
-
     def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
             stacked = stacker(parameters, lambda u: u.t_values)
-
-            # ===== Perform necessary operation prior to resampling ===== #
-            self._before_resampling(filter_, stacked.concated)
 
             # ===== Find the best particles ===== #
             inds = self._resampler(weights, normalized=True)
@@ -79,7 +65,7 @@ class ParticleMetropolisHastings(BaseKernel):
             _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, None if indep_kernel else stacked.concated.shape[0])
 
             # ===== Calculate difference in loglikelihood ===== #
-            t_filt.reset().longfilter(self._y, bar=False)
+            t_state = t_filt.reset().longfilter(self._y, bar=False)
             quotient = t_filt.result.loglikelihood - filter_.result.loglikelihood
 
             # ===== Calculate acceptance ratio ===== #
@@ -97,6 +83,7 @@ class ParticleMetropolisHastings(BaseKernel):
             else:
                 filter_.ssm.exchange(toaccept, t_filt.ssm)
 
+            state.exchange(toaccept, t_state)
             weights = normalize(filter_.result.loglikelihood)
 
         return self

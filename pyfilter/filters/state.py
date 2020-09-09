@@ -35,6 +35,13 @@ class KalmanState(BaseState):
     def get_loglikelihood(self):
         return self.ll
 
+    def exchange(self, inds: Tensor, state):
+        self.utf.xm[inds] = state.xm[inds]
+        self.utf.xc[inds] = state.xc[inds]
+
+        self.utf.ym[inds] = state.ym[inds]
+        self.utf.yc[inds] = state.yc[inds]
+
 
 class ParticleState(BaseState):
     def __init__(self, x: Tensor, w: Tensor, ll: Tensor):
@@ -56,3 +63,7 @@ class ParticleState(BaseState):
 
     def get_loglikelihood(self):
         return self.ll
+
+    def exchange(self, inds: Tensor, state):
+        self.x[inds] = state.x[inds]
+        self.w[inds] = state.w[inds]

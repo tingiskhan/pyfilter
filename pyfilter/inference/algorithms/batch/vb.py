@@ -1,11 +1,11 @@
 from .base import BatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
-from ..varapprox import StateMeanField, BaseApproximation, ParameterMeanField
-from ...timeseries import StateSpaceModel, StochasticProcess
-from ..utils import stacker
-from ...utils import EPS, unflattify
-from ...filters import UKF
+from ...varapprox import StateMeanField, BaseApproximation, ParameterMeanField
+from ....timeseries import StateSpaceModel, StochasticProcess
+from ...utils import stacker
+from ....utils import EPS, unflattify
+from ....filters import UKF
 from typing import Type, Union
 
 

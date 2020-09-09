@@ -1,8 +1,8 @@
 from .base import SequentialParticleAlgorithm
-from ..kernels import ParticleMetropolisHastings, SymmetricMH
-from ...utils import get_ess
-from ...filters import ParticleFilter
-from ...module import TensorContainer
+from ...kernels import ParticleMetropolisHastings, SymmetricMH
+from ....utils import get_ess
+from ....filters import ParticleFilter, BaseState
+from ....module import TensorContainer
 from torch import isfinite
 
 
@@ -65,7 +65,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         return state
 
-    def _increase_states(self):
+    def _increase_states(self) -> BaseState:
         """
         Increases the number of states.
         :return: Self
@@ -79,10 +79,12 @@ class SMC2(SequentialParticleAlgorithm):
 
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
-        self.filter.set_nparallel(self._w_rec.shape[0]).initialize().longfilter(self._y.tensors, bar=False)
+        self.filter.set_nparallel(self._w_rec.shape[0]).initialize()
+
+        state = self.filter.longfilter(self._y.tensors, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         self._w_rec = self.filter.result.loglikelihood - oldlogl
         self._increases += 1
 
-        return self
+        return state
