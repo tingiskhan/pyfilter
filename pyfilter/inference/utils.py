@@ -50,7 +50,7 @@ def stacker(parameters: Iterable[Parameter], selector=lambda u: u.values, dim=1)
     return StackedObject(torch.cat(to_conc, dim=-1), mask, prev_shape)
 
 
-def _construct_mvn(x: torch.Tensor, w: torch.Tensor):
+def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
     """
     Constructs a multivariate normal distribution of weighted samples.
     :param x: The samples
@@ -61,7 +61,7 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor):
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    return MultivariateNormal(mean, scale_tril=torch.cholesky(cov))
+    return MultivariateNormal(mean, scale_tril=scale * torch.cholesky(cov))
 
 
 def _mcmc_move(params: Iterable[Parameter], dist: Distribution, stacked: StackedObject, shape: int):

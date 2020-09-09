@@ -61,8 +61,8 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Define new filters and move via MCMC ===== #
             t_filt = filter_.copy()
-            t_filt.viewify_params((*filter_._n_parallel, 1))
             _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, None if indep_kernel else stacked.concated.shape[0])
+            t_filt.viewify_params((*filter_._n_parallel, 1))
 
             # ===== Calculate difference in loglikelihood ===== #
             t_state = t_filt.reset().longfilter(self._y, bar=False)
@@ -91,7 +91,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, values, weights, inds):
-        return _construct_mvn(values, weights)
+        return _construct_mvn(values, weights, scale=1.1)   # Same scale in in particles
 
 
 # Same as: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py
