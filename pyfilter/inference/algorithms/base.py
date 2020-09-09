@@ -81,3 +81,8 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
             raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
 
         self._filter = x
+
+    def populate_state_dict(self):
+        return {
+            "_filter": self.filter.state_dict()
+        }

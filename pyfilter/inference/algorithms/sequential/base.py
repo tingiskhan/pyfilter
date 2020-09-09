@@ -108,6 +108,16 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         return xm, ym
 
+    def populate_state_dict(self):
+        base = super(SequentialParticleAlgorithm, self).populate_state_dict()
+
+        base.update(**{
+            "particles": self.particles,
+            "_logged_ess": self._logged_ess
+        })
+
+        return base
+
 
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def __init__(self, filter_, particles, switch: int, first_kw, second_kw):
@@ -160,3 +170,15 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
             return self._first.predict(steps, state, aggregate=aggregate, **kwargs)
 
         return self._second.predict(steps, state, aggregate=aggregate, **kwargs)
+
+    def populate_state_dict(self):
+        base = super(CombinedSequentialParticleAlgorithm, self).populate_state_dict()
+
+        base.update(**{
+            "_first": self._first.state_dict(),
+            "_second": self._second.state_dict(),
+            "_when_to_switch": self._when_to_switch,
+            "_is_switched": self._is_switched
+        })
+
+        return base
