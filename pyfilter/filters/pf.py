@@ -135,3 +135,12 @@ class ParticleFilter(BaseFilter, ABC):
         super(ParticleFilter, self).reset()
         self.logged_ess = tuple()
         return self
+
+    def populate_state_dict(self):
+        base = super(ParticleFilter, self).populate_state_dict()
+        base.update({
+            "particles": self.particles,
+            "logged_ess": self.logged_ess
+        })
+
+        return base

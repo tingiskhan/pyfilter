@@ -1,6 +1,5 @@
 from .base import BaseKalmanFilter
-from ..uft import UnscentedFilterTransform, UFTCorrectionResult
-from ..utils import choose
+from ..uft import UnscentedFilterTransform
 import torch
 from typing import Dict
 from .state import KalmanState

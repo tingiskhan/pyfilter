@@ -83,3 +83,9 @@ class StateSpaceModel(StochasticProcessBase):
                 oldp.values[indices] = newp.values[indices]
 
         return self
+
+    def populate_state_dict(self):
+        return {
+            "hidden": self.hidden.state_dict(),
+            "observable": self.observable.state_dict()
+        }

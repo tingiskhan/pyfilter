@@ -27,7 +27,7 @@ class BaseFilter(Module, ABC):
 
         self._model = model
         self._n_parallel = None
-        self._filter_res = FilterResult()
+        self._result = FilterResult()
         self._save_means = save_means
 
     @property
@@ -36,7 +36,7 @@ class BaseFilter(Module, ABC):
         Returns the filtering result object.
         """
 
-        return self._filter_res
+        return self._result
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -85,9 +85,9 @@ class BaseFilter(Module, ABC):
         state = self._filter(y, state)
 
         if self._save_means:
-            self._filter_res.append(state.get_mean(), state.get_loglikelihood())
+            self._result.append(state.get_mean(), state.get_loglikelihood())
         else:
-            self._filter_res.append(None, state.get_loglikelihood())
+            self._result.append(None, state.get_loglikelihood())
 
         return state
 
@@ -138,7 +138,7 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
         if entire_history:
-            self._filter_res.resample(inds)
+            self._result.resample(inds)
 
         self.ssm.p_apply(lambda u: choose(u.values, inds))
 
@@ -150,7 +150,7 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        self._filter_res = FilterResult()
+        self._result = FilterResult()
 
         return self
 
@@ -164,9 +164,16 @@ class BaseFilter(Module, ABC):
         """
 
         self._model.exchange(inds, filter_.ssm)
-        self._filter_res.exchange(filter_._filter_res, inds)
+        self._result.exchange(filter_._result, inds)
 
         return self
+
+    def populate_state_dict(self):
+        return {
+            "_model": self.ssm.state_dict(),
+            "_n_parallell": self._n_parallel,
+            "_result": self.result
+        }
 
 
 class BaseKalmanFilter(BaseFilter, ABC):

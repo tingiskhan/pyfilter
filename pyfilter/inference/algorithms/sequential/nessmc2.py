@@ -1,8 +1,7 @@
 from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
-import torch
-from ....kde import ConstantKernel, robust_var, ShrinkingKernel
+from ....kde import ConstantKernel, robust_var, NonShrinkingKernel
 from ...utils import stacker
 from ....normalization import normalize
 
@@ -24,7 +23,7 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         return SMC2(filter_, particles, threshold=threshold, **kwargs)
 
     def make_second(self, filter_, particles, **kwargs):
-        kde = kwargs.pop('kde', ShrinkingKernel())
+        kde = kwargs.pop('kde', NonShrinkingKernel())
         return NESS(filter_, particles, kde=kde, **kwargs)
 
     def do_on_switch(self, first: SMC2, second: NESS, state):

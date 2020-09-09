@@ -346,3 +346,8 @@ class StochasticProcess(StochasticProcessBase, ABC):
         """
 
         raise NotImplementedError()
+
+    def populate_state_dict(self):
+        return {
+            "theta": self.theta
+        }
