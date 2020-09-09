@@ -115,8 +115,6 @@ class UnscentedFilterTransform(Module):
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
 
         # ===== Auxiliary variables ===== #
-        self._ymean = None
-        self._ycov = None
         self._views = None
 
         self._diaginds = range(model.hidden_ndim)
