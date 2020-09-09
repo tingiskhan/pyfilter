@@ -58,11 +58,11 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Update the description ===== #
         self._kernel.set_data(self._y.tensors)
         self._kernel.update(self.filter.ssm.theta_dists, self.filter, state.filter_state, state.w)
+        state.w[:] = 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
             state = self._increase_states()
-            state.w[:] = 0.
 
         return state
 
