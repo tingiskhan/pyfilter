@@ -139,7 +139,7 @@ class ParticleFilter(BaseFilter, ABC):
     def populate_state_dict(self):
         base = super(ParticleFilter, self).populate_state_dict()
         base.update({
-            "particles": self.particles,
+            "_particles": self.particles,
             "logged_ess": self.logged_ess
         })
 

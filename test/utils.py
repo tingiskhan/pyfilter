@@ -4,22 +4,9 @@ from torch.distributions import Normal, MultivariateNormal, Independent
 from pyfilter.uft import UnscentedFilterTransform
 import torch
 from pyfilter.filters import SISR, UKF
-from pyfilter.module import Module, TensorContainer
 from pyfilter.utils import concater
 from pyfilter.inference.utils import stacker
 from pyfilter.timeseries import Parameter
-
-
-class Help2(Module):
-    def __init__(self, a):
-        self.a = a
-
-
-class Help(Module):
-    def __init__(self, *params):
-        self._params = TensorContainer(*params)
-        self._views = TensorContainer(p.view(-1) for p in params)
-        self._mod = Help2(self._params[0] + 1)
 
 
 def f(x, alpha, sigma):
@@ -106,28 +93,6 @@ class Tests(unittest.TestCase):
 
         assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
 
-    def test_HelperMixin(self):
-        obj = Help(torch.empty(3000).normal_())
-
-        # ===== Verify that we don't break views when changing device ===== #
-        obj.to_('cpu:0')
-
-        temp = obj._params[0]
-        temp += 1
-
-        for p, v in zip(obj._params, obj._views):
-            assert (p == v).all() and v._base is p
-
-        # ===== Check state dict ===== #
-        sd = obj.state_dict()
-
-        newobj = Help(torch.empty(1))
-        newobj.load_state_dict(sd)
-
-        assert all((p1 == p2).all() for p1, p2 in zip(newobj._params, obj._params))
-        assert all((p1 == p2).all() for p1, p2 in zip(newobj._views, newobj._params))
-        assert all(p1._base is p2 for p1, p2 in zip(newobj._views, newobj._params))
-
     def test_StateDict(self):
         # ===== Define model ===== #
         norm = Normal(0., 1.)
@@ -136,22 +101,22 @@ class Tests(unittest.TestCase):
         model = StateSpaceModel(linear, linearobs)
 
         # ===== Define filter ===== #
-        filt = SISR(model, 100).initialize()
+        filt = SISR(model, 100)
 
         # ===== Get statedict ===== #
         sd = filt.state_dict()
 
         # ===== Verify that we don't save multiple instances ===== #
-        assert '_model' in sd and '_model' not in sd['_proposal']
+        assert '_model' in sd
 
         newfilt = SISR(model, 1000).load_state_dict(sd)
-        assert newfilt._w_old is not None and newfilt.ssm is newfilt._proposal._model
+        assert newfilt.particles == filt.particles
 
         # ===== Test same with UKF and verify that we save UT ===== #
-        ukf = UKF(model).initialize()
+        ukf = UKF(model)
         sd = ukf.state_dict()
 
-        assert '_model' in sd and '_model' not in sd['_ut']
+        assert '_model' in sd
 
     def test_Stacker(self):
         # ===== Define a mix of parameters ====== #

@@ -349,5 +349,11 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
     def populate_state_dict(self):
         return {
-            "theta": self.theta
+            "_theta": self.theta
         }
+
+    def load_state_dict(self, state: Dict[str, object]):
+        super(StochasticProcess, self).load_state_dict(state)
+        self.viewify_params(torch.Size([]))
+
+        return self

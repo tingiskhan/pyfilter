@@ -171,7 +171,7 @@ class BaseFilter(Module, ABC):
     def populate_state_dict(self):
         return {
             "_model": self.ssm.state_dict(),
-            "_n_parallell": self._n_parallel,
+            "_n_parallel": self._n_parallel,
             "_result": self.result
         }
 
