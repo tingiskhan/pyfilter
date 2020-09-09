@@ -30,7 +30,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         state.w += state.filter_state.get_loglikelihood()
 
         # ===== Log ESS ===== #
-        self._logged_ess.append(get_ess(state.w))
+        self._logged_ess += (get_ess(state.w),)
 
         return state
 
