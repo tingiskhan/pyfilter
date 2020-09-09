@@ -35,4 +35,4 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
             bw = (1 / self._particles[0] ** 1.5 * var).sqrt()
             second._kernel._kde._bw_fac = bw
 
-        return self._first.rejuvenate()
+        return self._first.rejuvenate(state)
