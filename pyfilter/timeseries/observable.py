@@ -12,9 +12,3 @@ class AffineObservations(AffineProcess):
 
     def sample_path(self, steps, **kwargs):
         raise NotImplementedError("Cannot sample from Observable only!")
-
-    def _verify_dimensions(self):
-        # TODO: Implement this
-        return self
-
-
