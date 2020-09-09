@@ -31,4 +31,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleState(x, normalize(w), loglikelihood(weights, old_normw))
+        return ParticleState(x, w, loglikelihood(weights, old_normw))

@@ -1,6 +1,7 @@
 from ..uft import UFTCorrectionResult
 from torch import Tensor
 from ..utils import choose
+from ..normalization import normalize
 
 
 class BaseState(object):
@@ -50,10 +51,11 @@ class ParticleState(BaseState):
         self.ll = ll
 
     def get_mean(self):
+        normw = normalize(self.w)
         if self.x.dim() == self.w.dim() + 1:
-            return (self.x * self.w.unsqueeze(-1)).sum(-2)
+            return (self.x * normw.unsqueeze(-1)).sum(-2)
         elif self.x.dim() == self.w.dim():
-            return (self.x * self.w).sum(-1)
+            return (self.x * normw).sum(-1)
 
         raise NotImplementedError()
 

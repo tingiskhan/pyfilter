@@ -35,4 +35,4 @@ class APF(ParticleFilter):
         # ===== Calculate log likelihood ===== #
         ll = loglikelihood(w) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
 
-        return ParticleState(x, normalize(w),  ll)
+        return ParticleState(x, w, ll)
