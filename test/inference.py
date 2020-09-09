@@ -71,14 +71,16 @@ class MyTestCase(unittest.TestCase):
 
             for alg, props in algs:
                 alg = alg(**props)
-                alg.fit(y)
+                state = alg.fit(y)
 
-                w = normalize(alg._w_rec if hasattr(alg, '_w_rec') else torch.ones(particles))
+                w = normalize(state.w)
 
-                tru_params = trumod.hidden.theta._cont + trumod.observable.theta._cont
-                inf_params = alg.filter.ssm.hidden.theta._cont + alg.filter.ssm.observable.theta._cont
+                zipped = zip(
+                    trumod.hidden.theta + trumod.observable.theta,                  # True parameter values
+                    alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta   # Inferred
+                )
 
-                for trup, p in zip(tru_params, inf_params):
+                for trup, p in zipped:
                     if not p.trainable:
                         continue
 
