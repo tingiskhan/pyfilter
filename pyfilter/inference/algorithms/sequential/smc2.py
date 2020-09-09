@@ -79,7 +79,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
-        self.filter.reset().set_nparallel(self._particles)
+        self.filter.reset().set_nparallel(*self.particles)
 
         state = self.filter.longfilter(self._y, bar=False)
 
