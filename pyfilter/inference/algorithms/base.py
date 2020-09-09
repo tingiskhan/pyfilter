@@ -1,10 +1,10 @@
 from abc import ABC
-from ...filters import BaseFilter, ParticleFilter, utils as u, BaseState
-from ...module import Module, TensorContainer
+from ...filters import BaseFilter, utils as u
+from ...module import Module
 import torch
-from ...utils import normalize
 from typing import Tuple
-from ...logging import LoggingWrapper, DefaultLogger, TqdmWrapper
+from ...logging import LoggingWrapper, TqdmWrapper
+from .state import AlgorithmState
 
 
 class BaseAlgorithm(Module, ABC):
@@ -24,15 +24,9 @@ class BaseAlgorithm(Module, ABC):
         :return: Self
         """
 
-        self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
-
-        return self
+        return self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
 
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
-        """
-        Method to be overridden by user.
-        """
-
         raise NotImplementedError()
 
     def initialize(self, *args, **kwargs):
