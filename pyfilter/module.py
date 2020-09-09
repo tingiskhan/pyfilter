@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import Distribution, TransformedDistribution
-from typing import Tuple, Type, Dict, Callable
+from typing import Tuple, Type, Dict
 
 
 _OBJTYPENAME = 'objtype'
@@ -47,47 +47,6 @@ class Module(object):
         """
 
         return _find_types(self, type_)
-
-    def modules(self):
-        """
-        Finds and returns all instances of type module.
-        """
-
-        return self._find_obj_helper(Module)
-
-    def tensors(self) -> Tuple[torch.Tensor, ...]:
-        raise NotImplementedError()
-
-    def apply(self, f: Callable[[torch.Tensor], torch.Tensor]):
-        """
-        Applies function f to all tensors.
-        :param f: The callable
-        :return: Self
-        """
-
-        for t in (t_ for t_ in self.tensors() if t_._base is None):
-            t.data = f(t.data)
-
-            if t._grad is not None:
-                t._grad.data = f(t._grad.data)
-
-        for t in (t_ for t_ in self.tensors() if t_._base is not None):
-            # TODO: Not too sure about this one, happens for some distributions
-            if t._base.dim() > 0:
-                t.data = t._base.data.view(t.data.shape)
-            else:
-                t.data = f(t.data)
-
-        return self
-
-    def to_(self, device: str):
-        """
-        Move to device.
-        :param device: The device to move to
-        :return: Self
-        """
-
-        return self.apply(lambda u: u.to(device))
 
     def state_dict(self) -> Dict[str, object]:
         """
