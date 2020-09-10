@@ -56,35 +56,17 @@ class ParticleFilter(BaseFilter, ABC):
 
     @property
     def particles(self) -> torch.Size:
-        """
-        Returns the number of particles.
-        """
-
         return self._particles
 
     @particles.setter
     def particles(self, x: Tuple[int, int] or int):
-        """
-        Sets the number of particles.
-        """
-
         self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
 
     @property
     def proposal(self) -> Proposal:
-        """
-        Returns the proposal.
-        """
-
         return self._proposal
 
     def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
-        """
-        Resamples the state in accordance with the weigths.
-        :param w: The weights
-        :return: The indices and mask
-        """
-
         # ===== Get the ones requiring resampling ====== #
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._th
