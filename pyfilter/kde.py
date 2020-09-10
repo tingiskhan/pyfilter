@@ -179,7 +179,7 @@ class ConstantKernel(ShrinkingKernel):
     def fit(self, x, w):
         self._w = w
         self._means = x
-        self._cov = torch.ones_like(self._bw_fac, device=w.device)
+        self._cov = torch.ones(self._means.shape[-1], device=self._means.device)
 
         return self
 
