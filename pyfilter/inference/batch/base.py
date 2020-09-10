@@ -1,6 +1,6 @@
 from abc import ABC
 import torch
-from pyfilter.logging import LoggingWrapper
+from ...logging import LoggingWrapper
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from ..state import AlgorithmState
 

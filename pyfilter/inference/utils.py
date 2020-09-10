@@ -61,7 +61,12 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    return MultivariateNormal(mean, scale_tril=scale * torch.cholesky(cov))
+    if cov.det() == 0.:
+        chol = cov.diag().sqrt().diag()
+    else:
+        chol = cov.cholesky()
+
+    return MultivariateNormal(mean, scale_tril=scale * chol)
 
 
 def _mcmc_move(params: Iterable[Parameter], dist: Distribution, stacked: StackedObject, shape: int):

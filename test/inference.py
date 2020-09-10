@@ -1,11 +1,11 @@
 import unittest
-from pyfilter.inference import algorithms as a
 from torch.distributions import Normal, Exponential, Independent, LogNormal
 from pyfilter.filters import UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
+from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 
 
 def f(x, alpha, sigma):
@@ -62,11 +62,11 @@ class MyTestCase(unittest.TestCase):
             x, y = trumod.sample_path(1000)
 
             algs = [
-                (a.sequential.NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (a.sequential.NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
-                (a.sequential.SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (a.sequential.SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (a.sequential.NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
+                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
             ]
 
             for alg, props in algs:

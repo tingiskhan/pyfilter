@@ -1,9 +1,9 @@
 from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
-from ....kde import ConstantKernel, robust_var, ShrinkingKernel
-from ...utils import stacker
-from ....normalization import normalize
+from ...kde import ConstantKernel, robust_var, ShrinkingKernel
+from ..utils import stacker
+from ...normalization import normalize
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):

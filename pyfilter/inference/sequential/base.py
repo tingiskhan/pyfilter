@@ -1,7 +1,7 @@
 from abc import ABC
-from ....filters import ParticleFilter, utils as u
+from ...filters import ParticleFilter, utils as u
 import torch
-from ....utils import normalize
+from ...utils import normalize
 from ..base import BaseFilterAlgorithm
 from .state import FilteringAlgorithmState
 

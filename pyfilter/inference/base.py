@@ -1,9 +1,9 @@
 from abc import ABC
-from ...filters import BaseFilter, utils as u
-from ...module import Module
+from ..filters import BaseFilter, utils as u
+from pyfilter.module import Module
 import torch
 from typing import Tuple
-from ...logging import LoggingWrapper, TqdmWrapper
+from ..logging import LoggingWrapper, TqdmWrapper
 from .state import AlgorithmState
 
 

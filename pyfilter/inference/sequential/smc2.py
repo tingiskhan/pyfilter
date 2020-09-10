@@ -1,7 +1,7 @@
 from .base import SequentialParticleAlgorithm
-from ...kernels import ParticleMetropolisHastings, SymmetricMH
-from ....utils import get_ess
-from ....filters import ParticleFilter
+from ..kernels import ParticleMetropolisHastings, SymmetricMH
+from ...utils import get_ess
+from ...filters import ParticleFilter
 from torch import isfinite
 from .state import FilteringAlgorithmState
 

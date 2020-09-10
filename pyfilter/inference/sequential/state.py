@@ -1,5 +1,5 @@
 from ..state import AlgorithmState
-from ....filters import BaseState
+from ...filters import BaseState
 from torch import Tensor
 
 
