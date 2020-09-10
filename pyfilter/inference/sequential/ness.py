@@ -36,7 +36,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
 
 
 class NESS(BaseNESS):
-    def __init__(self, filter_, particles, threshold=0.95, **kwargs):
+    def __init__(self, filter_, particles, threshold=0.9, **kwargs):
         """
         Implements the NESS algorithm by Miguez and Crisan.
         :param kde: The kernel density estimator to use for sampling new parameters.
