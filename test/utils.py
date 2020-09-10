@@ -89,34 +89,27 @@ class Tests(unittest.TestCase):
         uft = UnscentedFilterTransform(mvnmodel)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(0., p)
+        c = uft.correct(torch.tensor(0.), p)
 
         assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
 
     def test_StateDict(self):
-        # ===== Define model ===== #
         norm = Normal(0., 1.)
         linear = AffineProcess((f, g), (1., 1.), norm, norm)
         linearobs = AffineObservations((fo, go), (1., 1.), norm)
         model = StateSpaceModel(linear, linearobs)
 
-        # ===== Define filter ===== #
         filt = SISR(model, 100)
 
-        # ===== Get statedict ===== #
-        sd = filt.state_dict()
+        x, y = model.sample_path(100)
+        state = filt.longfilter(y)
 
-        # ===== Verify that we don't save multiple instances ===== #
-        assert '_model' in sd
+        sd = filt.state_dict()
 
         newfilt = SISR(model, 1000).load_state_dict(sd)
         assert newfilt.particles == filt.particles
-
-        # ===== Test same with UKF and verify that we save UT ===== #
-        ukf = UKF(model)
-        sd = ukf.state_dict()
-
-        assert '_model' in sd
+        assert newfilt.result.loglikelihood == filt.result.loglikelihood
+        assert (newfilt.result.filter_means == filt.result.filter_means).all()
 
     def test_Stacker(self):
         # ===== Define a mix of parameters ====== #
