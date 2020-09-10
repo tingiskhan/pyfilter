@@ -15,9 +15,6 @@ class Proposal(Module):
         self._model = None      # type: StateSpaceModel
         self._kernel = None     # type: Distribution
 
-    def modules(self):
-        return {}
-
     @property
     def kernel(self):
         """

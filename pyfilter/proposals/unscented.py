@@ -18,9 +18,6 @@ class Unscented(Proposal):
 
         return self
 
-    def modules(self):
-        return {'_ut': self._ut} if self._ut is not None else {}
-
     def construct(self, y, x):
         if self._ut_res is None:
             self._ut_res = self._ut.initialize(x.shape[:-1] if self._model.hidden_ndim > 0 else x.shape)
