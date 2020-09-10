@@ -145,12 +145,6 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def modules(self):
-        return {
-            '_first': self._first,
-            '_second': self._second
-        }
-
     @property
     def logged_ess(self):
         return torch.cat((self._first.logged_ess, self._second.logged_ess))
