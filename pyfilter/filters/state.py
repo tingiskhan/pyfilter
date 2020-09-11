@@ -27,8 +27,8 @@ class KalmanState(BaseState):
         return self.utf.xm
 
     def resample(self, inds):
-        self.utf.xm = choose(self.utf.xm, inds)
-        self.utf.xc = choose(self.utf.xc, inds)
+        self.utf.mean = choose(self.utf.mean, inds)
+        self.utf.cov = choose(self.utf.cov, inds)
 
         self.utf.ym = choose(self.utf.ym, inds)
         self.utf.yc = choose(self.utf.yc, inds)
@@ -39,8 +39,8 @@ class KalmanState(BaseState):
         return self.ll
 
     def exchange(self, inds: Tensor, state):
-        self.utf.xm[inds] = state.utf.xm[inds]
-        self.utf.xc[inds] = state.utf.xc[inds]
+        self.utf.mean[inds] = state.utf.mean[inds]
+        self.utf.cov[inds] = state.utf.cov[inds]
 
         self.utf.ym[inds] = state.utf.ym[inds]
         self.utf.yc[inds] = state.utf.yc[inds]

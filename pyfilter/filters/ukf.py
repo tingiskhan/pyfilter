@@ -23,7 +23,7 @@ class UKF(BaseKalmanFilter):
 
     def _filter(self, y, state: KalmanState):
         p = self._ut.predict(state.utf)
-        res = self._ut.correct(y, p)
+        res = self._ut.correct(y, p, state.utf)
 
         return KalmanState(res, res.y_dist().log_prob(y))
 

@@ -23,7 +23,7 @@ class Unscented(Proposal):
             self._ut_res = self._ut.initialize(x.shape[:-1] if self._model.hidden_ndim > 0 else x.shape)
 
         p = self._ut.predict(self._ut_res)
-        self._ut_res = self._ut.correct(y, p)
+        self._ut_res = self._ut.correct(y, p, self._ut_res)
         self._kernel = self._ut_res.x_dist()
 
         return self
