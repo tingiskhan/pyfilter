@@ -2,7 +2,7 @@ from abc import ABC
 import torch
 from ...logging import LoggingWrapper
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
-from ..state import AlgorithmState
+from .state import BatchState
 
 
 class BatchAlgorithm(BaseAlgorithm, ABC):
@@ -16,7 +16,9 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
     def is_converged(self, old_loss, new_loss):
         raise NotImplementedError()
 
-    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
+    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> BatchState:
+        self.initialize(y)
+
         old_loss = torch.tensor(float('inf'))
         logging_wrapper.set_num_iter(self._max_iter)
         loss = -old_loss
@@ -28,7 +30,7 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
             logging_wrapper.do_log(it, self, y)
             it += 1
 
-        return AlgorithmState()
+        return BatchState(self.is_converged(old_loss, loss), loss, it)
 
     def _step(self, y) -> float:
         raise NotImplementedError()
