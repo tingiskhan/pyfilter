@@ -22,6 +22,7 @@ class VariationalBayes(BatchAlgorithm):
         :param optimizer: The optimizer
         :param max_iter: The maximum number of iterations
         :param optkwargs: Any optimizer specific kwargs
+        :param use_filter: Whether to initialize VB with using filtered estimates
         """
 
         super().__init__(max_iter)

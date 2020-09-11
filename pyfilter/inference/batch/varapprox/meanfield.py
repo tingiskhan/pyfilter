@@ -1,6 +1,6 @@
 from .base import BaseApproximation
 import torch
-from torch.distributions import Independent, Normal, TransformedDistribution
+from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
 from ...utils import stacker
 from ....timeseries import Parameter, StochasticProcess
 from typing import Tuple
@@ -24,6 +24,9 @@ class StateMeanField(BaseApproximation):
 
     def get_parameters(self):
         return self._mean, self._log_std
+
+    def get_inferred_states(self) -> torch.Tensor:
+        return self._mean
 
 
 # TODO: Only supports 1D parameters currently
@@ -60,7 +63,7 @@ class ParameterMeanField(BaseApproximation):
     def dist(self):
         return Independent(Normal(self._mean, self._log_std.exp()), 1)
 
-    def get_transformed_dists(self):
+    def get_transformed_dists(self) -> Tuple[Distribution, ...]:
         res = tuple()
         for bij, msk in zip(self._bijections, self._stacked.mask):
             dist = TransformedDistribution(Normal(self._mean[msk], self._log_std[msk].exp()), bij)
