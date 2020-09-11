@@ -162,7 +162,7 @@ class UnscentedFilterTransform(Module):
         self._cov = torch.zeros((*shape, self._ndim, self._ndim))
 
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
-        self._views = self._model.viewify_params(view_shape)
+        self._views = self._model.viewify_params(view_shape, in_place=False)
 
         return self
 
@@ -174,10 +174,15 @@ class UnscentedFilterTransform(Module):
         :return: Self
         """
 
-        self._set_weights()._set_slices()._set_arrays(size_getter(shape))
+        shape = size_getter(shape)
+        self._set_weights()._set_slices()._set_arrays(shape)
 
         # ==== Set mean ===== #
-        self._mean[..., self._sslc] = self._model.hidden.i_sample(1000).mean(0)
+        mean = self._model.hidden.i_sample((1000, *shape)).mean(0)
+        if self._model.hidden_ndim < 1:
+            mean.unsqueeze_(-1)
+
+        self._mean[..., self._sslc] = mean
 
         # ==== Set state covariance ===== #
         var = cov = self._model.hidden.initial_dist.variance

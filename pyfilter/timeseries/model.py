@@ -43,8 +43,8 @@ class StateSpaceModel(StochasticProcessBase):
     def log_prob(self, y, x):
         return self.observable.log_prob(y, x)
 
-    def viewify_params(self, shape) -> Tuple[Tuple[Parameter, ...], ...]:
-        return tuple(ssm.viewify_params(shape) for ssm in [self.hidden, self.observable])
+    def viewify_params(self, shape, in_place=True) -> Tuple[Tuple[Parameter, ...], ...]:
+        return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
 
     def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """

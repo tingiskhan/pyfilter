@@ -273,18 +273,21 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
         return prod
 
-    def viewify_params(self, shape) -> Tuple[Parameter, ...]:
+    def viewify_params(self, shape, in_place=True) -> Tuple[Parameter, ...]:
         shape = size_getter(shape)
 
         # ===== Regular parameters ===== #
-        self._theta_vals = tuple()
+        theta_vals = tuple()
         for param in self.theta:
             if param.trainable:
                 var = _view_helper(param, shape)
             else:
                 var = param
 
-            self._theta_vals += (var,)
+            theta_vals += (var,)
+
+        if not in_place:
+            return theta_vals
 
         # ===== Distributional parameters ===== #
         for d, dists in self.distributional_theta.items():
@@ -296,7 +299,9 @@ class StochasticProcess(StochasticProcessBase, ABC):
 
             self._mapper[d].__init__(**temp)
 
-        return self._theta_vals
+        self._theta_vals = theta_vals
+
+        return theta_vals
 
     def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> torch.Tensor:
         """
