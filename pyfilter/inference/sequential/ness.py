@@ -1,7 +1,7 @@
 from .base import SequentialParticleAlgorithm
 from ...utils import get_ess
 from ..kernels import OnlineKernel
-from ...kde import NonShrinkingKernel, KernelDensityEstimate
+from ..kernels.kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
 from .state import FilteringAlgorithmState

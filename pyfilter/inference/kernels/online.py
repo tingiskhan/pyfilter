@@ -1,5 +1,5 @@
 from .base import BaseKernel
-from ...kde import KernelDensityEstimate, NonShrinkingKernel
+from .kde import KernelDensityEstimate, NonShrinkingKernel
 from ..utils import stacker
 from ...utils import unflattify, get_ess
 import torch
