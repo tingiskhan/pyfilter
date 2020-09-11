@@ -26,13 +26,13 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
             state.w[:] = 0.
 
         # ===== Propagate filter ===== #
-        state.filter_state = self.filter.filter(y, state.filter_state)
-        state.w += state.filter_state.get_loglikelihood()
+        fstate = self.filter.filter(y, state.filter_state)
+        w = state.w + state.filter_state.get_loglikelihood()
 
         # ===== Log ESS ===== #
         self._logged_ess += (get_ess(state.w),)
 
-        return state
+        return FilteringAlgorithmState(w, fstate)
 
 
 class NESS(BaseNESS):

@@ -35,12 +35,14 @@ class SMC2(SequentialParticleAlgorithm):
         self._y += (y,)
 
         # ===== Perform a filtering move ===== #
-        state.filter_state = self.filter.filter(y, state.filter_state)
-        state.w += state.filter_state.get_loglikelihood()
+        fstate = self.filter.filter(y, state.filter_state)
+        w = state.w + state.filter_state.get_loglikelihood()
 
         # ===== Calculate efficient number of samples ===== #
-        ess = get_ess(state.w)
+        ess = get_ess(w)
         self._logged_ess += (ess,)
+
+        state = FilteringAlgorithmState(w, fstate)
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._threshold or (~isfinite(state.w)).any():
