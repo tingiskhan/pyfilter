@@ -249,6 +249,17 @@ class UnscentedFilterTransform(Module):
 
         return AggregatedResult(xmean, xcov, ymean, ycov)
 
+    def update_state(self, xm: torch.Tensor, xc: torch.Tensor, state: UFTCorrectionResult,
+                     ym: torch.Tensor = None, yc: torch.Tensor = None):
+        # ===== Overwrite ===== #
+        mean = state.mean.clone()
+        cov = state.cov.clone()
+
+        mean[..., self._sslc] = xm
+        cov[..., self._sslc, self._sslc] = xc
+
+        return UFTCorrectionResult(mean, cov, self._sslc, ym, yc)
+
     def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult):
         """
         Constructs the mean and covariance given the current observation and previous state.
@@ -285,10 +296,4 @@ class UnscentedFilterTransform(Module):
         txcov = xcov - torch.matmul(gain, temp)
 
         # ===== Overwrite ===== #
-        mean = prev_corr.mean.clone()
-        cov = prev_corr.cov.clone()
-
-        mean[..., self._sslc] = txmean
-        cov[..., self._sslc, self._sslc] = txcov
-
-        return UFTCorrectionResult(mean, cov, self._sslc, ymean, ycov)
+        return self.update_state(txmean, txcov, prev_corr, ymean, ycov)

@@ -32,8 +32,8 @@ class Unscented(Proposal):
         if self._ut_res is None:
             return self
 
-        self._ut_res.xm = choose(self._ut_res.xm, inds)
-        self._ut_res.xc = choose(self._ut_res.xc, inds)
+        self._ut_res.mean = choose(self._ut_res.mean, inds)
+        self._ut_res.cov = choose(self._ut_res.cov, inds)
 
         return self
 

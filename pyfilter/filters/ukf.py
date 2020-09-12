@@ -28,8 +28,12 @@ class UKF(BaseKalmanFilter):
         return KalmanState(res, res.y_dist().log_prob(y))
 
     def predict(self, state: KalmanState, steps, *args, **kwargs):
+        utf_state = state.utf
+
         p = self._ut.predict(state.utf)
         c = self._ut.calc_mean_cov(p)
+
+        utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
 
         xres = torch.empty((steps, *c.xm.shape))
         yres = torch.empty((steps, *c.ym.shape))
@@ -38,8 +42,10 @@ class UKF(BaseKalmanFilter):
         yres[0] = c.ym
 
         for i in range(steps - 1):
-            p = self._ut.predict(c)
+            p = self._ut.predict(utf_state)
             c = self._ut.calc_mean_cov(p)
+
+            utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
 
             xres[i + 1] = c.xm
             yres[i + 1] = c.ym
