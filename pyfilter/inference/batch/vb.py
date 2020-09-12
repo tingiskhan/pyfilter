@@ -1,4 +1,4 @@
-from .base import BatchAlgorithm
+from .base import OptimizationBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
@@ -10,7 +10,7 @@ from typing import Type, Union
 from .state import VariationalState
 
 
-class VariationalBayes(BatchAlgorithm):
+class VariationalBayes(OptimizationBatchAlgorithm):
     def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, approx: BaseApproximation = None,
                  optimizer: Type[Optimizer] = Adam, max_iter=30e3, optkwargs=None, use_filter=True):
         """

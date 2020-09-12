@@ -5,12 +5,12 @@ from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from .state import BatchState
 
 
-class BatchAlgorithm(BaseAlgorithm, ABC):
+class OptimizationBatchAlgorithm(BaseAlgorithm, ABC):
     def __init__(self, max_iter: int):
         """
         Algorithm for batch inference.
         """
-        super(BatchAlgorithm, self).__init__()
+        super(OptimizationBatchAlgorithm, self).__init__()
         self._max_iter = int(max_iter)
 
     def is_converged(self, old_loss, new_loss):
