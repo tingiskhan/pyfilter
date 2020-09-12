@@ -85,7 +85,7 @@ def _g(x, s):
 
 
 class RandomWalk(AffineProcess):
-    def __init__(self, std: Union[torch.Tensor, float, Distribution]):
+    def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist: Distribution = None):
         """
         Defines a random walk.
         :param std: The vector of standard deviations
@@ -97,4 +97,4 @@ class RandomWalk(AffineProcess):
         else:
             normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
-        super().__init__((_f, _g), (std,), normal, normal)
+        super().__init__((_f, _g), (std,), initial_dist or normal, normal)
