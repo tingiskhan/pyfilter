@@ -20,6 +20,9 @@ class LoggingWrapper(object):
         if iteration % self._per_iter == 0:
             self._func(model, iteration, y)
 
+    def close(self):
+        return
+
 
 class DefaultLogger(LoggingWrapper):
     def __init__(self):
@@ -50,4 +53,7 @@ class TqdmWrapper(LoggingWrapper):
             self._initialized = True
 
         self._tqdm.update(self._per_iter)
+
+    def close(self):
+        self._tqdm.close()
 

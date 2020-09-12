@@ -30,6 +30,8 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
             logging_wrapper.do_log(it, self, y)
             it += 1
 
+        logging_wrapper.close()
+
         return BatchState(self.is_converged(old_loss, loss), loss, it)
 
     def _step(self, y) -> float:

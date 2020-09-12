@@ -33,6 +33,8 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
             state = self.update(yt, state)
             logging_wrapper.do_log(i, self, y)
 
+        logging_wrapper.close()
+
         return state
 
 
