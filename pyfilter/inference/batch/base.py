@@ -20,17 +20,20 @@ class BatchAlgorithm(BaseAlgorithm, ABC):
         self.initialize(y)
 
         old_loss = torch.tensor(float('inf'))
-        logging_wrapper.set_num_iter(self._max_iter)
         loss = -old_loss
         it = 0
 
-        while not self.is_converged(old_loss, loss) and it < self._max_iter:
-            old_loss = loss
-            loss = self._step(y)
-            logging_wrapper.do_log(it, self, y)
-            it += 1
+        try:
+            logging_wrapper.set_num_iter(self._max_iter)
+            while not self.is_converged(old_loss, loss) and it < self._max_iter:
+                old_loss = loss
+                loss = self._step(y)
+                logging_wrapper.do_log(it, self, y)
+                it += 1
 
-        logging_wrapper.close()
+        except Exception as e:
+            logging_wrapper.close()
+            raise e
 
         return BatchState(self.is_converged(old_loss, loss), loss, it)
 
