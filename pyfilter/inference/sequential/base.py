@@ -35,8 +35,9 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         except Exception as e:
             logging_wrapper.close()
-
             raise e
+
+        logging_wrapper.close()
 
         return state
 
