@@ -1,6 +1,6 @@
-from ...utils import normalize
+from ...utils import normalize, unflattify
 from .base import BaseKernel
-from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
+from ..utils import _construct_mvn
 import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
 from typing import Iterable
@@ -46,7 +46,7 @@ class ParticleMetropolisHastings(BaseKernel):
     def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
-            stacked = stacker(parameters, lambda u: u.t_values)
+            stacked = filter_.ssm.parameters_as_matrix(transformed=True)
 
             # ===== Find the best particles ===== #
             inds = self._resampler(weights, normalized=True)
@@ -59,18 +59,26 @@ class ParticleMetropolisHastings(BaseKernel):
             filter_.resample(inds, entire_history=self._entire_hist)
             state.resample(inds)
 
-            # ===== Define new filters and move via MCMC ===== #
-            t_filt = filter_.copy()
-            _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, None if indep_kernel else stacked.concated.shape[0])
-            t_filt.viewify_params((*filter_._n_parallel, 1))
+            # ===== Define new filters ===== #
+            t_filt = filter_.copy().reset()
+
+            # ===== Update parameters ===== #
+            rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
+            new_params = tuple(unflattify(rvs[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
+
+            t_filt.ssm.update_parameters(new_params)
+            t_filt.viewify_params((*filter_.n_parallel, 1))
 
             # ===== Calculate difference in loglikelihood ===== #
-            t_state = t_filt.reset().longfilter(self._y, bar=False)
+            t_state = t_filt.longfilter(self._y, bar=False)
             quotient = t_filt.result.loglikelihood - filter_.result.loglikelihood
 
             # ===== Calculate acceptance ratio ===== #
             plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
-            kernel = 0. if indep_kernel else _eval_kernel(filter_.ssm.theta_dists, dist, t_filt.ssm.theta_dists)
+
+            kernel = 0.
+            if not indep_kernel:
+                kernel += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
 
             # ===== Check which to accept ===== #
             toaccept = torch.empty_like(quotient).uniform_().log() < quotient + plogquot + kernel

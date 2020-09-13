@@ -1,7 +1,7 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
-from ...utils import stacker
+from ....utils import stacker
 from ....timeseries import Parameter, StochasticProcess
 from typing import Tuple
 

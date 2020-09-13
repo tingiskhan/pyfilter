@@ -1,4 +1,4 @@
-from .base import StochasticProcess
+from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Callable, Union

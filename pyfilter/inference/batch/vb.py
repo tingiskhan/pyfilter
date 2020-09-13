@@ -3,8 +3,7 @@ import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ...timeseries import StateSpaceModel, StochasticProcess
-from ..utils import stacker
-from ...utils import EPS, unflattify
+from ...utils import EPS, unflattify, stacker
 from ...filters import UKF
 from typing import Type, Union
 from .state import VariationalState

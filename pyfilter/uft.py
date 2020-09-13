@@ -1,5 +1,4 @@
-from .timeseries import StateSpaceModel
-from .timeseries.base import StochasticProcess
+from .timeseries import StateSpaceModel, StochasticProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal

@@ -127,6 +127,50 @@ def unflattify(values: torch.Tensor, shape: torch.Size):
     return values.reshape(values.shape[0], *shape)
 
 
+class StackedObject(object):
+    def __init__(self, concated: torch.Tensor, mask: torch.Tensor, prev_shape: torch.Size):
+        """
+        Object for storing the results of stacking tensors from `stacker`.
+        """
+
+        self.concated = concated
+        self.mask = mask
+        self.prev_shape = prev_shape
+
+
+def stacker(parameters: Iterable[torch.Tensor], selector=lambda u: u.values, dim=1):
+    """
+    Stacks the parameters and returns a n-tuple containing the mask for each parameter.
+    :param parameters: The parameters
+    :type parameters: tuple[Parameter]|list[Parameter]
+    :param selector: The selector
+    :param dim: The dimension to start flattening from
+    """
+
+    to_conc = tuple()
+    mask = tuple()
+    prev_shape = tuple()
+
+    i = 0
+    # TODO: Currently only supports one sampling dimension...
+    for p in parameters:
+        s = selector(p)
+        flat = s if s.dim() <= dim else s.flatten(dim)
+
+        if flat.dim() == dim:
+            to_conc += (flat.unsqueeze(-1),)
+            slc = i
+        else:
+            to_conc += (flat,)
+            slc = slice(i, i + flat.shape[-1])
+
+        mask += (slc,)
+        i += to_conc[-1].shape[-1]
+        prev_shape += (s.shape[dim:],)
+
+    return StackedObject(torch.cat(to_conc, dim=-1), mask, prev_shape)
+
+
 class TempOverride(object):
     def __init__(self, obj: object, attr: str, new_vals: object):
         """

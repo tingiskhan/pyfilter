@@ -1,5 +1,4 @@
-from ...utils import normalize
-from ..utils import stacker
+from ...utils import normalize, stacker
 import numpy as np
 from ...resampling import systematic
 import torch

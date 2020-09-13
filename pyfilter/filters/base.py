@@ -45,11 +45,14 @@ class BaseFilter(Module, ABC):
         """
         return self._model
 
-    def viewify_params(self, shape):
+    @property
+    def n_parallel(self) -> torch.Size:
+        return self._n_parallel
+
+    def viewify_params(self, shape: Union[int, torch.Size]):
         """
         Defines views to be used as parameters instead
         :param shape: The shape to use. Please note that
-        :type shape: tuple|torch.Size
         :return: Self
         """
 
@@ -117,8 +120,9 @@ class BaseFilter(Module, ABC):
         :return: Copy of self
         """
 
-        # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
-        return copy.deepcopy(self)
+        res = copy.deepcopy(self)
+        res.viewify_params(torch.Size([]))
+        return res
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """

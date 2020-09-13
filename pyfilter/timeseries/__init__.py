@@ -4,7 +4,7 @@ from .parameter import Parameter
 from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma
-from .base import StochasticProcess
+from .process import StochasticProcess
 
 
 __all__ = [

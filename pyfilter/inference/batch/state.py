@@ -1,5 +1,6 @@
 from ..state import AlgorithmState
 from .varapprox import ParameterMeanField, StateMeanField
+import torch
 
 
 class BatchState(AlgorithmState):
@@ -15,3 +16,12 @@ class VariationalState(BatchState):
         super().__init__(converged, final_loss, iterations)
         self.param_approx = param_approx
         self.state_approx = state_approx
+
+
+class PMMHState(AlgorithmState):
+    def __init__(self, initial_sample: torch.Tensor):
+        self.samples = [initial_sample]
+
+    def update(self, sample: torch.Tensor):
+        self.samples.append(sample)
+

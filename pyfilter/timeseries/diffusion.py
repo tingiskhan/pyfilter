@@ -1,8 +1,8 @@
 from .affine import AffineProcess, _define_transdist
-from .base import StochasticProcess
+from .process import StochasticProcess
 import torch
 from abc import ABC
-from torch.distributions import Distribution, Normal, Independent
+from torch.distributions import Distribution
 from ..utils import Empirical
 from typing import Callable, Tuple
 
