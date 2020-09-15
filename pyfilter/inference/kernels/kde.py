@@ -143,6 +143,21 @@ class NonShrinkingKernel(ShrinkingKernel):
         return self
 
 
+class LiuWestShrinkage(ShrinkingKernel):
+    def __init__(self, delta=0.99):
+        super().__init__()
+        self._a = delta
+        self._bw_fac = sqrt(1 - delta ** 2)
+
+    def fit(self, x, w):
+        mean = (w.unsqueeze(-1) * x).sum(0)
+
+        self._cov = robust_var(x, w, mean)
+        self._means = x * self._a + (1 - self._a) * mean
+
+        return self
+
+
 class IndependentGaussian(ShrinkingKernel):
     def __init__(self, factor=silverman):
         """
