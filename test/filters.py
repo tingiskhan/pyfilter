@@ -57,14 +57,15 @@ class Tests(unittest.TestCase):
         for model in [self.model, self.mvnmodel]:
             x, y = model.sample_path(500)
 
-            for filter_, props in [
+            for filter_type, props in [
                 (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
                 (UKF, {}),
                 (SISR, {'particles': 50, 'proposal': Unscented()})
             ]:
-                filt = filter_(model, **props)
-                filt.longfilter(y)
+                filt = filter_type(model, **props)
+                states = filt.longfilter(y, record_states=True)
+
                 filtmeans = filt.result.filter_means.numpy()
 
                 # ===== Run Kalman ===== #
@@ -73,17 +74,30 @@ class Tests(unittest.TestCase):
                 else:
                     kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1.]], observation_matrices=[1, 2])
 
-                filterestimates = kf.filter(y.numpy())
+                f_mean, _ = kf.filter(y.numpy())
 
-                if filtmeans.ndim < 2:
-                    filtmeans = filtmeans[:, None]
+                if model.hidden_ndim < 1 and not isinstance(filt, UKF):
+                    f_mean = f_mean[:, 0]
 
-                rel_error = np.median(np.abs((filtmeans - filterestimates[0]) / filterestimates[0]))
+                rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
 
                 ll = kf.loglikelihood(y.numpy())
                 rel_ll_error = np.abs((ll - filt.result.loglikelihood.numpy()) / ll)
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
+
+                if isinstance(filt, UKF):
+                    continue
+
+                smoothed = filt.smooth(states).mean(dim=1)
+                s_mean, _ = kf.smooth(y.numpy())
+
+                if model.hidden_ndim < 1:
+                    s_mean = s_mean[:, 0]
+
+                rel_error = np.median(np.abs((smoothed[1:] - s_mean) / s_mean))
+
+                assert rel_error < 5e-2
 
     def test_ParallellFiltersAndStability(self):
         x, y = self.model.sample_path(50)

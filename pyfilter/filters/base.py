@@ -6,7 +6,7 @@ import torch
 from ..utils import choose
 from ..module import Module
 from .utils import enforce_tensor, FilterResult
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterable
 from .state import BaseState
 
 
@@ -26,7 +26,7 @@ class BaseFilter(Module, ABC):
             raise ValueError(f'`model` must be `{StateSpaceModel.__name__:s}`!')
 
         self._model = model
-        self._n_parallel = None
+        self._n_parallel = torch.Size([])
         self._result = FilterResult()
         self._save_means = save_means
 
@@ -97,31 +97,43 @@ class BaseFilter(Module, ABC):
     def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
-    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True) -> BaseState:
+    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True,
+                   record_states=False) -> Union[BaseState, Tuple[BaseState]]:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
         :param bar: Whether to print a progressbar
-        :return: Self
+        :param record_states: Whether to record states on a tuple
         """
 
         astuple = tuple(y) if not isinstance(y, tuple) else y
         iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
 
+        recorder = tuple()
         state = self.initialize()
+
+        if record_states:
+            recorder += (state,)
+
         for yt in iterator:
             state = self.filter(yt, state)
 
-        return state
+            if record_states:
+                recorder += (state,)
 
-    def copy(self):
+        if not record_states:
+            return state
+
+        return recorder
+
+    def copy(self, view_shape=torch.Size([])):
         """
         Returns a copy of itself.
         :return: Copy of self
         """
 
         res = copy.deepcopy(self)
-        res.viewify_params(torch.Size([]))
+        res.viewify_params(view_shape)
         return res
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -178,6 +190,9 @@ class BaseFilter(Module, ABC):
             "_n_parallel": self._n_parallel,
             "_result": self.result
         }
+
+    def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
+        raise NotImplementedError()
 
 
 class BaseKalmanFilter(BaseFilter, ABC):

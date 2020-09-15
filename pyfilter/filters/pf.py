@@ -4,11 +4,12 @@ from ..resampling import systematic
 from ..timeseries import LinearGaussianObservations as LGO
 from ..proposals.bootstrap import Bootstrap, Proposal
 import torch
-from ..utils import get_ess, normalize
+from ..utils import get_ess, normalize, choose
 from .utils import _construct_empty
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterable
 from ..proposals import LinearGaussianObservations
 from .state import ParticleState
+from torch.distributions import Categorical, Independent
 
 
 _PROPOSAL_MAPPING = {
@@ -126,3 +127,17 @@ class ParticleFilter(BaseFilter, ABC):
         })
 
         return base
+
+    def smooth(self, states: Iterable[ParticleState]):
+        hidden_copy = self.ssm.hidden.copy((*self.n_parallel, 1, 1))
+        offset = -(2 + self.ssm.hidden_ndim)
+
+        res = [choose(states[-1].x, self._resampler(states[-1].w))]
+        reverse = states[::-1]
+        for state in reverse[1:]:
+            w = state.w.unsqueeze(-2) + hidden_copy.log_prob(res[-1].unsqueeze(offset), state.x.unsqueeze(offset + 1))
+
+            cat = Categorical(normalize(w))
+            res.append(choose(state.x, cat.sample()))
+
+        return torch.stack(res[::-1], dim=0)
