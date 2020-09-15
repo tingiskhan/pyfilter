@@ -49,8 +49,6 @@ class Base(Module):
         for param in self.theta_dists:
             param.sample_(shape)
 
-        self.viewify_params(shape)
-
         return self
 
     def log_prob(self, y: torch.Tensor, x: torch.Tensor):
@@ -138,10 +136,12 @@ class Base(Module):
 
         return out
 
-    def copy(self):
+    def copy(self, view_shape=torch.Size([])):
         """
         Returns a deep copy of the object.
         :return: Copy of current instance
         """
+        res = deepcopy(self)
+        res.viewify_params(view_shape)
 
-        return deepcopy(self)
+        return res
