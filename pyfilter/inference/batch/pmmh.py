@@ -10,7 +10,6 @@ from ...normalization import normalize
 from typing import Tuple
 
 
-# TODO: Add "initialize with"
 class RandomWalkMetropolis(BatchFilterAlgorithm):
     def __init__(self, filter_, samples=500, n_chains=4, initialize_with: str = "smc2"):
         """
@@ -26,14 +25,13 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
         self._initialize_with = initialize_with
 
     def _seed_initial_value(self, y: torch.Tensor) -> Tuple[StackedObject, torch.Tensor]:
-        filter_copy = self.filter.copy()
+        filter_copy = self.filter.copy((self._chains, 1))
 
         while True and self._initialize_with is None:
-            filter_copy.reset().viewify_params((self._chains, 1))
-            filter_copy.longfilter(y, bar=False)
+            filter_copy.reset().longfilter(y, bar=False)
 
             if torch.isfinite(filter_copy.result.loglikelihood).all():
-                return filter_copy.ssm.parameters_as_matrix(), 1e-4 * torch.eye(len(self.filter.ssm.theta_dists))
+                return filter_copy.ssm.parameters_as_matrix(), 1e-6 * torch.eye(len(self.filter.ssm.theta_dists))
 
             filter_copy.ssm.sample_params(self._chains)
 
@@ -47,12 +45,13 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
             mvn = _construct_mvn(stacked.concated, normalize(state.w))
             stacked.concated = stacked.concated[:self._chains]
 
-            return stacked, mvn.covariance_matrix
+            return stacked, 2.562 ** 2 / stacked.concated.shape[-1] * mvn.covariance_matrix
 
     def _fit(self, y, logging_wrapper, **kwargs):
         # ===== Initialize model ===== #
         self.filter.set_nparallel(self._chains)
         self.filter.ssm.sample_params(self._chains)
+        self.filter.viewify_params((self._chains, 1))
 
         # ===== Seed stuff ===== #
         stacked, cov = self._seed_initial_value(y)
@@ -60,7 +59,6 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
         # ===== Initialize parameters ==== #
         new_params = tuple(unflattify(stacked.concated[..., msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
         self.filter.ssm.update_parameters(new_params)
-        self.filter.viewify_params((self._chains, 1))
 
         # ===== Run filter ===== #
         self.filter.longfilter(y, bar=False)
@@ -71,7 +69,7 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
 
         for i in range(1, self._samples):
             # ===== Copy filter ====== #
-            t_filt = self.filter.copy().reset()
+            t_filt = self.filter.copy((self._chains, 1)).reset()
 
             # ===== Sample parameters ===== #
             mvn = MultivariateNormal(state.samples[-1], cov)
@@ -80,7 +78,6 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
             # ===== Update parameters ===== #
             new_params = tuple(unflattify(rvs[..., msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
             t_filt.ssm.update_parameters(new_params)
-            t_filt.viewify_params((self._chains, 1))
 
             # ===== Calculate acceptance ===== #
             t_filt.longfilter(y, bar=False)

@@ -60,14 +60,13 @@ class ParticleMetropolisHastings(BaseKernel):
             state.resample(inds)
 
             # ===== Define new filters ===== #
-            t_filt = filter_.copy().reset()
+            t_filt = filter_.copy((*filter_.n_parallel, 1)).reset()
 
             # ===== Update parameters ===== #
             rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
             new_params = tuple(unflattify(rvs[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
 
             t_filt.ssm.update_parameters(new_params)
-            t_filt.viewify_params((*filter_.n_parallel, 1))
 
             # ===== Calculate difference in loglikelihood ===== #
             t_state = t_filt.longfilter(self._y, bar=False)
