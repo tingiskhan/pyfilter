@@ -98,19 +98,20 @@ class BaseFilter(Module, ABC):
         raise NotImplementedError()
 
     def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True,
-                   record_states=False) -> Union[BaseState, Tuple[BaseState]]:
+                   record_states=False, init_state: BaseState = None) -> Union[BaseState, Tuple[BaseState]]:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
         :param bar: Whether to print a progressbar
         :param record_states: Whether to record states on a tuple
+        :param init_state: The initial state to use
         """
 
         astuple = tuple(y) if not isinstance(y, tuple) else y
         iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
 
         recorder = tuple()
-        state = self.initialize()
+        state = init_state or self.initialize()
 
         if record_states:
             recorder += (state,)
