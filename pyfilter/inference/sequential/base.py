@@ -137,6 +137,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         self._second = self.make_second(filter_, particles, **(second_kw or dict()))
         self._when_to_switch = switch
         self._is_switched = torch.tensor(False, dtype=torch.bool)
+        self._num_iters = 0
 
     def make_first(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         raise NotImplementedError()
@@ -156,8 +157,10 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         return torch.cat((self._first.logged_ess, self._second.logged_ess))
 
     def _update(self, y: torch.Tensor, state):
+        self._num_iters += 1
+
         if not self._is_switched:
-            if len(self._first._logged_ess) < self._when_to_switch:
+            if self._num_iters <= self._when_to_switch:
                 return self._first.update(y, state)
 
             self._is_switched = True
