@@ -1,7 +1,7 @@
 from .mh import ParticleMetropolisHastings
 from ...filters import BaseState
-from torch.distributions import Distribution
-from ..utils import _construct_mvn
+from torch.distributions import Distribution, MultivariateNormal
+from .kde import robust_var
 
 
 # TODO: Add support for replacing only part of filtered means
@@ -17,7 +17,10 @@ class BlockMetropolisHastings(ParticleMetropolisHastings):
         self._entire_hist = False
 
     def define_pdf(self, values, weights, inds):
-        return _construct_mvn(values, weights)
+        mean = (weights.unsqueeze(-1) * values).sum(0)
+        var = robust_var(values, weights, mean)
+
+        return MultivariateNormal(mean, var.diag())
 
     def calc_model_loss(self, new_filter, old_filter):
         new_state = new_filter.longfilter(self._y, bar=False, init_state=self._init_state)

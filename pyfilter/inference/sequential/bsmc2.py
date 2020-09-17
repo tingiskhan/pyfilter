@@ -20,9 +20,8 @@ class BSMC2(SequentialParticleAlgorithm):
         self._bl = block_length
         self._num_iters = 0
 
-        thresh = kwargs.pop("threshold", 0.5)
         self._kw = kwargs
-        self._alg = SMC2(self.filter, particles, threshold=thresh, **kwargs)
+        self._alg = SMC2(self.filter, particles, threshold=kwargs.pop("threshold", 0.5), **kwargs)
 
     def _update(self, y, state):
         self._num_iters += 1
