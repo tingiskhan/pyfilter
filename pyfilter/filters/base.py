@@ -161,13 +161,16 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def reset(self):
+    def reset(self, only_ll=False):
         """
-        Resets the filter by nullifying the filter specific attributes.
+        Resets the filter by resetting the results.
         :return: Self
         """
 
-        self._result = FilterResult()
+        if only_ll:
+            self._result._loglikelihood = torch.zeros_like(self._result.loglikelihood)
+        else:
+            self._result = FilterResult()
 
         return self
 
