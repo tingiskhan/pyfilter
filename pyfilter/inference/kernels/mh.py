@@ -3,8 +3,9 @@ from .base import BaseKernel
 from ..utils import _construct_mvn
 import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
-from typing import Iterable
+from typing import Iterable, Tuple
 from math import sqrt
+from ...filters import BaseState, BaseFilter
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -43,6 +44,14 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
+    def calc_model_loss(self, new_filter: BaseFilter, old_filter: BaseFilter) -> Tuple[BaseState, torch.Tensor]:
+        new_state = new_filter.longfilter(self._y, bar=False)
+        diff_logl = new_filter.result.loglikelihood - old_filter.result.loglikelihood
+
+        diff_prior = new_filter.ssm.p_prior() - old_filter.ssm.p_prior()
+
+        return new_state, diff_logl + diff_prior
+
     def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
@@ -60,37 +69,33 @@ class ParticleMetropolisHastings(BaseKernel):
             state.resample(inds)
 
             # ===== Define new filters ===== #
-            t_filt = filter_.copy((*filter_.n_parallel, 1)).reset()
+            prop_filt = filter_.copy((*filter_.n_parallel, 1)).reset()
 
             # ===== Update parameters ===== #
             rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
             new_params = tuple(unflattify(rvs[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
 
-            t_filt.ssm.update_parameters(new_params)
+            prop_filt.ssm.update_parameters(new_params)
 
-            # ===== Calculate difference in loglikelihood ===== #
-            t_state = t_filt.longfilter(self._y, bar=False)
-            quotient = t_filt.result.loglikelihood - filter_.result.loglikelihood
+            # ===== Calculate acceptance probabilities ===== #
+            prop_state, model_loss = self.calc_model_loss(prop_filt, filter_)
 
-            # ===== Calculate acceptance ratio ===== #
-            plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
-
-            kernel = 0.
+            kernel_diff = 0.
             if not indep_kernel:
-                kernel += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
+                kernel_diff += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
 
             # ===== Check which to accept ===== #
-            toaccept = torch.empty_like(quotient).uniform_().log() < quotient + plogquot + kernel
+            toaccept = torch.empty_like(model_loss).uniform_().log() < model_loss + kernel_diff
 
             # ===== Update the description ===== #
             self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
 
             if self._entire_hist:
-                filter_.exchange(t_filt, toaccept)
+                filter_.exchange(prop_filt, toaccept)
             else:
-                filter_.ssm.exchange(toaccept, t_filt.ssm)
+                filter_.ssm.exchange(toaccept, prop_filt.ssm)
 
-            state.exchange(toaccept, t_state)
+            state.exchange(toaccept, prop_state)
             weights = normalize(filter_.result.loglikelihood)
 
         return self

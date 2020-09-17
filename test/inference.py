@@ -5,7 +5,7 @@ from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
-from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
+from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2, BSMC2
 
 
 def f(x, alpha, sigma):
@@ -41,7 +41,7 @@ class MyTestCase(unittest.TestCase):
         mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
 
         # ===== Define model ===== #
-        linear = AffineProcess((f, g), (1., 0.25), dist, dist)
+        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
         model = LinearGaussianObservations(linear, scale=0.1)
 
         mv_linear = AffineProcess((fmvn, gmvn), (0.5, 0.25), mvn, mvn)
@@ -64,6 +64,7 @@ class MyTestCase(unittest.TestCase):
             algs = [
                 (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (BSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
