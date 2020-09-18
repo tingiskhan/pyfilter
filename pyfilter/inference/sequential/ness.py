@@ -36,7 +36,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
 
 
 class NESS(BaseNESS):
-    def __init__(self, filter_, particles, threshold=0.9, **kwargs):
+    def __init__(self, filter_, particles, threshold=0.95, **kwargs):
         """
         Implements the NESS algorithm by Miguez and Crisan.
         :param kde: The kernel density estimator to use for sampling new parameters.
@@ -59,6 +59,8 @@ class FixedWidthNESS(BaseNESS):
 
         super().__init__(filter_, particles, **kwargs)
         self._bl = block_len
+        self._num_iters = 0
 
     def do_update(self, state):
-        return (any(self._logged_ess) and len(self._logged_ess) % self._bl == 0) or (~isfinite(state.w)).any()
+        self._num_iters += 1
+        return (self._num_iters % self._bl == 0) or (~isfinite(state.w)).any()

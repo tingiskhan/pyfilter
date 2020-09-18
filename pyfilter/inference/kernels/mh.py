@@ -20,7 +20,6 @@ class ParticleMetropolisHastings(BaseKernel):
         self._nsteps = nsteps
         self._y = None
         self.accepted = None
-        self._entire_hist = True
 
     def set_data(self, y: Iterable[torch.Tensor]):
         """
@@ -65,7 +64,7 @@ class ParticleMetropolisHastings(BaseKernel):
             indep_kernel = isinstance(dist, Independent)
 
             # ===== Choose particles ===== #
-            filter_.resample(inds, entire_history=self._entire_hist)
+            filter_.resample(inds)
             state.resample(inds)
 
             # ===== Define new filters ===== #
@@ -90,11 +89,7 @@ class ParticleMetropolisHastings(BaseKernel):
             # ===== Update the description ===== #
             self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
 
-            if self._entire_hist:
-                filter_.exchange(prop_filt, toaccept)
-            else:
-                filter_.ssm.exchange(toaccept, prop_filt.ssm)
-
+            filter_.exchange(prop_filt, toaccept)
             state.exchange(toaccept, prop_state)
             weights = normalize(filter_.result.loglikelihood)
 
