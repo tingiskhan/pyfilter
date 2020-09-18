@@ -5,7 +5,7 @@ from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
-from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2, BSMC2
+from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 
 
 def f(x, alpha, sigma):
