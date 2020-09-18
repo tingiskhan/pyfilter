@@ -64,7 +64,7 @@ class ParticleMetropolisHastings(BaseKernel):
             indep_kernel = isinstance(dist, Independent)
 
             # ===== Choose particles ===== #
-            filter_.resample(inds)
+            filter_.resample(inds, entire_history=True)
             state.resample(inds)
 
             # ===== Define new filters ===== #
