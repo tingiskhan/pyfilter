@@ -144,7 +144,7 @@ class NonShrinkingKernel(ShrinkingKernel):
 
 
 class LiuWestShrinkage(ShrinkingKernel):
-    def __init__(self, delta=0.99):
+    def __init__(self, delta=0.98):
         super().__init__()
         self._a = delta
         self._bw_fac = sqrt(1 - delta ** 2)
