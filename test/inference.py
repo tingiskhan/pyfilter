@@ -64,7 +64,6 @@ class MyTestCase(unittest.TestCase):
             algs = [
                 (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
-                (BSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
