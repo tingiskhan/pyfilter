@@ -51,40 +51,47 @@ class Base(Module):
 
         return self
 
-    def log_prob(self, y: torch.Tensor, x: torch.Tensor):
+    def log_prob(self, y: torch.Tensor, x: torch.Tensor, u: torch.Tensor = None):
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.
         :param y: The value at x_t
         :param x: The value at x_{t-1}
+        :param u: Covariate value at time t
         :return: The log-weights
         """
 
-        return self._log_prob(y, x)
+        dist = self.define_density(x, u=u)
 
-    def _log_prob(self, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+        return dist.log_prob(y)
+
+    def define_density(self, x: torch.Tensor, u: torch.Tensor = None) -> Distribution:
         raise NotImplementedError()
 
-    def propagate(self, x: torch.Tensor, as_dist=False) -> Union[Distribution, torch.Tensor]:
+    def propagate(self, x: torch.Tensor, as_dist=False, u: torch.Tensor = None) -> Union[Distribution, torch.Tensor]:
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
         :param as_dist: Whether to return the new value as a distribution
+        :param u: Any covariates
         :return: Samples from the model
         """
 
-        return self._propagate(x, as_dist)
+        dist = self.define_density(x, u=u)
 
-    def _propagate(self, x, as_dist=False):
-        raise NotImplementedError()
+        if as_dist:
+            return dist
+
+        return dist.sample()
 
     def sample_path(self, steps: int, samples: Union[int, Tuple[int, ...]] = None,
-                    x_s: torch.Tensor = None) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
+                    x_s: torch.Tensor = None, u: torch.Tensor = None) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """
         Samples a trajectory from the model.
         :param steps: The number of steps
         :param samples: Number of sample paths
         :param x_s: The start value for the latent process
+        :param u: Any covariates
         :return: An array of sampled values
         """
 

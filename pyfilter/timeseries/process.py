@@ -198,7 +198,7 @@ class StochasticProcess(Base, ABC):
 
         return dist.sample()
 
-    def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
+    def sample_path(self, steps, samples=None, x_s=None, u=None) -> torch.Tensor:
         x_s = self.i_sample(samples) if x_s is None else x_s
         out = torch.zeros(steps, *x_s.shape, device=x_s.device, dtype=x_s.dtype)
         out[0] = x_s

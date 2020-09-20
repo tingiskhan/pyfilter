@@ -68,11 +68,11 @@ class StateSpaceModel(Base):
 
         return self.hidden.log_prob(y, x)
 
-    def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
 
         hidden = self.hidden.sample_path(steps, x_s=x)
-        obs = self.observable.propagate(hidden)
+        obs = self.observable.propagate(hidden, u=u)
 
         return hidden, obs
 

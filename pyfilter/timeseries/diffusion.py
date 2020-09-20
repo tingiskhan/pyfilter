@@ -55,12 +55,9 @@ class GeneralEulerMaruyama(StochasticDifferentialEquation):
         super().__init__(theta, initial_dist, inc_dist, dt, num_steps)
         self._prop_state = prop_state
 
-    def _propagate(self, x, as_dist=False):
+    def define_density(self, x, u=None):
         for i in range(self._ns):
             x = self._prop_state(x, *self.theta_vals, dt=self._dt)
-
-        if not as_dist:
-            return x
 
         return Empirical(x)
 

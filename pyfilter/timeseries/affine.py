@@ -29,10 +29,10 @@ class AffineProcess(StochasticProcess):
         # ===== Dynamics ===== #
         self.f, self.g = funcs
 
-    def _log_prob(self, y, x):
+    def define_density(self, x, u=None):
         loc, scale = self._mean_scale(x)
 
-        return self._define_transdist(loc, scale).log_prob(y)
+        return self._define_transdist(loc, scale)
 
     def mean_scale(self, x: torch.Tensor):
         """
@@ -59,14 +59,6 @@ class AffineProcess(StochasticProcess):
         """
 
         return _define_transdist(loc, scale, self.increment_dist, self.ndim)
-
-    def _propagate(self, x, as_dist=False):
-        dist = self._define_transdist(*self._mean_scale(x))
-
-        if as_dist:
-            return dist
-
-        return dist.sample()
 
     def _propagate_u(self, x, u):
         loc, scale = self._mean_scale(x)
