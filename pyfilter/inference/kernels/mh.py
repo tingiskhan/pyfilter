@@ -91,7 +91,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             filter_.exchange(prop_filt, toaccept)
             state.exchange(toaccept, prop_state)
-            weights = normalize(filter_.result.loglikelihood)
+            weights = torch.zeros_like(weights)
 
         return self
 
