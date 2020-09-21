@@ -91,7 +91,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             filter_.exchange(prop_filt, toaccept)
             state.exchange(toaccept, prop_state)
-            weights = torch.zeros_like(weights)
+            weights = torch.ones_like(weights) / weights.shape[0]
 
         return self
 
