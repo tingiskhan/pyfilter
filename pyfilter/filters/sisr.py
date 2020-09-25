@@ -2,6 +2,7 @@ from .pf import ParticleFilter
 from ..utils import loglikelihood, choose
 from ..normalization import normalize
 import torch
+from .state import ParticleState
 
 
 class SISR(ParticleFilter):
@@ -9,29 +10,25 @@ class SISR(ParticleFilter):
     Implements the SISR filter by Gordon et al.
     """
 
-    def _filter(self, y):
+    def _filter(self, y, state: ParticleState):
         # ===== Resample among old ===== #
         # TODO: Not optimal as we normalize in several other functions, fix this
-        old_normw = normalize(self._w_old)
+        old_normw = normalize(state.w)
 
-        inds, mask = self._resample_state(self._w_old)
-        to_prop = choose(self._x_cur, inds)
+        inds, mask = self._resample_state(state.w)
+        to_prop = choose(state.x, inds)
         self._proposal = self.proposal.construct(y, to_prop)
 
         # ===== Propagate ===== #
-        self._x_cur = self.proposal.draw(self._rsample)
-        weights = self.proposal.weight(y, self._x_cur, to_prop)
+        x = self.proposal.draw(self._rsample)
+        weights = self.proposal.weight(y, x, to_prop)
 
         self.proposal.resample(inds)
 
         # ===== Update weights ===== #
         tw = torch.zeros_like(weights)
-        tw[~mask] = self._w_old[~mask]
+        tw[~mask] = state.w[~mask]
 
-        self._w_old = weights + tw
+        w = weights + tw
 
-        normw = normalize(self._w_old)
-        if self._sumaxis < -1:
-            normw.unsqueeze_(-1)
-
-        return (normw * self._x_cur).sum(self._sumaxis), loglikelihood(weights, old_normw)
+        return ParticleState(x, w, loglikelihood(weights, old_normw))

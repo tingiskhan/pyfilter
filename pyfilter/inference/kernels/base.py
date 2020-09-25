@@ -1,19 +1,18 @@
-from ...utils import normalize
-from ..utils import stacker
+from ...utils import normalize, stacker
 import numpy as np
 from ...resampling import systematic
 import torch
 from typing import Iterable, Callable, Union
 from ...timeseries import Parameter
-from ...filters.base import BaseFilter
+from ...filters import BaseFilter, BaseState
 
 
 def finite_decorator(func):
-    def wrapper(obj, parameters, filter_, w):
+    def wrapper(obj, parameters, filter_, state, w):
         mask = ~torch.isfinite(w)
         w[mask] = -float('inf')
 
-        return func(obj, parameters, filter_, w)
+        return func(obj, parameters, filter_, state, w)
 
     return wrapper
 
@@ -42,23 +41,16 @@ class BaseKernel(object):
 
         return self
 
-    def _update(self, parameters: Iterable[Parameter], filter_: BaseFilter, weights: torch.Tensor):
-        """
-        The method for the user to override.
-        :param parameters: The parameters of the model to update
-        :param filter_: The filter
-        :param weights: The weights to be passed. A normalized copy of log_weights
-        :return: Self
-        """
-
+    def _update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
         raise NotImplementedError()
 
     @finite_decorator
-    def update(self, parameters: Iterable[Parameter], filter_: BaseFilter, weights: torch.Tensor):
+    def update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
         """
         Defines the function for updating the parameters.
         :param parameters: The parameters of the model to update
         :param filter_: The filter
+        :param state: The previous state of the filter
         :param weights: The weights to use for propagating.
         :return: Self
         """
@@ -68,7 +60,7 @@ class BaseKernel(object):
         if self._record_stats:
             self.record_stats(parameters, w)
 
-        self._update(parameters, filter_, w)
+        self._update(parameters, filter_, state, w)
 
         return self
 

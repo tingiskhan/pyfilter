@@ -2,6 +2,7 @@ from .pf import ParticleFilter
 from ..utils import loglikelihood, choose
 from ..normalization import normalize
 import torch
+from .state import ParticleState
 
 
 class APF(ParticleFilter):
@@ -9,16 +10,16 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def _filter(self, y):
+    def _filter(self, y, state: ParticleState):
         # ===== Perform auxiliary sampling ===== #
-        pre_weights = self.proposal.pre_weight(y, self._x_cur)
+        pre_weights = self.proposal.pre_weight(y, state.x)
 
-        resamp_w = pre_weights + self._w_old
-        normalized = normalize(self._w_old)
+        resamp_w = pre_weights + state.w
+        normalized = normalize(state.w)
 
         # ===== Resample ===== #
         resampled_indices = self._resampler(resamp_w)
-        resampled_x = choose(self._x_cur, resampled_indices)
+        resampled_x = choose(state.x, resampled_indices)
 
         self.proposal.resample(resampled_indices)
 
@@ -26,17 +27,12 @@ class APF(ParticleFilter):
         self.proposal.construct(y, resampled_x)
 
         # ===== Propagate and weight ===== #
-        self._x_cur = self._proposal.draw(self._rsample)
-        weights = self.proposal.weight(y, self._x_cur, resampled_x)
+        x = self._proposal.draw(self._rsample)
+        weights = self.proposal.weight(y, x, resampled_x)
 
-        self._w_old = weights - choose(pre_weights, resampled_indices)
+        w = weights - choose(pre_weights, resampled_indices)
 
         # ===== Calculate log likelihood ===== #
-        ll = loglikelihood(self._w_old) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
+        ll = loglikelihood(w) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
 
-        # ===== Get weights ====== #
-        normw = normalize(self._w_old)
-        if self._sumaxis < -1:
-            normw.unsqueeze_(-1)
-
-        return (normw * self._x_cur).sum(self._sumaxis), ll
+        return ParticleState(x, w, ll)

@@ -1,8 +1,8 @@
 import torch
-from .utils import get_ess
+from ...utils import get_ess
 from math import sqrt
 from typing import Union
-from .inference.utils import _construct_mvn
+from ..utils import _construct_mvn
 from torch.distributions import Normal, Independent
 
 
@@ -143,6 +143,21 @@ class NonShrinkingKernel(ShrinkingKernel):
         return self
 
 
+class LiuWestShrinkage(ShrinkingKernel):
+    def __init__(self, delta=0.98):
+        super().__init__()
+        self._a = delta
+        self._bw_fac = sqrt(1 - delta ** 2)
+
+    def fit(self, x, w):
+        mean = (w.unsqueeze(-1) * x).sum(0)
+
+        self._cov = robust_var(x, w, mean)
+        self._means = x * self._a + (1 - self._a) * mean
+
+        return self
+
+
 class IndependentGaussian(ShrinkingKernel):
     def __init__(self, factor=silverman):
         """
@@ -179,7 +194,7 @@ class ConstantKernel(ShrinkingKernel):
     def fit(self, x, w):
         self._w = w
         self._means = x
-        self._cov = torch.ones_like(self._bw_fac, device=w.device)
+        self._cov = torch.ones(self._means.shape[-1], device=self._means.device)
 
         return self
 

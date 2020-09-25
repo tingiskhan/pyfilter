@@ -1,16 +1,15 @@
-from .base import BatchAlgorithm
+from .base import OptimizationBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
-from ..timeseries import StateSpaceModel
-from ..timeseries.base import StochasticProcess
-from .utils import stacker
-from ..utils import EPS, unflattify
-from ..filters import UKF
+from ...timeseries import StateSpaceModel, StochasticProcess
+from ...utils import EPS, unflattify, stacker
+from ...filters import UKF
 from typing import Type, Union
+from .state import VariationalState
 
 
-class VariationalBayes(BatchAlgorithm):
+class VariationalBayes(OptimizationBatchAlgorithm):
     def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, approx: BaseApproximation = None,
                  optimizer: Type[Optimizer] = Adam, max_iter=30e3, optkwargs=None, use_filter=True):
         """
@@ -22,6 +21,7 @@ class VariationalBayes(BatchAlgorithm):
         :param optimizer: The optimizer
         :param max_iter: The maximum number of iterations
         :param optkwargs: Any optimizer specific kwargs
+        :param use_filter: Whether to initialize VB with using filtered estimates
         """
 
         super().__init__(max_iter)
@@ -48,22 +48,6 @@ class VariationalBayes(BatchAlgorithm):
         self._optimizer = None
         self.optkwargs = optkwargs or dict()
 
-    @property
-    def s_approximation(self) -> Union[None, StateMeanField]:
-        """
-        Returns the resulting variational approximation of the states.
-        """
-
-        return self._s_approx
-
-    @property
-    def p_approximation(self):
-        """
-        Returns the resulting variational approximation of the parameters.
-        """
-
-        return self._p_approx
-
     def sample_params(self):
         """
         Samples parameters from the variational approximation.
@@ -72,6 +56,9 @@ class VariationalBayes(BatchAlgorithm):
 
         params = self._p_approx.sample(self._ns)
         for p, msk in zip(self._model.theta_dists, self._mask):
+            if not p.trainable:
+                continue
+
             p.detach_()
             p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
 
@@ -94,11 +81,16 @@ class VariationalBayes(BatchAlgorithm):
 
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
-                filt = UKF(self._model.copy()).viewify_params((self._ns, 1)).set_nparallel(self._ns)
-                filt.initialize().longfilter(y, bar=False)
+                filt = UKF(self._model.copy()).set_nparallel(self._ns)
+                filt.longfilter(y, bar=False)
 
-                maxind = filt.result.loglikelihood.sum(0).argmax()
-                self._s_approx._mean.data[1:] = filt.result.filter_means[:, maxind]
+                maxind = filt.result.loglikelihood.argmax()
+
+                filtres = filt.result.filter_means[:, maxind]
+                if self._model.hidden_ndim < 1:
+                    filtres.squeeze_(-1)
+
+                self._s_approx._mean.data[1:] = filtres
 
             # ===== Append parameters ===== #
             params += self._s_approx.get_parameters()
@@ -131,7 +123,7 @@ class VariationalBayes(BatchAlgorithm):
         else:
             logl = self._model.log_prob(y[1:], y[:-1])
 
-        return -(logl.sum(1).mean(0) + torch.mean(self._model.p_prior(transformed=True), dtype=logl.dtype) + entropy)
+        return -(logl.sum(1).mean(0) + self._model.p_prior(transformed=True).mean() + entropy)
 
     def is_converged(self, old_loss, new_loss):
         return (new_loss - old_loss).abs() < EPS
@@ -148,3 +140,8 @@ class VariationalBayes(BatchAlgorithm):
         self._optimizer.step()
 
         return elbo
+
+    def _fit(self, y: torch.Tensor, logging_wrapper, **kwargs) -> VariationalState:
+        state = super(VariationalBayes, self)._fit(y, logging_wrapper, **kwargs)
+
+        return VariationalState(state.converged, state.final_loss, state.iterations, self._p_approx, self._s_approx)

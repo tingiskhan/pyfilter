@@ -6,7 +6,8 @@ import torch
 from ..utils import choose
 from ..module import Module
 from .utils import enforce_tensor, FilterResult
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterable
+from .state import BaseState
 
 
 class BaseFilter(Module, ABC):
@@ -25,8 +26,8 @@ class BaseFilter(Module, ABC):
             raise ValueError(f'`model` must be `{StateSpaceModel.__name__:s}`!')
 
         self._model = model
-        self._n_parallel = None
-        self._filter_res = FilterResult()
+        self._n_parallel = torch.Size([])
+        self._result = FilterResult()
         self._save_means = save_means
 
     @property
@@ -35,7 +36,7 @@ class BaseFilter(Module, ABC):
         Returns the filtering result object.
         """
 
-        return self._filter_res
+        return self._result
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -44,11 +45,14 @@ class BaseFilter(Module, ABC):
         """
         return self._model
 
-    def viewify_params(self, shape):
+    @property
+    def n_parallel(self) -> torch.Size:
+        return self._n_parallel
+
+    def viewify_params(self, shape: Union[int, torch.Size]):
         """
         Defines views to be used as parameters instead
         :param shape: The shape to use. Please note that
-        :type shape: tuple|torch.Size
         :return: Self
         """
 
@@ -64,71 +68,79 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def initialize(self):
+    def initialize(self) -> BaseState:
         """
         Initializes the filter.
         :return: Self
         """
 
-        return self
+        raise NotImplementedError()
 
     @enforce_tensor
-    def filter(self, y: Union[float, torch.Tensor]):
+    def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         """
         Performs a filtering the model for the observation `y`.
         :param y: The observation
+        :param state: The previous state
         :return: Self and log-likelihood
         """
 
-        xm, ll = self._filter(y)
+        state = self._filter(y, state)
 
         if self._save_means:
-            self._filter_res.append(xm, ll)
+            self._result.append(state.get_mean(), state.get_loglikelihood())
         else:
-            self._filter_res.append(None, ll)
+            self._result.append(None, state.get_loglikelihood())
 
-        return self, ll
+        return state
 
-    def _filter(self, y: Union[float, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        The actual filtering procedure. Overwrite this.
-        :param y: The observation
-        :return: Mean of state, log-likelihood
-        """
-
+    def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
-    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True):
+    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True,
+                   record_states=False, init_state: BaseState = None) -> Union[BaseState, Tuple[BaseState]]:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
         :param bar: Whether to print a progressbar
-        :return: Self
+        :param record_states: Whether to record states on a tuple
+        :param init_state: The initial state to use
         """
 
         astuple = tuple(y) if not isinstance(y, tuple) else y
-        if bar:
-            iterator = tqdm(astuple, desc=str(self.__class__.__name__))
-        else:
-            iterator = astuple
+        iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
+
+        recorder = tuple()
+        state = init_state or self.initialize()
+
+        if record_states:
+            recorder += (state,)
 
         for yt in iterator:
-            self.filter(yt)
+            state = self.filter(yt, state)
 
-        return self
+            if record_states:
+                recorder += (state,)
 
-    def copy(self):
+        if not record_states:
+            return state
+
+        return recorder
+
+    def copy(self, view_shape=torch.Size([])):
         """
         Returns a copy of itself.
         :return: Copy of self
         """
 
-        # TODO: Need to fix the reference to _theta_vals here. If there are parameters we need to redefine them
-        return copy.deepcopy(self)
+        res = copy.deepcopy(self)
+        res.viewify_params(view_shape)
+        return res
 
-    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead using the latest available information.
+        :param state: The state to go from
         :param steps: The number of steps forward to predict
         :param kwargs: Any key worded arguments
         """
@@ -143,39 +155,22 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
         if entire_history:
-            self._filter_res.resample(inds)
+            self._result.resample(inds)
 
-        # ===== Resample the parameters of the model ====== #
         self.ssm.p_apply(lambda u: choose(u.values, inds))
-        self._resample(inds)
 
         return self
 
-    def _resample(self, inds: torch.Tensor):
+    def reset(self, only_ll=False):
         """
-        Implements resampling unique for the filter.
-        :param inds: The indices
+        Resets the filter by resetting the results.
         :return: Self
         """
 
-        return self
-
-    def reset(self):
-        """
-        Resets the filter by nullifying the filter specific attributes.
-        :return: Self
-        """
-
-        self._filter_res = FilterResult()
-        self._reset()
-
-        return self
-
-    def _reset(self):
-        """
-        Any filter specific resets.
-        :return: Self
-        """
+        if only_ll:
+            self._result._loglikelihood = torch.zeros_like(self._result.loglikelihood)
+        else:
+            self._result = FilterResult()
 
         return self
 
@@ -189,21 +184,19 @@ class BaseFilter(Module, ABC):
         """
 
         self._model.exchange(inds, filter_.ssm)
-        self._filter_res.exchange(filter_._filter_res, inds)
-        self._exchange(filter_, inds)
+        self._result.exchange(filter_._result, inds)
 
         return self
 
-    def _exchange(self, filter_, inds: torch.Tensor):
-        """
-        Filter specific exchanges.
-        :param filter_: The new filter
-        :type filter_: BaseFilter
-        :param inds: The indices
-        :return: Self
-        """
+    def populate_state_dict(self):
+        return {
+            "_model": self.ssm.state_dict(),
+            "_n_parallel": self._n_parallel,
+            "_result": self.result
+        }
 
-        return self
+    def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
+        raise NotImplementedError()
 
 
 class BaseKalmanFilter(BaseFilter, ABC):

@@ -1,11 +1,11 @@
 import unittest
-from pyfilter.inference import NESS, SMC2, NESSMC2, SMC2FW
 from torch.distributions import Normal, Exponential, Independent, LogNormal
-from pyfilter.filters import SISR, UKF, APF
+from pyfilter.filters import UKF, APF
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
+from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 
 
 def f(x, alpha, sigma):
@@ -41,7 +41,7 @@ class MyTestCase(unittest.TestCase):
         mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
 
         # ===== Define model ===== #
-        linear = AffineProcess((f, g), (1., 0.25), dist, dist)
+        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
         model = LinearGaussianObservations(linear, scale=0.1)
 
         mv_linear = AffineProcess((fmvn, gmvn), (0.5, 0.25), mvn, mvn)
@@ -70,16 +70,17 @@ class MyTestCase(unittest.TestCase):
             ]
 
             for alg, props in algs:
-                alg = alg(**props).initialize()
+                alg = alg(**props)
+                state = alg.fit(y)
 
-                alg = alg.fit(y)
+                w = normalize(state.w)
 
-                w = normalize(alg._w_rec if hasattr(alg, '_w_rec') else torch.ones(particles))
+                zipped = zip(
+                    trumod.hidden.theta + trumod.observable.theta,                  # True parameter values
+                    alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta   # Inferred
+                )
 
-                tru_params = trumod.hidden.theta._cont + trumod.observable.theta._cont
-                inf_params = alg.filter.ssm.hidden.theta._cont + alg.filter.ssm.observable.theta._cont
-
-                for trup, p in zip(tru_params, inf_params):
+                for trup, p in zipped:
                     if not p.trainable:
                         continue
 

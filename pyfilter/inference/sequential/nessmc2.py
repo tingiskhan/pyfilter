@@ -1,10 +1,8 @@
 from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
-import torch
-from ..kde import ConstantKernel, robust_var, ShrinkingKernel
-from .utils import stacker
-from ..normalization import normalize
+from ..kernels.kde import ConstantKernel, robust_var, LiuWestShrinkage, NormalApproximation
+from ...normalization import normalize
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
@@ -24,16 +22,15 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         return SMC2(filter_, particles, threshold=threshold, **kwargs)
 
     def make_second(self, filter_, particles, **kwargs):
-        kde = kwargs.pop('kde', ShrinkingKernel())
-        return NESS(filter_, particles, kde=kde, **kwargs)
+        kde = kwargs.pop('kde', LiuWestShrinkage())
+        return NESS(filter_, particles, kde=kde, threshold=kwargs.pop("threshold", 0.95), **kwargs)
 
-    def do_on_switch(self, first: SMC2, second: NESS):
+    def do_on_switch(self, first: SMC2, second: NESS, state):
         if isinstance(self._second._kernel._kde, ConstantKernel):
-            stacked = stacker(first.filter.ssm.theta_dists, lambda u: u.t_values)
-            var = robust_var(stacked.concated, normalize(self._w_rec))
+            stacked = first.filter.ssm.parameters_as_matrix()
+            var = robust_var(stacked.concated, normalize(state.w))
 
             bw = (1 / self._particles[0] ** 1.5 * var).sqrt()
             second._kernel._kde._bw_fac = bw
 
-        self._first.rejuvenate()
-        second._w_rec = torch.zeros_like(first._w_rec)
+        return self._first.rejuvenate(state)

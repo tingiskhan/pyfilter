@@ -1,11 +1,11 @@
-from ...filters.base import BaseFilter
-from ...utils import normalize
+from ...utils import normalize, unflattify
 from .base import BaseKernel
-from ..utils import stacker, _eval_kernel, _construct_mvn, _mcmc_move
+from ..utils import _construct_mvn
 import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
-from typing import Iterable
+from typing import Iterable, Tuple
 from math import sqrt
+from ...filters import BaseState, BaseFilter
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -20,7 +20,6 @@ class ParticleMetropolisHastings(BaseKernel):
         self._nsteps = nsteps
         self._y = None
         self.accepted = None
-        self._entire_hist = True
 
     def set_data(self, y: Iterable[torch.Tensor]):
         """
@@ -44,34 +43,18 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def _calc_diff_logl(self, t_filt: BaseFilter, filter_: BaseFilter):
-        """
-        Helper method for calculating the difference in log likelihood between proposed and existing parameters.
-        :param t_filt: The new filter
-        :param filter_: The old filter
-        :return: Difference in loglikelihood
-        """
+    def calc_model_loss(self, new_filter: BaseFilter, old_filter: BaseFilter) -> Tuple[BaseState, torch.Tensor]:
+        new_state = new_filter.longfilter(self._y, bar=False)
+        diff_logl = new_filter.result.loglikelihood - old_filter.result.loglikelihood
 
-        t_filt.reset().initialize().longfilter(self._y, bar=False)
-        return t_filt.result.loglikelihood - filter_.result.loglikelihood
+        diff_prior = new_filter.ssm.p_prior() - old_filter.ssm.p_prior()
 
-    def _before_resampling(self, filter_: BaseFilter, stacked: torch.Tensor):
-        """
-        Helper method for carrying out operations before resampling.
-        :param filter_: The filter
-        :param stacked: The stacked parameterss
-        :return: Self
-        """
+        return new_state, diff_logl + diff_prior
 
-        return self
-
-    def _update(self, parameters, filter_, weights):
+    def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
-            stacked = stacker(parameters, lambda u: u.t_values)
-
-            # ===== Perform necessary operation prior to resampling ===== #
-            self._before_resampling(filter_, stacked.concated)
+            stacked = filter_.ssm.parameters_as_matrix(transformed=True)
 
             # ===== Find the best particles ===== #
             inds = self._resampler(weights, normalized=True)
@@ -81,39 +64,41 @@ class ParticleMetropolisHastings(BaseKernel):
             indep_kernel = isinstance(dist, Independent)
 
             # ===== Choose particles ===== #
-            filter_.resample(inds, entire_history=self._entire_hist)
+            filter_.resample(inds, entire_history=True)
+            state.resample(inds)
 
-            # ===== Define new filters and move via MCMC ===== #
-            t_filt = filter_.copy()
-            t_filt.viewify_params((*filter_._n_parallel, 1))
-            _mcmc_move(t_filt.ssm.theta_dists, dist, stacked, None if indep_kernel else stacked.concated.shape[0])
+            # ===== Define new filters ===== #
+            prop_filt = filter_.copy((*filter_.n_parallel, 1)).reset()
 
-            # ===== Calculate difference in loglikelihood ===== #
-            quotient = self._calc_diff_logl(t_filt, filter_)
+            # ===== Update parameters ===== #
+            rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
+            new_params = tuple(unflattify(rvs[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
 
-            # ===== Calculate acceptance ratio ===== #
-            plogquot = t_filt.ssm.p_prior() - filter_.ssm.p_prior()
-            kernel = 0. if indep_kernel else _eval_kernel(filter_.ssm.theta_dists, dist, t_filt.ssm.theta_dists)
+            prop_filt.ssm.update_parameters(new_params)
+
+            # ===== Calculate acceptance probabilities ===== #
+            prop_state, model_loss = self.calc_model_loss(prop_filt, filter_)
+
+            kernel_diff = 0.
+            if not indep_kernel:
+                kernel_diff += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
 
             # ===== Check which to accept ===== #
-            toaccept = torch.empty_like(quotient).uniform_().log() < quotient + plogquot + kernel
+            toaccept = torch.empty_like(model_loss).uniform_().log() < model_loss + kernel_diff
 
             # ===== Update the description ===== #
             self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
 
-            if self._entire_hist:
-                filter_.exchange(t_filt, toaccept)
-            else:
-                filter_.ssm.exchange(toaccept, t_filt.ssm)
-
-            weights = normalize(filter_.result.loglikelihood)
+            filter_.exchange(prop_filt, toaccept)
+            state.exchange(toaccept, prop_state)
+            weights = torch.ones_like(weights) / weights.shape[0]
 
         return self
 
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, values, weights, inds):
-        return _construct_mvn(values, weights)
+        return _construct_mvn(values, weights, scale=1.1)   # Same scale in in particles
 
 
 # Same as: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py

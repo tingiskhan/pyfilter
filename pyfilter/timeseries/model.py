@@ -1,10 +1,12 @@
-from ..utils import flatten
+from ..utils import flatten, stacker
 import torch
-from .base import StochasticProcess, StochasticProcessBase
+from .base import Base
+from .process import StochasticProcess
 from typing import Tuple
+from .parameter import Parameter
 
 
-class StateSpaceModel(StochasticProcessBase):
+class StateSpaceModel(Base):
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         """
         Combines a hidden and observable processes to constitute a state-space model.
@@ -42,11 +44,19 @@ class StateSpaceModel(StochasticProcessBase):
     def log_prob(self, y, x):
         return self.observable.log_prob(y, x)
 
-    def viewify_params(self, shape):
-        for mod in [self.hidden, self.observable]:
-            mod.viewify_params(shape)
+    def viewify_params(self, shape, in_place=True) -> Tuple[Tuple[Parameter, ...], ...]:
+        return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
+
+    def update_parameters(self, params, transformed=True):
+        num_params = len(self.hidden.theta_dists)
+
+        for m, ps in [(self.hidden, params[:num_params]), (self.observable, params[num_params:])]:
+            m.update_parameters(ps)
 
         return self
+
+    def parameters_as_matrix(self, transformed=True):
+        return stacker(self.theta_dists, lambda u: u.t_values if transformed else u.values)
 
     def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """
@@ -58,11 +68,11 @@ class StateSpaceModel(StochasticProcessBase):
 
         return self.hidden.log_prob(y, x)
 
-    def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
 
         hidden = self.hidden.sample_path(steps, x_s=x)
-        obs = self.observable.propagate(hidden)
+        obs = self.observable.propagate(hidden, u=u)
 
         return hidden, obs
 
@@ -85,3 +95,9 @@ class StateSpaceModel(StochasticProcessBase):
                 oldp.values[indices] = newp.values[indices]
 
         return self
+
+    def populate_state_dict(self):
+        return {
+            "hidden": self.hidden.state_dict(),
+            "observable": self.observable.state_dict()
+        }

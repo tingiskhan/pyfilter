@@ -1,10 +1,9 @@
-from .timeseries import StateSpaceModel
-from .timeseries.base import StochasticProcess
+from .timeseries import StateSpaceModel, StochasticProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from .utils import construct_diag, TempOverride
-from .module import Module, TensorContainer
+from .module import Module
 from .timeseries.parameter import size_getter
 from typing import Tuple, Union
 
@@ -58,12 +57,21 @@ def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
 
 
 class UFTCorrectionResult(object):
-    def __init__(self, xm: torch.Tensor, xc: torch.Tensor, ym: torch.Tensor, yc: torch.Tensor):
-        self.xm = xm
-        self.xc = xc
-
+    def __init__(self, mean: torch.Tensor, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor):
         self.ym = ym
         self.yc = yc
+
+        self.mean = mean
+        self.cov = cov
+        self._sslc = state_slice
+
+    @property
+    def xm(self):
+        return self.mean[..., self._sslc]
+
+    @property
+    def xc(self):
+        return self.cov[..., self._sslc, self._sslc]
 
     @staticmethod
     def _helper(m, c):
@@ -83,6 +91,14 @@ class UFTPredictionResult(object):
     def __init__(self, spx: torch.Tensor, spy: torch.Tensor):
         self.spx = spx
         self.spy = spy
+
+
+class AggregatedResult(object):
+    def __init__(self, xm, xc, ym, yc):
+        self.xm = xm
+        self.xc = xc
+        self.ym = ym
+        self.yc = yc
 
 
 # TODO: Rewrite this one to not save state
@@ -115,8 +131,6 @@ class UnscentedFilterTransform(Module):
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
 
         # ===== Auxiliary variables ===== #
-        self._ymean = None
-        self._ycov = None
         self._views = None
 
         self._diaginds = range(model.hidden_ndim)
@@ -159,25 +173,8 @@ class UnscentedFilterTransform(Module):
         :return: Self
         """
 
-        # ==== Define empty arrays ===== #
-        self._mean = torch.zeros((*shape, self._ndim))
-        self._cov = torch.zeros((*shape, self._ndim, self._ndim))
-
-        # TODO: Perhaps move this to Timeseries?
-        self._views = TensorContainer()
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
-
-        for model in [self._model.hidden, self._model.observable]:
-            params = tuple()
-            for p in model.theta:
-                if p.trainable:
-                    view = p.view(*view_shape, *p.shape[1:])
-                else:
-                    view = p
-
-                params += (view,)
-
-            self._views.append(TensorContainer(*params))
+        self._views = self._model.viewify_params(view_shape, in_place=False)
 
         return self
 
@@ -189,39 +186,45 @@ class UnscentedFilterTransform(Module):
         :return: Self
         """
 
-        self._set_weights()._set_slices()._set_arrays(size_getter(shape))
+        shape = size_getter(shape)
+        self._set_weights()._set_slices()._set_arrays(shape)
 
-        # ==== Set mean ===== #
-        self._mean[..., self._sslc] = self._model.hidden.i_sample(1000).mean(0)
+        # ===== Define and covariance ===== #
+        mean = torch.zeros((*shape, self._ndim))
+        cov = torch.zeros((*shape, self._ndim, self._ndim))
+
+        # ===== Set mean ===== #
+        s_mean = self._model.hidden.i_sample((1000, *shape)).mean(0)
+        if self._model.hidden_ndim < 1:
+            s_mean.unsqueeze_(-1)
+
+        mean[..., self._sslc] = s_mean
 
         # ==== Set state covariance ===== #
-        var = cov = self._model.hidden.initial_dist.variance
+        var = s_cov = self._model.hidden.initial_dist.variance
 
         if self._model.hidden_ndim > 0:
-            cov = construct_diag(var)
+            s_cov = construct_diag(var)
 
-        self._cov[..., self._sslc, self._sslc] = cov
+        cov[..., self._sslc, self._sslc] = s_cov
 
         # ==== Set noise covariance ===== #
-        self._cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
-        self._cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
+        cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
+        cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
 
-        return UFTCorrectionResult(self._mean[..., self._sslc], self._cov[..., self._sslc, self._sslc], None, None)
+        return UFTCorrectionResult(mean, cov, self._sslc, None, None)
 
-    def _get_sps(self, mean: torch.Tensor, cov: torch.Tensor):
+    def _get_sps(self, state: UFTCorrectionResult):
         """
         Constructs the Sigma points used for propagation.
         :return: Sigma points
         """
 
-        self._mean[..., self._sslc] = mean
-        self._cov[..., self._sslc, self._sslc] = cov
+        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(state.cov)
 
-        cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(self._cov)
-
-        spx = self._mean.unsqueeze(-2)
-        sph = self._mean[..., None, :] + cholcov
-        spy = self._mean[..., None, :] - cholcov
+        spx = state.mean.unsqueeze(-2)
+        sph = state.mean[..., None, :] + cholcov
+        spy = state.mean[..., None, :] - cholcov
 
         return torch.cat((spx, sph, spy), -2)
 
@@ -232,8 +235,7 @@ class UnscentedFilterTransform(Module):
         :return: Prediction
         """
 
-        # ===== Propagate sigma points ===== #
-        sps = self._get_sps(utf_corr.xm, utf_corr.xc)
+        sps = self._get_sps(utf_corr)
 
         spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
         spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._views[1])
@@ -244,13 +246,25 @@ class UnscentedFilterTransform(Module):
         xmean, xcov = _get_meancov(uft_pred.spx, self._wm, self._wc)
         ymean, ycov = _get_meancov(uft_pred.spy, self._wm, self._wc)
 
-        return UFTCorrectionResult(xmean, xcov, ymean, ycov)
+        return AggregatedResult(xmean, xcov, ymean, ycov)
 
-    def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult):
+    def update_state(self, xm: torch.Tensor, xc: torch.Tensor, state: UFTCorrectionResult,
+                     ym: torch.Tensor = None, yc: torch.Tensor = None):
+        # ===== Overwrite ===== #
+        mean = state.mean.clone()
+        cov = state.cov.clone()
+
+        mean[..., self._sslc] = xm
+        cov[..., self._sslc, self._sslc] = xc
+
+        return UFTCorrectionResult(mean, cov, self._sslc, ym, yc)
+
+    def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult):
         """
         Constructs the mean and covariance given the current observation and previous state.
         :param y: The current observation
         :param uft_pred: The prediction result to correct
+        :param prev_corr: The previous correction result
         :return: Self
         """
 
@@ -280,4 +294,5 @@ class UnscentedFilterTransform(Module):
         temp = torch.matmul(ycov, gain.transpose(-1, -2))
         txcov = xcov - torch.matmul(gain, temp)
 
-        return UFTCorrectionResult(txmean, txcov, ymean, ycov)
+        # ===== Overwrite ===== #
+        return self.update_state(txmean, txcov, prev_corr, ymean, ycov)

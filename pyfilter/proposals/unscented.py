@@ -18,15 +18,12 @@ class Unscented(Proposal):
 
         return self
 
-    def modules(self):
-        return {'_ut': self._ut} if self._ut is not None else {}
-
     def construct(self, y, x):
         if self._ut_res is None:
             self._ut_res = self._ut.initialize(x.shape[:-1] if self._model.hidden_ndim > 0 else x.shape)
 
         p = self._ut.predict(self._ut_res)
-        self._ut_res = self._ut.correct(y, p)
+        self._ut_res = self._ut.correct(y, p, self._ut_res)
         self._kernel = self._ut_res.x_dist()
 
         return self
@@ -35,8 +32,8 @@ class Unscented(Proposal):
         if self._ut_res is None:
             return self
 
-        self._ut_res.xm = choose(self._ut_res.xm, inds)
-        self._ut_res.xc = choose(self._ut_res.xc, inds)
+        self._ut_res.mean = choose(self._ut_res.mean, inds)
+        self._ut_res.cov = choose(self._ut_res.cov, inds)
 
         return self
 

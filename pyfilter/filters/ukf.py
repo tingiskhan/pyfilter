@@ -1,8 +1,8 @@
 from .base import BaseKalmanFilter
-from ..uft import UnscentedFilterTransform, UFTCorrectionResult
-from ..utils import choose
+from ..uft import UnscentedFilterTransform
 import torch
 from typing import Dict
+from .state import KalmanState
 
 
 class UKF(BaseKalmanFilter):
@@ -16,28 +16,24 @@ class UKF(BaseKalmanFilter):
         super().__init__(model, **kwargs)
 
         self._ut = UnscentedFilterTransform(model, **(utfkwargs or dict()))
-        self._ut_res = None
 
-    def initialize(self):
-        self._ut_res = self._ut.initialize(self._n_parallel)
+    def initialize(self) -> KalmanState:
+        res = self._ut.initialize(self._n_parallel)
+        return KalmanState(res, torch.tensor(0., device=res.xm.device))
 
-        return self
+    def _filter(self, y, state: KalmanState):
+        p = self._ut.predict(state.utf)
+        res = self._ut.correct(y, p, state.utf)
 
-    def _filter(self, y):
-        p = self._ut.predict(self._ut_res)
-        self._ut_res = self._ut.correct(y, p)
+        return KalmanState(res, res.y_dist().log_prob(y))
 
-        return self._ut_res.xm, self._ut_res.y_dist().log_prob(y)
+    def predict(self, state: KalmanState, steps, *args, **kwargs):
+        utf_state = state.utf
 
-    def _resample(self, inds):
-        self._ut_res.xm = choose(self._ut_res.xm, inds)
-        self._ut_res.xc = choose(self._ut_res.xc, inds)
-
-        return self
-
-    def predict(self, steps, *args, **kwargs):
-        p = self._ut.predict(self._ut_res)
+        p = self._ut.predict(state.utf)
         c = self._ut.calc_mean_cov(p)
+
+        utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
 
         xres = torch.empty((steps, *c.xm.shape))
         yres = torch.empty((steps, *c.ym.shape))
@@ -46,8 +42,10 @@ class UKF(BaseKalmanFilter):
         yres[0] = c.ym
 
         for i in range(steps - 1):
-            p = self._ut.predict(c)
+            p = self._ut.predict(utf_state)
             c = self._ut.calc_mean_cov(p)
+
+            utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
 
             xres[i + 1] = c.xm
             yres[i + 1] = c.ym

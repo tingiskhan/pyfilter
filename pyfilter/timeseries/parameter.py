@@ -176,7 +176,12 @@ class Parameter(torch.Tensor):
         if not self.trainable:
             raise ValueError('Cannot initialize parameter as it is not of instance `Distribution`!')
 
-        self.data = self._prior.sample(size_getter(shape))
+        new_data = self._prior.sample(size_getter(shape))
+
+        if self.data.shape == new_data.shape:
+            self.values = new_data
+        else:
+            self.data = new_data
 
         return self
 

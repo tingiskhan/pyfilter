@@ -1,4 +1,4 @@
-from .base import StochasticProcess
+from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Callable, Union
@@ -29,10 +29,10 @@ class AffineProcess(StochasticProcess):
         # ===== Dynamics ===== #
         self.f, self.g = funcs
 
-    def _log_prob(self, y, x):
+    def define_density(self, x, u=None):
         loc, scale = self._mean_scale(x)
 
-        return self._define_transdist(loc, scale).log_prob(y)
+        return self._define_transdist(loc, scale)
 
     def mean_scale(self, x: torch.Tensor):
         """
@@ -60,14 +60,6 @@ class AffineProcess(StochasticProcess):
 
         return _define_transdist(loc, scale, self.increment_dist, self.ndim)
 
-    def _propagate(self, x, as_dist=False):
-        dist = self._define_transdist(*self._mean_scale(x))
-
-        if as_dist:
-            return dist
-
-        return dist.sample()
-
     def _propagate_u(self, x, u):
         loc, scale = self._mean_scale(x)
         return loc + scale * u
@@ -85,7 +77,7 @@ def _g(x, s):
 
 
 class RandomWalk(AffineProcess):
-    def __init__(self, std: Union[torch.Tensor, float, Distribution]):
+    def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist: Distribution = None):
         """
         Defines a random walk.
         :param std: The vector of standard deviations
@@ -97,4 +89,4 @@ class RandomWalk(AffineProcess):
         else:
             normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
-        super().__init__((_f, _g), (std,), normal, normal)
+        super().__init__((_f, _g), (std,), initial_dist or normal, normal)

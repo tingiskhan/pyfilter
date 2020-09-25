@@ -1,13 +1,12 @@
 import torch
-from ..module import TensorContainerBase, TensorContainer
 
 
 def enforce_tensor(func):
-    def wrapper(obj, y, **kwargs):
+    def wrapper(obj, y, *args, **kwargs):
         if not isinstance(y, torch.Tensor):
             raise ValueError('The observation must be of type Tensor!')
 
-        return func(obj, y, **kwargs)
+        return func(obj, y, *args, **kwargs)
 
     return wrapper
 
@@ -22,7 +21,7 @@ def _construct_empty(array: torch.Tensor) -> torch.Tensor:
     return temp * torch.ones_like(array, dtype=temp.dtype)
 
 
-class FilterResult(TensorContainerBase):
+class FilterResult(object):
     def __init__(self):
         """
         Implements a basic object for storing log likelihoods and the filtered means of a filter.
@@ -30,14 +29,7 @@ class FilterResult(TensorContainerBase):
         super().__init__()
 
         self._loglikelihood = None    # type: torch.Tensor
-        self._filter_means = TensorContainer()
-
-    @property
-    def tensors(self):
-        if not isinstance(self._loglikelihood, torch.Tensor):
-            return self._filter_means.tensors
-
-        return (self._loglikelihood,) + self._filter_means.tensors
+        self._filter_means = tuple()
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -46,7 +38,7 @@ class FilterResult(TensorContainerBase):
     @property
     def filter_means(self) -> torch.Tensor:
         if len(self._filter_means) > 0:
-            return torch.stack(self._filter_means.tensors)
+            return torch.stack(self._filter_means)
 
         return torch.empty(0)
 
@@ -66,7 +58,7 @@ class FilterResult(TensorContainerBase):
             old_fm = self.filter_means
             old_fm[:, inds] = res.filter_means[:, inds]
 
-            self._filter_means = TensorContainer(*old_fm)
+            self._filter_means = tuple(old_fm)
 
         return self
 
@@ -79,12 +71,12 @@ class FilterResult(TensorContainerBase):
         self._loglikelihood = self.loglikelihood[inds]
 
         if len(self._filter_means) > 0:
-            self._filter_means = TensorContainer(*self.filter_means[:, inds])
+            self._filter_means = tuple(self.filter_means[:, inds])
 
         return self
 
     def append(self, xm, ll):
-        self._filter_means.append(xm)
+        self._filter_means += (xm,)
 
         if self._loglikelihood is None:
             self._loglikelihood = torch.zeros_like(ll)
