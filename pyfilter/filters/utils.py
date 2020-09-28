@@ -76,7 +76,8 @@ class FilterResult(object):
         return self
 
     def append(self, xm, ll):
-        self._filter_means += (xm,)
+        if xm is not None:
+            self._filter_means += (xm,)
 
         if self._loglikelihood is None:
             self._loglikelihood = torch.zeros_like(ll)

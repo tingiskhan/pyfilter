@@ -118,7 +118,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         base = super(SequentialParticleAlgorithm, self).populate_state_dict()
 
         base.update(**{
-            "particles": self.particles,
+            "_particles": self.particles,
             "_logged_ess": self._logged_ess
         })
 
@@ -181,7 +181,8 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
             "_first": self._first.state_dict(),
             "_second": self._second.state_dict(),
             "_when_to_switch": self._when_to_switch,
-            "_is_switched": self._is_switched
+            "_is_switched": self._is_switched,
+            "_num_iters": self._num_iters
         })
 
         return base
