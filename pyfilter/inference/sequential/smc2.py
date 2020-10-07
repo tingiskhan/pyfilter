@@ -90,3 +90,12 @@ class SMC2(SequentialParticleAlgorithm):
         self._increases += 1
 
         return FilteringAlgorithmState(w, state)
+
+    def populate_state_dict(self):
+        res = super(SMC2, self).populate_state_dict()
+        res.update(**{
+            "_y": self._y,
+            "_increases": self._increases
+        })
+
+        return res
