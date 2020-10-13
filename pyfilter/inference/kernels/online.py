@@ -1,8 +1,8 @@
 from .base import BaseKernel
 from .kde import KernelDensityEstimate, NonShrinkingKernel
-from ...utils import unflattify, get_ess
+from ...utils import unflattify
 import torch
-from ...filters import BaseFilter, BaseState
+from ...filters import BaseFilter, FilterResult
 
 
 class OnlineKernel(BaseKernel):
@@ -12,20 +12,15 @@ class OnlineKernel(BaseKernel):
         :param kde: The kernel density estimator to use
         :type kde: KernelDensityEstimate
         """
+
         super().__init__(**kwargs)
 
         self._kde = kde or NonShrinkingKernel()
         self._disc = discrete
 
-    def _resample(self, filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
-        """
-        Helper method for performing resampling.
-        :param filter_: The filter to resample
-        :param weights: The weights
-        """
-
+    def _resample(self, filter_: BaseFilter, state: FilterResult, weights: torch.Tensor):
         inds = self._resampler(weights, normalized=True)
-        filter_.resample(inds, entire_history=False)
+        filter_.resample(inds)
         state.resample(inds)
 
         return inds

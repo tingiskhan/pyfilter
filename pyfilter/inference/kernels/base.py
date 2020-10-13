@@ -4,7 +4,7 @@ from ...resampling import systematic
 import torch
 from typing import Iterable, Callable, Union
 from ...timeseries import Parameter
-from ...filters import BaseFilter, BaseState
+from ...filters import BaseFilter, FilterResult
 
 
 def finite_decorator(func):
@@ -41,11 +41,11 @@ class BaseKernel(object):
 
         return self
 
-    def _update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
+    def _update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: FilterResult, weights: torch.Tensor):
         raise NotImplementedError()
 
     @finite_decorator
-    def update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: BaseState, weights: torch.Tensor):
+    def update(self, parameters: Iterable[Parameter], filter_: BaseFilter, state: FilterResult, weights: torch.Tensor):
         """
         Defines the function for updating the parameters.
         :param parameters: The parameters of the model to update

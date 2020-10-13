@@ -1,11 +1,11 @@
-from ...utils import normalize, unflattify
+from ...utils import unflattify
 from .base import BaseKernel
 from ..utils import _construct_mvn
 import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
 from typing import Iterable, Tuple
 from math import sqrt
-from ...filters import BaseState, BaseFilter
+from ...filters import BaseState, BaseFilter, FilterResult
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -43,13 +43,14 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def calc_model_loss(self, new_filter: BaseFilter, old_filter: BaseFilter) -> Tuple[BaseState, torch.Tensor]:
-        new_state = new_filter.longfilter(self._y, bar=False)
-        diff_logl = new_filter.result.loglikelihood - old_filter.result.loglikelihood
+    def calc_model_loss(self, new_filter: BaseFilter, old_filter: BaseFilter,
+                        old_res: FilterResult) -> Tuple[FilterResult, torch.Tensor]:
+        new_res = new_filter.longfilter(self._y, bar=False)
+        diff_logl = new_res.loglikelihood - old_res.loglikelihood
 
         diff_prior = new_filter.ssm.p_prior() - old_filter.ssm.p_prior()
 
-        return new_state, diff_logl + diff_prior
+        return new_res, diff_logl + diff_prior
 
     def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
@@ -64,11 +65,11 @@ class ParticleMetropolisHastings(BaseKernel):
             indep_kernel = isinstance(dist, Independent)
 
             # ===== Choose particles ===== #
-            filter_.resample(inds, entire_history=True)
+            filter_.resample(inds)
             state.resample(inds)
 
             # ===== Define new filters ===== #
-            prop_filt = filter_.copy((*filter_.n_parallel, 1)).reset()
+            prop_filt = filter_.copy((*filter_.n_parallel, 1))
 
             # ===== Update parameters ===== #
             rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
@@ -77,20 +78,20 @@ class ParticleMetropolisHastings(BaseKernel):
             prop_filt.ssm.update_parameters(new_params)
 
             # ===== Calculate acceptance probabilities ===== #
-            prop_state, model_loss = self.calc_model_loss(prop_filt, filter_)
+            prop_state, model_loss = self.calc_model_loss(prop_filt, filter_, state)
 
             kernel_diff = 0.
             if not indep_kernel:
                 kernel_diff += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
 
             # ===== Check which to accept ===== #
-            toaccept = torch.empty_like(model_loss).uniform_().log() < model_loss + kernel_diff
+            toaccept = torch.empty_like(model_loss).uniform_().log() < (model_loss + kernel_diff)
 
             # ===== Update the description ===== #
             self.accepted = toaccept.sum().float() / float(toaccept.shape[0])
 
             filter_.exchange(prop_filt, toaccept)
-            state.exchange(toaccept, prop_state)
+            state.exchange(prop_state, toaccept)
             weights = torch.ones_like(weights) / weights.shape[0]
 
         return self

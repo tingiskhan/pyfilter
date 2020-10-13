@@ -11,14 +11,11 @@ from .state import BaseState
 
 
 class BaseFilter(Module, ABC):
-    def __init__(self, model: StateSpaceModel, save_means=True):
+    def __init__(self, model: StateSpaceModel):
         """
         The basis for filters. Take as input a model and specific attributes.
         :param model: The model
-        :param save_means: Whether to record the means, or to ignore
         """
-
-        self._dummy = torch.tensor(0.)
 
         super().__init__()
 
@@ -27,16 +24,6 @@ class BaseFilter(Module, ABC):
 
         self._model = model
         self._n_parallel = torch.Size([])
-        self._result = FilterResult()
-        self._save_means = save_means
-
-    @property
-    def result(self) -> FilterResult:
-        """
-        Returns the filtering result object.
-        """
-
-        return self._result
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -85,20 +72,13 @@ class BaseFilter(Module, ABC):
         :return: Self and log-likelihood
         """
 
-        state = self._filter(y, state)
-
-        if self._save_means:
-            self._result.append(state.get_mean(), state.get_loglikelihood())
-        else:
-            self._result.append(None, state.get_loglikelihood())
-
-        return state
+        return self._filter(y, state)
 
     def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
     def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True,
-                   record_states=False, init_state: BaseState = None) -> Union[BaseState, Tuple[BaseState]]:
+                   record_states=False, init_state: BaseState = None) -> FilterResult:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
@@ -110,22 +90,14 @@ class BaseFilter(Module, ABC):
         astuple = tuple(y) if not isinstance(y, tuple) else y
         iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
 
-        recorder = tuple()
         state = init_state or self.initialize()
-
-        if record_states:
-            recorder += (state,)
+        result = FilterResult(state)
 
         for yt in iterator:
             state = self.filter(yt, state)
+            result.append(state.get_mean(), state.get_loglikelihood(), state, not record_states)
 
-            if record_states:
-                recorder += (state,)
-
-        if not record_states:
-            return state
-
-        return recorder
+        return result
 
     def copy(self, view_shape=torch.Size([])):
         """
@@ -147,30 +119,14 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def resample(self, inds: torch.Tensor, entire_history: bool = False):
+    def resample(self, inds: torch.Tensor):
         """
         Resamples the filter, used in cases where we use nested filters.
         :param inds: The indices
-        :param entire_history: Whether to resample entire history
         :return: Self
         """
-        if entire_history:
-            self._result.resample(inds)
 
         self.ssm.p_apply(lambda u: choose(u.values, inds))
-
-        return self
-
-    def reset(self, only_ll=False):
-        """
-        Resets the filter by resetting the results.
-        :return: Self
-        """
-
-        if only_ll:
-            self._result._loglikelihood = torch.zeros_like(self._result.loglikelihood)
-        else:
-            self._result = FilterResult()
 
         return self
 
@@ -184,15 +140,13 @@ class BaseFilter(Module, ABC):
         """
 
         self._model.exchange(inds, filter_.ssm)
-        self._result.exchange(filter_._result, inds)
 
         return self
 
     def populate_state_dict(self):
         return {
             "_model": self.ssm.state_dict(),
-            "_n_parallel": self._n_parallel,
-            "_result": self.result
+            "_n_parallel": self._n_parallel
         }
 
     def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:

@@ -28,7 +28,7 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
         filter_copy = self.filter.copy((self._chains, 1))
 
         while True and self._initialize_with is None:
-            filter_copy.reset().longfilter(y, bar=False)
+            filter_copy.longfilter(y, bar=False)
 
             if torch.isfinite(filter_copy.result.loglikelihood).all():
                 return filter_copy.ssm.parameters_as_matrix(), 1e-6 * torch.eye(len(self.filter.ssm.theta_dists))
@@ -61,7 +61,7 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
         self.filter.ssm.update_parameters(new_params)
 
         # ===== Run filter ===== #
-        self.filter.longfilter(y, bar=False)
+        old_res = self.filter.longfilter(y, bar=False)
 
         # ===== Initialize state ===== #
         state = PMMHState(stacked.concated, self._chains)
@@ -69,7 +69,7 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
 
         for i in range(1, self._samples):
             # ===== Copy filter ====== #
-            t_filt = self.filter.copy((self._chains, 1)).reset()
+            t_filt = self.filter.copy((self._chains, 1))
 
             # ===== Sample parameters ===== #
             mvn = MultivariateNormal(state.samples[-1], cov)
@@ -80,15 +80,16 @@ class RandomWalkMetropolis(BatchFilterAlgorithm):
             t_filt.ssm.update_parameters(new_params)
 
             # ===== Calculate acceptance ===== #
-            t_filt.longfilter(y, bar=False)
+            new_res = t_filt.longfilter(y, bar=False)
 
-            logl_diff = t_filt.result.loglikelihood - self.filter.result.loglikelihood
+            logl_diff = new_res.loglikelihood - old_res.loglikelihood
             prior_diff = t_filt.ssm.p_prior(True) - self.filter.ssm.p_prior(True)
 
             accepted = logl_diff + prior_diff > torch.empty(self._chains).uniform_().log()
 
             # ===== Check acceptance ===== #
             self.filter.exchange(t_filt, accepted)
+            old_res.exchange(new_res, accepted)
 
             stacked = self.filter.ssm.parameters_as_matrix()
             state.accepted += accepted.float().sum()

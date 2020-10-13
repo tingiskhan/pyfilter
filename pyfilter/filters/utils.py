@@ -1,4 +1,6 @@
 import torch
+from .state import BaseState
+from typing import Tuple
 
 
 def enforce_tensor(func):
@@ -22,7 +24,7 @@ def _construct_empty(array: torch.Tensor) -> torch.Tensor:
 
 
 class FilterResult(object):
-    def __init__(self):
+    def __init__(self, init_state: BaseState):
         """
         Implements a basic object for storing log likelihoods and the filtered means of a filter.
         """
@@ -30,6 +32,7 @@ class FilterResult(object):
 
         self._loglikelihood = None    # type: torch.Tensor
         self._filter_means = tuple()
+        self._states = (init_state,)
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -41,6 +44,14 @@ class FilterResult(object):
             return torch.stack(self._filter_means)
 
         return torch.empty(0)
+
+    @property
+    def states(self) -> Tuple[BaseState, ...]:
+        return self._states
+
+    @property
+    def latest_state(self) -> BaseState:
+        return self._states[-1]
 
     def exchange(self, res, inds: torch.Tensor):
         """
@@ -60,6 +71,9 @@ class FilterResult(object):
 
             self._filter_means = tuple(old_fm)
 
+        for ns, os in zip(res.states, self.states):
+            os.exchange(ns, inds)
+
         return self
 
     def resample(self, inds: torch.Tensor):
@@ -73,9 +87,12 @@ class FilterResult(object):
         if len(self._filter_means) > 0:
             self._filter_means = tuple(self.filter_means[:, inds])
 
+        for s in self._states:
+            s.resample(inds)
+
         return self
 
-    def append(self, xm, ll):
+    def append(self, xm, ll, state, only_latest=True):
         if xm is not None:
             self._filter_means += (xm,)
 
@@ -83,5 +100,9 @@ class FilterResult(object):
             self._loglikelihood = torch.zeros_like(ll)
 
         self._loglikelihood += ll
+        if only_latest:
+            self._states = (state,)
+        else:
+            self._states += (state,)
 
         return self

@@ -9,7 +9,7 @@ from .utils import _construct_empty
 from typing import Tuple, Union, Iterable
 from ..proposals import LinearGaussianObservations
 from .state import ParticleState
-from torch.distributions import Categorical, Independent
+from torch.distributions import Categorical
 
 
 _PROPOSAL_MAPPING = {
@@ -19,7 +19,7 @@ _PROPOSAL_MAPPING = {
 
 class ParticleFilter(BaseFilter, ABC):
     def __init__(self, model, particles: int, resampling=systematic, proposal: Union[str, Proposal] = 'auto', ess=0.9,
-                 need_grad=False, log_ess=True, **kwargs):
+                 need_grad=False, **kwargs):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
@@ -38,13 +38,9 @@ class ParticleFilter(BaseFilter, ABC):
         # ===== Auxiliary variable ===== #
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
         self._rsample = need_grad
-        self._log_ess = log_ess
 
         # ===== Resampling function ===== #
         self._resampler = resampling
-
-        # ===== Logged ESS ===== #
-        self.logged_ess = tuple()
 
         # ===== Proposal ===== #
         if proposal == 'auto':
@@ -71,9 +67,6 @@ class ParticleFilter(BaseFilter, ABC):
         # ===== Get the ones requiring resampling ====== #
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._th
-
-        if self._log_ess:
-            self.logged_ess += (ess,)
 
         # ===== Create a default array for resampling ===== #
         out = _construct_empty(w)
@@ -114,16 +107,12 @@ class ParticleFilter(BaseFilter, ABC):
 
         return xm[1:], ym[1:]
 
-    def _reset(self):
-        super(ParticleFilter, self).reset()
-        self.logged_ess = tuple()
-        return self
-
     def populate_state_dict(self):
         base = super(ParticleFilter, self).populate_state_dict()
         base.update({
             "_particles": self.particles,
-            "logged_ess": self.logged_ess
+            "_rsample": self._rsample,
+            "_th": self._th
         })
 
         return base
