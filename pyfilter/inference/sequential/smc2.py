@@ -4,10 +4,12 @@ from ...utils import get_ess
 from ...filters import ParticleFilter
 from torch import isfinite
 from .state import FilteringAlgorithmState
+from typing import Optional
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.2, kernel: ParticleMetropolisHastings = None, max_increases=5):
+    def __init__(self, filter_, particles, threshold=0.2, kernel: Optional[ParticleMetropolisHastings] = None,
+                 max_increases=5):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation

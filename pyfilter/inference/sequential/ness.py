@@ -5,11 +5,11 @@ from ..kernels.kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
 from .state import FilteringAlgorithmState
-from ...filters import FilterResult
+from typing import Optional
 
 
 class BaseNESS(SequentialParticleAlgorithm, ABC):
-    def __init__(self, filter_, particles, kde: KernelDensityEstimate = None, discrete=False):
+    def __init__(self, filter_, particles, kde: Optional[KernelDensityEstimate] = None, discrete=False):
         super().__init__(filter_, particles)
 
         self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel(), discrete=discrete)
