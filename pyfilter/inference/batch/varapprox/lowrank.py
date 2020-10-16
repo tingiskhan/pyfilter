@@ -11,7 +11,7 @@ class StateLowRank(StateMeanField):
     
     def set_model(self, model):
         if model.ndim > 0:
-            raise NotImplementedError(f"Maximum ")
+            raise NotImplementedError(f"Maximum dimension of timeseries is currently 1!")
         
         super(StateLowRank, self).set_model(model)
 
