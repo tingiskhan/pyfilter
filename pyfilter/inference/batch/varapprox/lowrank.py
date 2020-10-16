@@ -4,7 +4,7 @@ from torch.distributions import LowRankMultivariateNormal
 
 
 class StateLowRank(StateMeanField):
-    def __init__(self, rank=2):
+    def __init__(self, rank: int = 2):
         super().__init__()
         self._w = None
         self._rank = rank
