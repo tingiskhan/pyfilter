@@ -15,7 +15,7 @@ class StateMeanField(BaseApproximation):
 
     def initialize(self, data, *args):
         self._mean = torch.zeros((data.shape[0] + 1, *self._model.increment_dist.event_shape), requires_grad=True)
-        self._log_std = torch.ones_like(self._mean, requires_grad=True)
+        self._log_std = torch.zeros_like(self._mean, requires_grad=True)
 
         return self
 

@@ -5,13 +5,14 @@ from .varapprox import StateMeanField, BaseApproximation, ParameterMeanField
 from ...timeseries import StateSpaceModel, StochasticProcess
 from ...utils import EPS, unflattify, stacker
 from ...filters import UKF
-from typing import Type, Union
+from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
 
 
 class VariationalBayes(OptimizationBatchAlgorithm):
     def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, approx: BaseApproximation = None,
-                 optimizer: Type[Optimizer] = Adam, max_iter=30e3, optkwargs=None, use_filter=True):
+                 optimizer: Type[Optimizer] = Adam, max_iter=30e3, optkwargs: Optional[Dict[str, Any]] = None,
+                 use_filter=True):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.
@@ -82,11 +83,11 @@ class VariationalBayes(OptimizationBatchAlgorithm):
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
                 filt = UKF(self._model.copy()).set_nparallel(self._ns)
-                filt.longfilter(y, bar=False)
+                result = filt.longfilter(y, bar=False)
 
-                maxind = filt.result.loglikelihood.argmax()
+                maxind = result.loglikelihood.argmax()
 
-                filtres = filt.result.filter_means[:, maxind]
+                filtres = result.filter_means[:, maxind]
                 if self._model.hidden_ndim < 1:
                     filtres.squeeze_(-1)
 
@@ -117,13 +118,17 @@ class VariationalBayes(OptimizationBatchAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            logl = self._model.log_prob(y, x_t) + self._model.h_weight(x_t, x_tm1)
+            init_dist = self._model.hidden.i_sample(as_dist=True)
+
+            logl = (self._model.log_prob(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1)
+            logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
+
             entropy += self._s_approx.entropy()
 
         else:
-            logl = self._model.log_prob(y[1:], y[:-1])
+            logl = self._model.log_prob(y[1:], y[:-1]).sum(1)
 
-        return -(logl.sum(1).mean(0) + self._model.p_prior(transformed=True).mean() + entropy)
+        return -(logl.mean(0) + self._model.p_prior(transformed=True).mean() + entropy)
 
     def is_converged(self, old_loss, new_loss):
         return (new_loss - old_loss).abs() < EPS
