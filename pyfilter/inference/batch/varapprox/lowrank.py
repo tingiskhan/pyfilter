@@ -4,17 +4,21 @@ from torch.distributions import LowRankMultivariateNormal
 
 
 class StateLowRank(StateMeanField):
-    def __init__(self, model):
+    def __init__(self, rank=2):
+        super().__init__()
+        self._w = None
+        self._rank = rank
+    
+    def set_model(self, model):
         if model.ndim > 0:
             raise NotImplementedError(f"Maximum ")
-
-        super().__init__(model)
-        self._w = None
+        
+        super(StateLowRank, self).set_model(model)
 
     def initialize(self, data, *args):
         self._mean = torch.zeros((data.shape[0] + 1, *self._model.increment_dist.event_shape), requires_grad=True)
         self._log_std = torch.zeros_like(self._mean, requires_grad=True)
-        self._w = torch.zeros((self._mean.shape[0], 2), requires_grad=True)
+        self._w = torch.zeros((self._mean.shape[0], self._rank), requires_grad=True)
 
         return self
 

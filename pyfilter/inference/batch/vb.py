@@ -34,7 +34,8 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         self._s_approx = None
 
         if self._is_ssm:
-            self._s_approx = approx or StateMeanField(model.hidden)
+            self._s_approx = approx or StateMeanField()
+            self._s_approx.set_model(model.hidden)
 
         self._p_approx = ParameterMeanField()
 

@@ -7,10 +7,13 @@ from typing import Tuple
 
 
 class StateMeanField(BaseApproximation):
-    def __init__(self, model: StochasticProcess):
+    def __init__(self):
         super().__init__()
         self._mean = None
         self._log_std = None
+        self._model = None
+
+    def set_model(self, model: StochasticProcess):
         self._model = model
 
     def initialize(self, data, *args):
