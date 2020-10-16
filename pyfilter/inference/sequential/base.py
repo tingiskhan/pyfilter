@@ -101,7 +101,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         return torch.stack(self._logged_ess)
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict(state.filter_state, steps, aggregate=aggregate, **kwargs)
+        px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py
