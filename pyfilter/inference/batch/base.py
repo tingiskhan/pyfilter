@@ -6,14 +6,19 @@ from .state import VariationalState
 from ...utils import EPS
 
 
-class OptimizationBatchAlgorithm(BaseAlgorithm, ABC):
+class BaseBatchAlgorithm(BaseAlgorithm, ABC):
     def __init__(self, max_iter: int):
         """
         Algorithm for batch inference.
         """
-        super(OptimizationBatchAlgorithm, self).__init__()
+        super(BaseBatchAlgorithm, self).__init__()
         self._max_iter = int(max_iter)
 
+    def initialize(self, y: torch.Tensor, *args, **kwargs):
+        raise NotImplementedError()
+
+
+class OptimizationBatchAlgorithm(BaseBatchAlgorithm, ABC):
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss) ** 2) ** 0.5 < EPS
 
@@ -43,10 +48,11 @@ class OptimizationBatchAlgorithm(BaseAlgorithm, ABC):
         raise NotImplementedError()
 
 
-class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
-    def __init__(self, filter_):
+class BatchFilterAlgorithm(BaseFilterAlgorithm, BaseBatchAlgorithm, ABC):
+    def __init__(self, filter_, max_iter):
         """
         Implements a class of inference algorithms using filters for inference.
         """
 
-        super().__init__(filter_)
+        super(BatchFilterAlgorithm, self).__init__(filter_)
+        self._max_iter = max_iter
