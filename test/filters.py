@@ -64,9 +64,9 @@ class Tests(unittest.TestCase):
                 (SISR, {'particles': 50, 'proposal': Unscented()})
             ]:
                 filt = filter_type(model, **props)
-                states = filt.longfilter(y, record_states=True)
+                result = filt.longfilter(y, record_states=True)
 
-                filtmeans = filt.result.filter_means.numpy()
+                filtmeans = result.filter_means.numpy()
 
                 # ===== Run Kalman ===== #
                 if model is self.model:
@@ -82,14 +82,14 @@ class Tests(unittest.TestCase):
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
 
                 ll = kf.loglikelihood(y.numpy())
-                rel_ll_error = np.abs((ll - filt.result.loglikelihood.numpy()) / ll)
+                rel_ll_error = np.abs((ll - result.loglikelihood.numpy()) / ll)
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
                 if isinstance(filt, UKF):
                     continue
 
-                smoothed = filt.smooth(states).mean(dim=1)
+                smoothed = filt.smooth(result.states).mean(dim=1)
                 s_mean, _ = kf.smooth(y.numpy())
 
                 if model.hidden_ndim < 1:
@@ -108,9 +108,9 @@ class Tests(unittest.TestCase):
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000).set_nparallel(shape)
-        filt.longfilter(y)
+        result = filt.longfilter(y)
 
-        filtermeans = filt.result.filter_means
+        filtermeans = result.filter_means
 
         x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
@@ -126,9 +126,9 @@ class Tests(unittest.TestCase):
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape)
-        filt.longfilter(y)
+        result = filt.longfilter(y)
 
-        filtermeans = filt.result.filter_means
+        filtermeans = result.filter_means
 
         x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
@@ -148,9 +148,9 @@ class Tests(unittest.TestCase):
         x, y = model.sample_path(500)
 
         for filt in [SISR(model, 500, proposal=Bootstrap()), UKF(model)]:
-            filt.longfilter(y)
+            result = filt.longfilter(y)
 
-            means = filt.result.filter_means
+            means = result.filter_means
             if isinstance(filt, UKF):
                 means = means[:, 0]
 

@@ -29,19 +29,19 @@ class BaseAlgorithm(Module, ABC):
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> AlgorithmState:
         raise NotImplementedError()
 
-    def initialize(self, *args, **kwargs):
+    def initialize(self, *args, **kwargs) -> AlgorithmState:
         """
         Initializes the chosen algorithm.
         :return: Self
         """
 
-        return self
+        raise NotImplementedError()
 
-    def predict(self, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, steps: int, state: AlgorithmState, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Predicts `steps` ahead.
         :param steps: The number of steps
-        :param args: Any arguments
+        :param state: The current state of the algorithm
         :param kwargs: Any keyworded arguments
         """
 

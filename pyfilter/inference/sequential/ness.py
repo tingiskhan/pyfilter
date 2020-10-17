@@ -5,10 +5,11 @@ from ..kernels.kde import NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
 from .state import FilteringAlgorithmState
+from typing import Optional
 
 
 class BaseNESS(SequentialParticleAlgorithm, ABC):
-    def __init__(self, filter_, particles, kde: KernelDensityEstimate = None, discrete=False):
+    def __init__(self, filter_, particles, kde: Optional[KernelDensityEstimate] = None, discrete=False):
         super().__init__(filter_, particles)
 
         self._kernel = OnlineKernel(kde=kde or NonShrinkingKernel(), discrete=discrete)
@@ -26,13 +27,14 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
             state.w[:] = 0.
 
         # ===== Propagate filter ===== #
-        fstate = self.filter.filter(y, state.filter_state)
-        w = state.w + state.filter_state.get_loglikelihood()
+        fstate = self.filter.filter(y, state.filter_state.latest_state)
+        w = state.w + state.filter_state.latest_state.get_loglikelihood()
 
         # ===== Log ESS ===== #
         self._logged_ess += (get_ess(state.w),)
+        state.filter_state.append(fstate.get_mean(), fstate.get_loglikelihood(), fstate)
 
-        return FilteringAlgorithmState(w, fstate)
+        return FilteringAlgorithmState(w, state.filter_state)
 
 
 class NESS(BaseNESS):

@@ -7,20 +7,21 @@ from typing import Tuple
 
 
 class StateMeanField(BaseApproximation):
-    def __init__(self, model: StochasticProcess):
+    def __init__(self):
         super().__init__()
         self._mean = None
         self._log_std = None
-        self._model = model
+        self._dim = None
 
-    def initialize(self, data, *args):
-        self._mean = torch.zeros((data.shape[0] + 1, *self._model.increment_dist.event_shape), requires_grad=True)
-        self._log_std = torch.ones_like(self._mean, requires_grad=True)
+    def initialize(self, data, model: StochasticProcess, *args):
+        self._mean = torch.zeros((data.shape[0] + 1, *model.increment_dist.event_shape), requires_grad=True)
+        self._log_std = torch.zeros_like(self._mean, requires_grad=True)
+        self._dim = model.ndim
 
         return self
 
     def dist(self):
-        return Independent(Normal(self._mean, self._log_std.exp()), self._model.ndim + 1)
+        return Independent(Normal(self._mean, self._log_std.exp()), self._dim + 1)
 
     def get_parameters(self):
         return self._mean, self._log_std
@@ -45,13 +46,10 @@ class ParameterMeanField(BaseApproximation):
         self._stacked = stacked = stacker(parameters, lambda u: u.t_values)
 
         self._mean = torch.zeros(stacked.concated.shape[1:], device=stacked.concated.device)
-        self._log_std = torch.ones_like(self._mean)
+        self._log_std = torch.zeros_like(self._mean)
 
         self._bijections = tuple()
         for p, msk in zip(parameters, stacked.mask):
-            if not p.trainable:
-                continue
-
             self._mean[msk] = p.bijection.inv(p.distr.mean)
             self._bijections += (p.bijection,)
 

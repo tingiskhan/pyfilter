@@ -1,12 +1,14 @@
 from .base import CombinedSequentialParticleAlgorithm
 from .ness import NESS
 from .smc2 import SMC2
-from ..kernels.kde import ConstantKernel, robust_var, LiuWestShrinkage, NormalApproximation
+from ..kernels.kde import ConstantKernel, robust_var, LiuWestShrinkage
 from ...normalization import normalize
+from typing import Optional, Dict, Any
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, switch=500, smc2_kw=None, ness_kw=None):
+    def __init__(self, filter_, particles, switch=500, smc2_kw: Optional[Dict[str, Any]] = None,
+                 ness_kw: Optional[Dict[str, Any]] = None):
         """
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally

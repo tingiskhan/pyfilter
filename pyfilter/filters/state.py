@@ -14,7 +14,7 @@ class BaseState(object):
     def get_loglikelihood(self) -> Tensor:
         raise NotImplementedError()
 
-    def exchange(self, inds: Tensor, state):
+    def exchange(self, state, inds: Tensor):
         raise NotImplementedError()
 
 
@@ -38,7 +38,7 @@ class KalmanState(BaseState):
     def get_loglikelihood(self):
         return self.ll
 
-    def exchange(self, inds: Tensor, state):
+    def exchange(self, state, inds):
         self.utf.mean[inds] = state.utf.mean[inds]
         self.utf.cov[inds] = state.utf.cov[inds]
 
@@ -71,7 +71,7 @@ class ParticleState(BaseState):
     def get_loglikelihood(self):
         return self.ll
 
-    def exchange(self, inds: Tensor, state):
+    def exchange(self, state, inds):
         self.x[inds] = state.x[inds]
         self.w[inds] = state.w[inds]
         self.ll[inds] = state.ll[inds]

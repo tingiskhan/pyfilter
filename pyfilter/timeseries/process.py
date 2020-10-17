@@ -180,7 +180,8 @@ class StochasticProcess(Base, ABC):
     def parameters_as_matrix(self, transformed=True):
         return stacker(self.theta_dists, lambda u: u.t_values if transformed else u.values)
 
-    def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> torch.Tensor:
+    def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> Union[torch.Tensor,
+                                                                                                Distribution]:
         """
         Samples from the initial distribution.
         :param shape: The number of samples

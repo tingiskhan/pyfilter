@@ -4,10 +4,12 @@ from ...utils import get_ess
 from ...filters import ParticleFilter
 from torch import isfinite
 from .state import FilteringAlgorithmState
+from typing import Optional
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.2, kernel: ParticleMetropolisHastings = None, max_increases=5):
+    def __init__(self, filter_, particles, threshold=0.2, kernel: Optional[ParticleMetropolisHastings] = None,
+                 max_increases=5):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
@@ -35,14 +37,15 @@ class SMC2(SequentialParticleAlgorithm):
         self._y += (y,)
 
         # ===== Perform a filtering move ===== #
-        fstate = self.filter.filter(y, state.filter_state)
-        w = state.w + state.filter_state.get_loglikelihood()
+        fstate = self.filter.filter(y, state.filter_state.latest_state)
+        w = state.w + state.filter_state.latest_state.get_loglikelihood()
 
         # ===== Calculate efficient number of samples ===== #
         ess = get_ess(w)
         self._logged_ess += (ess,)
 
-        state = FilteringAlgorithmState(w, fstate)
+        state.filter_state.append(fstate.get_mean(), fstate.get_loglikelihood(), fstate)
+        state = FilteringAlgorithmState(w, state.filter_state)
 
         # ===== Rejuvenate if there are too few samples ===== #
         if ess < self._threshold or (~isfinite(state.w)).any():
@@ -63,11 +66,11 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
-            state = self._increase_states()
+            state = self._increase_states(state)
 
         return state
 
-    def _increase_states(self) -> FilteringAlgorithmState:
+    def _increase_states(self, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         """
         Increases the number of states.
         :return: Self
@@ -77,19 +80,16 @@ class SMC2(SequentialParticleAlgorithm):
             raise Exception(f'Configuration only allows {self._max_increases}!')
 
         # ===== Create new filter with double the state particles ===== #
-        oldlogl = self.filter.result.loglikelihood
-
-        self.filter.reset()
         self.filter.particles = 2 * self.filter.particles[1]
-        self.filter.reset().set_nparallel(*self.particles)
+        self.filter.set_nparallel(*self.particles)
 
-        state = self.filter.longfilter(self._y, bar=False)
+        fstate = self.filter.longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
-        w = self.filter.result.loglikelihood - oldlogl
+        w = fstate.loglikelihood - state.filter_state.loglikelihood
         self._increases += 1
 
-        return FilteringAlgorithmState(w, state)
+        return FilteringAlgorithmState(w, fstate)
 
     def populate_state_dict(self):
         res = super(SMC2, self).populate_state_dict()

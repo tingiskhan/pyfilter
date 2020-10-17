@@ -1,5 +1,5 @@
 from abc import ABC
-from ...filters import ParticleFilter, utils as u
+from ...filters import ParticleFilter, utils as u, FilterResult
 import torch
 from ...utils import normalize
 from ..base import BaseFilterAlgorithm
@@ -90,7 +90,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
-        return FilteringAlgorithmState(init_weights, init_state)
+        return FilteringAlgorithmState(init_weights, FilterResult(init_state))
 
     @property
     def logged_ess(self) -> torch.Tensor:
@@ -101,7 +101,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         return torch.stack(self._logged_ess)
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict(state.filter_state, steps, aggregate=aggregate, **kwargs)
+        px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py
