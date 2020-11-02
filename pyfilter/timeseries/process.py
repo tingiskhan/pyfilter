@@ -9,7 +9,11 @@ from .base import Base
 
 
 def _view_helper(p: Parameter, shape):
-    return p.view(*shape, *p.prior.event_shape) if len(shape) > 0 else p.view(p.shape)
+    if p.trainable:
+        return p.view(*shape, *p.prior.event_shape) if len(shape) > 0 else p.view(p.shape)
+
+    return p.view(*shape, *p.shape) if len(shape) > 0 else p.view(p.shape)
+
 
 
 class StochasticProcess(Base, ABC):
@@ -55,28 +59,28 @@ class StochasticProcess(Base, ABC):
         self._dist_theta = dict()
         self._org_dist = dict()
 
-        # TODO: Improve this
+        # TODO: Fix this
         for t, n in [('initial', self.initial_dist), ('increment', self.increment_dist)]:
             if n is None:
                 continue
 
-            parameters = dict()
+            dist_parameters = dict()
             statics = dict()
             for k, v in vars(n).items():
                 if k.startswith('_'):
                     continue
 
                 if isinstance(v, Parameter) and n is self.increment_dist:
-                    parameters[k] = v
+                    dist_parameters[k] = v
                 elif isinstance(v, torch.Tensor):
                     statics[k] = v
 
             if not not parameters:
-                self._dist_theta[f'{t}/{n.__class__.__name__}'] = parameters
+                self._dist_theta[f'{t}/{n.__class__.__name__}'] = dist_parameters
                 self._org_dist[f'{t}/{n.__class__.__name__}'] = statics
 
         # ===== Regular parameters ====== #
-        self.theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in parameters)
+        self.parameters = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in parameters)
 
     @property
     def distributional_theta(self) -> Dict[str, Dict[str, Parameter]]:
@@ -102,13 +106,14 @@ class StochasticProcess(Base, ABC):
         self.viewify_params(torch.Size([]))
 
     @property
-    def parameter_distributions(self):
-        return tuple(p for p in self.parameters if p.trainable) + flatten((v.values() for v in self._dist_theta.values()))
+    def trainable_parameters(self):
+        res = (p for p in self.parameters if p.trainable)
+        return tuple(res) + flatten((v.values() for v in self._dist_theta.values()))
 
     @property
     def parameter_views(self) -> Tuple[Parameter, ...]:
         """
-        Returns the values of the parameters.
+        Returns views of the parameters.
         """
         return self._parameter_views
 
@@ -139,7 +144,7 @@ class StochasticProcess(Base, ABC):
         shape = size_getter(shape)
 
         # ===== Regular parameters ===== #
-        vals = tuple(_view_helper(param, shape) if param.trainable else param for param in self.parameters)
+        vals = tuple(_view_helper(p, shape) for p in self.parameters)
 
         if not in_place:
             return vals
@@ -159,10 +164,10 @@ class StochasticProcess(Base, ABC):
         return vals
 
     def update_parameters(self, new_values: Tuple[torch.Tensor, ...], transformed=True):
-        if len(new_values) != len(self.parameter_distributions):
-            raise ValueError(f"Not of same length!")
+        if len(new_values) != len(self.trainable_parameters):
+            raise ValueError("Not of same length!")
 
-        for nv, p in zip(new_values, self.parameter_distributions):
+        for nv, p in zip(new_values, self.trainable_parameters):
             if transformed:
                 p.t_values = nv
             else:
@@ -171,7 +176,7 @@ class StochasticProcess(Base, ABC):
         return self
 
     def parameters_as_matrix(self, transformed=True):
-        return stacker(self.parameter_distributions, lambda u: u.t_values if transformed else u.values)
+        return stacker(self.trainable_parameters, lambda u: u.t_values if transformed else u.values)
 
     def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> TensorOrDist:
         """

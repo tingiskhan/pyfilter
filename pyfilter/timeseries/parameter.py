@@ -72,7 +72,7 @@ class Parameter(torch.Tensor):
 
     @property
     @lru_cache()
-    def transformed_dist(self):
+    def bijected_prior(self):
         """
         Returns the unconstrained distribution.
         """

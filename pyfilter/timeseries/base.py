@@ -3,8 +3,11 @@ import torch
 from .parameter import Parameter
 from copy import deepcopy
 from ..module import Module
-from typing import Tuple, Union, Callable, Iterable
+from typing import Tuple, Union, Callable, Iterable, TypeVar
 from ..utils import StackedObject
+
+
+T = TypeVar("T")
 
 
 class Base(Module):
@@ -17,7 +20,7 @@ class Base(Module):
         raise NotImplementedError()
 
     @property
-    def parameter_distributions(self) -> Tuple[Parameter, ...]:
+    def trainable_parameters(self) -> Tuple[Parameter, ...]:
         """
         Returns the parameters that are distributions.
         """
@@ -46,7 +49,7 @@ class Base(Module):
         :return: Self
         """
 
-        for param in self.parameter_distributions:
+        for param in self.trainable_parameters:
             param.sample_(shape)
 
         return self
@@ -105,7 +108,7 @@ class Base(Module):
         :return: Self
         """
 
-        for p in self.parameter_distributions:
+        for p in self.trainable_parameters:
             if transformed:
                 p.t_values = func(p)
             else:
@@ -121,15 +124,13 @@ class Base(Module):
         """
 
         if transformed:
-            prop1 = 'transformed_dist'
-            prop2 = 't_values'
+            res = self.p_map(lambda u: u.bijected_prior.log_prob(u.t_values))
         else:
-            prop1 = 'dist'
-            prop2 = 'values'
+            res = self.p_map(lambda u: u.prior.log_prob(u.values))
 
-        return sum(self.p_map(lambda u: getattr(u, prop1).log_prob(getattr(u, prop2))))
+        return sum(res)
 
-    def p_map(self, func: Callable[[Parameter], object]) -> Tuple[object, ...]:
+    def p_map(self, func: Callable[[Parameter], T]) -> Tuple[T, ...]:
         """
         Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
         that are distributions.
@@ -138,7 +139,7 @@ class Base(Module):
         """
 
         out = tuple()
-        for p in self.parameter_distributions:
+        for p in self.trainable_parameters:
             out += (func(p),)
 
         return out
