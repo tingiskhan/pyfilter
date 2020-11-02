@@ -16,11 +16,11 @@ class StateSpaceModel(Base):
 
         self.hidden = hidden
         self.observable = observable
-        self.observable._inputdim = self.hidden_ndim
+        self.observable._input_dim = self.hidden_ndim
 
     @property
-    def theta_dists(self):
-        return flatten(self.hidden.theta_dists, self.observable.theta_dists)
+    def parameter_distributions(self):
+        return flatten(self.hidden.parameter_distributions, self.observable.parameter_distributions)
 
     @property
     def hidden_ndim(self) -> int:
@@ -48,7 +48,7 @@ class StateSpaceModel(Base):
         return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
 
     def update_parameters(self, params, transformed=True):
-        num_params = len(self.hidden.theta_dists)
+        num_params = len(self.hidden.parameter_distributions)
 
         for m, ps in [(self.hidden, params[:num_params]), (self.observable, params[num_params:])]:
             m.update_parameters(ps)
@@ -56,7 +56,7 @@ class StateSpaceModel(Base):
         return self
 
     def parameters_as_matrix(self, transformed=True):
-        return stacker(self.theta_dists, lambda u: u.t_values if transformed else u.values)
+        return stacker(self.parameter_distributions, lambda u: u.t_values if transformed else u.values)
 
     def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """
@@ -86,8 +86,8 @@ class StateSpaceModel(Base):
         """
 
         procs = (
-            (newmodel.hidden.theta_dists, self.hidden.theta_dists),
-            (newmodel.observable.theta_dists, self.observable.theta_dists)
+            (newmodel.hidden.parameter_distributions, self.hidden.parameter_distributions),
+            (newmodel.observable.parameter_distributions, self.observable.parameter_distributions)
         )
 
         for proc in procs:

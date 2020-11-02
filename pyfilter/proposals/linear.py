@@ -59,8 +59,8 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = 1 / scale ** 2
 
         # ===== Observable ===== #
-        c = self._model.observable.theta_vals[0]
-        o_var_inv = 1 / self._model.observable.theta_vals[-1] ** 2
+        c = self._model.observable.parameter_views[0]
+        o_var_inv = 1 / self._model.observable.parameter_views[-1] ** 2
 
         if self._model.hidden_ndim == 0:
             self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
@@ -73,7 +73,7 @@ class LinearGaussianObservations(Proposal):
         hloc, hscale = self._model.hidden.mean_scale(x)
         oloc, oscale = self._model.observable.mean_scale(hloc)
 
-        c = self._model.observable.theta_vals[0]
+        c = self._model.observable.parameter_views[0]
         ovar = oscale ** 2
         hvar = hscale ** 2
 

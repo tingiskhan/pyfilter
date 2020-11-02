@@ -15,7 +15,7 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribu
 
 
 class AffineProcess(StochasticProcess):
-    def __init__(self, funcs: Tuple[Callable[[torch.Tensor, Tuple[object, ...]], torch.Tensor], ...], theta,
+    def __init__(self, funcs: Tuple[Callable[[torch.Tensor, Tuple[object, ...]], torch.Tensor], ...], parameters,
                  initial_dist, increment_dist, initial_transform=None):
         """
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
@@ -24,7 +24,7 @@ class AffineProcess(StochasticProcess):
         :param funcs: The functions governing the dynamics of the process
         """
 
-        super().__init__(theta, initial_dist, increment_dist, initial_transform=initial_transform)
+        super().__init__(parameters, initial_dist, increment_dist, initial_transform=initial_transform)
 
         # ===== Dynamics ===== #
         self.f, self.g = funcs
@@ -49,7 +49,7 @@ class AffineProcess(StochasticProcess):
         :return: (mean, scale)
         """
 
-        return self.f(x, *self.theta_vals), self.g(x, *self.theta_vals)
+        return self.f(x, *self.parameter_views), self.g(x, *self.parameter_views)
 
     def _define_transdist(self, loc: torch.Tensor, scale: torch.Tensor):
         """
@@ -65,7 +65,7 @@ class AffineProcess(StochasticProcess):
         return loc + scale * u
 
     def prop_apf(self, x):
-        return self.f(x, *self.theta_vals)
+        return self.f(x, *self.parameter_views)
 
 
 def _f(x, s):

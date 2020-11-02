@@ -50,7 +50,7 @@ class ParameterMeanField(BaseApproximation):
 
         self._bijections = tuple()
         for p, msk in zip(parameters, stacked.mask):
-            self._mean[msk] = p.bijection.inv(p.distr.mean)
+            self._mean[msk] = p.bijection.inv(p.prior.mean)
             self._bijections += (p.bijection,)
 
         self._mean.requires_grad_(True)

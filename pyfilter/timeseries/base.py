@@ -9,7 +9,7 @@ from ..utils import StackedObject
 
 class Base(Module):
     @property
-    def theta(self) -> Tuple[Parameter, ...]:
+    def parameters(self) -> Tuple[Parameter, ...]:
         """
         Returns the parameters of the model.
         """
@@ -17,7 +17,7 @@ class Base(Module):
         raise NotImplementedError()
 
     @property
-    def theta_dists(self) -> Tuple[Parameter, ...]:
+    def parameter_distributions(self) -> Tuple[Parameter, ...]:
         """
         Returns the parameters that are distributions.
         """
@@ -46,7 +46,7 @@ class Base(Module):
         :return: Self
         """
 
-        for param in self.theta_dists:
+        for param in self.parameter_distributions:
             param.sample_(shape)
 
         return self
@@ -105,7 +105,7 @@ class Base(Module):
         :return: Self
         """
 
-        for p in self.theta_dists:
+        for p in self.parameter_distributions:
             if transformed:
                 p.t_values = func(p)
             else:
@@ -138,7 +138,7 @@ class Base(Module):
         """
 
         out = tuple()
-        for p in self.theta_dists:
+        for p in self.parameter_distributions:
             out += (func(p),)
 
         return out

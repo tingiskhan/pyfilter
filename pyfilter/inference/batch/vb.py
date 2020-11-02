@@ -44,7 +44,7 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         """
 
         params = param_approximation.sample(self._ns)
-        for p, msk in zip(self._model.theta_dists, self._mask):
+        for p, msk in zip(self._model.parameter_distributions, self._mask):
             p.detach_()
             p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
 
@@ -96,10 +96,10 @@ class VariationalBayes(OptimizationBatchAlgorithm):
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._ns)
-        self._mask = stacker(self._model.theta_dists).mask  # NB: We create a mask once
+        self._mask = stacker(self._model.parameter_distributions).mask  # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
-        param_approx.initialize(self._model.theta_dists)
+        param_approx.initialize(self._model.parameter_distributions)
         opt_params = param_approx.get_parameters()
 
         # ===== Initialize the state approximation ===== #

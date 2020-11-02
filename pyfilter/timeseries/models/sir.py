@@ -28,7 +28,7 @@ def prop_state(x, beta, gamma, eta, dt):
 
 
 class StochasticSIR(GeneralEulerMaruyama):
-    def __init__(self, theta, initial_dist, dt, num_steps=10):
+    def __init__(self, parameters, initial_dist, dt, num_steps=10):
         """
         Implements the stochastic SIR model.
         """
@@ -36,7 +36,7 @@ class StochasticSIR(GeneralEulerMaruyama):
         if initial_dist.event_shape != torch.Size([3]):
             raise NotImplementedError('Must be of size 3!')
 
-        super().__init__(theta, initial_dist, dt=dt, prop_state=prop_state, num_steps=num_steps)
+        super().__init__(parameters, initial_dist, dt=dt, prop_state=prop_state, num_steps=num_steps)
 
     def _propagate_u(self, x, u):
         raise ValueError(f'This method cannot sample using already defined latent variables!')
@@ -51,11 +51,11 @@ def f(x, beta, gamma, sigma):
 
 
 class OneFactorSIR(AffineEulerMaruyama):
-    def __init__(self, theta, initial_dist, dt, num_steps=10):
+    def __init__(self, parameters, initial_dist, dt, num_steps=10):
         """
         Implements a SIR model where the number of sick has been replaced with the fraction of sick people of the entire
         population. Model taken from this article: https://arxiv.org/pdf/2004.06680.pdf
-        :param theta: The parameters (beta, gamma, sigma)
+        :param parameters: The parameters (beta, gamma, sigma)
         """
 
         if initial_dist.event_shape != torch.Size([3]):
@@ -69,7 +69,7 @@ class OneFactorSIR(AffineEulerMaruyama):
 
         inc_dist = Independent(Normal(torch.zeros(1), math.sqrt(dt) * torch.ones(1)), 1)
 
-        super().__init__((f, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
+        super().__init__((f, g), parameters, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
 
 class Mixin(object):
@@ -90,11 +90,11 @@ class Mixin(object):
 
 
 class TwoFactorSIR(Mixin, AffineEulerMaruyama):
-    def __init__(self, theta, initial_dist, dt, num_steps=10):
+    def __init__(self, parameters, initial_dist, dt, num_steps=10):
         """
         Similar as `OneFactorFractionalStochasticSIR`, but we now have two sources of randomness originating from shocks
         to both paramters `beta` and `gamma`.
-        :param theta: The parameters (beta, gamma, sigma, eta)
+        :param parameters: The parameters (beta, gamma, sigma, eta)
         """
 
         if initial_dist.event_shape != torch.Size([3]):
@@ -113,14 +113,14 @@ class TwoFactorSIR(Mixin, AffineEulerMaruyama):
         f_ = lambda u, beta, gamma, sigma, eps: f(u, beta, gamma, sigma)
         inc_dist = Independent(Normal(torch.zeros(2), math.sqrt(dt) * torch.ones(2)), 1)
 
-        super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
+        super().__init__((f_, g), parameters, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
 
 class ThreeFactorSIRD(Mixin, AffineEulerMaruyama):
-    def __init__(self, theta, initial_dist, dt, num_steps=10):
+    def __init__(self, parameters, initial_dist, dt, num_steps=10):
         """
         Similar as `TwoFactorSIR`, but we now have three sources of randomness, as well as incorporating death rates.
-        :param theta: The parameters (beta, gamma, alpha, rho, sigma, eta, nu)
+        :param parameters: The parameters (beta, gamma, alpha, rho, sigma, eta, nu)
         """
 
         if initial_dist.event_shape != torch.Size([4]):
@@ -148,16 +148,16 @@ class ThreeFactorSIRD(Mixin, AffineEulerMaruyama):
 
         inc_dist = Independent(Normal(torch.zeros(3), math.sqrt(dt) * torch.ones(3)), 1)
 
-        super().__init__((f_, g), theta, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
+        super().__init__((f_, g), parameters, initial_dist, inc_dist, dt=dt, num_steps=num_steps)
 
 
 class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
-    def __init__(self, theta, initial_dist, dt, num_steps=10):
+    def __init__(self, parameters, initial_dist, dt, num_steps=10):
         """
         Implements a two factor stochastic SEIRD model, inspired by the blog:
             https://towardsdatascience.com/infectious-disease-modelling-beyond-the-basic-sir-model-216369c584c4
         and models above.
-        :param theta: The parameters of the model. Corresponds to (beta, gamma, delta, alpha, rho, sigma, eta)
+        :param parameters: The parameters of the model. Corresponds to (beta, gamma, delta, alpha, rho, sigma, eta)
         """
 
         def f(x, beta, gamma, delta, alpha, rho, sigma, eps):
@@ -185,4 +185,4 @@ class TwoFactorSEIRD(Mixin, AffineEulerMaruyama):
 
         inc_dist = Independent(Normal(torch.zeros(2), math.sqrt(dt) * torch.ones(2)), 1)
 
-        super().__init__((f, g), theta, initial_dist, inc_dist, dt, num_steps=num_steps)
+        super().__init__((f, g), parameters, initial_dist, inc_dist, dt, num_steps=num_steps)

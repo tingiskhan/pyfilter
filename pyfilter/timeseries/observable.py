@@ -4,13 +4,13 @@ import torch
 
 
 class AffineObservations(AffineProcess):
-    def __init__(self, funcs, theta, increment_dist):
+    def __init__(self, funcs, parameters, increment_dist):
         """
         Class for defining model with affine dynamics in the observable process.
         :param funcs: The functions governing the dynamics of the process
         """
 
-        super().__init__(funcs, theta, None, increment_dist)
+        super().__init__(funcs, parameters, None, increment_dist)
         self._covariate = None
 
     def sample_path(self, steps, **kwargs):
@@ -31,6 +31,6 @@ class AffineObservations(AffineProcess):
         loc, scale = self._mean_scale(x)
 
         if (u is not None) and (self._covariate is not None):
-            loc += self._covariate(u, *self.theta_vals)
+            loc += self._covariate(u, *self.parameter_views)
 
         return self._define_transdist(loc, scale)
