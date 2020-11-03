@@ -76,7 +76,7 @@ class MyTestCase(unittest.TestCase):
                 w = normalize(state.w)
 
                 zipped = zip(
-                    trumod.hidden.theta + trumod.observable.theta,                  # True parameter values
+                    trumod.hidden.parameters + trumod.observable.parameters,                  # True parameter values
                     alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta   # Inferred
                 )
 

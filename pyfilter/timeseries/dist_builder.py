@@ -1,7 +1,8 @@
 from typing import Union, Type, Callable, Dict
 from torch.distributions import Distribution
 import torch
-from .timeseries.parameter import Parameter, ShapeLike
+from .parameter import Parameter
+from ..utils import ShapeLike
 
 
 TypeOrCallable = Union[Type[Distribution], Callable[[Dict[str, torch.Tensor]], Distribution]]
@@ -13,7 +14,7 @@ class DistributionBuilder(object):
         self._parameters = parameters
 
     def get_parameters(self):
-        return tuple(v for v in self._parameters.values() if isinstance(v, Parameter))
+        return tuple(v for v in self._parameters.values() if isinstance(v, Parameter) and v.trainable)
 
     def build(self, shape: ShapeLike = None) -> Distribution:
         if shape is None:
@@ -21,3 +22,5 @@ class DistributionBuilder(object):
 
         new_dict = {k: v.view(shape) if isinstance(v, torch.Tensor) else v for k, v in self._parameters.items()}
         return self._base_dist(**new_dict)
+
+    __call__ = build

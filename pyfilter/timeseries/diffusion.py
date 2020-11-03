@@ -64,7 +64,7 @@ class GeneralEulerMaruyama(StochasticDifferentialEquation):
 
 class AffineEulerMaruyama(GeneralEulerMaruyama):
     def __init__(self, dynamics: Tuple[Callable[[torch.Tensor, Tuple[object, ...]], torch.Tensor], ...], parameters,
-                 initial_dist, increment_dist: Distribution, dt, **kwargs):
+                 initial_dist, increment_dist, dt, **kwargs):
         """
         Euler Maruyama method for SDEs of affine nature. A generalization of OneStepMaruyama that allows multiple
         recursions. The difference between this class and GeneralEulerMaruyama is that you need not specify prop_state

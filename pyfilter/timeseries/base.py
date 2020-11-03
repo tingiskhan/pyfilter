@@ -4,7 +4,7 @@ from .parameter import Parameter
 from copy import deepcopy
 from ..module import Module
 from typing import Tuple, Union, Callable, Iterable, TypeVar
-from ..utils import StackedObject
+from ..utils import StackedObject, ShapeLike
 
 
 T = TypeVar("T")
@@ -42,7 +42,7 @@ class Base(Module):
     def parameters_as_matrix(self, transformed=True) -> StackedObject:
         raise NotImplementedError()
 
-    def sample_params(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
+    def sample_params(self, shape: ShapeLike):
         """
         Samples the parameters of the model in place.
         :param shape: The shape to use
@@ -51,6 +51,8 @@ class Base(Module):
 
         for param in self.trainable_parameters:
             param.sample_(shape)
+
+        self.viewify_params(shape)
 
         return self
 

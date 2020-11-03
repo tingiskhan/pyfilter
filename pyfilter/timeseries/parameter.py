@@ -5,11 +5,10 @@ from collections import OrderedDict
 from copy import deepcopy
 from torch.distributions import Distribution, TransformedDistribution, Transform, biject_to
 from typing import Union, Tuple
-
+from ..utils import ShapeLike
 
 TensorOrDist = Union[torch.Tensor, Distribution]
 ArrayType = Union[float, int, TensorOrDist, np.ndarray]
-ShapeLike = Union[int, Tuple[int, ...], torch.Size]
 
 
 def size_getter(shape: ShapeLike) -> torch.Size:
