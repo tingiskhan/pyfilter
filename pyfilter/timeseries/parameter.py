@@ -71,6 +71,17 @@ class Parameter(torch.Tensor):
         return result
 
     @property
+    def prior(self):
+        """
+        Returns the distribution.
+        """
+
+        if self.trainable:
+            return self._prior
+
+        raise ValueError("Does not have a distribution!")
+
+    @property
     @lru_cache()
     def bijected_prior(self):
         """
@@ -140,17 +151,6 @@ class Parameter(torch.Tensor):
         """
 
         self.values = self.bijection(x)
-
-    @property
-    def prior(self):
-        """
-        Returns the distribution.
-        """
-
-        if self.trainable:
-            return self._prior
-
-        raise ValueError("Does not have a distribution!")
 
     def sample_(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
         """
