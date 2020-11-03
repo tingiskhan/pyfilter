@@ -138,7 +138,7 @@ class StochasticProcess(Base, ABC):
         if len(dist.event_shape) < 1:
             return 1
 
-        return torch.prod(dist.event_shape)
+        return dist.event_shape.numel()
 
     def viewify_params(self, shape, in_place=True) -> Tuple[Parameter, ...]:
         shape = size_getter(shape)
