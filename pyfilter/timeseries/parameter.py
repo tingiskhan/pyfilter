@@ -9,9 +9,10 @@ from typing import Union, Tuple
 
 TensorOrDist = Union[torch.Tensor, Distribution]
 ArrayType = Union[float, int, TensorOrDist, np.ndarray]
+ShapeLike = Union[int, Tuple[int, ...], torch.Size]
 
 
-def size_getter(shape: Union[int, Tuple[int, ...], torch.Size]) -> torch.Size:
+def size_getter(shape: ShapeLike) -> torch.Size:
     """
     Helper function for defining a size object.
     :param shape: The shape
