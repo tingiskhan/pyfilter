@@ -3,7 +3,6 @@ import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .varapprox import StateMeanField, ParameterMeanField
 from ...timeseries import StateSpaceModel, StochasticProcess
-from ...utils import unflattify, stacker
 from ...filters import APF
 from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
@@ -17,7 +16,6 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         `StochasticProcess`.
         :param model: The model
         :param samples: The number of samples
-        :param approx: The variational approximation to use for the latent space
         :param optimizer: The optimizer
         :param max_iter: The maximum number of iterations
         :param optkwargs: Any optimizer specific kwargs
@@ -29,7 +27,6 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         self._ns = samples
 
         # ===== Helpers ===== #
-        self._mask = None
         self._use_filter = use_filter
 
         # ===== Optimization stuff ===== #
@@ -37,27 +34,24 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         self._optimizer = None
         self.optkwargs = optkwargs or dict()
 
-    def sample_params(self, param_approximation: ParameterMeanField):
-        """
-        Samples parameters from the variational approximation.
-        :return: Self
-        """
-
+    # TODO: Fix this one
+    def sample_parameter_approximation(self, param_approximation: ParameterMeanField):
         params = param_approximation.sample(self._ns)
-        for p, msk in zip(self._model.trainable_parameters, self._mask):
+        left = 0
+        for p in self._model.trainable_parameters:
             p.detach_()
-            p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
+            slc, numel = p.get_slice_for_parameter(left, True)
+
+            p[:] = p.bijection(params[:, slc])
+            left += numel
 
         self._model.viewify_params((self._ns, 1))
 
         return self
 
     def loss(self, y, state):
-        """
-        The loss function, i.e. ELBO.
-        """
         # ===== Sample parameters ===== #
-        self.sample_params(state.param_approx)
+        self.sample_parameter_approximation(state.param_approx)
         entropy = state.param_approx.entropy()
 
         if isinstance(self._model, StateSpaceModel):
@@ -96,7 +90,6 @@ class VariationalBayes(OptimizationBatchAlgorithm):
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._ns)
-        self._mask = stacker(self._model.trainable_parameters).mask  # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
         param_approx.initialize(self._model.trainable_parameters)
@@ -112,7 +105,7 @@ class VariationalBayes(OptimizationBatchAlgorithm):
                 state_approx._mean.data[:] = means
                 state_approx._log_std.data[:] = -1.
 
-                param_approx._mean.data[:] = self._model.parameters_as_matrix().concated[maxind]
+                param_approx._mean.data[:] = self._model.parameters_to_array(transformed=True)[maxind]
 
             # ===== Append parameters ===== #
             opt_params += state_approx.get_parameters()

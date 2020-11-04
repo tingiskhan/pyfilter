@@ -1,6 +1,13 @@
 import unittest
-from pyfilter.timeseries import StateSpaceModel, AffineObservations, AffineProcess, models
-from torch.distributions import Normal
+from pyfilter.timeseries import (
+    StateSpaceModel,
+    AffineObservations,
+    AffineProcess,
+    models,
+    DistributionBuilder,
+    Parameter
+)
+from torch.distributions import Normal, Exponential
 import torch
 
 
@@ -107,3 +114,24 @@ class Tests(unittest.TestCase):
         x, y = mod.sample_path(covariate.shape[0], u=covariate)
 
         assert (((y - torch.arange(y.shape[0])) - x) < 1e-3).all()
+
+    def test_ParametersToFromArray(self):
+        sde = models.OrnsteinUhlenbeck(Exponential(10.), Normal(0., 1.), Exponential(5.), 1, dt=1.)
+
+        dist_builder = DistributionBuilder(Normal, loc=0., scale=Parameter(Exponential(5.)))
+        obs = AffineObservations((lambda u: u, lambda u: 1.), (Normal(0., 1.), Exponential(1.)), dist_builder)
+
+        mod = StateSpaceModel(sde, obs)
+
+        mod.sample_params(100)
+
+        as_array = mod.parameters_to_array(transformed=False)
+
+        assert as_array.shape == torch.Size([100, 6])
+
+        offset = 1.
+        mod.parameters_from_array(as_array + offset, transformed=False)
+        assert len(mod.trainable_parameters) == as_array.shape[-1]
+
+        for i, p in enumerate(sde.trainable_parameters):
+            assert (((p - offset) - as_array[:, i]).abs() < 1e-6).all()

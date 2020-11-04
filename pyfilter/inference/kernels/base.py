@@ -1,4 +1,4 @@
-from ...utils import normalize, stacker
+from ...utils import normalize
 import numpy as np
 from ...resampling import systematic
 import torch
@@ -72,11 +72,11 @@ class BaseKernel(object):
         :return: Self
         """
 
-        stacked = stacker(parameters, lambda u: u.t_values)
+        stacked = torch.cat(tuple(p.t_values.view(-1, p.numel_(True)) for p in parameters), -1)
         weights = weights.unsqueeze(-1)
 
-        mean = (stacked.concated * weights).sum(0)
-        scale = ((stacked.concated - mean) ** 2 * weights).sum(0).sqrt()
+        mean = (stacked * weights).sum(0)
+        scale = ((stacked - mean) ** 2 * weights).sum(0).sqrt()
 
         self._recorded_stats['mean'] += (mean,)
         self._recorded_stats['scale'] += (scale,)

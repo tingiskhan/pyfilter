@@ -1,7 +1,6 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
-from ....utils import stacker
 from ....timeseries import Parameter, StochasticProcess
 from typing import Tuple
 
@@ -37,24 +36,31 @@ class ParameterMeanField(BaseApproximation):
         self._mean = None
         self._log_std = None
         self._bijections = None
-        self._stacked = None
+        self._mask = None
 
     def get_parameters(self):
         return self._mean, self._log_std
 
     def initialize(self, parameters: Tuple[Parameter, ...], *args):
-        self._stacked = stacked = stacker(parameters, lambda u: u.t_values)
-
-        self._mean = torch.zeros(stacked.concated.shape[1:], device=stacked.concated.device)
-        self._log_std = torch.zeros_like(self._mean)
-
         self._bijections = tuple()
-        for p, msk in zip(parameters, stacked.mask):
-            self._mean[msk] = p.bijection.inv(p.prior.mean)
-            self._bijections += (p.bijection,)
 
+        means = tuple()
+        self._mask = tuple()
+
+        left = 0
+        for p in parameters:
+            slc, numel = p.get_slice_for_parameter(left, True)
+
+            means += (p.bijection.inv(p.prior.mean),)
+            self._bijections += (p.bijection,)
+            self._mask += (slc,)
+
+            left += numel
+
+        self._mean = torch.stack(means)
         self._mean.requires_grad_(True)
-        self._log_std.requires_grad_(True)
+
+        self._log_std = torch.zeros_like(self._mean, requires_grad=True)
 
         return self
 
@@ -63,7 +69,7 @@ class ParameterMeanField(BaseApproximation):
 
     def get_transformed_dists(self) -> Tuple[Distribution, ...]:
         res = tuple()
-        for bij, msk in zip(self._bijections, self._stacked.mask):
+        for bij, msk in zip(self._bijections, self._mask):
             dist = TransformedDistribution(Normal(self._mean[msk], self._log_std[msk].exp()), bij)
             res += (dist,)
 

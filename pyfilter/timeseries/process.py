@@ -4,9 +4,9 @@ import torch
 from functools import lru_cache
 from .parameter import Parameter, size_getter, ArrayType, TensorOrDist
 from typing import Tuple, Union, Callable, Dict
-from ..utils import stacker, ShapeLike
+from ..utils import ShapeLike
 from .base import Base
-from pyfilter.timeseries.dist_builder import DistributionBuilder
+from .distributions import DistributionBuilder
 
 
 DistOrBuilder = Union[Distribution, DistributionBuilder]
@@ -35,11 +35,11 @@ class StochasticProcess(Base, ABC):
         # ===== Check distributions ===== #
         cases = (
             all(isinstance(n, (DistributionBuilder, Distribution)) for n in (initial_dist, increment_dist)),
-            (isinstance(increment_dist, Distribution) and initial_dist is None)
+            (isinstance(increment_dist, (DistributionBuilder, Distribution)) and initial_dist is None)
         )
 
         if not any(cases):
-            raise ValueError('All must be of instance `torch.distributions.Distribution`!')
+            raise ValueError("All must be of instance 'torch.distributions.Distribution'!")
 
         self.initial_dist = initial_dist
         self.init_transform = initial_transform
@@ -104,9 +104,6 @@ class StochasticProcess(Base, ABC):
         """
 
         dist = self.initial_dist or self.increment_dist
-        if len(dist.event_shape) < 1:
-            return 1
-
         return dist.event_shape.numel()
 
     def viewify_params(self, shape, in_place=True) -> Tuple[Parameter, ...]:
@@ -125,20 +122,35 @@ class StochasticProcess(Base, ABC):
 
         return vals
 
-    def update_parameters(self, new_values: Tuple[torch.Tensor, ...], transformed=True):
-        if len(new_values) != len(self.trainable_parameters):
-            raise ValueError("Not of same length!")
+    def parameters_to_array(self, transformed=False, as_tuple=False):
+        res = tuple(
+            (p.values if not transformed else p.t_values).view(-1, p.numel_(transformed))
+            for p in self.trainable_parameters
+        )
 
-        for nv, p in zip(new_values, self.trainable_parameters):
+        if not res or as_tuple:
+            return res
+
+        return torch.cat(res, dim=-1)
+
+    def parameters_from_array(self, array, transformed=False):
+        tot_shape = sum(p.numel_(transformed) for p in self.trainable_parameters)
+
+        if array.shape[-1] != tot_shape:
+            raise ValueError(f"Shapes not congruent, {array.shape[-1]} != {tot_shape}")
+
+        left = 0
+        for p in self.trainable_parameters:
+            slc, numel = p.get_slice_for_parameter(left, transformed)
+
             if transformed:
-                p.t_values = nv
+                p.t_values = array[..., slc].reshape(p.t_values.shape)
             else:
-                p.values = nv
+                p.values = array[..., slc].reshape(p.shape)
+
+            left += numel
 
         return self
-
-    def parameters_as_matrix(self, transformed=True):
-        return stacker(self.trainable_parameters, lambda u: u.t_values if transformed else u.values)
 
     def i_sample(self, shape: ShapeLike = None, as_dist=False) -> TensorOrDist:
         """
@@ -191,8 +203,8 @@ class StochasticProcess(Base, ABC):
 
     def populate_state_dict(self):
         return {
-            "_theta": self.parameters,
-            "_dist_theta": self._dist_theta
+            "_parameters": self._parameters,
+            "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict()
         }
 
     def load_state_dict(self, state: Dict[str, object]):

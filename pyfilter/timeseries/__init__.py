@@ -5,7 +5,7 @@ from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma
 from .process import StochasticProcess
-from .dist_builder import DistributionBuilder
+from .distributions.dist_builder import DistributionBuilder
 
 
 __all__ = [

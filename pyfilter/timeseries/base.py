@@ -3,8 +3,8 @@ import torch
 from .parameter import Parameter
 from copy import deepcopy
 from ..module import Module
-from typing import Tuple, Union, Callable, Iterable, TypeVar
-from ..utils import StackedObject, ShapeLike
+from typing import Tuple, Union, Callable, TypeVar
+from ..utils import ShapeLike
 
 
 T = TypeVar("T")
@@ -36,10 +36,10 @@ class Base(Module):
 
         raise NotImplementedError()
 
-    def update_parameters(self, params: Iterable[torch.Tensor], transformed=True):
+    def parameters_to_array(self, transformed=False, as_tuple=False) -> torch.Tensor:
         raise NotImplementedError()
 
-    def parameters_as_matrix(self, transformed=True) -> StackedObject:
+    def parameters_from_array(self, array: torch.Tensor, transformed=False):
         raise NotImplementedError()
 
     def sample_params(self, shape: ShapeLike):

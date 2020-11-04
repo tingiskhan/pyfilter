@@ -154,7 +154,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
     @property
     def logged_ess(self):
-        return torch.cat((self._first.logged_ess, self._second.logged_ess))
+        return torch.stack(self._first._logged_ess + self._second._logged_ess)
 
     def _update(self, y: torch.Tensor, state):
         self._num_iters += 1

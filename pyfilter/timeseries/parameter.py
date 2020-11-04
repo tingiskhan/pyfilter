@@ -41,9 +41,11 @@ def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
 
 
 class Parameter(torch.Tensor):
+    _prior = None
+
     def __new__(cls, parameter: ArrayType = None, requires_grad=False):
         if isinstance(parameter, Parameter):
-            raise ValueError(f"The input cannot be of instance '{parameter.__class__.__name__}'!")
+            return parameter
         elif isinstance(parameter, torch.Tensor):
             _data = parameter
         elif isinstance(parameter, Distribution):
@@ -64,8 +66,10 @@ class Parameter(torch.Tensor):
         if id(self) in memo:
             return memo[id(self)]
 
-        result = type(self)(self.data.clone(), self.requires_grad)
-        result._prior = deepcopy(self.prior)
+        result = Parameter(self.data.clone(), self.requires_grad)
+
+        if self._prior is not None:
+            result._prior = deepcopy(self.prior)
 
         memo[id(self)] = result
         return result
@@ -176,6 +180,17 @@ class Parameter(torch.Tensor):
         """
 
         return isinstance(self._prior, Distribution)
+
+    def numel_(self, transformed=True) -> int:
+        return (self.prior.event_shape if not transformed else self.bijected_prior.event_shape).numel()
+
+    def get_slice_for_parameter(self, prev_index, transformed=False) -> Tuple[Union[slice, int], int]:
+        numel = self.numel_(transformed)
+
+        if numel == 1:
+            return prev_index, numel
+
+        return slice(prev_index, prev_index + numel), numel
 
     def __reduce_ex__(self, protocol):
         return (

@@ -1,4 +1,3 @@
-from ..utils import flatten, stacker
 import torch
 from .base import Base
 from .process import StochasticProcess
@@ -20,7 +19,7 @@ class StateSpaceModel(Base):
 
     @property
     def trainable_parameters(self):
-        return flatten(self.hidden.trainable_parameters, self.observable.trainable_parameters)
+        return self.hidden.trainable_parameters + self.observable.trainable_parameters
 
     @property
     def hidden_ndim(self) -> int:
@@ -38,25 +37,33 @@ class StateSpaceModel(Base):
 
         return self.observable.ndim
 
-    def propagate(self, x, as_dist=False):
-        return self.hidden.propagate(x, as_dist=as_dist)
+    def propagate(self, x, u=None, as_dist=False):
+        return self.hidden.propagate(x, u=u, as_dist=as_dist)
 
-    def log_prob(self, y, x):
-        return self.observable.log_prob(y, x)
+    def log_prob(self, y, x, u=None):
+        return self.observable.log_prob(y, x, u=u)
 
     def viewify_params(self, shape, in_place=True) -> Tuple[Tuple[Parameter, ...], ...]:
         return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
 
-    def update_parameters(self, params, transformed=True):
-        num_params = len(self.hidden.trainable_parameters)
+    def parameters_to_array(self, transformed=False, as_tuple=False):
+        hidden = self.hidden.parameters_to_array(transformed, True)
+        obs = self.observable.parameters_to_array(transformed, True)
 
-        for m, ps in [(self.hidden, params[:num_params]), (self.observable, params[num_params:])]:
-            m.update_parameters(ps)
+        tot = hidden + obs
+
+        if not tot or as_tuple:
+            return tot
+
+        return torch.cat(tot, dim=-1)
+
+    def parameters_from_array(self, array, transformed=False):
+        hid_shape = sum(p.numel_(transformed) for p in self.hidden.trainable_parameters)
+
+        self.hidden.parameters_from_array(array[:, :hid_shape], transformed=transformed)
+        self.observable.parameters_from_array(array[:, hid_shape:], transformed=transformed)
 
         return self
-
-    def parameters_as_matrix(self, transformed=True):
-        return stacker(self.trainable_parameters, lambda u: u.t_values if transformed else u.values)
 
     def h_weight(self, y: torch.Tensor, x: torch.Tensor):
         """

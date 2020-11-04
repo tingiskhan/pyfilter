@@ -2,8 +2,7 @@ from .affine import AffineProcess, _define_transdist
 from .process import StochasticProcess
 import torch
 from abc import ABC
-from torch.distributions import Distribution
-from ..utils import Empirical
+from .distributions import Empirical
 from typing import Callable, Tuple
 
 
@@ -42,8 +41,9 @@ class OneStepEulerMaruyma(AffineProcess):
 
 
 class GeneralEulerMaruyama(StochasticDifferentialEquation):
-    def __init__(self, parameters, initial_dist: Distribution, dt,
-                 prop_state: Callable[[torch.Tensor, Tuple[object, ...], float], torch.Tensor], num_steps, **kwargs):
+    def __init__(self, parameters, initial_dist, dt,
+                 prop_state: Callable[[torch.Tensor, Tuple[object, ...], float], torch.Tensor], num_steps,
+                 increment_dist=None):
         """
         The Euler-Maruyama discretization scheme for stochastic differential equations of general type. I.e. you have
         full freedom for specifying the model. The recursion is defined as
@@ -51,8 +51,7 @@ class GeneralEulerMaruyama(StochasticDifferentialEquation):
         :param prop_state: The function for propagating the state. Should take as input (x, *parameters, dt)
         """
 
-        inc_dist = kwargs.pop('increment_dist', initial_dist)
-        super().__init__(parameters, initial_dist, inc_dist, dt, num_steps)
+        super().__init__(parameters, initial_dist, increment_dist or initial_dist, dt, num_steps)
         self._prop_state = prop_state
 
     def define_density(self, x, u=None):

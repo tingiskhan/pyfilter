@@ -24,7 +24,7 @@ def _propagate_sps(spx: torch.Tensor, spn: torch.Tensor, process: StochasticProc
         spx = spx.squeeze(-1)
         spn = spn.squeeze(-1)
 
-    with TempOverride(process, '_theta_vals', temp_params):
+    with TempOverride(process, "_parameter_views", temp_params):
         out = process.propagate_u(spx, u=spn)
         return out if is_md else out.unsqueeze(-1)
 
@@ -101,7 +101,6 @@ class AggregatedResult(object):
         self.yc = yc
 
 
-# TODO: Rewrite this one to not save state
 class UnscentedFilterTransform(Module):
     def __init__(self, model: StateSpaceModel, a=1., b=2., k=0.):
         """
@@ -115,7 +114,7 @@ class UnscentedFilterTransform(Module):
         if len(model.hidden.increment_dist.event_shape) > 1:
             raise ValueError('Can at most handle vector valued processes!')
 
-        if model.hidden.distributional_theta or model.observable.distributional_theta:
+        if model.hidden._dist_builder or model.observable._dist_builder:
             raise ValueError('Cannot currently handle case when distribution is parameterized!')
 
         # ===== Model ===== #

@@ -77,7 +77,7 @@ def _g(x, s):
 
 
 class RandomWalk(AffineProcess):
-    def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist: Distribution = None):
+    def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist=None):
         """
         Defines a random walk.
         :param std: The vector of standard deviations

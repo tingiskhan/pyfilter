@@ -6,6 +6,9 @@ from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
+from pyfilter.inference.batch import VariationalBayes, varapprox as apx
+from pyfilter.inference.batch.state import VariationalState
+from scipy.stats import gaussian_kde
 
 
 def f(x, alpha, sigma):
@@ -34,8 +37,8 @@ def gmvn(x, alpha, sigma):
     return concater(sigma, sigma)
 
 
-class MyTestCase(unittest.TestCase):
-    def test_Inference(self):
+class InferenceAlgorithmTests(unittest.TestCase):
+    def test_SequentialAlgorithms(self):
         # ===== Distributions ===== #
         dist = Normal(0., 1.)
         mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
@@ -77,20 +80,45 @@ class MyTestCase(unittest.TestCase):
 
                 zipped = zip(
                     trumod.hidden.parameters + trumod.observable.parameters,                  # True parameter values
-                    alg.filter.ssm.hidden.theta + alg.filter.ssm.observable.theta   # Inferred
+                    alg.filter.ssm.hidden.parameters + alg.filter.ssm.observable.parameters   # Inferred
                 )
 
                 for trup, p in zipped:
                     if not p.trainable:
                         continue
 
-                    kde = p.get_kde(weights=w)
+                    kde = gaussian_kde(p.t_values.numpy(), weights=w.numpy())
 
-                    transed = p.bijection.inv(trup)
-                    densval = kde.logpdf(transed.numpy().reshape(-1, 1))
-                    priorval = p.distr.log_prob(trup)
+                    inverse_true_value = p.bijection.inv(trup)
 
-                    assert (densval > priorval.numpy()).all()
+                    posterior_log_prob = kde.logpdf(inverse_true_value.numpy().reshape(-1, 1))
+                    prior_log_prob = p.bijected_prior.log_prob(inverse_true_value)
+
+                    assert (posterior_log_prob > prior_log_prob.numpy()).all()
+
+    def test_VariationalBayes(self):
+        # ===== Distributions ===== #
+        dist = Normal(0., 1.)
+
+        # ===== Define model ===== #
+        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
+        model = LinearGaussianObservations(linear, scale=0.1)
+
+        # ===== Sample ===== #
+        x, y = model.sample_path(100)
+
+        # ==== Construct model to train ===== #
+        priors = Exponential(1.), LogNormal(0., 1.)
+
+        hidden1d = AffineProcess((f, g), priors, dist, dist)
+        oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
+
+        vb = VariationalBayes(oned)
+        state: VariationalState = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
+
+        assert state.converged
+
+        # TODO: Check true values, not just convergence...
 
 
 if __name__ == '__main__':

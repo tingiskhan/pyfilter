@@ -1,11 +1,10 @@
-from ...utils import unflattify
 from .base import BaseKernel
 from ..utils import _construct_mvn
 import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
 from typing import Iterable, Tuple
 from math import sqrt
-from ...filters import BaseState, BaseFilter, FilterResult
+from ...filters import BaseFilter, FilterResult
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -55,13 +54,13 @@ class ParticleMetropolisHastings(BaseKernel):
     def _update(self, parameters, filter_, state, weights):
         for i in range(self._nsteps):
             # ===== Save un-resampled particles ===== #
-            stacked = filter_.ssm.parameters_as_matrix(transformed=True)
+            stacked = filter_.ssm.parameters_to_array(transformed=True)
 
             # ===== Find the best particles ===== #
             inds = self._resampler(weights, normalized=True)
 
             # ===== Construct distribution ===== #
-            dist = self.define_pdf(stacked.concated, weights, inds)
+            dist = self.define_pdf(stacked, weights, inds)
             indep_kernel = isinstance(dist, Independent)
 
             # ===== Choose particles ===== #
@@ -72,17 +71,15 @@ class ParticleMetropolisHastings(BaseKernel):
             prop_filt = filter_.copy((*filter_.n_parallel, 1))
 
             # ===== Update parameters ===== #
-            rvs = dist.sample(() if indep_kernel else (stacked.concated.shape[0],))
-            new_params = tuple(unflattify(rvs[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
-
-            prop_filt.ssm.update_parameters(new_params)
+            rvs = dist.sample(() if indep_kernel else (stacked.shape[0],))
+            prop_filt.ssm.parameters_from_array(rvs, transformed=True)
 
             # ===== Calculate acceptance probabilities ===== #
             prop_state, model_loss = self.calc_model_loss(prop_filt, filter_, state)
 
             kernel_diff = 0.
             if not indep_kernel:
-                kernel_diff += dist.log_prob(stacked.concated[inds]) - dist.log_prob(rvs)
+                kernel_diff += dist.log_prob(stacked[inds]) - dist.log_prob(rvs)
 
             # ===== Check which to accept ===== #
             toaccept = torch.empty_like(model_loss).uniform_().log() < (model_loss + kernel_diff)

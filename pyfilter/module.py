@@ -1,6 +1,4 @@
-import torch
-from torch.distributions import Distribution, TransformedDistribution
-from typing import Tuple, Type, Dict
+from typing import Type, Dict
 
 
 _OBJTYPENAME = 'objtype'
@@ -14,29 +12,6 @@ def _find_types(x, type_: Type) -> Dict[str, object]:
     """
 
     return {k: v for k, v in vars(x).items() if isinstance(v, type_)}
-
-
-# TODO: Wait for pytorch to implement moving entire distributions
-def _iterate_distribution(d: Distribution) -> Tuple[Distribution, ...]:
-    """
-    Helper method for iterating over distributions.
-    :param d: The distribution
-    """
-
-    res = tuple()
-    if not isinstance(d, TransformedDistribution):
-        res += tuple(_find_types(d, torch.Tensor).values())
-
-        for sd in _find_types(d, Distribution).values():
-            res += _iterate_distribution(sd)
-
-    else:
-        res += _iterate_distribution(d.base_dist)
-
-        for t in d.transforms:
-            res += tuple(_find_types(t, torch.Tensor).values())
-
-    return res
 
 
 class Module(object):
