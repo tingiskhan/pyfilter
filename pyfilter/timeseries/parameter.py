@@ -12,12 +12,6 @@ ArrayType = Union[float, int, TensorOrDist, np.ndarray]
 
 
 def size_getter(shape: ShapeLike) -> torch.Size:
-    """
-    Helper function for defining a size object.
-    :param shape: The shape
-    :return: Size object
-    """
-
     if shape is None:
         return torch.Size([])
     elif isinstance(shape, torch.Size):
@@ -75,11 +69,15 @@ class Parameter(torch.Tensor):
         return result
 
     @property
-    def prior(self):
-        """
-        Returns the distribution.
-        """
+    def batch_shape(self):
+        dim = len(self.prior.event_shape)
+        if dim == 0:
+            return self.shape
 
+        return self.shape[:-dim]
+
+    @property
+    def prior(self):
         if self.trainable:
             return self._prior
 
@@ -88,10 +86,6 @@ class Parameter(torch.Tensor):
     @property
     @lru_cache()
     def bijected_prior(self):
-        """
-        Returns the unconstrained distribution.
-        """
-
         if not self.trainable:
             raise ValueError('Is not of `Distribution` instance!')
 
@@ -100,33 +94,26 @@ class Parameter(torch.Tensor):
     @property
     def bijection(self) -> Transform:
         """
-        Returns a bijected function for transforms from unconstrained to constrained space.
+        Returns the bijection from unconstrained to constrained space.
         """
+
         if not self.trainable:
-            raise ValueError("Is not of `Distribution` instance!")
+            raise ValueError("Is not of 'Distribution' instance!")
 
         return biject_to(self.prior.support)
 
     @property
     def values(self) -> torch.Tensor:
-        """
-        Returns the actual values of the parameters.
-        """
-
-        return self.data
+        return self
 
     @values.setter
     def values(self, x: torch.Tensor):
-        """
-        Sets the values of x.
-        :param x: The values
-        """
         if not isinstance(x, torch.Tensor):
             raise ValueError("Is not the same type!")
         elif x.shape != self.data.shape:
             raise ValueError("Not of same shape!")
         elif not self.trainable:
-            self.data[:] = x
+            self[:] = x
             return
 
         support = self._prior.support.check(x)
@@ -134,7 +121,7 @@ class Parameter(torch.Tensor):
         if (~support).any():
             raise ValueError("Found values outside bounds!")
 
-        self.data[:] = x
+        self[:] = x
 
     @property
     def t_values(self) -> torch.Tensor:
@@ -149,18 +136,13 @@ class Parameter(torch.Tensor):
 
     @t_values.setter
     def t_values(self, x: torch.Tensor):
-        """
-        Sets transformed values.
-        :param x: The values
-        """
-
         self.values = self.bijection(x)
 
     def sample_(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
         """
         Samples the variable from prior distribution in place.
-        :param shape: The shape to use
         """
+
         if not self.trainable:
             raise ValueError("Cannot initialize parameter as it is not of instance 'Distribution'!")
 
