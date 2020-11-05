@@ -37,14 +37,11 @@ class VariationalBayes(OptimizationBatchAlgorithm):
     # TODO: Fix this one
     def sample_parameter_approximation(self, param_approximation: ParameterMeanField):
         params = param_approximation.sample(self._ns)
-        left = 0
+
         for p in self._model.trainable_parameters:
             p.detach_()
-            slc, numel = p.get_slice_for_parameter(left, True)
 
-            p[:] = p.bijection(params[:, slc])
-            left += numel
-
+        self._model.parameters_from_array(params, transformed=True)
         self._model.viewify_params((self._ns, 1))
 
         return self
