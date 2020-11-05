@@ -56,7 +56,7 @@ class Base(Module):
 
         return self
 
-    def log_prob(self, y: torch.Tensor, x: torch.Tensor, u: torch.Tensor = None):
+    def log_prob(self, y: torch.Tensor, x: torch.Tensor, u: torch.Tensor = None) -> torch.Tensor:
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
         distribution is different from the underlying.

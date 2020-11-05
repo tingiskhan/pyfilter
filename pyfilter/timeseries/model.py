@@ -23,18 +23,10 @@ class StateSpaceModel(Base):
 
     @property
     def hidden_ndim(self) -> int:
-        """
-        Returns the dimension of the hidden process.
-        """
-
         return self.hidden.ndim
 
     @property
     def obs_ndim(self) -> int:
-        """
-        Returns the dimension of the observable process
-        """
-
         return self.observable.ndim
 
     def propagate(self, x, u=None, as_dist=False):
@@ -70,7 +62,7 @@ class StateSpaceModel(Base):
         Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
         :param y: The current hidden state
         :param x: The previous hidden state
-        :return: The corresponding log-weights
+        :return: The log-weights
         """
 
         return self.hidden.log_prob(y, x)
