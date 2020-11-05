@@ -3,7 +3,7 @@ import torch
 from ...logging import LoggingWrapper
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from .state import VariationalState
-from ...utils import EPS
+from ...constants import EPS
 
 
 class BaseBatchAlgorithm(BaseAlgorithm, ABC):

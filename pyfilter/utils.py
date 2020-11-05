@@ -1,11 +1,9 @@
 from .normalization import normalize
 import torch
-from math import sqrt
 from typing import Union, Tuple, Iterable
 
 
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]
-EPS = sqrt(torch.finfo(torch.float32).eps)
 
 
 def get_ess(w: torch.Tensor, normalized=False):

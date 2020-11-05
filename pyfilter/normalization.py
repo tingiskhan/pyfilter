@@ -1,9 +1,10 @@
 import torch
+from .constants import INFTY
 
 
 def _vector(w: torch.Tensor):
     mask = torch.isfinite(w)
-    w[~mask] = float('-inf')
+    w[~mask] = -INFTY
 
     reweighed = torch.exp(w - w.max())
 
@@ -16,7 +17,7 @@ def _vector(w: torch.Tensor):
 
 def _matrix(w: torch.Tensor):
     mask = torch.isfinite(w)
-    w[~mask] = float('-inf')
+    w[~mask] = -INFTY
 
     reweighed = torch.exp(w - w.max(-1)[0][..., None])
     normalized = reweighed / reweighed.sum(-1)[..., None]
