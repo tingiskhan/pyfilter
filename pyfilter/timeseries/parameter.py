@@ -147,7 +147,7 @@ class Parameter(torch.Tensor):
 
         new_data = self._prior.sample(size_getter(shape))
 
-        if self.data.shape == new_data.shape:
+        if self.shape == new_data.shape:
             self.values = new_data
         else:
             self.data = new_data
