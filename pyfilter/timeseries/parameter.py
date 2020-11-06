@@ -54,6 +54,7 @@ class Parameter(torch.Tensor):
 
         self.requires_grad = requires_grad
 
+    # Same as torch
     def __deepcopy__(self, memo):
         if id(self) in memo:
             return memo[id(self)]
