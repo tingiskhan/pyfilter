@@ -99,10 +99,13 @@ class Tests(unittest.TestCase):
 
         filt = SISR(model, 100)
 
-        x, y = model.sample_path(100)
-        state = filt.longfilter(y)
-
         sd = filt.state_dict()
 
-        newfilt = SISR(model, 1000).load_state_dict(sd)
+        new_linear = AffineProcess((f, g), (2., 1.), norm, norm)
+        new_linearobs = AffineObservations((fo, go), (1., 3.), norm)
+        new_model = StateSpaceModel(new_linear, new_linearobs)
+
+        newfilt = SISR(new_model, 1000).load_state_dict(sd)
+
         assert newfilt.particles == filt.particles
+        assert new_model.hidden.parameters[0] == 1. and new_model.observable.parameters[-1] == 1.

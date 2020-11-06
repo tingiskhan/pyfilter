@@ -7,7 +7,6 @@ from pyfilter.normalization import normalize
 import torch
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch import VariationalBayes, varapprox as apx
-from pyfilter.inference.batch.state import VariationalState
 from scipy.stats import gaussian_kde
 
 
@@ -105,7 +104,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
         model = LinearGaussianObservations(linear, scale=0.1)
 
         # ===== Sample ===== #
-        x, y = model.sample_path(100)
+        x, y = model.sample_path(1000)
 
         # ==== Construct model to train ===== #
         priors = Exponential(1.), LogNormal(0., 1.)
@@ -113,8 +112,8 @@ class InferenceAlgorithmTests(unittest.TestCase):
         hidden1d = AffineProcess((f, g), priors, dist, dist)
         oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
 
-        vb = VariationalBayes(oned)
-        state: VariationalState = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
+        vb = VariationalBayes(oned, samples=12)
+        state = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
 
         assert state.converged
 
