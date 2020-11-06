@@ -25,9 +25,6 @@ def size_getter(shape: ShapeLike) -> torch.Size:
 # NB: This is basically the same as original, but we include the prior as well
 def _rebuild_parameter(data, requires_grad, prior, backward_hooks):
     param = Parameter(data, requires_grad)
-    # NB: This line exists only for backwards compatibility; the
-    # general expectation is that backward_hooks is an empty
-    # OrderedDict.  See Note [Don't serialize hooks]
     param._backward_hooks = backward_hooks
     param._prior = prior
 
@@ -43,7 +40,6 @@ class Parameter(torch.Tensor):
         elif isinstance(parameter, torch.Tensor):
             _data = parameter
         elif isinstance(parameter, Distribution):
-            # This is just a place holder
             _data = torch.empty(parameter.event_shape)
         else:
             _data = torch.tensor(parameter) if not isinstance(parameter, np.ndarray) else torch.from_numpy(parameter)
@@ -51,10 +47,12 @@ class Parameter(torch.Tensor):
         return torch.Tensor._make_subclass(cls, _data, requires_grad)
 
     def __init__(self, parameter: ArrayType = None, requires_grad=False):
-        """
-        The parameter class.
-        """
-        self._prior = parameter if isinstance(parameter, Distribution) else None
+        if isinstance(parameter, Distribution):
+            self._prior = parameter
+        elif isinstance(parameter, Parameter):
+            self._prior = parameter.prior
+
+        self.requires_grad = requires_grad
 
     def __deepcopy__(self, memo):
         if id(self) in memo:
@@ -157,10 +155,6 @@ class Parameter(torch.Tensor):
 
     @property
     def trainable(self):
-        """
-        Boolean of whether parameter is trainable.
-        """
-
         return isinstance(self._prior, Distribution)
 
     def numel_(self, transformed=True) -> int:
