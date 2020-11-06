@@ -3,7 +3,7 @@ import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .varapprox import StateMeanField, ParameterMeanField
 from ...timeseries import StateSpaceModel, StochasticProcess
-from ...filters import APF
+from ...filters import UKF
 from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
 
@@ -76,13 +76,14 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         return -(logl.mean(0) + self._model.p_prior(transformed=True).mean() + entropy)
 
     def _seed_init_path(self, y) -> [int, torch.Tensor]:
-        filt = APF(self._model.copy(), 1000).set_nparallel(self._ns).viewify_params((self._ns, 1))
+        filt = UKF(self._model.copy()).set_nparallel(self._ns).viewify_params((self._ns, 1))
         state = filt.initialize()
         result = filt.longfilter(y, bar=False, init_state=state)
 
         maxind = result.loglikelihood.argmax()
 
-        return maxind, torch.cat((state.x.mean(axis=1).unsqueeze(0), result.filter_means), axis=0)[:, maxind]
+        to_cat = (state.get_mean().mean(axis=1).unsqueeze(0), result.filter_means.squeeze(-1))
+        return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         # ===== Sample model in place for a primitive version of initialization ===== #
@@ -99,9 +100,8 @@ class VariationalBayes(OptimizationBatchAlgorithm):
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
                 maxind, means = self._seed_init_path(y)
-                state_approx._mean.data[:] = means
-                state_approx._log_std.data[:] = -1.
 
+                state_approx._mean.data[:] = means
                 param_approx._mean.data[:] = self._model.parameters_to_array(transformed=True)[maxind]
 
             # ===== Append parameters ===== #

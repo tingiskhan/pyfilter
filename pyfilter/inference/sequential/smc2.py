@@ -71,11 +71,6 @@ class SMC2(SequentialParticleAlgorithm):
         return state
 
     def _increase_states(self, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
-        """
-        Increases the number of states.
-        :return: Self
-        """
-
         if self._increases >= self._max_increases:
             raise Exception(f'Configuration only allows {self._max_increases}!')
 

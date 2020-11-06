@@ -2,7 +2,7 @@ from ...utils import normalize
 import numpy as np
 from ...resampling import systematic
 import torch
-from typing import Iterable, Callable, Union
+from typing import Iterable, Callable, Union, Dict
 from ...timeseries import Parameter
 from ...filters import BaseFilter, FilterResult
 
@@ -33,10 +33,6 @@ class BaseKernel(object):
         self._resampler = resampling
 
     def set_resampler(self, resampler: Callable[[torch.Tensor, bool, Union[float, torch.Tensor]], torch.Tensor]):
-        """
-        Sets the resampler to use if necessary for kernel.
-        """
-
         self._resampler = resampler
 
         return self
@@ -65,13 +61,6 @@ class BaseKernel(object):
         return self
 
     def record_stats(self, parameters: Iterable[Parameter], weights: torch.Tensor):
-        """
-        Records the stats of the parameters.
-        :param parameters: The parameters of the model to update
-        :param weights: The weights to be passed
-        :return: Self
-        """
-
         stacked = torch.cat(tuple(p.t_values.view(-1, p.numel_(True)) for p in parameters), -1)
         weights = weights.unsqueeze(-1)
 
@@ -83,11 +72,7 @@ class BaseKernel(object):
 
         return self
 
-    def get_as_numpy(self):
-        """
-        Returns the stats numpy arrays instead of torch tensor.
-        """
-
+    def get_as_numpy(self) -> Dict[str, np.ndarray]:
         res = dict()
         for k, v in self._recorded_stats.items():
             t_res = tuple()

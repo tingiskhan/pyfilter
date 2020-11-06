@@ -13,18 +13,10 @@ T = TypeVar("T")
 class Base(Module):
     @property
     def parameters(self) -> Tuple[Parameter, ...]:
-        """
-        Returns the parameters of the model.
-        """
-
         raise NotImplementedError()
 
     @property
     def trainable_parameters(self) -> Tuple[Parameter, ...]:
-        """
-        Returns the parameters that are distributions.
-        """
-
         raise NotImplementedError()
 
     def viewify_params(self, shape: Union[Tuple[int, ...], torch.Size]):
@@ -45,8 +37,6 @@ class Base(Module):
     def sample_params(self, shape: ShapeLike):
         """
         Samples the parameters of the model in place.
-        :param shape: The shape to use
-        :return: Self
         """
 
         for param in self.trainable_parameters:
@@ -58,12 +48,10 @@ class Base(Module):
 
     def log_prob(self, y: torch.Tensor, x: torch.Tensor, u: torch.Tensor = None) -> torch.Tensor:
         """
-        Weights the process of the current state `x_t` with the previous `x_{t-1}`. Used whenever the proposal
-        distribution is different from the underlying.
+        Weights the process of the current state `x_t` with the previous `x_{t-1}`.
         :param y: The value at x_t
         :param x: The value at x_{t-1}
         :param u: Covariate value at time t
-        :return: The log-weights
         """
 
         dist = self.define_density(x, u=u)
@@ -104,7 +92,7 @@ class Base(Module):
 
     def p_apply(self, func: Callable[[Parameter], Parameter], transformed=False):
         """
-        Applies `func` to each parameter of the model "inplace", i.e. manipulates `self.theta`.
+        Applies `func` to each parameter of the model inplace.
         :param func: Function to apply, must be of the structure func(param)
         :param transformed: Whether or not results from applied function are transformed variables
         :return: Self

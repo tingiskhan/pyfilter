@@ -66,3 +66,9 @@ class FixedWidthNESS(BaseNESS):
     def do_update(self, state):
         self._num_iters += 1
         return (self._num_iters % self._bl == 0) or (~isfinite(state.w)).any()
+
+    def populate_state_dict(self):
+        res = super(FixedWidthNESS, self).populate_state_dict()
+        res["_num_iters"] = self._num_iters
+
+        return res

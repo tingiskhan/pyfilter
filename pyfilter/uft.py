@@ -2,21 +2,14 @@ from .timeseries import StateSpaceModel, StochasticProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
-from .utils import construct_diag, TempOverride
+from .utils import construct_diag, TempOverride, ShapeLike
 from .module import Module
 from .timeseries.parameter import size_getter
-from typing import Tuple, Union
+from typing import Tuple
 
 
 def _propagate_sps(spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess,
                    temp_params: Tuple[torch.Tensor, ...]):
-    """
-    Propagate the Sigma points through the given process.
-    :param spx: The state Sigma points
-    :param spn: The noise Sigma points
-    :param process: The process
-    :return: Translated and scaled sigma points
-    """
 
     is_md = process.ndim > 0
 
@@ -42,14 +35,6 @@ def _covcalc(a: torch.Tensor, b: torch.Tensor, wc: torch.Tensor):
 
 
 def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
-    """
-    Calculates the mean and covariance given sigma points for 2D processes.
-    :param spxy: The state/observation sigma points
-    :param wm: The W^m
-    :param wc: The W^c
-    :return: Mean and covariance
-    """
-
     x = (wm.unsqueeze(-1) * spxy).sum(-2)
     centered = spxy - x.unsqueeze(-2)
 
@@ -138,11 +123,6 @@ class UnscentedFilterTransform(Module):
         return {}
 
     def _set_slices(self):
-        """
-        Sets the different slices for selecting states and noise.
-        :return: Self
-        """
-
         hidden_dim = self._model.hidden.num_vars
 
         self._sslc = slice(hidden_dim)
@@ -152,11 +132,6 @@ class UnscentedFilterTransform(Module):
         return self
 
     def _set_weights(self):
-        """
-        Generates the weights used for sigma point construction.
-        :return: Self
-        """
-
         self._wm = torch.zeros(1 + 2 * self._ndim)
         self._wc = self._wm.clone()
         self._wm[0] = self._lam / (self._ndim + self._lam)
@@ -166,25 +141,12 @@ class UnscentedFilterTransform(Module):
         return self
 
     def _set_arrays(self, shape: torch.Size):
-        """
-        Sets the mean and covariance arrays.
-        :param shape: The shape
-        :return: Self
-        """
-
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
         self._views = self._model.viewify_params(view_shape, in_place=False)
 
         return self
 
-    def initialize(self, shape: Union[int, Tuple[int, ...], torch.Size] = None):
-        """
-        Initializes UnscentedTransform class.
-        :param shape: Shape of the state
-        :type shape: int|tuple|torch.Size
-        :return: Self
-        """
-
+    def initialize(self, shape: ShapeLike = None):
         shape = size_getter(shape)
         self._set_weights()._set_slices()._set_arrays(shape)
 
@@ -214,11 +176,6 @@ class UnscentedFilterTransform(Module):
         return UFTCorrectionResult(mean, cov, self._sslc, None, None)
 
     def _get_sps(self, state: UFTCorrectionResult):
-        """
-        Constructs the Sigma points used for propagation.
-        :return: Sigma points
-        """
-
         cholcov = sqrt(self._lam + self._ndim) * torch.cholesky(state.cov)
 
         spx = state.mean.unsqueeze(-2)
@@ -228,12 +185,6 @@ class UnscentedFilterTransform(Module):
         return torch.cat((spx, sph, spy), -2)
 
     def predict(self, utf_corr: UFTCorrectionResult):
-        """
-        Performs a prediction step using previous result from
-        :param utf_corr: The correction result to use for predicting
-        :return: Prediction
-        """
-
         sps = self._get_sps(utf_corr)
 
         spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
@@ -259,14 +210,6 @@ class UnscentedFilterTransform(Module):
         return UFTCorrectionResult(mean, cov, self._sslc, ym, yc)
 
     def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult):
-        """
-        Constructs the mean and covariance given the current observation and previous state.
-        :param y: The current observation
-        :param uft_pred: The prediction result to correct
-        :param prev_corr: The previous correction result
-        :return: Self
-        """
-
         # ===== Calculate mean and covariance ====== #
         correction = self.calc_mean_cov(uft_pred)
         xmean, xcov, ymean, ycov = correction.xm, correction.xc, correction.ym, correction.yc

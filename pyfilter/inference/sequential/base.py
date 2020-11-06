@@ -7,10 +7,6 @@ from .state import FilteringAlgorithmState
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
-    """
-    Algorithm for sequential inference.
-    """
-
     def _update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
@@ -44,11 +40,6 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     def __init__(self, filter_, particles: int):
-        """
-        Implements a base class for sequential particle inference.
-        :param particles: The number of particles to use
-        """
-
         super().__init__(filter_)
 
         # ===== ESS related ===== #
@@ -57,18 +48,10 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     @property
     def particles(self) -> torch.Size:
-        """
-        Returns the number of particles.
-        """
-
         return self._particles
 
     @particles.setter
     def particles(self, x: int):
-        """
-        Sets the particles.
-        """
-
         self._particles = torch.Size([x])
 
     def viewify_params(self):
@@ -78,11 +61,6 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         return self
 
     def initialize(self) -> FilteringAlgorithmState:
-        """
-        Overwrites the initialization.
-        :return: Self
-        """
-
         self.filter.set_nparallel(*self.particles)
         self.filter.ssm.sample_params(self.particles)
 
@@ -94,10 +72,6 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     @property
     def logged_ess(self) -> torch.Tensor:
-        """
-        Returns the logged ESS.
-        """
-
         return torch.stack(self._logged_ess)
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
