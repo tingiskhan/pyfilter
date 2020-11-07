@@ -49,7 +49,7 @@ class Parameter(torch.Tensor):
     def __init__(self, parameter: ArrayType = None, requires_grad=False):
         if isinstance(parameter, Distribution):
             self._prior = parameter
-        elif isinstance(parameter, Parameter):
+        elif isinstance(parameter, Parameter) and parameter.trainable:
             self._prior = parameter.prior
 
         self.requires_grad = requires_grad
