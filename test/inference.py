@@ -112,7 +112,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
         hidden1d = AffineProcess((f, g), priors, dist, dist)
         oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
 
-        vb = VariationalBayes(oned, samples=12)
+        vb = VariationalBayes(oned, samples=12, max_iter=50_000)
         state = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
 
         assert state.converged
