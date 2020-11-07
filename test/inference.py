@@ -6,7 +6,7 @@ from pyfilter.utils import concater
 from pyfilter.normalization import normalize
 import torch
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
-from pyfilter.inference.batch import VariationalBayes, varapprox as apx
+from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
 from scipy.stats import gaussian_kde
 
 

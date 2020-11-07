@@ -1,11 +1,11 @@
-from .base import OptimizationBatchAlgorithm
+from ..base import OptimizationBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
-from .varapprox import StateMeanField, ParameterMeanField
-from ...timeseries import StateSpaceModel, StochasticProcess
-from ...filters import UKF
+from .approximation import StateMeanField, ParameterMeanField
+from ....timeseries import StateSpaceModel, StochasticProcess
+from ....filters import UKF
 from typing import Type, Union, Optional, Any, Dict
-from .state import VariationalState
+from ..state import VariationalState
 
 
 class VariationalBayes(OptimizationBatchAlgorithm):
