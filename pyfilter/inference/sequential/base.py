@@ -54,17 +54,13 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     def particles(self, x: int):
         self._particles = torch.Size([x])
 
-    def viewify_params(self):
-        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.viewify_params(shape)
-
-        return self
-
     def initialize(self) -> FilteringAlgorithmState:
         self.filter.set_nparallel(*self.particles)
         self.filter.ssm.sample_params(self.particles)
 
-        self.viewify_params()
+        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
+        self.filter.viewify_params(shape)
+
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
