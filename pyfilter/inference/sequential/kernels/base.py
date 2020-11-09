@@ -1,10 +1,10 @@
-from ...utils import normalize
+from pyfilter.utils import normalize
 import numpy as np
-from ...resampling import systematic
+from ....resampling import systematic
 import torch
 from typing import Iterable, Callable, Union, Dict
-from ...timeseries import Parameter
-from ...filters import BaseFilter, FilterResult
+from ....timeseries import Parameter
+from ....filters import BaseFilter, FilterResult
 
 
 def finite_decorator(func):

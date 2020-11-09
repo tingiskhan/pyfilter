@@ -1,7 +1,7 @@
 from .base import BaseKernel
 from .kde import KernelDensityEstimate, NonShrinkingKernel
 import torch
-from ...filters import BaseFilter, FilterResult
+from ....filters import BaseFilter, FilterResult
 
 
 class OnlineKernel(BaseKernel):

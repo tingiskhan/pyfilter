@@ -19,7 +19,7 @@ class AffineObservations(AffineProcess):
     def add_covariate(self, f: Callable[[torch.Tensor], torch.Tensor]):
         """
         Adds a covariate function to the observable density, such that
-        Y_t = f(U_t) + \mu(X_t) + \sigma(X_t) * W_t
+            Y_t = f(U_t) + \mu(X_t) + \sigma(X_t) * W_t
         :param f: The covariate function
         """
 

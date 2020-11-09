@@ -1,5 +1,5 @@
 from .base import SequentialParticleAlgorithm
-from ..kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH
 from ...utils import get_ess
 from ...filters import ParticleFilter
 from torch import isfinite
@@ -23,7 +23,7 @@ class SMC2(SequentialParticleAlgorithm):
         self._kernel = kernel or SymmetricMH()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
-            raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
+            raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
 
         # ===== Some helpers to figure out whether to raise ===== #
         self._max_increases = max_increases

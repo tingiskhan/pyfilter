@@ -90,8 +90,8 @@ class StateSpaceModel(Base):
         )
 
         for proc in procs:
-            for newp, oldp in zip(*proc):
-                oldp.values[indices] = newp.values[indices]
+            for new_param, self_param in zip(*proc):
+                self_param.values[indices] = new_param.values[indices]
 
         return self
 

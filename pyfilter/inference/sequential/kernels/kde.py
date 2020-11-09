@@ -1,8 +1,8 @@
 import torch
-from ...utils import get_ess
+from ....utils import get_ess
 from math import sqrt
 from typing import Union
-from ..utils import _construct_mvn
+from ....inference.utils import _construct_mvn
 from torch.distributions import Normal, Independent
 
 
