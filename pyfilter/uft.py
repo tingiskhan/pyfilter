@@ -116,9 +116,6 @@ class UnscentedFilterTransform(Module):
 
         self._diaginds = range(model.hidden_ndim)
 
-    def modules(self):
-        return {}
-
     def _set_slices(self):
         hidden_dim = self._model.hidden.num_vars
 
