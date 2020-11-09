@@ -59,7 +59,6 @@ def construct_diag(x: torch.Tensor):
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
     Do note that it only considers the last axis.
-    :param x: The tensor
     """
 
     if x.dim() < 1:
@@ -69,10 +68,7 @@ def construct_diag(x: torch.Tensor):
     elif x.dim() < 2:
         return torch.diag(x)
 
-    b = torch.eye(x.size(-1), device=x.device)
-    c = x.unsqueeze(-1).expand(*x.size(), x.size(-1))
-
-    return c * b
+    return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 
 
 class TempOverride(object):
