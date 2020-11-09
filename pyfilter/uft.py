@@ -22,12 +22,9 @@ def _propagate_sps(spx: torch.Tensor, spn: torch.Tensor, process: StochasticProc
         return out if is_md else out.unsqueeze(-1)
 
 
-def _covcalc(a: torch.Tensor, b: torch.Tensor, wc: torch.Tensor):
+def _covariance(a: torch.Tensor, b: torch.Tensor, wc: torch.Tensor):
     """
     Calculates the covariance from a * b^t
-    :param a: The `a` matrix
-    :param b: The `b` matrix
-    :return: The covariance
     """
     cov = a.unsqueeze(-1) * b.unsqueeze(-2)
 
@@ -38,7 +35,7 @@ def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
     x = (wm.unsqueeze(-1) * spxy).sum(-2)
     centered = spxy - x.unsqueeze(-2)
 
-    return x, _covcalc(centered, centered, wc)
+    return x, _covariance(centered, centered, wc)
 
 
 class UFTCorrectionResult(object):
@@ -225,7 +222,7 @@ class UnscentedFilterTransform(Module):
         else:
             ty = uft_pred.spy - ymean
 
-        xycov = _covcalc(tx, ty, self._wc)
+        xycov = _covariance(tx, ty, self._wc)
 
         # ==== Calculate the gain ==== #
         gain = torch.matmul(xycov, ycov.inverse())
