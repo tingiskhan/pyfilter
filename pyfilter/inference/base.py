@@ -2,9 +2,12 @@ from abc import ABC
 from ..filters import BaseFilter, utils as u
 from pyfilter.module import Module
 import torch
-from typing import Tuple
+from typing import Tuple, TypeVar
 from ..logging import LoggingWrapper, TqdmWrapper
 from .state import AlgorithmState
+
+
+T = TypeVar("T", bound=AlgorithmState)
 
 
 class BaseAlgorithm(Module, ABC):
@@ -12,10 +15,10 @@ class BaseAlgorithm(Module, ABC):
         super().__init__()
 
     @u.enforce_tensor
-    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs) -> AlgorithmState:
+    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs):
         return self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
 
-    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> AlgorithmState:
+    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> T:
         raise NotImplementedError()
 
     def initialize(self, *args, **kwargs) -> AlgorithmState:
@@ -46,7 +49,7 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
     @filter.setter
     def filter(self, x: BaseFilter):
         if not isinstance(x, type(self.filter)):
-            raise ValueError('`x` is not {:s}!'.format(type(self.filter)))
+            raise ValueError(f"'x' is not {self.filter}!")
 
         self._filter = x
 
