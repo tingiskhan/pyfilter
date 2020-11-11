@@ -1,5 +1,5 @@
 from ..state import AlgorithmState
-from .varapprox import ParameterMeanField, StateMeanField
+from .variational.approximation import ParameterMeanField, StateMeanField
 import torch
 from torch.optim import Adadelta as Optimizer
 from typing import Optional

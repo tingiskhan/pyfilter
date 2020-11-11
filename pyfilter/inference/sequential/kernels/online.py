@@ -1,8 +1,7 @@
 from .base import BaseKernel
 from .kde import KernelDensityEstimate, NonShrinkingKernel
-from ...utils import unflattify
 import torch
-from ...filters import BaseFilter, FilterResult
+from ....filters import BaseFilter, FilterResult
 
 
 class OnlineKernel(BaseKernel):
@@ -26,8 +25,8 @@ class OnlineKernel(BaseKernel):
         return inds
 
     def _update(self, parameters, filter_, state, weights):
-        stacked = filter_.ssm.parameters_as_matrix(transformed=True)
-        kde = self._kde.fit(stacked.concated, weights)
+        stacked = filter_.ssm.parameters_to_array(transformed=True)
+        kde = self._kde.fit(stacked, weights)
 
         inds = self._resample(filter_, state, weights)
         jittered = kde.sample(inds=inds)
@@ -37,9 +36,8 @@ class OnlineKernel(BaseKernel):
                 jittered.shape[0], device=jittered.device
             ).bernoulli_(1 / weights.shape[0] ** 0.5).unsqueeze(-1)
 
-            jittered = (1 - to_jitter) * stacked.concated[inds] + to_jitter * jittered
+            jittered = (1 - to_jitter) * stacked[inds] + to_jitter * jittered
 
-        new_params = tuple(unflattify(jittered[:, msk], ps) for msk, ps in zip(stacked.mask, stacked.prev_shape))
-        filter_.ssm.update_parameters(new_params)
+        filter_.ssm.parameters_from_array(jittered, True)
 
         return self

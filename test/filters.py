@@ -86,19 +86,6 @@ class Tests(unittest.TestCase):
 
                 assert rel_error < 0.05 and rel_ll_error < 0.05
 
-                if isinstance(filt, UKF):
-                    continue
-
-                smoothed = filt.smooth(result.states).mean(dim=1)
-                s_mean, _ = kf.smooth(y.numpy())
-
-                if model.hidden_ndim < 1:
-                    s_mean = s_mean[:, 0]
-
-                rel_error = np.median(np.abs((smoothed[1:] - s_mean) / s_mean))
-
-                assert rel_error < 5e-2
-
     def test_ParallellFiltersAndStability(self):
         x, y = self.model.sample_path(50)
 

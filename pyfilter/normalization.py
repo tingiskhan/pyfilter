@@ -1,28 +1,5 @@
 import torch
-
-
-def _vector(w: torch.Tensor):
-    mask = torch.isfinite(w)
-    w[~mask] = float('-inf')
-
-    reweighed = torch.exp(w - w.max())
-
-    normalized = reweighed / reweighed.sum()
-    if normalized.sum() == 0:
-        normalized[:] = 1 / normalized.shape[-1]
-
-    return normalized
-
-
-def _matrix(w: torch.Tensor):
-    mask = torch.isfinite(w)
-    w[~mask] = float('-inf')
-
-    reweighed = torch.exp(w - w.max(-1)[0][..., None])
-    normalized = reweighed / reweighed.sum(-1)[..., None]
-    normalized[torch.isnan(normalized.sum(1))] = 1 / normalized.shape[-1]
-
-    return normalized
+from .constants import INFTY
 
 
 def normalize(w: torch.Tensor):
@@ -32,7 +9,18 @@ def normalize(w: torch.Tensor):
     :return: Normalized weights
     """
 
-    if w.dim() > 1:
-        return _matrix(w)
+    is_1d = w.dim() == 1
 
-    return _vector(w)
+    if is_1d:
+        w = w.unsqueeze(0)
+
+    mask = torch.isfinite(w)
+    w[~mask] = -INFTY
+
+    reweighed = torch.exp(w - w.max(-1)[0][..., None])
+    normalized = reweighed / reweighed.sum(-1)[..., None]
+
+    ax_sum = normalized.sum(1)
+    normalized[torch.isnan(ax_sum) | (ax_sum == 0.)] = 1 / normalized.shape[-1]
+
+    return normalized.squeeze(0) if is_1d else normalized

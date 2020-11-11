@@ -13,7 +13,7 @@ from torch.distributions import Categorical
 
 
 _PROPOSAL_MAPPING = {
-    LGO: LinearGaussianObservations
+    LGO.__name__: LinearGaussianObservations
 }
 
 
@@ -45,7 +45,7 @@ class ParticleFilter(BaseFilter, ABC):
         # ===== Proposal ===== #
         if proposal == 'auto':
             try:
-                proposal = _PROPOSAL_MAPPING[type(self._model)]()
+                proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
             except KeyError:
                 proposal = Bootstrap()
 

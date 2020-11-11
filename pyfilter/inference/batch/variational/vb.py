@@ -1,12 +1,11 @@
-from .base import OptimizationBatchAlgorithm
+from ..base import OptimizationBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
-from .varapprox import StateMeanField, ParameterMeanField
-from ...timeseries import StateSpaceModel, StochasticProcess
-from ...utils import unflattify, stacker
-from ...filters import APF
+from .approximation import StateMeanField, ParameterMeanField
+from ....timeseries import StateSpaceModel, StochasticProcess
+from ....filters import UKF
 from typing import Type, Union, Optional, Any, Dict
-from .state import VariationalState
+from ..state import VariationalState
 
 
 class VariationalBayes(OptimizationBatchAlgorithm):
@@ -17,7 +16,6 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         `StochasticProcess`.
         :param model: The model
         :param samples: The number of samples
-        :param approx: The variational approximation to use for the latent space
         :param optimizer: The optimizer
         :param max_iter: The maximum number of iterations
         :param optkwargs: Any optimizer specific kwargs
@@ -29,7 +27,6 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         self._ns = samples
 
         # ===== Helpers ===== #
-        self._mask = None
         self._use_filter = use_filter
 
         # ===== Optimization stuff ===== #
@@ -37,27 +34,21 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         self._optimizer = None
         self.optkwargs = optkwargs or dict()
 
-    def sample_params(self, param_approximation: ParameterMeanField):
-        """
-        Samples parameters from the variational approximation.
-        :return: Self
-        """
-
+    # TODO: Fix this one
+    def sample_parameter_approximation(self, param_approximation: ParameterMeanField):
         params = param_approximation.sample(self._ns)
-        for p, msk in zip(self._model.theta_dists, self._mask):
-            p.detach_()
-            p[:] = unflattify(p.bijection(params[:, msk]), p.c_shape)
 
+        for p in self._model.trainable_parameters:
+            p.detach_()
+
+        self._model.parameters_from_array(params, transformed=True)
         self._model.viewify_params((self._ns, 1))
 
         return self
 
     def loss(self, y, state):
-        """
-        The loss function, i.e. ELBO.
-        """
         # ===== Sample parameters ===== #
-        self.sample_params(state.param_approx)
+        self.sample_parameter_approximation(state.param_approx)
         entropy = state.param_approx.entropy()
 
         if isinstance(self._model, StateSpaceModel):
@@ -74,7 +65,7 @@ class VariationalBayes(OptimizationBatchAlgorithm):
 
             init_dist = self._model.hidden.i_sample(as_dist=True)
 
-            logl = (self._model.log_prob(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1)
+            logl = (self._model.log_prob(y, x_t) + self._model.hidden.log_prob(x_t, x_tm1)).sum(1)
             logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
 
             entropy += state.state_approx.entropy()
@@ -85,21 +76,21 @@ class VariationalBayes(OptimizationBatchAlgorithm):
         return -(logl.mean(0) + self._model.p_prior(transformed=True).mean() + entropy)
 
     def _seed_init_path(self, y) -> [int, torch.Tensor]:
-        filt = APF(self._model.copy(), 1000).set_nparallel(self._ns).viewify_params((self._ns, 1))
+        filt = UKF(self._model.copy()).set_nparallel(self._ns).viewify_params((self._ns, 1))
         state = filt.initialize()
         result = filt.longfilter(y, bar=False, init_state=state)
 
         maxind = result.loglikelihood.argmax()
 
-        return maxind, torch.cat((state.x.mean(axis=1).unsqueeze(0), result.filter_means), axis=0)[:, maxind]
+        to_cat = (state.get_mean().mean(axis=1).unsqueeze(0), result.filter_means.squeeze(-1))
+        return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params(self._ns)
-        self._mask = stacker(self._model.theta_dists).mask  # NB: We create a mask once
 
         # ===== Setup the parameter approximation ===== #
-        param_approx.initialize(self._model.theta_dists)
+        param_approx.initialize(self._model.trainable_parameters)
         opt_params = param_approx.get_parameters()
 
         # ===== Initialize the state approximation ===== #
@@ -109,10 +100,9 @@ class VariationalBayes(OptimizationBatchAlgorithm):
             # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
                 maxind, means = self._seed_init_path(y)
-                state_approx._mean.data[:] = means
-                state_approx._log_std.data[:] = -1.
 
-                param_approx._mean.data[:] = self._model.parameters_as_matrix().concated[maxind]
+                state_approx._mean.data[:] = means
+                param_approx._mean.data[:] = self._model.parameters_to_array(transformed=True)[maxind]
 
             # ===== Append parameters ===== #
             opt_params += state_approx.get_parameters()

@@ -1,4 +1,3 @@
-from ..utils import flatten, stacker
 import torch
 from .base import Base
 from .process import StochasticProcess
@@ -16,57 +15,47 @@ class StateSpaceModel(Base):
 
         self.hidden = hidden
         self.observable = observable
-        self.observable._inputdim = self.hidden_ndim
+        self.observable._input_dim = self.hidden_ndim
 
     @property
-    def theta_dists(self):
-        return flatten(self.hidden.theta_dists, self.observable.theta_dists)
+    def trainable_parameters(self):
+        return self.hidden.trainable_parameters + self.observable.trainable_parameters
 
     @property
     def hidden_ndim(self) -> int:
-        """
-        Returns the dimension of the hidden process.
-        """
-
         return self.hidden.ndim
 
     @property
     def obs_ndim(self) -> int:
-        """
-        Returns the dimension of the observable process
-        """
-
         return self.observable.ndim
 
-    def propagate(self, x, as_dist=False):
-        return self.hidden.propagate(x, as_dist=as_dist)
+    def propagate(self, x, u=None, as_dist=False):
+        return self.hidden.propagate(x, u=u, as_dist=as_dist)
 
-    def log_prob(self, y, x):
-        return self.observable.log_prob(y, x)
+    def log_prob(self, y, x, u=None):
+        return self.observable.log_prob(y, x, u=u)
 
     def viewify_params(self, shape, in_place=True) -> Tuple[Tuple[Parameter, ...], ...]:
         return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
 
-    def update_parameters(self, params, transformed=True):
-        num_params = len(self.hidden.theta_dists)
+    def parameters_to_array(self, transformed=False, as_tuple=False):
+        hidden = self.hidden.parameters_to_array(transformed, True)
+        obs = self.observable.parameters_to_array(transformed, True)
 
-        for m, ps in [(self.hidden, params[:num_params]), (self.observable, params[num_params:])]:
-            m.update_parameters(ps)
+        tot = hidden + obs
+
+        if not tot or as_tuple:
+            return tot
+
+        return torch.cat(tot, dim=-1)
+
+    def parameters_from_array(self, array, transformed=False):
+        hid_shape = sum(p.numel_(transformed) for p in self.hidden.trainable_parameters)
+
+        self.hidden.parameters_from_array(array[:, :hid_shape], transformed=transformed)
+        self.observable.parameters_from_array(array[:, hid_shape:], transformed=transformed)
 
         return self
-
-    def parameters_as_matrix(self, transformed=True):
-        return stacker(self.theta_dists, lambda u: u.t_values if transformed else u.values)
-
-    def h_weight(self, y: torch.Tensor, x: torch.Tensor):
-        """
-        Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
-        :param y: The current hidden state
-        :param x: The previous hidden state
-        :return: The corresponding log-weights
-        """
-
-        return self.hidden.log_prob(y, x)
 
     def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
@@ -86,13 +75,13 @@ class StateSpaceModel(Base):
         """
 
         procs = (
-            (newmodel.hidden.theta_dists, self.hidden.theta_dists),
-            (newmodel.observable.theta_dists, self.observable.theta_dists)
+            (newmodel.hidden.trainable_parameters, self.hidden.trainable_parameters),
+            (newmodel.observable.trainable_parameters, self.observable.trainable_parameters)
         )
 
         for proc in procs:
-            for newp, oldp in zip(*proc):
-                oldp.values[indices] = newp.values[indices]
+            for new_param, self_param in zip(*proc):
+                self_param.values[indices] = new_param.values[indices]
 
         return self
 

@@ -1,12 +1,10 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceModel
-from torch.distributions import Normal, MultivariateNormal, Independent
+from torch.distributions import Normal, MultivariateNormal
 from pyfilter.uft import UnscentedFilterTransform
 import torch
-from pyfilter.filters import SISR, UKF
+from pyfilter.filters import SISR
 from pyfilter.utils import concater
-from pyfilter.inference.utils import stacker
-from pyfilter.timeseries import Parameter
 
 
 def f(x, alpha, sigma):
@@ -69,7 +67,7 @@ class Tests(unittest.TestCase):
         uft = UnscentedFilterTransform(model)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(torch.tensor(0.), p)
+        c = uft.correct(torch.tensor(0.), p, res)
 
         assert isinstance(c.x_dist(), Normal) and c.x_dist().mean.shape == torch.Size([3000])
 
@@ -89,7 +87,7 @@ class Tests(unittest.TestCase):
         uft = UnscentedFilterTransform(mvnmodel)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(torch.tensor(0.), p)
+        c = uft.correct(torch.tensor(0.), p, res)
 
         assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
 
@@ -101,35 +99,13 @@ class Tests(unittest.TestCase):
 
         filt = SISR(model, 100)
 
-        x, y = model.sample_path(100)
-        state = filt.longfilter(y)
-
         sd = filt.state_dict()
 
-        newfilt = SISR(model, 1000).load_state_dict(sd)
+        new_linear = AffineProcess((f, g), (2., 1.), norm, norm)
+        new_linearobs = AffineObservations((fo, go), (1., 3.), norm)
+        new_model = StateSpaceModel(new_linear, new_linearobs)
+
+        newfilt = SISR(new_model, 1000).load_state_dict(sd)
+
         assert newfilt.particles == filt.particles
-        assert newfilt.result.loglikelihood == filt.result.loglikelihood
-        assert (newfilt.result.filter_means == filt.result.filter_means).all()
-
-    def test_Stacker(self):
-        # ===== Define a mix of parameters ====== #
-        zerod = Parameter(Normal(0., 1.)).sample_((1000,))
-        oned_luring = Parameter(Normal(torch.tensor([0.]), torch.tensor([1.]))).sample_(zerod.shape)
-        oned = Parameter(MultivariateNormal(torch.zeros(2), torch.eye(2))).sample_(zerod.shape)
-
-        mu = torch.zeros((3, 3))
-        norm = Independent(Normal(mu, torch.ones_like(mu)), 2)
-        twod = Parameter(norm).sample_(zerod.shape)
-
-        # ===== Stack ===== #
-        params = (zerod, oned, oned_luring, twod)
-        stacked = stacker(params, lambda u: u.t_values, dim=1)
-
-        # ===== Verify it's recreated correctly ====== #
-        for p, m, ps in zip(params, stacked.mask, stacked.prev_shape):
-            v = stacked.concated[..., m]
-
-            if len(p.c_shape) != 0:
-                v = v.reshape(*v.shape[:-1], *ps)
-
-            assert (p.t_values == v).all()
+        assert new_model.hidden.parameters[0] == 1. and new_model.observable.parameters[-1] == 1.

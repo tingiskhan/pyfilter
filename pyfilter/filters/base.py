@@ -12,11 +12,6 @@ from .state import BaseState
 
 class BaseFilter(Module, ABC):
     def __init__(self, model: StateSpaceModel):
-        """
-        The basis for filters. Take as input a model and specific attributes.
-        :param model: The model
-        """
-
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -27,9 +22,6 @@ class BaseFilter(Module, ABC):
 
     @property
     def ssm(self) -> StateSpaceModel:
-        """
-        Returns the SSM as an object.
-        """
         return self._model
 
     @property
@@ -37,12 +29,6 @@ class BaseFilter(Module, ABC):
         return self._n_parallel
 
     def viewify_params(self, shape: Union[int, torch.Size]):
-        """
-        Defines views to be used as parameters instead
-        :param shape: The shape to use. Please note that
-        :return: Self
-        """
-
         self.ssm.viewify_params(shape)
 
         return self
@@ -56,17 +42,12 @@ class BaseFilter(Module, ABC):
         raise NotImplementedError()
 
     def initialize(self) -> BaseState:
-        """
-        Initializes the filter.
-        :return: Self
-        """
-
         raise NotImplementedError()
 
     @enforce_tensor
     def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         """
-        Performs a filtering the model for the observation `y`.
+        Performs a filtering move given the observation `y`.
         :param y: The observation
         :param state: The previous state
         :return: Self and log-likelihood
@@ -81,7 +62,7 @@ class BaseFilter(Module, ABC):
                    record_states=False, init_state: BaseState = None) -> FilterResult:
         """
         Filters the entire data set `y`.
-        :param y: An array of data. Should be {# observations, # dimensions (minimum of 1)}
+        :param y: An array of data. Could either be 1D or 2D.
         :param bar: Whether to print a progressbar
         :param record_states: Whether to record states on a tuple
         :param init_state: The initial state to use
@@ -100,23 +81,11 @@ class BaseFilter(Module, ABC):
         return result
 
     def copy(self, view_shape=torch.Size([])):
-        """
-        Returns a copy of itself.
-        :return: Copy of self
-        """
-
         res = copy.deepcopy(self)
         res.viewify_params(view_shape)
         return res
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Predicts `steps` ahead using the latest available information.
-        :param state: The state to go from
-        :param steps: The number of steps forward to predict
-        :param kwargs: Any key worded arguments
-        """
-
         raise NotImplementedError()
 
     def resample(self, inds: torch.Tensor):

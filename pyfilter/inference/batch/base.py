@@ -3,14 +3,11 @@ import torch
 from ...logging import LoggingWrapper
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from .state import VariationalState
-from ...utils import EPS
+from ...constants import EPS
 
 
 class BaseBatchAlgorithm(BaseAlgorithm, ABC):
     def __init__(self, max_iter: int):
-        """
-        Algorithm for batch inference.
-        """
         super(BaseBatchAlgorithm, self).__init__()
         self._max_iter = int(max_iter)
 
@@ -50,9 +47,5 @@ class OptimizationBatchAlgorithm(BaseBatchAlgorithm, ABC):
 
 class BatchFilterAlgorithm(BaseFilterAlgorithm, BaseBatchAlgorithm, ABC):
     def __init__(self, filter_, max_iter):
-        """
-        Implements a class of inference algorithms using filters for inference.
-        """
-
         super(BatchFilterAlgorithm, self).__init__(filter_)
         self._max_iter = max_iter

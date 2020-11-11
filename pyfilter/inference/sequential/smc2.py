@@ -1,5 +1,5 @@
 from .base import SequentialParticleAlgorithm
-from ..kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels import ParticleMetropolisHastings, SymmetricMH
 from ...utils import get_ess
 from ...filters import ParticleFilter
 from torch import isfinite
@@ -23,7 +23,7 @@ class SMC2(SequentialParticleAlgorithm):
         self._kernel = kernel or SymmetricMH()
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
-            raise ValueError(f'The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!')
+            raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
 
         # ===== Some helpers to figure out whether to raise ===== #
         self._max_increases = max_increases
@@ -61,7 +61,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== Update the description ===== #
         self._kernel.set_data(self._y)
-        self._kernel.update(self.filter.ssm.theta_dists, self.filter, state.filter_state, state.w)
+        self._kernel.update(self.filter.ssm.trainable_parameters, self.filter, state.filter_state, state.w)
         state.w[:] = 0.
 
         # ===== Increase states if less than 20% are accepted ===== #
@@ -71,11 +71,6 @@ class SMC2(SequentialParticleAlgorithm):
         return state
 
     def _increase_states(self, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
-        """
-        Increases the number of states.
-        :return: Self
-        """
-
         if self._increases >= self._max_increases:
             raise Exception(f'Configuration only allows {self._max_increases}!')
 

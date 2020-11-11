@@ -3,39 +3,6 @@ import torch
 from typing import Union
 
 
-def _matrix(weights: torch.Tensor, u: torch.Tensor):
-    """
-    Performs systematic resampling of a 2D array of log weights along the second axis.
-    independent of the others.
-    :param weights: The weights to use for resampling
-    :return: Resampled indices
-    """
-    n = weights.shape[1]
-    index_range = torch.arange(n, dtype=u.dtype, device=weights.device).unsqueeze(0)
-
-    probs = (index_range + u) / n
-    cumsum = weights.cumsum(-1)
-
-    cumsum[..., -1] = 1.
-
-    return torch.searchsorted(cumsum, probs)
-
-
-def _vector(weights: torch.Tensor, u: torch.Tensor):
-    """
-    Performs systematic resampling of a 1D array log weights.
-    :param weights: The weights to use for resampling
-    :return: Resampled indices
-    """
-    n = weights.shape[0]
-    probs = (torch.arange(n, dtype=u.dtype, device=weights.device) + u) / n
-
-    cumsum = weights.cumsum(0)
-    cumsum[..., -1] = 1.
-
-    return torch.searchsorted(cumsum, probs)
-
-
 def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None):
     """
     Performs systematic resampling on either a 1D or 2D array.
@@ -44,15 +11,25 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     :param u: Parameter for overriding the sampled index, for testing
     :return: Resampled indices
     """
+    is_1d = w.dim() == 1
 
-    shape = (1,) if w.dim() < 2 else (w.shape[0], 1)
+    if is_1d:
+        w = w.unsqueeze(0)
+
+    shape = (w.shape[0], 1)
     u = u if u is not None else (torch.empty(shape, device=w.device)).uniform_()
     w = normalize(w) if not normalized else w
 
-    if w.dim() > 1:
-        return _matrix(w, u)
+    n = w.shape[1]
+    index_range = torch.arange(n, dtype=u.dtype, device=w.device).unsqueeze(0)
 
-    return _vector(w, u)
+    probs = (index_range + u) / n
+    cumsum = w.cumsum(-1)
+
+    cumsum[..., -1] = 1.
+    res = torch.searchsorted(cumsum, probs)
+
+    return res.squeeze(0) if is_1d else res
 
 
 def multinomial(w: torch.Tensor, normalized=False):

@@ -1,0 +1,1 @@
+from .vb import VariationalBayes

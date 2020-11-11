@@ -4,6 +4,7 @@ from pyfilter.timeseries import (
     OneStepEulerMaruyma,
     Parameter,
     AffineEulerMaruyama,
+    DistributionBuilder,
     models as m
 )
 import torch
@@ -272,7 +273,7 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
-        dist = Normal(loc=0., scale=Parameter(Exponential(10.)))
+        dist = DistributionBuilder(Normal, loc=0., scale=Parameter(Exponential(10.)))
 
         init = Normal(a, 1.)
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
@@ -295,49 +296,24 @@ class Tests(unittest.TestCase):
         path = sde.sample_path(num + 1, shape)
         self.assertEqual(samps.shape, path.shape)
 
-    def test_StochasticSIR(self):
-        dist = Independent(Binomial(torch.tensor([1000, 1, 0]), torch.tensor([1, 1, 1e-6])), 1)
-        sir = m.StochasticSIR((0.1, 0.05, 0.01), dist, 1e-1)
-
-        x = sir.sample_path(1000, 10)
-
-        self.assertEqual(x.shape, torch.Size([1000, 10, 3]))
-
-    def test_OneFactorFractionalSIR(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1.]))
-        sir = m.OneFactorSIR((0.1, 0.05, 0.1), dist, dt=1e-1)
-
-        x = sir.sample_path(1000)
-
-        self.assertEqual(x.shape, torch.Size([1000, 3]))
-
-    def test_TwoFactorFractionalSIR(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1.]))
-        sir = m.TwoFactorSIR((0.1, 0.05, 0.05, 0.05), dist, dt=1e-1)
-
-        x = sir.sample_path(1000)
-
-        self.assertEqual(x.shape, torch.Size([1000, 3]))
-
-    def test_TwoFactorSEIRD(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1., 1., 1.]))
-        seird = m.TwoFactorSEIRD((0.1, 0.05, 0.05, 0.01, 0.1, 0.05, 0.05), dist, dt=1e-1)
-
-        x = seird.sample_path(1000)
-
-        self.assertEqual(x.shape, torch.Size([1000, 5]))
-
-    def test_TwoFactorSIRD(self):
-        dist = Dirichlet(torch.tensor([10000., 1., 1., 1.]))
-        sird = m.ThreeFactorSIRD((0.1, 0.05, 0.05, 0.01, 0.05, 0.05, 0.05), dist, dt=1e-1)
-
-        x = sird.sample_path(1000)
-
-        self.assertEqual(x.shape, torch.Size([1000, 4]))
-
     def test_AR(self):
         ar = m.AR(0., 0.99, 0.08)
 
         x = ar.sample_path(100)
 
         self.assertEqual(x.shape, torch.Size([100]))
+
+    def test_ParametersToFromArray(self):
+        sde = m.OrnsteinUhlenbeck(Exponential(10.), Normal(0., 1.), Exponential(5.), 1, dt=1.)
+        sde.sample_params(100)
+
+        as_array = sde.parameters_to_array(transformed=False)
+
+        assert as_array.shape == torch.Size([100, 3])
+
+        offset = 1.
+        sde.parameters_from_array(as_array + offset, transformed=False)
+        assert len(sde.parameters) == as_array.shape[-1]
+
+        for i, p in enumerate(sde.trainable_parameters):
+            assert (((p - offset) - as_array[:, i]).abs() < 1e-6).all()

@@ -2,23 +2,30 @@ from abc import ABC
 from torch.distributions import Distribution
 import torch
 from functools import lru_cache
-from .parameter import Parameter, size_getter
-from typing import Tuple, Union, Callable, Dict, Iterable
-from ..utils import flatten, stacker
+from .parameter import Parameter, size_getter, ArrayType, TensorOrDist
+from typing import Tuple, Union, Callable, Dict
+from ..utils import ShapeLike
 from .base import Base
+from .distributions import DistributionBuilder
 
 
-def _view_helper(p, shape):
-    return p.view(*shape, *p._prior.event_shape) if len(shape) > 0 else p.view(p.shape)
+DistOrBuilder = Union[Distribution, DistributionBuilder]
+
+
+def _view_helper(p: Parameter, shape):
+    if p.trainable:
+        return p.view(*shape, *p.prior.event_shape) if len(shape) > 0 else p.view(p.shape)
+
+    return p.view(p.shape)
 
 
 class StochasticProcess(Base, ABC):
-    def __init__(self, theta: Tuple[object, ...], initial_dist: Union[Distribution, None],
-                 increment_dist: Distribution,
+    def __init__(self, parameters: Tuple[ArrayType, ...], initial_dist: Union[Distribution, None],
+                 increment_dist: DistOrBuilder,
                  initial_transform: Union[Callable[[Distribution, Tuple[Parameter, ...]], Distribution], None] = None):
         """
         The base class for time series.
-        :param theta: The parameters governing the dynamics
+        :param parameters: The parameters governing the dynamics
         :param initial_dist: The initial distribution
         :param increment_dist: The distribution of the increments
         """
@@ -27,89 +34,57 @@ class StochasticProcess(Base, ABC):
 
         # ===== Check distributions ===== #
         cases = (
-            all(isinstance(n, Distribution) for n in (initial_dist, increment_dist)),
-            (isinstance(increment_dist, Distribution) and initial_dist is None)
+            all(isinstance(n, (DistributionBuilder, Distribution)) for n in (initial_dist, increment_dist)),
+            (isinstance(increment_dist, (DistributionBuilder, Distribution)) and initial_dist is None)
         )
 
         if not any(cases):
-            raise ValueError('All must be of instance `torch.distributions.Distribution`!')
+            raise ValueError("All must be of instance 'torch.distributions.Distribution'!")
 
         self.initial_dist = initial_dist
-        self.increment_dist = increment_dist
         self.init_transform = initial_transform
 
-        self._mapper = {
-            f'increment/{increment_dist.__class__.__name__}': self.increment_dist
-        }
-
-        if self.initial_dist is not None:
-            self._mapper[f'initial/{initial_dist.__class__.__name__}'] = self.initial_dist
+        self._dist_builder = increment_dist if isinstance(increment_dist, DistributionBuilder) else None
+        self.increment_dist = increment_dist if self._dist_builder is None else self._dist_builder()
 
         # ===== Some helpers ===== #
-        self._theta = None
-        self._theta_vals = None
+        self._parameters = None
+        self._parameter_views = None
 
-        self._inputdim = self.ndim
-
-        # ===== Distributional parameters ===== #
-        self._dist_theta = dict()
-        self._org_dist = dict()
-
-        for t, n in [('initial', self.initial_dist), ('increment', self.increment_dist)]:
-            if n is None:
-                continue
-
-            parameters = dict()
-            statics = dict()
-            for k, v in vars(n).items():
-                if k.startswith('_'):
-                    continue
-
-                if isinstance(v, Parameter) and n is self.increment_dist:
-                    parameters[k] = v
-                elif isinstance(v, torch.Tensor):
-                    statics[k] = v
-
-            if not not parameters:
-                self._dist_theta[f'{t}/{n.__class__.__name__}'] = parameters
-                self._org_dist[f'{t}/{n.__class__.__name__}'] = statics
+        self._input_dim = self.ndim
 
         # ===== Regular parameters ====== #
-        self.theta = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in theta)
+        self.parameters = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in parameters)
 
     @property
-    def distributional_theta(self) -> Dict[str, Dict[str, Parameter]]:
-        """
-        Returns the parameters of the distribution to re-initialize the distribution with. Mainly a helper for when
-        the user passes distributions parameterized by priors.
-        """
+    def parameters(self):
+        return self._parameters
 
-        return self._dist_theta
-
-    @property
-    def theta(self):
-        return self._theta
-
-    @theta.setter
-    def theta(self, x: Tuple[Parameter, ...]):
-        if self._theta is not None and len(x) != len(self._theta):
-            raise ValueError('The number of parameters must be same!')
+    @parameters.setter
+    def parameters(self, x: Tuple[Parameter, ...]):
+        if self._parameters is not None and len(x) != len(self._parameters):
+            raise ValueError("The number of parameters must be same!")
         if not all(isinstance(p, Parameter) for p in x):
-            raise ValueError(f'Not all items are of instance {Parameter.__class__.__name__}')
+            raise ValueError(f"Not all items are of instance {Parameter.__class__.__name__}")
 
-        self._theta = x
+        self._parameters = x
         self.viewify_params(torch.Size([]))
 
     @property
-    def theta_dists(self):
-        return tuple(p for p in self.theta if p.trainable) + flatten((v.values() for v in self._dist_theta.values()))
+    def trainable_parameters(self):
+        res = tuple(p for p in self.parameters if p.trainable)
+
+        if self._dist_builder is not None:
+            res += self._dist_builder.get_parameters()
+
+        return res
 
     @property
-    def theta_vals(self) -> Tuple[Parameter, ...]:
+    def parameter_views(self) -> Tuple[Parameter, ...]:
         """
-        Returns the values of the parameters.
+        Returns views of the parameters.
         """
-        return self._theta_vals
+        return self._parameter_views
 
     @property
     @lru_cache()
@@ -129,59 +104,55 @@ class StochasticProcess(Base, ABC):
         """
 
         dist = self.initial_dist or self.increment_dist
-        if len(dist.event_shape) < 1:
-            return 1
-
-        prod = 1
-        for i in dist.event_shape:
-            prod *= i
-
-        return prod
+        return dist.event_shape.numel()
 
     def viewify_params(self, shape, in_place=True) -> Tuple[Parameter, ...]:
         shape = size_getter(shape)
 
         # ===== Regular parameters ===== #
-        theta_vals = tuple()
-        for param in self.theta:
-            if param.trainable:
-                var = _view_helper(param, shape)
-            else:
-                var = param
-
-            theta_vals += (var,)
+        vals = tuple(_view_helper(p, shape) for p in self.parameters)
 
         if not in_place:
-            return theta_vals
+            return vals
 
-        # ===== Distributional parameters ===== #
-        for d, dists in self.distributional_theta.items():
-            temp = dict()
-            temp.update(self._org_dist[d])
+        if self._dist_builder is not None:
+            self.increment_dist = self._dist_builder(shape)
 
-            for k, v in dists.items():
-                temp[k] = _view_helper(v, shape)
+        self._parameter_views = vals
 
-            self._mapper[d].__init__(**temp)
+        return vals
 
-        self._theta_vals = theta_vals
+    def parameters_to_array(self, transformed=False, as_tuple=False):
+        res = tuple(
+            (p.values if not transformed else p.t_values).view(-1, p.numel_(transformed))
+            for p in self.trainable_parameters
+        )
 
-        return theta_vals
+        if not res or as_tuple:
+            return res
 
-    def update_parameters(self, new_values: Iterable[torch.Tensor], transformed=True):
-        for nv, p in zip(new_values, self.theta_dists):
+        return torch.cat(res, dim=-1)
+
+    def parameters_from_array(self, array, transformed=False):
+        tot_shape = sum(p.numel_(transformed) for p in self.trainable_parameters)
+
+        if array.shape[-1] != tot_shape:
+            raise ValueError(f"Shapes not congruent, {array.shape[-1]} != {tot_shape}")
+
+        left = 0
+        for p in self.trainable_parameters:
+            slc, numel = p.get_slice_for_parameter(left, transformed)
+
             if transformed:
-                p.t_values = nv
+                p.t_values = array[..., slc].reshape(p.t_values.shape)
             else:
-                p.values = nv
+                p.values = array[..., slc].reshape(p.shape)
+
+            left += numel
 
         return self
 
-    def parameters_as_matrix(self, transformed=True):
-        return stacker(self.theta_dists, lambda u: u.t_values if transformed else u.values)
-
-    def i_sample(self, shape: Union[int, Tuple[int, ...], None] = None, as_dist=False) -> Union[torch.Tensor,
-                                                                                                Distribution]:
+    def i_sample(self, shape: ShapeLike = None, as_dist=False) -> TensorOrDist:
         """
         Samples from the initial distribution.
         :param shape: The number of samples
@@ -192,7 +163,7 @@ class StochasticProcess(Base, ABC):
         dist = self.initial_dist.expand(size_getter(shape))
 
         if self.init_transform is not None:
-            dist = self.init_transform(dist, *self.theta_vals)
+            dist = self.init_transform(dist, *self.parameter_views)
 
         if as_dist:
             return dist
@@ -232,8 +203,8 @@ class StochasticProcess(Base, ABC):
 
     def populate_state_dict(self):
         return {
-            "_theta": self.theta,
-            "_dist_theta": self._dist_theta
+            "_parameters": self._parameters,
+            "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict()
         }
 
     def load_state_dict(self, state: Dict[str, object]):

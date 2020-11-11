@@ -6,8 +6,6 @@ import warnings
 def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
     """
     Constructs a multivariate normal distribution of weighted samples.
-    :param x: The samples
-    :param w: The weights
     """
 
     mean = (x * w.unsqueeze(-1)).sum(0)
@@ -24,7 +22,7 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
 
 def experimental(func):
     def wrapper(obj, *args, **kwargs):
-        warnings.warn(f'{obj:s} is an experimental algorithm, use at own risk')
+        warnings.warn(f"{obj:s} is an experimental algorithm, use at own risk")
 
         return func(obj, *args, **kwargs)
 
@@ -33,7 +31,7 @@ def experimental(func):
 
 def preliminary(func):
     def wrapper(obj, *args, **kwargs):
-        warnings.warn(f'{obj:s} is only a preliminary version algorithm, use at own risk')
+        warnings.warn(f"{obj:s} is only a preliminary version algorithm, use at own risk")
 
         return func(obj, *args, **kwargs)
 
