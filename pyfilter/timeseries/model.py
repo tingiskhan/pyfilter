@@ -57,16 +57,6 @@ class StateSpaceModel(Base):
 
         return self
 
-    def h_weight(self, y: torch.Tensor, x: torch.Tensor):
-        """
-        Weights the process of the current hidden state `x_t`, with the previous `x_{t-1}`.
-        :param y: The current hidden state
-        :param x: The previous hidden state
-        :return: The log-weights
-        """
-
-        return self.hidden.log_prob(y, x)
-
     def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
 

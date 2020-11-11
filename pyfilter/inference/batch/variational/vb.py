@@ -65,7 +65,7 @@ class VariationalBayes(OptimizationBatchAlgorithm):
 
             init_dist = self._model.hidden.i_sample(as_dist=True)
 
-            logl = (self._model.log_prob(y, x_t) + self._model.h_weight(x_t, x_tm1)).sum(1)
+            logl = (self._model.log_prob(y, x_t) + self._model.hidden.log_prob(x_t, x_tm1)).sum(1)
             logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
 
             entropy += state.state_approx.entropy()

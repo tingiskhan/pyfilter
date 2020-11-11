@@ -34,7 +34,7 @@ class Proposal(Module):
         return self._kernel.rsample()
 
     def weight(self, y: torch.Tensor, xn: torch.Tensor, xo: torch.Tensor):
-        return self._model.log_prob(y, xn) + self._model.h_weight(xn, xo) - self._kernel.log_prob(xn)
+        return self._model.log_prob(y, xn) + self._model.hidden.log_prob(xn, xo) - self._kernel.log_prob(xn)
 
     def resample(self, inds: torch.Tensor):
         return self
