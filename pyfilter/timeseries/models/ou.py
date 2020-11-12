@@ -21,7 +21,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         if ndim > 1:
             dist = Independent(Normal(torch.zeros(ndim), torch.ones(ndim)), 1)
         else:
-            dist = Normal(0., 1)
+            dist = Normal(0.0, 1)
 
         super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans)
         self._dt = torch.tensor(dt)

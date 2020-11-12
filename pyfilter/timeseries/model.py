@@ -76,7 +76,7 @@ class StateSpaceModel(Base):
 
         procs = (
             (newmodel.hidden.trainable_parameters, self.hidden.trainable_parameters),
-            (newmodel.observable.trainable_parameters, self.observable.trainable_parameters)
+            (newmodel.observable.trainable_parameters, self.observable.trainable_parameters),
         )
 
         for proc in procs:
@@ -86,7 +86,4 @@ class StateSpaceModel(Base):
         return self
 
     def populate_state_dict(self):
-        return {
-            "hidden": self.hidden.state_dict(),
-            "observable": self.observable.state_dict()
-        }
+        return {"hidden": self.hidden.state_dict(), "observable": self.observable.state_dict()}

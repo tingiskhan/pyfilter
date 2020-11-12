@@ -118,7 +118,7 @@ class ShrinkingKernel(KernelDensityEstimate):
         self._cov = robust_var(x, w, mean)
 
         # ===== Calculate shrinkage and shrink ===== #
-        beta = sqrt(1. - self._bw_fac ** 2)
+        beta = sqrt(1.0 - self._bw_fac ** 2)
         self._means = mean + beta * (x - mean)
 
         return self
@@ -203,7 +203,7 @@ class ConstantKernel(ShrinkingKernel):
 class NormalApproximation(KernelDensityEstimate):
     def __init__(self, independent=True):
         super().__init__()
-        self._dist = None   # type: torch.distributions.Distribution
+        self._dist = None  # type: torch.distributions.Distribution
         self._indep = independent
         self._shape = None
 

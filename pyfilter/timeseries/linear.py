@@ -39,8 +39,13 @@ def _get_shape(a):
 
 
 class LinearObservations(StateSpaceModel):
-    def __init__(self, hidden, a: Union[torch.Tensor, float, dists.Distribution],
-                 scale: Union[torch.Tensor, float, dists.Distribution], base_dist):
+    def __init__(
+        self,
+        hidden,
+        a: Union[torch.Tensor, float, dists.Distribution],
+        scale: Union[torch.Tensor, float, dists.Distribution],
+        base_dist,
+    ):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.
         :param hidden: The hidden dynamics
@@ -54,7 +59,7 @@ class LinearObservations(StateSpaceModel):
 
         # ===== Assert distributions make sense ===== #
         if base_dist.event_shape != dim:
-            raise ValueError(f'The distribution is not of correct shape!')
+            raise ValueError("The distribution is not of correct shape!")
 
         # ===== Determine propagator function ===== #
         if not is_1d:
@@ -70,7 +75,7 @@ class LinearObservations(StateSpaceModel):
 
 
 class LinearGaussianObservations(LinearObservations):
-    def __init__(self, hidden, a=1., scale=1.):
+    def __init__(self, hidden, a=1.0, scale=1.0):
         """
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
@@ -83,9 +88,9 @@ class LinearGaussianObservations(LinearObservations):
         dim, is_1d = _get_shape(a)
 
         # ====== Define distributions ===== #
-        n = dists.Normal(0., 1.) if is_1d else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
+        n = dists.Normal(0.0, 1.0) if is_1d else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
 
         if not isinstance(scale, (torch.Tensor, float, dists.Distribution)):
-            raise ValueError(f'`scale` parameter must be numeric type!')
+            raise ValueError(f"`scale` parameter must be numeric type!")
 
         super().__init__(hidden, a, scale, n)

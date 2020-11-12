@@ -23,7 +23,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         # ===== Jitter ===== #
         if self.do_update(state):
             self._kernel.update(self.filter.ssm.trainable_parameters, self.filter, state.filter_state, state.w)
-            state.w[:] = 0.
+            state.w[:] = 0.0
 
         # ===== Propagate filter ===== #
         fstate = self.filter.filter(y, state.filter_state.latest_state)

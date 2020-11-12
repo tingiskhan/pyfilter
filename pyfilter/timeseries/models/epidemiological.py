@@ -34,4 +34,3 @@ class OneFactorSIR(AffineEulerMaruyama):
 
         increment_dist = Independent(Normal(torch.zeros(1), sqrt(dt) * torch.ones(1)), 1)
         super().__init__((f, g), parameters, initial_dist, increment_dist, dt, **kwargs)
-

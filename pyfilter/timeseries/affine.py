@@ -9,9 +9,7 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribu
 
     shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
 
-    return TransformedDistribution(
-        inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim)
-    )
+    return TransformedDistribution(inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim))
 
 
 MeanOrScaleFun = Callable[[torch.Tensor, Tuple[torch.Tensor, ...]], torch.Tensor]
@@ -87,8 +85,8 @@ class RandomWalk(AffineProcess):
         """
 
         if not isinstance(std, torch.Tensor):
-            normal = Normal(0., 1.)
+            normal = Normal(0.0, 1.0)
         else:
-            normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
+            normal = Normal(0.0, 1.0) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
         super().__init__((_f, _g), (std,), initial_dist or normal, normal)

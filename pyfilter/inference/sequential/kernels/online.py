@@ -32,9 +32,11 @@ class OnlineKernel(BaseKernel):
         jittered = kde.sample(inds=inds)
 
         if self._disc:
-            to_jitter = torch.empty(
-                jittered.shape[0], device=jittered.device
-            ).bernoulli_(1 / weights.shape[0] ** 0.5).unsqueeze(-1)
+            to_jitter = (
+                torch.empty(jittered.shape[0], device=jittered.device)
+                .bernoulli_(1 / weights.shape[0] ** 0.5)
+                .unsqueeze(-1)
+            )
 
             jittered = (1 - to_jitter) * stacked[inds] + to_jitter * jittered
 

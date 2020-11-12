@@ -12,8 +12,8 @@ class Proposal(Module):
 
         super().__init__()
 
-        self._model = None      # type: StateSpaceModel
-        self._kernel = None     # type: Distribution
+        self._model = None  # type: StateSpaceModel
+        self._kernel = None  # type: Distribution
 
     @property
     def kernel(self):

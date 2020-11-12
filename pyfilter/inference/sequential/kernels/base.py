@@ -10,7 +10,7 @@ from ....filters import BaseFilter, FilterResult
 def finite_decorator(func):
     def wrapper(obj, parameters, filter_, state, w):
         mask = ~torch.isfinite(w)
-        w[mask] = -float('inf')
+        w[mask] = -float("inf")
 
         return func(obj, parameters, filter_, state, w)
 
@@ -25,10 +25,7 @@ class BaseKernel(object):
 
         self._record_stats = record_stats
 
-        self._recorded_stats = dict(
-            mean=tuple(),
-            scale=tuple()
-        )
+        self._recorded_stats = dict(mean=tuple(), scale=tuple())
 
         self._resampler = resampling
 
@@ -67,8 +64,8 @@ class BaseKernel(object):
         mean = (stacked * weights).sum(0)
         scale = ((stacked - mean) ** 2 * weights).sum(0).sqrt()
 
-        self._recorded_stats['mean'] += (mean,)
-        self._recorded_stats['scale'] += (scale,)
+        self._recorded_stats["mean"] += (mean,)
+        self._recorded_stats["scale"] += (scale,)
 
         return self
 

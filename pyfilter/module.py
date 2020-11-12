@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 
-_OBJTYPENAME = 'objtype'
+_OBJTYPENAME = "objtype"
 
 
 class Module(object):

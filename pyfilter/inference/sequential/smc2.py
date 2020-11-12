@@ -8,8 +8,9 @@ from typing import Optional
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(self, filter_, particles, threshold=0.2, kernel: Optional[ParticleMetropolisHastings] = None,
-                 max_increases=5):
+    def __init__(
+        self, filter_, particles, threshold=0.2, kernel: Optional[ParticleMetropolisHastings] = None, max_increases=5
+    ):
         """
         Implements the SMC2 algorithm by Chopin et al.
         :param threshold: The threshold at which to perform MCMC rejuvenation
@@ -62,7 +63,7 @@ class SMC2(SequentialParticleAlgorithm):
         # ===== Update the description ===== #
         self._kernel.set_data(self._y)
         self._kernel.update(self.filter.ssm.trainable_parameters, self.filter, state.filter_state, state.w)
-        state.w[:] = 0.
+        state.w[:] = 0.0
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
@@ -72,7 +73,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def _increase_states(self, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         if self._increases >= self._max_increases:
-            raise Exception(f'Configuration only allows {self._max_increases}!')
+            raise Exception(f"Configuration only allows {self._max_increases}!")
 
         # ===== Create new filter with double the state particles ===== #
         self.filter.particles = 2 * self.filter.particles[1]
@@ -88,9 +89,6 @@ class SMC2(SequentialParticleAlgorithm):
 
     def populate_state_dict(self):
         res = super(SMC2, self).populate_state_dict()
-        res.update(**{
-            "_y": self._y,
-            "_increases": self._increases
-        })
+        res.update(**{"_y": self._y, "_increases": self._increases})
 
         return res

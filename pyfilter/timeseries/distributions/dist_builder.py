@@ -30,8 +30,6 @@ class DistributionBuilder(Module):
         return self._base_dist(**new_dict)
 
     def populate_state_dict(self) -> Dict[str, object]:
-        return {
-            "_parameters": self._parameters
-        }
+        return {"_parameters": self._parameters}
 
     __call__ = build

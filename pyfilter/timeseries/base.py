@@ -77,8 +77,9 @@ class Base(Module):
 
         return dist.sample()
 
-    def sample_path(self, steps: int, samples: Union[int, Tuple[int, ...]] = None,
-                    x_s: torch.Tensor = None, u: torch.Tensor = None) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
+    def sample_path(
+        self, steps: int, samples: Union[int, Tuple[int, ...]] = None, x_s: torch.Tensor = None, u: torch.Tensor = None
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """
         Samples a trajectory from the model.
         :param steps: The number of steps

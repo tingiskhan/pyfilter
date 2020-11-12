@@ -9,8 +9,15 @@ from ..state import VariationalState
 
 
 class VariationalBayes(OptimizationBatchAlgorithm):
-    def __init__(self, model: Union[StateSpaceModel, StochasticProcess], samples=4, optimizer: Type[Optimizer] = Adam,
-                 max_iter=30e3, optkwargs: Optional[Dict[str, Any]] = None, use_filter=True):
+    def __init__(
+        self,
+        model: Union[StateSpaceModel, StochasticProcess],
+        samples=4,
+        optimizer: Type[Optimizer] = Adam,
+        max_iter=30e3,
+        optkwargs: Optional[Dict[str, Any]] = None,
+        use_filter=True,
+    ):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.

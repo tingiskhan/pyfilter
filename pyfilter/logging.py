@@ -56,4 +56,3 @@ class TqdmWrapper(LoggingWrapper):
 
     def close(self):
         self._tqdm.close()
-

@@ -70,7 +70,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
 class SymmetricMH(ParticleMetropolisHastings):
     def define_pdf(self, values, weights, inds):
-        return _construct_mvn(values, weights, scale=1.1)   # Same scale in in particles
+        return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
 
 
 # Same as: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py

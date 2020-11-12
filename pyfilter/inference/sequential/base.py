@@ -87,10 +87,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     def populate_state_dict(self):
         base = super(SequentialParticleAlgorithm, self).populate_state_dict()
 
-        base.update(**{
-            "_particles": self.particles,
-            "_logged_ess": self._logged_ess
-        })
+        base.update(**{"_particles": self.particles, "_logged_ess": self._logged_ess})
 
         return base
 
@@ -115,8 +112,9 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         raise NotImplementedError()
 
-    def do_on_switch(self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm,
-                     state: FilteringAlgorithmState) -> FilteringAlgorithmState:
+    def do_on_switch(
+        self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm, state: FilteringAlgorithmState
+    ) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
     def initialize(self):
@@ -147,12 +145,14 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def populate_state_dict(self):
         base = super(CombinedSequentialParticleAlgorithm, self).populate_state_dict()
 
-        base.update(**{
-            "_first": self._first.state_dict(),
-            "_second": self._second.state_dict(),
-            "_when_to_switch": self._when_to_switch,
-            "_is_switched": self._is_switched,
-            "_num_iters": self._num_iters
-        })
+        base.update(
+            **{
+                "_first": self._first.state_dict(),
+                "_second": self._second.state_dict(),
+                "_when_to_switch": self._when_to_switch,
+                "_is_switched": self._is_switched,
+                "_num_iters": self._num_iters,
+            }
+        )
 
         return base

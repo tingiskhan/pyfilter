@@ -32,17 +32,9 @@ def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None):
 
     # ===== Calculate the second term ===== #
     if weights is None:
-        temp = (
-            torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))
-            .mean(-1)
-            .log()
-        )
+        temp = torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)).mean(-1).log()
     else:
-        temp = (
-            (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)))
-            .sum(-1)
-            .log()
-        )
+        temp = (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))).sum(-1).log()
 
     return maxw + temp
 
