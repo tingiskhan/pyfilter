@@ -1,7 +1,7 @@
 from .base import Proposal
 import torch
 from torch.distributions import Normal, Independent
-from ..timeseries import AffineProcess
+from ...timeseries import AffineProcess
 from torch.autograd import grad
 
 

@@ -1,6 +1,6 @@
-from ..timeseries.model import StateSpaceModel
+from ...timeseries import StateSpaceModel
 from torch.distributions import Distribution
-from ..module import Module
+from ...module import Module
 import torch
 
 

@@ -2,12 +2,11 @@ from .base import BaseFilter
 from abc import ABC
 from ..resampling import systematic
 from ..timeseries import LinearGaussianObservations as LGO
-from ..proposals.bootstrap import Bootstrap, Proposal
+from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 import torch
 from ..utils import get_ess, normalize, choose
 from .utils import _construct_empty
 from typing import Tuple, Union, Iterable
-from ..proposals import LinearGaussianObservations
 from .state import ParticleState
 from torch.distributions import Categorical
 

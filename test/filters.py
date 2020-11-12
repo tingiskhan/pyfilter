@@ -2,10 +2,9 @@ import unittest
 import numpy as np
 import pykalman
 from torch.distributions import Normal, Independent
-from pyfilter.filters import SISR, APF, UKF
+from pyfilter.filters import SISR, APF, UKF, proposals as prop
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama
 import torch
-from pyfilter.proposals import Unscented, Bootstrap
 from pyfilter.utils import concater
 
 
@@ -61,7 +60,7 @@ class Tests(unittest.TestCase):
                 (SISR, {'particles': 500}),
                 (APF, {'particles': 500}),
                 (UKF, {}),
-                (SISR, {'particles': 50, 'proposal': Unscented()})
+                (SISR, {'particles': 50, 'proposal': prop.Unscented()})
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)
@@ -112,7 +111,7 @@ class Tests(unittest.TestCase):
         linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
         self.model.hidden = linear
 
-        filt = SISR(self.model, 1000, proposal=Unscented()).set_nparallel(shape)
+        filt = SISR(self.model, 1000, proposal=prop.Unscented()).set_nparallel(shape)
         result = filt.longfilter(y)
 
         filtermeans = result.filter_means
@@ -134,7 +133,7 @@ class Tests(unittest.TestCase):
 
         x, y = model.sample_path(500)
 
-        for filt in [SISR(model, 500, proposal=Bootstrap()), UKF(model)]:
+        for filt in [SISR(model, 500, proposal=prop.Bootstrap()), UKF(model)]:
             result = filt.longfilter(y)
 
             means = result.filter_means

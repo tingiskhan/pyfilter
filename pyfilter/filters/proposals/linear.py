@@ -1,8 +1,8 @@
 from .base import Proposal
 from torch.distributions import Normal, MultivariateNormal
-from ..timeseries import LinearGaussianObservations as LGO, AffineProcess
+from ...timeseries import LinearGaussianObservations as LGO, AffineProcess
 import torch
-from ..utils import construct_diag
+from ...utils import construct_diag
 
 
 class LinearGaussianObservations(Proposal):
