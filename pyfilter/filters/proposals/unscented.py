@@ -1,6 +1,6 @@
 from .base import Proposal
-from ..uft import UnscentedFilterTransform, UFTCorrectionResult
-from ..utils import choose
+from ...uft import UnscentedFilterTransform, UFTCorrectionResult
+from ...utils import choose
 
 
 class Unscented(Proposal):
@@ -9,8 +9,8 @@ class Unscented(Proposal):
         Implements the unscented proposal by van der Merwe et al.
         """
         super().__init__()
-        self._ut = None         # type: UnscentedFilterTransform
-        self._ut_res = None     # type: UFTCorrectionResult
+        self._ut = None  # type: UnscentedFilterTransform
+        self._ut_res = None  # type: UFTCorrectionResult
 
     def set_model(self, model):
         self._model = model

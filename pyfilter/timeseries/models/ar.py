@@ -22,7 +22,8 @@ class AR(AffineProcess):
         Implements a basic one dimensional autoregressive process.
         """
 
-        inc_dist = Normal(0., 1.)
+        inc_dist = Normal(0.0, 1.0)
 
-        super().__init__((_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist,
-                         initial_transform=_init_trans)
+        super().__init__(
+            (_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist, initial_transform=_init_trans
+        )

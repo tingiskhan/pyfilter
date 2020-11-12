@@ -9,14 +9,14 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribu
 
     shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
 
-    return TransformedDistribution(
-        inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim)
-    )
+    return TransformedDistribution(inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim))
+
+
+MeanOrScaleFun = Callable[[torch.Tensor, Tuple[torch.Tensor, ...]], torch.Tensor]
 
 
 class AffineProcess(StochasticProcess):
-    def __init__(self, funcs: Tuple[Callable[[torch.Tensor, Tuple[torch.Tensor, ...]], torch.Tensor], ...], parameters,
-                 initial_dist, increment_dist, initial_transform=None):
+    def __init__(self, funcs: Tuple[MeanOrScaleFun, ...], parameters, initial_dist, increment_dist, **kwargs):
         """
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
         that is, given a base distribution X we get a new distribution Y as
@@ -24,7 +24,7 @@ class AffineProcess(StochasticProcess):
         :param funcs: The functions governing the dynamics of the process
         """
 
-        super().__init__(parameters, initial_dist, increment_dist, initial_transform=initial_transform)
+        super().__init__(parameters, initial_dist, increment_dist, **kwargs)
 
         # ===== Dynamics ===== #
         self.f, self.g = funcs
@@ -85,8 +85,8 @@ class RandomWalk(AffineProcess):
         """
 
         if not isinstance(std, torch.Tensor):
-            normal = Normal(0., 1.)
+            normal = Normal(0.0, 1.0)
         else:
-            normal = Normal(0., 1.) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
+            normal = Normal(0.0, 1.0) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
 
         super().__init__((_f, _g), (std,), initial_dist or normal, normal)

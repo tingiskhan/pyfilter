@@ -20,5 +20,5 @@ __all__ = [
     "OneStepEulerMaruyma",
     "StochasticProcess",
     "models",
-    "DistributionBuilder"
+    "DistributionBuilder",
 ]

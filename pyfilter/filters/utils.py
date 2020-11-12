@@ -6,7 +6,7 @@ from typing import Tuple
 def enforce_tensor(func):
     def wrapper(obj, y, *args, **kwargs):
         if not isinstance(y, torch.Tensor):
-            raise ValueError('The observation must be of type Tensor!')
+            raise ValueError("The observation must be of type Tensor!")
 
         return func(obj, y, *args, **kwargs)
 
@@ -30,7 +30,7 @@ class FilterResult(object):
         """
         super().__init__()
 
-        self._loglikelihood = None    # type: torch.Tensor
+        self._loglikelihood = None  # type: torch.Tensor
         self._filter_means = tuple()
         self._states = (init_state,)
 

@@ -21,6 +21,6 @@ def normalize(w: torch.Tensor):
     normalized = reweighed / reweighed.sum(-1)[..., None]
 
     ax_sum = normalized.sum(1)
-    normalized[torch.isnan(ax_sum) | (ax_sum == 0.)] = 1 / normalized.shape[-1]
+    normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
 
     return normalized.squeeze(0) if is_1d else normalized

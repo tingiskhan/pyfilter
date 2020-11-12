@@ -8,8 +8,9 @@ from .timeseries.parameter import size_getter
 from typing import Tuple
 
 
-def _propagate_sps(spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess,
-                   temp_params: Tuple[torch.Tensor, ...]):
+def _propagate_sps(
+    spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
+):
 
     is_md = process.ndim > 0
 
@@ -84,7 +85,7 @@ class AggregatedResult(object):
 
 
 class UnscentedFilterTransform(Module):
-    def __init__(self, model: StateSpaceModel, a=1., b=2., k=0.):
+    def __init__(self, model: StateSpaceModel, a=1.0, b=2.0, k=0.0):
         """
         Implements the Unscented Transform for a state space model.
         :param model: The model
@@ -94,15 +95,16 @@ class UnscentedFilterTransform(Module):
         """
 
         if len(model.hidden.increment_dist.event_shape) > 1:
-            raise ValueError('Can at most handle vector valued processes!')
+            raise ValueError("Can at most handle vector valued processes!")
 
         if model.hidden._dist_builder or model.observable._dist_builder:
-            raise ValueError('Cannot currently handle case when distribution is parameterized!')
+            raise ValueError("Cannot currently handle case when distribution is parameterized!")
 
         # ===== Model ===== #
         self._model = model
-        self._trans_dim = 1 if len(model.hidden.increment_dist.event_shape) == 0 else \
-            model.hidden.increment_dist.event_shape[0]
+        self._trans_dim = (
+            1 if len(model.hidden.increment_dist.event_shape) == 0 else model.hidden.increment_dist.event_shape[0]
+        )
 
         self._ndim = model.hidden.num_vars + self._trans_dim + model.observable.num_vars
 
@@ -192,8 +194,14 @@ class UnscentedFilterTransform(Module):
 
         return AggregatedResult(xmean, xcov, ymean, ycov)
 
-    def update_state(self, xm: torch.Tensor, xc: torch.Tensor, state: UFTCorrectionResult,
-                     ym: torch.Tensor = None, yc: torch.Tensor = None):
+    def update_state(
+        self,
+        xm: torch.Tensor,
+        xc: torch.Tensor,
+        state: UFTCorrectionResult,
+        ym: torch.Tensor = None,
+        yc: torch.Tensor = None,
+    ):
         # ===== Overwrite ===== #
         mean = state.mean.clone()
         cov = state.cov.clone()

@@ -4,8 +4,9 @@ import torch
 from typing import Tuple
 
 
-def run_pmmh(filter_: BaseFilter, state: FilterResult, prop_kernel: Distribution, prop_filt,
-             y: torch.Tensor) -> Tuple[torch.Tensor, FilterResult, BaseFilter]:
+def run_pmmh(
+    filter_: BaseFilter, state: FilterResult, prop_kernel: Distribution, prop_filt, y: torch.Tensor
+) -> Tuple[torch.Tensor, FilterResult, BaseFilter]:
     """
     Runs one iteration of a vectorized Particle Marginal Metropolis hastings.
     """

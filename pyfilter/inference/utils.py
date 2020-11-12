@@ -3,7 +3,7 @@ from torch.distributions import MultivariateNormal
 import warnings
 
 
-def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
+def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     """
     Constructs a multivariate normal distribution of weighted samples.
     """
@@ -12,7 +12,7 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.):
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    if cov.det() == 0.:
+    if cov.det() == 0.0:
         chol = cov.diag().sqrt().diag()
     else:
         chol = cov.cholesky()

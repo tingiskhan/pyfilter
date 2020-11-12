@@ -15,7 +15,7 @@ class BaseFilter(Module, ABC):
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
-            raise ValueError(f'`model` must be `{StateSpaceModel.__name__:s}`!')
+            raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
 
         self._model = model
         self._n_parallel = torch.Size([])
@@ -58,8 +58,13 @@ class BaseFilter(Module, ABC):
     def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         raise NotImplementedError()
 
-    def longfilter(self, y: Union[torch.Tensor, Tuple[torch.Tensor, ...]], bar=True,
-                   record_states=False, init_state: BaseState = None) -> FilterResult:
+    def longfilter(
+        self,
+        y: Union[torch.Tensor, Tuple[torch.Tensor, ...]],
+        bar=True,
+        record_states=False,
+        init_state: BaseState = None,
+    ) -> FilterResult:
         """
         Filters the entire data set `y`.
         :param y: An array of data. Could either be 1D or 2D.
@@ -113,10 +118,7 @@ class BaseFilter(Module, ABC):
         return self
 
     def populate_state_dict(self):
-        return {
-            "_model": self.ssm.state_dict(),
-            "_n_parallel": self._n_parallel
-        }
+        return {"_model": self.ssm.state_dict(), "_n_parallel": self._n_parallel}
 
     def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
         raise NotImplementedError()

@@ -26,7 +26,7 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     probs = (index_range + u) / n
     cumsum = w.cumsum(-1)
 
-    cumsum[..., -1] = 1.
+    cumsum[..., -1] = 1.0
     res = torch.searchsorted(cumsum, probs)
 
     return res.squeeze(0) if is_1d else res
@@ -53,12 +53,12 @@ def residual(w: torch.Tensor, normalized=False):
     """
 
     if w.dim() > 1:
-        raise NotImplementedError('Not implemented for multidimensional arrays!')
+        raise NotImplementedError("Not implemented for multidimensional arrays!")
 
     w = normalize(w) if not normalized else w
 
     # ===== Calculate the number of deterministic to get ===== #
-    mw = (w.shape[-1] * w)
+    mw = w.shape[-1] * w
     floored = mw.floor()
     res = mw - floored
 

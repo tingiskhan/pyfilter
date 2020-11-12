@@ -1,7 +1,7 @@
 from .base import Proposal
 import torch
 from torch.distributions import Normal, Independent
-from ..timeseries import AffineProcess
+from ...timeseries import AffineProcess
 from torch.autograd import grad
 
 
@@ -19,7 +19,7 @@ class Linearized(Proposal):
 
     def set_model(self, model):
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
-            raise ValueError(f'Both observable and hidden must be of type {AffineProcess.__class__.__name__}!')
+            raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
 
         self._model = model
 

@@ -17,4 +17,4 @@ class Verhulst(AffineEulerMaruyama):
         def g_(x, k, g, s):
             return s * x
 
-        super().__init__((f, g_), (kappa, gamma, sigma), LogNormal(0., 1.), Normal(0., 1.), **kwargs)
+        super().__init__((f, g_), (kappa, gamma, sigma), LogNormal(0.0, 1.0), Normal(0.0, 1.0), **kwargs)

@@ -6,8 +6,15 @@ from typing import Optional
 
 
 class VariationalState(AlgorithmState):
-    def __init__(self, converged: bool, loss: float, iterations: int, param_approx: ParameterMeanField,
-                 optimizer: Optimizer, state_approx: Optional[StateMeanField] = None):
+    def __init__(
+        self,
+        converged: bool,
+        loss: float,
+        iterations: int,
+        param_approx: ParameterMeanField,
+        optimizer: Optimizer,
+        state_approx: Optional[StateMeanField] = None,
+    ):
 
         self.converged = converged
         self.loss = loss

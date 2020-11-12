@@ -20,9 +20,13 @@ def _view_helper(p: Parameter, shape):
 
 
 class StochasticProcess(Base, ABC):
-    def __init__(self, parameters: Tuple[ArrayType, ...], initial_dist: Union[Distribution, None],
-                 increment_dist: DistOrBuilder,
-                 initial_transform: Union[Callable[[Distribution, Tuple[Parameter, ...]], Distribution], None] = None):
+    def __init__(
+        self,
+        parameters: Tuple[ArrayType, ...],
+        initial_dist: Union[Distribution, None],
+        increment_dist: DistOrBuilder,
+        initial_transform: Union[Callable[[Distribution, Tuple[Parameter, ...]], Distribution], None] = None,
+    ):
         """
         The base class for time series.
         :param parameters: The parameters governing the dynamics
@@ -31,15 +35,6 @@ class StochasticProcess(Base, ABC):
         """
 
         super().__init__()
-
-        # ===== Check distributions ===== #
-        cases = (
-            all(isinstance(n, (DistributionBuilder, Distribution)) for n in (initial_dist, increment_dist)),
-            (isinstance(increment_dist, (DistributionBuilder, Distribution)) and initial_dist is None)
-        )
-
-        if not any(cases):
-            raise ValueError("All must be of instance 'torch.distributions.Distribution'!")
 
         self.initial_dist = initial_dist
         self.init_transform = initial_transform
@@ -204,7 +199,7 @@ class StochasticProcess(Base, ABC):
     def populate_state_dict(self):
         return {
             "_parameters": self._parameters,
-            "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict()
+            "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict(),
         }
 
     def load_state_dict(self, state: Dict[str, object]):

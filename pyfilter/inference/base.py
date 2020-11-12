@@ -51,6 +51,4 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         self._filter = x
 
     def populate_state_dict(self):
-        return {
-            "_filter": self.filter.state_dict()
-        }
+        return {"_filter": self.filter.state_dict()}

@@ -86,7 +86,7 @@ class Parameter(torch.Tensor):
     @lru_cache()
     def bijected_prior(self):
         if not self.trainable:
-            raise ValueError('Is not of `Distribution` instance!')
+            raise ValueError("Is not of `Distribution` instance!")
 
         return TransformedDistribution(self.prior, self.bijection.inv)
 
@@ -170,7 +170,4 @@ class Parameter(torch.Tensor):
         return slice(prev_index, prev_index + numel), numel
 
     def __reduce_ex__(self, protocol):
-        return (
-            _rebuild_parameter,
-            (self.data, self.requires_grad, self._prior, OrderedDict())
-        )
+        return (_rebuild_parameter, (self.data, self.requires_grad, self._prior, OrderedDict()))

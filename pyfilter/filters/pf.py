@@ -2,24 +2,29 @@ from .base import BaseFilter
 from abc import ABC
 from ..resampling import systematic
 from ..timeseries import LinearGaussianObservations as LGO
-from ..proposals.bootstrap import Bootstrap, Proposal
+from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 import torch
 from ..utils import get_ess, normalize, choose
 from .utils import _construct_empty
 from typing import Tuple, Union, Iterable
-from ..proposals import LinearGaussianObservations
 from .state import ParticleState
 from torch.distributions import Categorical
 
 
-_PROPOSAL_MAPPING = {
-    LGO.__name__: LinearGaussianObservations
-}
+_PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
 
 
 class ParticleFilter(BaseFilter, ABC):
-    def __init__(self, model, particles: int, resampling=systematic, proposal: Union[str, Proposal] = 'auto', ess=0.9,
-                 need_grad=False, **kwargs):
+    def __init__(
+        self,
+        model,
+        particles: int,
+        resampling=systematic,
+        proposal: Union[str, Proposal] = "auto",
+        ess=0.9,
+        need_grad=False,
+        **kwargs
+    ):
         """
         Implements the base functionality of a particle filter.
         :param particles: How many particles to use
@@ -43,13 +48,13 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         # ===== Proposal ===== #
-        if proposal == 'auto':
+        if proposal == "auto":
             try:
                 proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
             except KeyError:
                 proposal = Bootstrap()
 
-        self._proposal = proposal.set_model(self._model)    # type: Proposal
+        self._proposal = proposal.set_model(self._model)  # type: Proposal
 
     @property
     def particles(self) -> torch.Size:
@@ -91,7 +96,7 @@ class ParticleFilter(BaseFilter, ABC):
         x = self._model.hidden.i_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
 
-        return ParticleState(x, w, torch.tensor(0., device=x.device))
+        return ParticleState(x, w, torch.tensor(0.0, device=x.device))
 
     def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)
@@ -109,11 +114,7 @@ class ParticleFilter(BaseFilter, ABC):
 
     def populate_state_dict(self):
         base = super(ParticleFilter, self).populate_state_dict()
-        base.update({
-            "_particles": self.particles,
-            "_rsample": self._rsample,
-            "_th": self._th
-        })
+        base.update({"_particles": self.particles, "_rsample": self._rsample, "_th": self._th})
 
         return base
 

@@ -1,8 +1,8 @@
 from .base import Proposal
 from torch.distributions import Normal, MultivariateNormal
-from ..timeseries import LinearGaussianObservations as LGO, AffineProcess
+from ...timeseries import LinearGaussianObservations as LGO, AffineProcess
 import torch
-from ..utils import construct_diag
+from ...utils import construct_diag
 
 
 class LinearGaussianObservations(Proposal):
@@ -18,7 +18,7 @@ class LinearGaussianObservations(Proposal):
 
     def set_model(self, model):
         if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
-            raise ValueError('Model combination not supported!')
+            raise ValueError("Model combination not supported!")
 
         self._model = model
 
@@ -95,5 +95,3 @@ class LinearGaussianObservations(Proposal):
             cov = diag_ovar + c.matmul(diag_hvar).matmul(c.transpose(-2, -1))
 
         return MultivariateNormal(oloc, cov).log_prob(y)
-
-
