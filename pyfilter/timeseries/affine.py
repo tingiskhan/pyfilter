@@ -14,9 +14,11 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribu
     )
 
 
+MeanOrScaleFun = Callable[[torch.Tensor, Tuple[torch.Tensor, ...]], torch.Tensor]
+
+
 class AffineProcess(StochasticProcess):
-    def __init__(self, funcs: Tuple[Callable[[torch.Tensor, Tuple[torch.Tensor, ...]], torch.Tensor], ...], parameters,
-                 initial_dist, increment_dist, initial_transform=None):
+    def __init__(self, funcs: Tuple[MeanOrScaleFun, ...], parameters, initial_dist, increment_dist, **kwargs):
         """
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
         that is, given a base distribution X we get a new distribution Y as
@@ -24,7 +26,7 @@ class AffineProcess(StochasticProcess):
         :param funcs: The functions governing the dynamics of the process
         """
 
-        super().__init__(parameters, initial_dist, increment_dist, initial_transform=initial_transform)
+        super().__init__(parameters, initial_dist, increment_dist, **kwargs)
 
         # ===== Dynamics ===== #
         self.f, self.g = funcs

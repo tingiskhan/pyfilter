@@ -32,15 +32,6 @@ class StochasticProcess(Base, ABC):
 
         super().__init__()
 
-        # ===== Check distributions ===== #
-        cases = (
-            all(isinstance(n, (DistributionBuilder, Distribution)) for n in (initial_dist, increment_dist)),
-            (isinstance(increment_dist, (DistributionBuilder, Distribution)) and initial_dist is None)
-        )
-
-        if not any(cases):
-            raise ValueError("All must be of instance 'torch.distributions.Distribution'!")
-
         self.initial_dist = initial_dist
         self.init_transform = initial_transform
 
