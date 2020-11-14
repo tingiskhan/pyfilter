@@ -25,16 +25,11 @@ class VariationalState(AlgorithmState):
 
 
 class PMMHState(AlgorithmState):
-    def __init__(self, initial_sample: torch.Tensor, accepted: int):
+    def __init__(self, initial_sample: torch.Tensor):
         self.samples = [initial_sample]
-        self.accepted = accepted
 
     def update(self, sample: torch.Tensor):
         self.samples.append(sample)
-
-    @property
-    def acceptance_ratio(self):
-        return self.accepted / self.as_tensor().shape[0]
 
     def as_tensor(self):
         return torch.stack(self.samples)
