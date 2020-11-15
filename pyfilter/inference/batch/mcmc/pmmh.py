@@ -21,24 +21,32 @@ class PMMH(BatchFilterAlgorithm):
         super().__init__(filter_, iterations)
         self._num_chains = num_chains
         self._proposal_builder = proposal_builder or IndependentProposal()
+        self._filter_kw = {"record_states": True}
 
     def initialize(self, y: torch.Tensor, *args, **kwargs) -> PMMHState:
         self._filter = seed(self._filter, y, 50, self._num_chains)
+        prev_res = self._filter.longfilter(y, bar=False, **self._filter_kw)
 
-        return PMMHState(self._filter.ssm.parameters_to_array())
+        return PMMHState(self._filter.ssm.parameters_to_array(), prev_res)
 
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
         state = self.initialize(y, **kwargs)
-        prev_res = self._filter.longfilter(y, bar=False)
 
         prop_filt = self._filter.copy((*self._filter.n_parallel, 1))
 
         logging_wrapper.set_num_iter(self._max_iter)
         for i in range(self._max_iter):
-            prop_dist = self._proposal_builder(state, self._filter, prev_res)
-            accept, new_res, prop_filt = run_pmmh(self._filter, prev_res, prop_dist, prop_filt, y)
+            prop_dist = self._proposal_builder(state, self._filter, state.filter_result)
+            accept, new_res, prop_filt = run_pmmh(
+                self._filter,
+                state.filter_result,
+                prop_dist,
+                prop_filt,
+                y,
+                **self._filter_kw
+            )
 
-            prev_res.exchange(new_res, accept)
+            state.filter_result.exchange(new_res, accept)
             self._filter.exchange(prop_filt, accept)
 
             state.update(self._filter.ssm.parameters_to_array())

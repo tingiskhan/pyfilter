@@ -96,7 +96,7 @@ class ParticleFilter(BaseFilter, ABC):
         x = self._model.hidden.i_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
 
-        return ParticleState(x, w, torch.tensor(0.0, device=x.device))
+        return ParticleState(x, w, torch.zeros(self._n_parallel, device=x.device))
 
     def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)

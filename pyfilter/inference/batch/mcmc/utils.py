@@ -6,7 +6,13 @@ from ....constants import INFTY
 
 
 def run_pmmh(
-    filter_: BaseFilter, state: FilterResult, prop_kernel: Distribution, prop_filt, y: torch.Tensor, size=torch.Size([])
+    filter_: BaseFilter,
+    state: FilterResult,
+    prop_kernel: Distribution,
+    prop_filt,
+    y: torch.Tensor,
+    size=torch.Size([]),
+    **kwargs
 ) -> Tuple[torch.Tensor, FilterResult, BaseFilter]:
     """
     Runs one iteration of a vectorized Particle Marginal Metropolis hastings.
@@ -15,7 +21,7 @@ def run_pmmh(
     rvs = prop_kernel.sample(size)
     prop_filt.ssm.parameters_from_array(rvs, transformed=True)
 
-    new_res = prop_filt.longfilter(y, bar=False)
+    new_res = prop_filt.longfilter(y, bar=False, **kwargs)
 
     diff_logl = new_res.loglikelihood - state.loglikelihood
     diff_prior = prop_filt.ssm.p_prior() - filter_.ssm.p_prior()

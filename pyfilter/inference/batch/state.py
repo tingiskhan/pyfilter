@@ -3,6 +3,7 @@ from .variational.approximation import ParameterMeanField, StateMeanField
 import torch
 from torch.optim import Adadelta as Optimizer
 from typing import Optional
+from ...filters import FilterResult
 
 
 class VariationalState(AlgorithmState):
@@ -25,8 +26,9 @@ class VariationalState(AlgorithmState):
 
 
 class PMMHState(AlgorithmState):
-    def __init__(self, initial_sample: torch.Tensor):
+    def __init__(self, initial_sample: torch.Tensor, filter_result: FilterResult):
         self.samples = [initial_sample]
+        self.filter_result = filter_result
 
     def update(self, sample: torch.Tensor):
         self.samples.append(sample)
