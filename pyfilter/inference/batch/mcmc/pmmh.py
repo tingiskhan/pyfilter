@@ -5,11 +5,11 @@ from typing import Dict, Any, Callable
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
 from ..state import PMMHState
-from ....filters import BaseFilter, FilterResult
+from ....filters import BaseFilter
 from .proposal import IndependentProposal
 
 
-PropConstructor = Callable[[PMMHState, BaseFilter, FilterResult], Distribution]
+PropConstructor = Callable[[PMMHState, BaseFilter], Distribution]
 
 
 class PMMH(BatchFilterAlgorithm):
@@ -36,7 +36,7 @@ class PMMH(BatchFilterAlgorithm):
 
         logging_wrapper.set_num_iter(self._max_iter)
         for i in range(self._max_iter):
-            prop_dist = self._proposal_builder(state, self._filter, state.filter_result)
+            prop_dist = self._proposal_builder(state, self._filter)
             accept, new_res, prop_filt = run_pmmh(
                 self._filter,
                 state.filter_result,
