@@ -45,7 +45,7 @@ class OptimizationBatchAlgorithm(BaseBatchAlgorithm, ABC):
         raise NotImplementedError()
 
 
-class BatchFilterAlgorithm(BaseFilterAlgorithm, BaseBatchAlgorithm, ABC):
+class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
     def __init__(self, filter_, max_iter):
         super(BatchFilterAlgorithm, self).__init__(filter_)
         self._max_iter = max_iter

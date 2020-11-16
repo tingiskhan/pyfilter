@@ -7,6 +7,7 @@ from pyfilter.normalization import normalize
 import torch
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
+from pyfilter.inference.batch.mcmc import PMMH
 from scipy.stats import gaussian_kde
 
 
@@ -119,6 +120,29 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         # TODO: Check true values, not just convergence...
 
+    def test_PMMH(self):
+        # ===== Distributions ===== #
+        dist = Normal(0., 1.)
+
+        # ===== Define model ===== #
+        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
+        model = LinearGaussianObservations(linear, scale=0.1)
+
+        # ===== Sample ===== #
+        x, y = model.sample_path(500)
+
+        # ==== Construct model to train ===== #
+        priors = Exponential(1.), LogNormal(0., 1.)
+
+        hidden1d = AffineProcess((f, g), priors, dist, dist)
+        oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
+
+        filt = APF(oned, 200)
+        pmmh = PMMH(filt, 500, num_chains=6)
+
+        state = pmmh.fit(y)
+
+        # TODO: Add check for posterior
 
 if __name__ == '__main__':
     unittest.main()

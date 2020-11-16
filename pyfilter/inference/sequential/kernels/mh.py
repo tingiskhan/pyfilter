@@ -4,7 +4,7 @@ import torch
 from torch.distributions import Distribution, MultivariateNormal, Independent
 from typing import Iterable
 from math import sqrt
-from ...batch.pmmh import run_pmmh
+from ...batch.mcmc.utils import run_pmmh
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -56,7 +56,7 @@ class ParticleMetropolisHastings(BaseKernel):
             state.resample(inds)
 
             # ===== Update parameters ===== #
-            to_accept, prop_state, prop_filt = run_pmmh(filter_, state, dist, prop_filt, self._y)
+            to_accept, prop_state, prop_filt = run_pmmh(filter_, state, dist, prop_filt, self._y, filter_._n_parallel)
 
             # ===== Update the description ===== #
             self.accepted = to_accept.sum().float() / float(to_accept.shape[0])
