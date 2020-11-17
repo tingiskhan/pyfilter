@@ -3,6 +3,11 @@ from torch.distributions import Distribution, Independent
 import torch
 from typing import Tuple
 from ....constants import INFTY
+from ...state import AlgorithmState
+from typing import Callable
+
+
+PropConstructor = Callable[[AlgorithmState, BaseFilter, torch.Tensor], Distribution]
 
 
 def run_pmmh(

@@ -24,11 +24,13 @@ class OnlineKernel(BaseKernel):
 
         return inds
 
-    def _update(self, parameters, filter_, state, weights):
+    def _update(self, filter_, state, *args):
+        weights = state.normalized_weights()
+
         stacked = filter_.ssm.parameters_to_array(transformed=True)
         kde = self._kde.fit(stacked, weights)
 
-        inds = self._resample(filter_, state, weights)
+        inds = self._resample(filter_, state.filter_state, weights)
         jittered = kde.sample(inds=inds)
 
         if self._disc:
@@ -41,5 +43,6 @@ class OnlineKernel(BaseKernel):
             jittered = (1 - to_jitter) * stacked[inds] + to_jitter * jittered
 
         filter_.ssm.parameters_from_array(jittered, True)
+        state.w[:] = 0.0
 
         return self

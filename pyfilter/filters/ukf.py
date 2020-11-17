@@ -18,7 +18,7 @@ class UKF(BaseKalmanFilter):
 
     def initialize(self) -> KalmanState:
         res = self._ut.initialize(self._n_parallel)
-        return KalmanState(res, torch.tensor(0.0, device=res.xm.device))
+        return KalmanState(res, torch.zeros(self._n_parallel, device=res.xm.device))
 
     def _filter(self, y, state: KalmanState):
         p = self._ut.predict(state.utf)

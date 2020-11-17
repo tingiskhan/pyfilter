@@ -1,34 +1,30 @@
 from .base import BaseKernel
 from ...utils import _construct_mvn
 import torch
-from torch.distributions import Distribution, MultivariateNormal, Independent
-from typing import Iterable
-from math import sqrt
-from ...batch.mcmc.utils import run_pmmh
+from torch.distributions import Distribution
+from ...batch.mcmc.utils import run_pmmh, PropConstructor
+
+
+class SymmetricMH(object):
+    def __call__(self, state, filter_, y):
+        values = filter_.ssm.parameters_to_array(transformed=True)
+        weights = state.normalized_weights()
+
+        return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
 
 
 class ParticleMetropolisHastings(BaseKernel):
-    def __init__(self, nsteps=1, **kwargs):
+    def __init__(self, n_steps=1, proposal: PropConstructor = None, **kwargs):
         """
         Implements a base class for the particle Metropolis Hastings class.
-        :param nsteps: The number of steps to perform
+        :param n_steps: The number of steps to perform
         """
 
         super().__init__(**kwargs)
 
-        self._nsteps = nsteps
-        self._y = None
-        self.accepted = None
-
-    def set_data(self, y: Iterable[torch.Tensor]):
-        """
-        Sets the data to be used when calculating acceptance probabilities.
-        :param y: The data
-        :return: Self
-        """
-        self._y = y
-
-        return self
+        self._n_steps = n_steps
+        self._proposal = proposal
+        self.accepted = None or SymmetricMH()
 
     def define_pdf(self, values: torch.Tensor, weights: torch.Tensor, inds: torch.Tensor) -> Distribution:
         """
@@ -38,45 +34,35 @@ class ParticleMetropolisHastings(BaseKernel):
 
         raise NotImplementedError()
 
-    def _update(self, parameters, filter_, state, weights):
+    def _update(self, filter_, state, y, *args):
         prop_filt = filter_.copy((*filter_.n_parallel, 1))
 
-        for _ in range(self._nsteps):
-            # ===== Save un-resampled particles ===== #
-            stacked = filter_.ssm.parameters_to_array(transformed=True)
-
+        for _ in range(self._n_steps):
             # ===== Find the best particles ===== #
-            inds = self._resampler(weights, normalized=True)
+            inds = self._resampler(state.normalized_weights(), normalized=True)
 
             # ===== Construct distribution ===== #
-            dist = self.define_pdf(stacked, weights, inds)
+            dist = self._proposal(state, filter_, y)
 
             # ===== Choose particles ===== #
             filter_.resample(inds)
-            state.resample(inds)
+            state.filter_state.resample(inds)
 
             # ===== Update parameters ===== #
-            to_accept, prop_state, prop_filt = run_pmmh(filter_, state, dist, prop_filt, self._y, filter_._n_parallel)
+            to_accept, prop_state, prop_filt = run_pmmh(
+                filter_,
+                state.filter_state,
+                dist,
+                prop_filt,
+                y,
+                filter_._n_parallel
+            )
 
             # ===== Update the description ===== #
             self.accepted = to_accept.sum().float() / float(to_accept.shape[0])
 
             filter_.exchange(prop_filt, to_accept)
-            state.exchange(prop_state, to_accept)
-            weights = torch.ones_like(weights) / weights.shape[0]
+            state.filter_state.exchange(prop_state, to_accept)
+            state.w[:] = 0.0
 
         return self
-
-
-class SymmetricMH(ParticleMetropolisHastings):
-    def define_pdf(self, values, weights, inds):
-        return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
-
-
-# Same as: https://github.com/nchopin/particles/blob/master/particles/smc_samplers.py
-class AdaptiveRandomWalk(ParticleMetropolisHastings):
-    def define_pdf(self, values, weights, inds):
-        mvn = _construct_mvn(values, weights)
-        chol = 2.38 / sqrt(values.shape[1]) * mvn.scale_tril
-
-        return Independent(MultivariateNormal(values[inds], scale_tril=chol), 1)
