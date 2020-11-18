@@ -1,6 +1,5 @@
 from .pf import ParticleFilter
 from ..utils import loglikelihood, choose
-from ..normalization import normalize
 import torch
 from .state import ParticleState
 
@@ -13,7 +12,7 @@ class SISR(ParticleFilter):
     def _filter(self, y, state: ParticleState):
         # ===== Resample among old ===== #
         # TODO: Not optimal as we normalize in several other functions, fix this
-        old_normw = normalize(state.w)
+        old_normw = state.normalized_weights()
 
         inds, mask = self._resample_state(state.w)
         to_prop = choose(state.x, inds)
@@ -31,4 +30,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleState(x, w, loglikelihood(weights, old_normw))
+        return ParticleState(x, w, loglikelihood(weights, old_normw), inds)

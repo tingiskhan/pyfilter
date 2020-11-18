@@ -1,6 +1,5 @@
 from .pf import ParticleFilter
 from ..utils import loglikelihood, choose
-from ..normalization import normalize
 import torch
 from .state import ParticleState
 
@@ -15,7 +14,7 @@ class APF(ParticleFilter):
         pre_weights = self.proposal.pre_weight(y, state.x)
 
         resamp_w = pre_weights + state.w
-        normalized = normalize(state.w)
+        normalized = state.normalized_weights()
 
         # ===== Resample ===== #
         resampled_indices = self._resampler(resamp_w)
@@ -35,4 +34,4 @@ class APF(ParticleFilter):
         # ===== Calculate log likelihood ===== #
         ll = loglikelihood(w) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
 
-        return ParticleState(x, w, ll)
+        return ParticleState(x, w, ll, resampled_indices)
