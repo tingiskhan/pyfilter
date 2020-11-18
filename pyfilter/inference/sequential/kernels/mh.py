@@ -1,8 +1,7 @@
 from .base import BaseKernel
-from ...utils import _construct_mvn
+from ...utils import _construct_mvn, PropConstructor, run_pmmh
 import torch
 from torch.distributions import Distribution
-from ...batch.mcmc.utils import run_pmmh, PropConstructor
 
 
 class SymmetricMH(object):

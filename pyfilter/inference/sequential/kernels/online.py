@@ -1,7 +1,6 @@
 from .base import BaseKernel
 from .kde import KernelDensityEstimate, NonShrinkingKernel
 import torch
-from ....filters import BaseFilter, FilterResult
 
 
 class OnlineKernel(BaseKernel):
@@ -17,20 +16,16 @@ class OnlineKernel(BaseKernel):
         self._kde = kde or NonShrinkingKernel()
         self._disc = discrete
 
-    def _resample(self, filter_: BaseFilter, state: FilterResult, weights: torch.Tensor):
-        inds = self._resampler(weights, normalized=True)
-        filter_.resample(inds)
-        state.resample(inds)
-
-        return inds
-
     def _update(self, filter_, state, *args):
         weights = state.normalized_weights()
 
         stacked = filter_.ssm.parameters_to_array(transformed=True)
         kde = self._kde.fit(stacked, weights)
 
-        inds = self._resample(filter_, state.filter_state, weights)
+        inds = self._resampler(weights, normalized=True)
+        filter_.resample(inds)
+        state.filter_state.resample(inds)
+
         jittered = kde.sample(inds=inds)
 
         if self._disc:

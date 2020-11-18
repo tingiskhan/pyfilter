@@ -1,10 +1,10 @@
-from .utils import run_pmmh, seed
+from .utils import seed
 import torch
 from typing import Dict, Any
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
 from ..state import PMMHState
-from .utils import PropConstructor
+from ...utils import PropConstructor, run_pmmh
 from .proposal import IndependentProposal
 
 
