@@ -1,15 +1,11 @@
-from .utils import run_pmmh, seed
-from torch.distributions import Distribution
+from .utils import seed
 import torch
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
 from ..state import PMMHState
-from ....filters import BaseFilter
+from ...utils import PropConstructor, run_pmmh
 from .proposal import IndependentProposal
-
-
-PropConstructor = Callable[[PMMHState, BaseFilter, torch.Tensor], Distribution]
 
 
 class PMMH(BatchFilterAlgorithm):

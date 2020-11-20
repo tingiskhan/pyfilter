@@ -30,7 +30,7 @@ class FilterResult(object):
         """
         super().__init__()
 
-        self._loglikelihood = None  # type: torch.Tensor
+        self._loglikelihood = init_state.get_loglikelihood()  # type: torch.Tensor
         self._filter_means = tuple()
         self._states = (init_state,)
 
@@ -92,14 +92,10 @@ class FilterResult(object):
 
         return self
 
-    def append(self, xm, ll, state, only_latest=True):
-        if xm is not None:
-            self._filter_means += (xm,)
+    def append(self, state: BaseState, only_latest=True):
+        self._filter_means += (state.get_mean(),)
 
-        if self._loglikelihood is None:
-            self._loglikelihood = torch.zeros_like(ll)
-
-        self._loglikelihood += ll
+        self._loglikelihood += state.get_loglikelihood()
         if only_latest:
             self._states = (state,)
         else:

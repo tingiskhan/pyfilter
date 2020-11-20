@@ -22,8 +22,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
     def _update(self, y, state):
         # ===== Jitter ===== #
         if self.do_update(state):
-            self._kernel.update(self.filter.ssm.trainable_parameters, self.filter, state.filter_state, state.w)
-            state.w[:] = 0.0
+            self._kernel.update(self.filter, state)
 
         # ===== Propagate filter ===== #
         fstate = self.filter.filter(y, state.filter_state.latest_state)
@@ -31,7 +30,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
 
         # ===== Log ESS ===== #
         self._logged_ess += (get_ess(state.w),)
-        state.filter_state.append(fstate.get_mean(), fstate.get_loglikelihood(), fstate)
+        state.filter_state.append(fstate)
 
         return FilteringAlgorithmState(w, state.filter_state)
 

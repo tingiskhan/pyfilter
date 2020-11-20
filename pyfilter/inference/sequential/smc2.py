@@ -1,5 +1,6 @@
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings, SymmetricMH
+from .kernels.mh import PropConstructor
 from ...utils import get_ess
 from ...filters import ParticleFilter
 from torch import isfinite
@@ -9,7 +10,7 @@ from typing import Optional
 
 class SMC2(SequentialParticleAlgorithm):
     def __init__(
-        self, filter_, particles, threshold=0.2, kernel: Optional[ParticleMetropolisHastings] = None, max_increases=5
+        self, filter_, particles, threshold=0.2, kernel: Optional[PropConstructor] = None, max_increases=5, **kwargs
     ):
         """
         Implements the SMC2 algorithm by Chopin et al.
@@ -21,7 +22,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         # ===== When and how to update ===== #
         self._threshold = threshold * particles
-        self._kernel = kernel or SymmetricMH()
+        self._kernel = ParticleMetropolisHastings(proposal=kernel or SymmetricMH(), **kwargs)
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
@@ -45,7 +46,7 @@ class SMC2(SequentialParticleAlgorithm):
         ess = get_ess(w)
         self._logged_ess += (ess,)
 
-        state.filter_state.append(fstate.get_mean(), fstate.get_loglikelihood(), fstate)
+        state.filter_state.append(fstate)
         state = FilteringAlgorithmState(w, state.filter_state)
 
         # ===== Rejuvenate if there are too few samples ===== #
@@ -61,9 +62,7 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         # ===== Update the description ===== #
-        self._kernel.set_data(self._y)
-        self._kernel.update(self.filter.ssm.trainable_parameters, self.filter, state.filter_state, state.w)
-        state.w[:] = 0.0
+        self._kernel.update(self.filter, state, self._y)
 
         # ===== Increase states if less than 20% are accepted ===== #
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):

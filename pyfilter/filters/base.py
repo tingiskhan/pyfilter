@@ -81,7 +81,7 @@ class BaseFilter(Module, ABC):
 
         for yt in iterator:
             state = self.filter(yt, state)
-            result.append(state.get_mean(), state.get_loglikelihood(), state, not record_states)
+            result.append(state, not record_states)
 
         return result
 
