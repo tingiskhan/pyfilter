@@ -144,5 +144,6 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         # TODO: Add check for posterior
 
+
 if __name__ == '__main__':
     unittest.main()

@@ -3,7 +3,7 @@ import torch
 from typing import Dict, Any
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
-from ..state import PMMHState
+from .state import PMMHState
 from ...utils import PropConstructor, run_pmmh
 from .proposal import IndependentProposal
 
