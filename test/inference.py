@@ -129,7 +129,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
         model = LinearGaussianObservations(linear, scale=0.1)
 
         # ===== Sample ===== #
-        x, y = model.sample_path(500)
+        x, y = model.sample_path(100)
 
         # ==== Construct model to train ===== #
         priors = Exponential(1.), LogNormal(0., 1.)
@@ -138,10 +138,11 @@ class InferenceAlgorithmTests(unittest.TestCase):
         oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
 
         filt = APF(oned, 200)
-        pmmh = PMMH(filt, 500, num_chains=6)
+        pmmh = PMMH(filt, 50, num_chains=6)
 
         state = pmmh.fit(y)
-
+        oned.copy().parameters_from_array(state.as_tensor())
+        print()
         # TODO: Add check for posterior
 
 if __name__ == '__main__':
