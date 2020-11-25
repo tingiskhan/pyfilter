@@ -1,5 +1,5 @@
 from torch.distributions import Independent, Normal
-from .state import PMMHState
+from ..state import PMMHState
 from ....filters import BaseFilter
 import torch
 

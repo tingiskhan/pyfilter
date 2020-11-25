@@ -1,15 +1,14 @@
-from ..base import BaseBatchAlgorithm
+from ..base import OptimizationBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .approximation import StateMeanField, ParameterMeanField
 from ....timeseries import StateSpaceModel, StochasticProcess
 from ....filters import UKF
 from typing import Type, Union, Optional, Any, Dict
-from .state import VariationalState
-from ....constants import EPS
+from ..state import VariationalState
 
 
-class VariationalBayes(BaseBatchAlgorithm):
+class VariationalBayes(OptimizationBatchAlgorithm):
     def __init__(
         self,
         model: Union[StateSpaceModel, StochasticProcess],
@@ -41,31 +40,6 @@ class VariationalBayes(BaseBatchAlgorithm):
         self._opt_type = optimizer
         self._optimizer = None
         self.optkwargs = optkwargs or dict()
-
-    def is_converged(self, old_loss, new_loss):
-        return ((new_loss - old_loss) ** 2) ** 0.5 < EPS
-
-    def _fit(self, y: torch.Tensor, logging_wrapper, **kwargs) -> VariationalState:
-        state = self.initialize(y, **kwargs)
-
-        try:
-            logging_wrapper.set_num_iter(self._max_iter)
-            while not state.converged and state.iterations < self._max_iter:
-                old_loss = state.loss
-
-                state = self._step(y, state)
-                logging_wrapper.do_log(state.iterations, self, y)
-
-                state.iterations += 1
-                state.converged = self.is_converged(old_loss, state.loss)
-
-        except Exception as e:
-            logging_wrapper.close()
-            raise e
-
-        logging_wrapper.close()
-
-        return state
 
     # TODO: Fix this one
     def sample_parameter_approximation(self, param_approximation: ParameterMeanField):

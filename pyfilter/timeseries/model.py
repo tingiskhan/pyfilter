@@ -52,8 +52,8 @@ class StateSpaceModel(Base):
     def parameters_from_array(self, array, transformed=False):
         hid_shape = sum(p.numel_(transformed) for p in self.hidden.trainable_parameters)
 
-        self.hidden.parameters_from_array(array[..., :hid_shape], transformed=transformed)
-        self.observable.parameters_from_array(array[..., hid_shape:], transformed=transformed)
+        self.hidden.parameters_from_array(array[:, :hid_shape], transformed=transformed)
+        self.observable.parameters_from_array(array[:, hid_shape:], transformed=transformed)
 
         return self
 
