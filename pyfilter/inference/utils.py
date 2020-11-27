@@ -53,7 +53,7 @@ def run_pmmh(
     prop_filt,
     y: torch.Tensor,
     size=torch.Size([]),
-    **kwargs
+    **kwargs,
 ) -> Tuple[torch.Tensor, FilterResult, BaseFilter]:
     """
     Runs one iteration of a vectorized Particle Marginal Metropolis hastings.

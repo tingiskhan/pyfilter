@@ -1,7 +1,5 @@
 from .base import BaseKernel
 from ...utils import _construct_mvn, PropConstructor, run_pmmh
-import torch
-from torch.distributions import Distribution
 
 
 class SymmetricMH(object):
@@ -22,16 +20,8 @@ class ParticleMetropolisHastings(BaseKernel):
         super().__init__(**kwargs)
 
         self._n_steps = n_steps
-        self._proposal = proposal
-        self.accepted = None or SymmetricMH()
-
-    def define_pdf(self, values: torch.Tensor, weights: torch.Tensor, inds: torch.Tensor) -> Distribution:
-        """
-        The method to be overridden by the user for defining the kernel to propagate the parameters. Note that the
-        parameters should be propagated in transformed space.
-        """
-
-        raise NotImplementedError()
+        self._proposal = proposal or SymmetricMH()
+        self.accepted = None
 
     def _update(self, filter_, state, y, *args):
         prop_filt = filter_.copy((*filter_.n_parallel, 1))
@@ -49,12 +39,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Update parameters ===== #
             to_accept, prop_state, prop_filt = run_pmmh(
-                filter_,
-                state.filter_state,
-                dist,
-                prop_filt,
-                y,
-                filter_._n_parallel
+                filter_, state.filter_state, dist, prop_filt, y, filter_._n_parallel
             )
 
             # ===== Update the description ===== #

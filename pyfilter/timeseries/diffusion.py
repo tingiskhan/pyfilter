@@ -50,7 +50,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
         """
         The Euler-Maruyama discretization scheme for stochastic differential equations of general type. I.e. you have
         full freedom for specifying the model. The recursion is defined as
-            X[t + 1] = prop_state(X[t], *parameters, dt)
+            X[t + 1] = prop_state(X[t], dt, *parameters)
         :param prop_state: The function for propagating the state. Should take as input (x, *parameters, dt)
         """
 
@@ -88,5 +88,11 @@ class AffineEulerMaruyama(EulerMaruyama):
             g = self.g(x, *self.parameter_views)
 
             x += f + g * u
+
+        return x
+
+    def prop_apf(self, x):
+        for i in range(self._ns):
+            x += self.f(x, *self.parameter_views) * self._dt
 
         return x

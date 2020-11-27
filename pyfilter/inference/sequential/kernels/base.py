@@ -21,4 +21,3 @@ class BaseKernel(object):
         self._update(filter_, state, *args)
 
         return self
-

@@ -21,4 +21,3 @@ class VariationalState(AlgorithmState):
         self.optimizer = optimizer
         self.param_approx = param_approx
         self.state_approx = state_approx
-
