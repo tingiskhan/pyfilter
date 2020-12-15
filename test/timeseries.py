@@ -229,7 +229,7 @@ class Tests(unittest.TestCase):
         dt = 1e-2
         dist = DistributionWrapper(Normal, loc=0., scale=Parameter(Exponential(10.)))
 
-        init = Normal(a, 1.)
+        init = DistributionWrapper(Normal, loc=a, scale=1.)
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
 
         sde.sample_params(shape)
