@@ -1,11 +1,14 @@
 from torch.distributions import Distribution
 import torch
 from torch.nn import Module
-from typing import Type, Dict
+from typing import Type, Dict, Union, Callable
+
+
+DistributionType = Union[Type[Distribution], Callable[[Dict], Distribution]]
 
 
 class DistributionWrapper(Module):
-    def __init__(self, base_dist: Type[Distribution], **parameters):
+    def __init__(self, base_dist: DistributionType, **parameters):
         super().__init__()
 
         self.base_dist = base_dist

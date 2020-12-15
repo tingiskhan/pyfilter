@@ -29,52 +29,6 @@ def g_sde(x, alpha, sigma):
 
 
 class Tests(unittest.TestCase):
-    def test_Parameter(self):
-        # ===== Start stuff ===== #
-        param = Parameter(Normal(0., 1.))
-        param.sample_(1000)
-
-        assert param.shape == torch.Size([1000])
-
-        # ===== Construct view ===== #
-        view = param.view(1000, 1)
-
-        # ===== Change values ===== #
-        param.values = torch.empty_like(param).normal_()
-
-        assert (view[:, 0] == param).all()
-
-        # ===== Have in tuple ===== #
-        vals = (param.view(1000, 1, 1),)
-
-        param.values = torch.empty_like(param).normal_()
-
-        assert (vals[0][:, 0, 0] == param).all()
-
-        # ===== Set t_values ===== #
-        view = param.view(1000, 1)
-
-        param.t_values = torch.empty_like(param).normal_()
-
-        assert (view[:, 0] == param.t_values).all()
-
-        # ===== Check we cannot set different shape ===== #
-        with self.assertRaises(ValueError):
-            param.values = torch.empty(1).normal_()
-
-        # ===== Check that we cannot set out of bounds values for parameter ===== #
-        positive = Parameter(Exponential(1.))
-        positive.sample_(1)
-
-        with self.assertRaises(ValueError):
-            positive.values = -torch.empty_like(positive).normal_().abs()
-
-        # ===== Check that we can set transformed values ===== #
-        values = torch.empty_like(positive).normal_()
-        positive.t_values = values
-
-        assert (positive == positive.bijection(values)).all()
-
     def test_LinearNoBatch(self):
         norm = DistributionWrapper(Normal, loc=0., scale=1.)
         linear = AffineProcess((f, g), (1., 1.), norm, norm)
@@ -221,9 +175,9 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 0.1
-        norm = Normal(0., math.sqrt(dt))
+        norm = DistributionWrapper(Normal, loc=0., scale=math.sqrt(dt))
 
-        init = Normal(a, 1.)
+        init = norm = DistributionWrapper(Normal, loc=a, scale=math.sqrt(dt))
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
 
         # ===== Initialize ===== #
@@ -247,9 +201,9 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
-        dist = Poisson(dt * 0.1)
+        dist = DistributionWrapper(Poisson, rate=dt * 0.1)
 
-        init = Normal(a, 1.)
+        init = DistributionWrapper(Normal, loc=0., scale=math.sqrt(dt))
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
 
         # ===== Initialize ===== #
@@ -273,7 +227,7 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
-        dist = DistributionBuilder(Normal, loc=0., scale=Parameter(Exponential(10.)))
+        dist = DistributionWrapper(Normal, loc=0., scale=Parameter(Exponential(10.)))
 
         init = Normal(a, 1.)
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
