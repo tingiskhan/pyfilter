@@ -8,7 +8,7 @@ DistributionType = Union[Type[Distribution], Callable[[Dict], Distribution]]
 
 
 class DistributionWrapper(Module):
-    def __init__(self, base_dist: DistributionType, **parameters):
+    def __init__(self, base_dist: Type[Distribution], **parameters):
         super().__init__()
 
         self.base_dist = base_dist
