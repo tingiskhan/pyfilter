@@ -4,7 +4,7 @@ from ..timeseries import StateSpaceModel
 from tqdm import tqdm
 import torch
 from ..utils import choose
-from ..module import Module
+from torch.nn import Module
 from .utils import enforce_tensor, FilterResult
 from typing import Tuple, Union, Iterable
 from .state import BaseState

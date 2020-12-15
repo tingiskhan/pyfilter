@@ -1,31 +1,26 @@
 from abc import ABC
 from torch.distributions import Distribution
 import torch
+from torch.nn import Parameter
 from functools import lru_cache
-from .parameter import Parameter, size_getter, ArrayType, TensorOrDist
-from typing import Tuple, Union, Callable, Dict
+from .parameter import size_getter, ArrayType, TensorOrDist
+from typing import Tuple, Union, Callable, Dict, Optional
 from ..utils import ShapeLike
 from .base import Base
-from .distributions import DistributionBuilder
+from ..distributions import DistributionWrapper, Prior
+from ..parameter import ExtendedParameter
 
 
-DistOrBuilder = Union[Distribution, DistributionBuilder]
-
-
-def _view_helper(p: Parameter, shape):
-    if p.trainable:
-        return p.view(*shape, *p.prior.event_shape) if len(shape) > 0 else p.view(p.shape)
-
-    return p.view(p.shape)
+DistOrBuilder = DistributionWrapper
 
 
 class StochasticProcess(Base, ABC):
     def __init__(
         self,
         parameters: Tuple[ArrayType, ...],
-        initial_dist: Union[Distribution, None],
-        increment_dist: DistOrBuilder,
-        initial_transform: Union[Callable[[Distribution, Tuple[Parameter, ...]], Distribution], None] = None,
+        initial_dist: Optional[DistributionWrapper],
+        increment_dist: DistributionWrapper,
+        initial_transform: Union[Callable[[Distribution, Tuple[torch.Tensor, ...]], Distribution], None] = None,
     ):
         """
         The base class for time series.
@@ -38,48 +33,27 @@ class StochasticProcess(Base, ABC):
 
         self.initial_dist = initial_dist
         self.init_transform = initial_transform
-
-        self._dist_builder = increment_dist if isinstance(increment_dist, DistributionBuilder) else None
-        self.increment_dist = increment_dist if self._dist_builder is None else self._dist_builder()
-
-        # ===== Some helpers ===== #
-        self._parameters = None
-        self._parameter_views = None
+        self.increment_dist = increment_dist
 
         self._input_dim = self.ndim
 
-        # ===== Regular parameters ====== #
-        self.parameters = tuple(Parameter(th) if not isinstance(th, Parameter) else th for th in parameters)
+        for i, p in enumerate(parameters):
+            name = f"parameter_{i}"
 
-    @property
-    def parameters(self):
-        return self._parameters
+            if isinstance(p, Prior):
+                self.add_module(f"prior__{name}", p)
+                self.register_parameter(name, ExtendedParameter(p, requires_grad=False))
+            elif isinstance(p, Parameter):
+                self.register_parameter(name, p)
+            else:
+                self.register_buffer(name, p if isinstance(p, torch.Tensor) else torch.tensor(p))
 
-    @parameters.setter
-    def parameters(self, x: Tuple[Parameter, ...]):
-        if self._parameters is not None and len(x) != len(self._parameters):
-            raise ValueError("The number of parameters must be same!")
-        if not all(isinstance(p, Parameter) for p in x):
-            raise ValueError(f"Not all items are of instance {Parameter.__class__.__name__}")
+    def functional_parameters(self):
+        res = dict()
+        res.update(self._parameters)
+        res.update(self._buffers)
 
-        self._parameters = x
-        self.viewify_params(torch.Size([]))
-
-    @property
-    def trainable_parameters(self):
-        res = tuple(p for p in self.parameters if p.trainable)
-
-        if self._dist_builder is not None:
-            res += self._dist_builder.get_parameters()
-
-        return res
-
-    @property
-    def parameter_views(self) -> Tuple[Parameter, ...]:
-        """
-        Returns views of the parameters.
-        """
-        return self._parameter_views
+        return tuple(v for _, v in sorted(res.items(), key=lambda k: k[0]))
 
     @property
     @lru_cache()
@@ -88,7 +62,7 @@ class StochasticProcess(Base, ABC):
         Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
         """
 
-        return len((self.initial_dist or self.increment_dist).event_shape)
+        return len((self.initial_dist or self.increment_dist)().event_shape)
 
     @property
     @lru_cache()
@@ -99,23 +73,7 @@ class StochasticProcess(Base, ABC):
         """
 
         dist = self.initial_dist or self.increment_dist
-        return dist.event_shape.numel()
-
-    def viewify_params(self, shape, in_place=True) -> Tuple[Parameter, ...]:
-        shape = size_getter(shape)
-
-        # ===== Regular parameters ===== #
-        vals = tuple(_view_helper(p, shape) for p in self.parameters)
-
-        if not in_place:
-            return vals
-
-        if self._dist_builder is not None:
-            self.increment_dist = self._dist_builder(shape)
-
-        self._parameter_views = vals
-
-        return vals
+        return dist().event_shape.numel()
 
     def parameters_to_array(self, transformed=False, as_tuple=False):
         res = tuple(
@@ -155,7 +113,7 @@ class StochasticProcess(Base, ABC):
         :return: Samples from the initial distribution
         """
 
-        dist = self.initial_dist.expand(size_getter(shape))
+        dist = self.initial_dist().expand(size_getter(shape))
 
         if self.init_transform is not None:
             dist = self.init_transform(dist, *self.parameter_views)
@@ -201,9 +159,3 @@ class StochasticProcess(Base, ABC):
             "_parameters": self._parameters,
             "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict(),
         }
-
-    def load_state_dict(self, state: Dict[str, object]):
-        super(StochasticProcess, self).load_state_dict(state)
-        self.viewify_params(torch.Size([]))
-
-        return self

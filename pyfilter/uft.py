@@ -3,7 +3,7 @@ import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from .utils import construct_diag, TempOverride, ShapeLike
-from .module import Module
+from torch.nn import Module
 from .timeseries.parameter import size_getter
 from typing import Tuple
 
@@ -39,8 +39,9 @@ def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
     return x, _covariance(centered, centered, wc)
 
 
-class UFTCorrectionResult(object):
+class UFTCorrectionResult(Module):
     def __init__(self, mean: torch.Tensor, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor):
+        super().__init__()
         self.ym = ym
         self.yc = yc
 
@@ -70,14 +71,16 @@ class UFTCorrectionResult(object):
         return self._helper(self.ym, self.yc)
 
 
-class UFTPredictionResult(object):
+class UFTPredictionResult(Module):
     def __init__(self, spx: torch.Tensor, spy: torch.Tensor):
+        super().__init__()
         self.spx = spx
         self.spy = spy
 
 
-class AggregatedResult(object):
+class AggregatedResult(Module):
     def __init__(self, xm, xc, ym, yc):
+        super().__init__()
         self.xm = xm
         self.xc = xc
         self.ym = ym
@@ -94,6 +97,7 @@ class UnscentedFilterTransform(Module):
         :param k: The kappa parameter. To control the semi-definiteness
         """
 
+        super().__init__()
         if len(model.hidden.increment_dist.event_shape) > 1:
             raise ValueError("Can at most handle vector valued processes!")
 

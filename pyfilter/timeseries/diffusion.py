@@ -39,8 +39,8 @@ class OneStepEulerMaruyma(AffineProcess):
         self._dt = dt
 
     def _mean_scale(self, x):
-        mean = x + self.f(x, *self.parameter_views) * self._dt
-        scale = self.g(x, *self.parameter_views)
+        mean = x + self.f(x, *self.functional_parameters()) * self._dt
+        scale = self.g(x, *self.functional_parameters())
 
         return mean, scale
 
@@ -59,7 +59,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
 
     def define_density(self, x, u=None):
         for i in range(self._ns):
-            x = self._propagator(x, self._dt, *self.parameter_views).sample()
+            x = self._propagator(x, self._dt, *self.functional_parameters()).sample()
 
         return Empirical(x)
 
@@ -80,12 +80,12 @@ class AffineEulerMaruyama(EulerMaruyama):
         f = self.f(x, *params) * dt
         g = self.g(x, *params)
 
-        return _define_transdist(x + f, g, self.increment_dist, self.ndim)
+        return _define_transdist(x + f, g, self.increment_dist(), self.ndim)
 
     def _propagate_u(self, x, u):
         for i in range(self._ns):
-            f = self.f(x, *self.parameter_views) * self._dt
-            g = self.g(x, *self.parameter_views)
+            f = self.f(x, *self.functional_parameters()) * self._dt
+            g = self.g(x, *self.functional_parameters())
 
             x += f + g * u
 
@@ -93,6 +93,6 @@ class AffineEulerMaruyama(EulerMaruyama):
 
     def prop_apf(self, x):
         for i in range(self._ns):
-            x += self.f(x, *self.parameter_views) * self._dt
+            x += self.f(x, *self.functional_parameters()) * self._dt
 
         return x

@@ -5,7 +5,6 @@ from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma
 from .process import StochasticProcess
-from .distributions.dist_builder import DistributionBuilder
 
 
 __all__ = [
@@ -20,5 +19,4 @@ __all__ = [
     "OneStepEulerMaruyma",
     "StochasticProcess",
     "models",
-    "DistributionBuilder",
 ]

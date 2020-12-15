@@ -2,7 +2,7 @@ from torch.distributions import Distribution
 import torch
 from .parameter import Parameter
 from copy import deepcopy
-from ..module import Module
+from torch.nn import Module
 from typing import Tuple, Union, Callable, TypeVar
 from ..utils import ShapeLike
 
@@ -11,23 +11,6 @@ T = TypeVar("T")
 
 
 class Base(Module):
-    @property
-    def parameters(self) -> Tuple[Parameter, ...]:
-        raise NotImplementedError()
-
-    @property
-    def trainable_parameters(self) -> Tuple[Parameter, ...]:
-        raise NotImplementedError()
-
-    def viewify_params(self, shape: Union[Tuple[int, ...], torch.Size]):
-        """
-        Makes views of the parameters.
-        :param shape: The shape to use. Please note that this shape will be prepended to the "event shape"
-        :return: Self
-        """
-
-        raise NotImplementedError()
-
     def parameters_to_array(self, transformed=False, as_tuple=False) -> torch.Tensor:
         raise NotImplementedError()
 

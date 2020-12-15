@@ -1,10 +1,11 @@
-from ..uft import UFTCorrectionResult
 from torch import Tensor
+from torch.nn import Module
+from ..uft import UFTCorrectionResult
 from ..utils import choose
 from ..normalization import normalize
 
 
-class BaseState(object):
+class BaseState(Module):
     def get_mean(self) -> Tensor:
         raise NotImplementedError()
 
@@ -20,6 +21,7 @@ class BaseState(object):
 
 class KalmanState(BaseState):
     def __init__(self, utf: UFTCorrectionResult, ll: Tensor):
+        super().__init__()
         self.utf = utf
         self.ll = ll
 
@@ -50,6 +52,7 @@ class KalmanState(BaseState):
 
 class ParticleState(BaseState):
     def __init__(self, x: Tensor, w: Tensor, ll: Tensor, prev_inds: Tensor):
+        super().__init__()
         self.x = x
         self.w = w
         self.ll = ll

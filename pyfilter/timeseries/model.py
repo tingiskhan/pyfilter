@@ -2,7 +2,6 @@ import torch
 from .base import Base
 from .process import StochasticProcess
 from typing import Tuple
-from .parameter import Parameter
 
 
 class StateSpaceModel(Base):
@@ -13,13 +12,14 @@ class StateSpaceModel(Base):
         :param observable: The observable process(es) constituting the SSM
         """
 
+        super().__init__()
         self.hidden = hidden
         self.observable = observable
         self.observable._input_dim = self.hidden_ndim
 
     @property
     def trainable_parameters(self):
-        return self.hidden.trainable_parameters + self.observable.trainable_parameters
+        return tuple(self.hidden._parameters) + tuple(self.observable._parameters)
 
     @property
     def hidden_ndim(self) -> int:
@@ -34,9 +34,6 @@ class StateSpaceModel(Base):
 
     def log_prob(self, y, x, u=None):
         return self.observable.log_prob(y, x, u=u)
-
-    def viewify_params(self, shape, in_place=True) -> Tuple[Tuple[Parameter, ...], ...]:
-        return tuple(ssm.viewify_params(shape, in_place=in_place) for ssm in [self.hidden, self.observable])
 
     def parameters_to_array(self, transformed=False, as_tuple=False):
         hidden = self.hidden.parameters_to_array(transformed, True)

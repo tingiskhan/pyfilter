@@ -1,8 +1,8 @@
 from abc import ABC
-from ..filters import BaseFilter, utils as u
-from pyfilter.module import Module
+from torch.nn import Module
 import torch
 from typing import Tuple
+from ..filters import BaseFilter, utils as u
 from ..logging import LoggingWrapper, TqdmWrapper
 from .state import AlgorithmState
 

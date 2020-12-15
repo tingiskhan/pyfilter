@@ -1,9 +1,23 @@
 from .normalization import normalize
 import torch
 from typing import Union, Tuple, Iterable
+from torch.nn import Module
 
 
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]
+
+
+class TensorList(Module):
+    def __init__(self):
+        super().__init__()
+        self._i = 0
+
+    def append(self, x: torch.Tensor):
+        self.register_buffer(str(self._i), x)
+        self._i += 1
+
+    def __getitem__(self, item: int):
+        return self._buffers[str(item)]
 
 
 def get_ess(w: torch.Tensor, normalized=False):

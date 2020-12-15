@@ -4,12 +4,12 @@ from pyfilter.timeseries import (
     OneStepEulerMaruyma,
     Parameter,
     AffineEulerMaruyama,
-    DistributionBuilder,
     models as m
 )
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
 import math
+from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
@@ -76,7 +76,7 @@ class Tests(unittest.TestCase):
         assert (positive == positive.bijection(values)).all()
 
     def test_LinearNoBatch(self):
-        norm = Normal(0., 1.)
+        norm = DistributionWrapper(Normal, loc=0., scale=1.)
         linear = AffineProcess((f, g), (1., 1.), norm, norm)
 
         # ===== Initialize ===== #
@@ -96,7 +96,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_LinearBatch(self):
-        norm = Normal(0., 1.)
+        norm = DistributionWrapper(Normal, loc=0., scale=1.)
         linear = AffineProcess((f, g), (1., 1.), norm, norm)
 
         # ===== Initialize ===== #
@@ -117,12 +117,12 @@ class Tests(unittest.TestCase):
         self.assertEqual(samps.shape, path.shape)
 
     def test_BatchedParameter(self):
-        norm = Normal(0., 1.)
+        norm = DistributionWrapper(Normal, loc=0., scale=1.)
         shape = 1000, 100
 
         a = torch.ones((shape[0], 1))
 
-        init = Normal(a, 1.)
+        init = DistributionWrapper(Normal, loc=a, scale=1.)
         linear = AffineProcess((f, g), (a, 1.), init, norm)
 
         # ===== Initialize ===== #
@@ -147,7 +147,7 @@ class Tests(unittest.TestCase):
 
         shape = 1000, 100
 
-        mvn = Independent(Normal(mu, scale), 1)
+        mvn = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=mu, scale=scale)
         mvn = AffineProcess((f, g), (1., 1.), mvn, mvn)
 
         # ===== Initialize ===== #
@@ -171,10 +171,10 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
 
-        init = Normal(a, 1.)
+        init = DistributionWrapper(Normal, loc=a, scale=1.)
 
         dt = 1.
-        norm = Normal(0., math.sqrt(dt))
+        norm = DistributionWrapper(Normal, loc=0., scale=math.sqrt(dt))
 
         sde = OneStepEulerMaruyma((f_sde, g_sde), (a, 0.15), init, norm, dt)
 
