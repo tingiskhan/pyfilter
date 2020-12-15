@@ -30,5 +30,5 @@ class DistributionWrapper(Module):
     def build_distribution(self) -> Distribution:
         return self.base_dist(**self.get_parameters())
 
-    def forward(self):
+    def forward(self) -> Distribution:
         return self.build_distribution()
