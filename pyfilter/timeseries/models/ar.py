@@ -1,6 +1,7 @@
 from ..affine import AffineProcess
 from torch.distributions import Distribution, Normal
 from .ou import init_trans
+from ...distributions import DistributionWrapper
 
 
 def _f(x, alpha, beta, sigma):
@@ -22,7 +23,7 @@ class AR(AffineProcess):
         Implements a basic one dimensional autoregressive process.
         """
 
-        inc_dist = Normal(0.0, 1.0)
+        inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
         super().__init__(
             (_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist, initial_transform=_init_trans

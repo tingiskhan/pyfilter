@@ -87,7 +87,6 @@ class BaseFilter(Module, ABC):
 
     def copy(self, view_shape=torch.Size([])):
         res = copy.deepcopy(self)
-        res.viewify_params(view_shape)
         return res
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -100,7 +99,8 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        self.ssm.p_apply(lambda u: choose(u.values, inds))
+        for p in self.parameters():
+            p.data[:] = choose(p, inds)
 
         return self
 
@@ -116,9 +116,6 @@ class BaseFilter(Module, ABC):
         self._model.exchange(inds, filter_.ssm)
 
         return self
-
-    def populate_state_dict(self):
-        return {"_model": self.ssm.state_dict(), "_n_parallel": self._n_parallel}
 
     def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
         raise NotImplementedError()

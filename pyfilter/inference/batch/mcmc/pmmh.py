@@ -1,6 +1,5 @@
 from .utils import seed
 import torch
-from typing import Dict, Any
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
 from .state import PMMHState
@@ -44,6 +43,3 @@ class PMMH(BatchFilterAlgorithm):
             logging_wrapper.do_log(i, self, y)
 
         return state
-
-    def populate_state_dict(self) -> Dict[str, Any]:
-        return {"_filter": self._filter.state_dict()}

@@ -1,14 +1,17 @@
 import unittest
 from torch.distributions import Normal, Exponential, Independent, LogNormal
+import torch
+from scipy.stats import gaussian_kde
 from pyfilter.filters import UKF, APF
+from pyfilter.distributions import Prior
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.utils import concater
 from pyfilter.normalization import normalize
-import torch
+from pyfilter.distributions import DistributionWrapper
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
 from pyfilter.inference.batch.mcmc import PMMH
-from scipy.stats import gaussian_kde
+
 
 
 def f(x, alpha, sigma):
@@ -40,8 +43,8 @@ def gmvn(x, alpha, sigma):
 class InferenceAlgorithmTests(unittest.TestCase):
     def test_SequentialAlgorithms(self):
         # ===== Distributions ===== #
-        dist = Normal(0., 1.)
-        mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
+        dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        mvn = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2))
 
         # ===== Define model ===== #
         linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
@@ -51,7 +54,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
         mvnmodel = LinearGaussianObservations(mv_linear, torch.eye(2), scale=0.1)
 
         # ===== Test for multiple models ===== #
-        priors = Exponential(1.), LogNormal(0., 1.)
+        priors = Prior(Exponential, rate=1.0), Prior(LogNormal, loc=0.0, scale=1.0)
 
         hidden1d = AffineProcess((f, g), priors, dist, dist)
         oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)

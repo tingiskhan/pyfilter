@@ -1,15 +1,25 @@
 from torch.nn import Parameter
 import torch
-from .distributions import Prior
+
+
+# Basically same as old
+def _rebuild_parameter(prior, data, requires_grad, backward_hooks):
+    param = torch.nn.Parameter(prior, requires_grad)
+    param.data = data
+    param._backward_hooks = backward_hooks
+
+    return param
 
 
 class ExtendedParameter(Parameter):
-    def __new__(cls, prior: Prior, requires_grad=False):
-        return torch.Tensor._make_subclass(cls, torch.empty(prior().event_shape), requires_grad)
+    def sample_(self, prior, shape: torch.Size = None):
+        self.data = prior.build_distribution().sample(shape or ())
 
-    def __init__(self, prior: Prior, **kwargs):
-        super().__init__(**kwargs)
-        self.prior = prior
+    def update_values(self, x: torch.Tensor, prior, constrained=True):
+        value = x if constrained else prior.get_constrained(x)
+        support = prior().support.check(value)
 
-    def sample_(self, shape: torch.Size = None):
-        self.data = self.prior.build_distribution().sample(shape or ())
+        if not support.any():
+            raise ValueError("Some of the values were out of bounds!")
+
+        self.data[:] = value.view(self.shape)

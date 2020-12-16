@@ -2,6 +2,7 @@ from ..diffusion import AffineEulerMaruyama
 from torch.distributions import Normal, TransformedDistribution, AbsTransform
 from .ou import init_trans
 from math import sqrt
+from ...distributions import DistributionWrapper
 
 
 def f(x, k, g, s):
@@ -30,8 +31,8 @@ class Verhulst(AffineEulerMaruyama):
         super().__init__(
             (f, g_),
             (kappa, gamma, sigma),
-            Normal(0.0, 1.0),
-            Normal(0.0, sqrt(dt)),
+            DistributionWrapper(Normal, loc=0.0, scale=1.0),
+            DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt)),
             dt=dt,
             num_steps=num_steps,
             initial_transform=init_transform,

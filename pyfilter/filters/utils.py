@@ -1,6 +1,8 @@
 import torch
-from .state import BaseState
+from torch.nn import Module
 from typing import Tuple
+from .state import BaseState
+from ..utils import TensorList, ModuleList
 
 
 def enforce_tensor(func):
@@ -23,16 +25,17 @@ def _construct_empty(array: torch.Tensor) -> torch.Tensor:
     return temp * torch.ones_like(array, dtype=temp.dtype)
 
 
-class FilterResult(object):
+class FilterResult(Module):
     def __init__(self, init_state: BaseState):
         """
         Implements a basic object for storing log likelihoods and the filtered means of a filter.
         """
         super().__init__()
 
-        self._loglikelihood = init_state.get_loglikelihood()  # type: torch.Tensor
-        self._filter_means = tuple()
-        self._states = (init_state,)
+        self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
+
+        self._filter_means = TensorList()
+        self._states = ModuleList(init_state)
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -40,14 +43,11 @@ class FilterResult(object):
 
     @property
     def filter_means(self) -> torch.Tensor:
-        if len(self._filter_means) > 0:
-            return torch.stack(self._filter_means)
-
-        return torch.empty(0)
+        return self._filter_means.values()
 
     @property
     def states(self) -> Tuple[BaseState, ...]:
-        return self._states
+        return self._states.values()
 
     @property
     def latest_state(self) -> BaseState:
@@ -65,18 +65,16 @@ class FilterResult(object):
         self._loglikelihood[inds] = res.loglikelihood[inds]
 
         # ===== Filter means ====== #
-        if len(self._filter_means) > 0:
-            old_fm = self.filter_means
-            old_fm[:, inds] = res.filter_means[:, inds]
-
-            self._filter_means = tuple(old_fm)
+        # TODO: Not the best...
+        for old_fm, new_fm in zip(self._filter_means, res._filter_means):
+            old_fm[..., inds] = new_fm[..., inds]
 
         for ns, os in zip(res.states, self.states):
             os.exchange(ns, inds)
 
         return self
 
-    def resample(self, inds: torch.Tensor):
+    def resample(self, inds: torch.Tensor, entire_history=True):
         """
         Resamples the specified indices of self with res.
         :param inds: The indices
@@ -84,8 +82,9 @@ class FilterResult(object):
 
         self._loglikelihood = self.loglikelihood[inds]
 
-        if len(self._filter_means) > 0:
-            self._filter_means = tuple(self.filter_means[:, inds])
+        if entire_history:
+            for mean in self._filter_means:
+                mean[:] = mean[..., inds]
 
         for s in self._states:
             s.resample(inds)
@@ -93,12 +92,12 @@ class FilterResult(object):
         return self
 
     def append(self, state: BaseState, only_latest=True):
-        self._filter_means += (state.get_mean(),)
+        self._filter_means.append(state.get_mean())
 
         self._loglikelihood += state.get_loglikelihood()
         if only_latest:
-            self._states = (state,)
+            self._states = ModuleList(state)
         else:
-            self._states += (state,)
+            self._states.append(state)
 
         return self

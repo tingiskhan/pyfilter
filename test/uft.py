@@ -3,7 +3,6 @@ from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceMod
 from torch.distributions import Normal, MultivariateNormal
 from pyfilter.uft import UnscentedFilterTransform
 import torch
-from pyfilter.filters import SISR
 from pyfilter.utils import concater
 
 
@@ -91,21 +90,3 @@ class Tests(unittest.TestCase):
 
         assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
 
-    def test_StateDict(self):
-        norm = Normal(0., 1.)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
-        linearobs = AffineObservations((fo, go), (1., 1.), norm)
-        model = StateSpaceModel(linear, linearobs)
-
-        filt = SISR(model, 100)
-
-        sd = filt.state_dict()
-
-        new_linear = AffineProcess((f, g), (2., 1.), norm, norm)
-        new_linearobs = AffineObservations((fo, go), (1., 3.), norm)
-        new_model = StateSpaceModel(new_linear, new_linearobs)
-
-        newfilt = SISR(new_model, 1000).load_state_dict(sd)
-
-        assert newfilt.particles == filt.particles
-        assert new_model.hidden.parameters[0] == 1. and new_model.observable.parameters[-1] == 1.

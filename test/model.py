@@ -4,10 +4,9 @@ from pyfilter.timeseries import (
     AffineObservations,
     AffineProcess,
     models,
-    DistributionBuilder,
-    Parameter
 )
 from torch.distributions import Normal, Exponential
+from pyfilter.distributions import DistributionWrapper, Prior
 import torch
 
 
@@ -116,22 +115,25 @@ class Tests(unittest.TestCase):
         assert (((y - torch.arange(y.shape[0])) - x) < 1e-3).all()
 
     def test_ParametersToFromArray(self):
-        sde = models.OrnsteinUhlenbeck(Exponential(10.), Normal(0., 1.), Exponential(5.), 1, dt=1.)
+        priors = Prior(Exponential, rate=10.0), Prior(Normal, loc=0.0, scale=1.0), Prior(Exponential, rate=5.0)
+        sde = models.OrnsteinUhlenbeck(*priors, 1, dt=1.)
 
-        dist_builder = DistributionBuilder(Normal, loc=0., scale=Parameter(Exponential(5.)))
-        obs = AffineObservations((lambda u: u, lambda u: 1.), (Normal(0., 1.), Exponential(1.)), dist_builder)
+        dist = DistributionWrapper(Normal, loc=0., scale=Prior(Exponential, rate=5.0))
+        priors = Prior(Normal, loc=0.0, scale=1.0), Prior(Exponential, rate=1.0)
+        obs = AffineObservations((lambda u: u, lambda u: 1.), priors, dist)
 
         mod = StateSpaceModel(sde, obs)
 
-        mod.sample_params(100)
+        mod.sample_params((100,))
 
-        as_array = mod.parameters_to_array(transformed=False)
+        as_array = mod.parameters_to_array(constrained=False)
 
         assert as_array.shape == torch.Size([100, 6])
 
         offset = 1.
-        mod.parameters_from_array(as_array + offset, transformed=False)
-        assert len(mod.trainable_parameters) == as_array.shape[-1]
+        mod.parameters_from_array(as_array + offset, constrained=False)
+        assert len(tuple(mod.parameters())) == as_array.shape[-1]
 
-        for i, p in enumerate(sde.trainable_parameters):
-            assert (((p - offset) - as_array[:, i]).abs() < 1e-6).all()
+        new_array = mod.parameters_to_array()
+
+        assert (((new_array - offset) - as_array).abs().max() < 1e-6).all()

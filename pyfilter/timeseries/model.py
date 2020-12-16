@@ -17,9 +17,8 @@ class StateSpaceModel(Base):
         self.observable = observable
         self.observable._input_dim = self.hidden_ndim
 
-    @property
-    def trainable_parameters(self):
-        return tuple(self.hidden._parameters) + tuple(self.observable._parameters)
+    def functional_parameters(self):
+        return self.hidden.functional_parameters(), self.observable.functional_parameters()
 
     @property
     def hidden_ndim(self) -> int:
@@ -35,9 +34,15 @@ class StateSpaceModel(Base):
     def log_prob(self, y, x, u=None):
         return self.observable.log_prob(y, x, u=u)
 
-    def parameters_to_array(self, transformed=False, as_tuple=False):
-        hidden = self.hidden.parameters_to_array(transformed, True)
-        obs = self.observable.parameters_to_array(transformed, True)
+    def parameters_and_priors(self):
+        return tuple(self.hidden.parameters_and_priors()) + tuple(self.observable.parameters_and_priors())
+
+    def priors(self):
+        return tuple(self.hidden.priors()) + tuple(self.observable.priors())
+
+    def parameters_to_array(self, constrained=False, as_tuple=False):
+        hidden = self.hidden.parameters_to_array(constrained, True)
+        obs = self.observable.parameters_to_array(constrained, True)
 
         tot = hidden + obs
 
@@ -46,11 +51,11 @@ class StateSpaceModel(Base):
 
         return torch.cat(tot, dim=-1)
 
-    def parameters_from_array(self, array, transformed=False):
-        hid_shape = sum(p.numel_(transformed) for p in self.hidden.trainable_parameters)
+    def parameters_from_array(self, array, constrained=False):
+        hid_shape = sum(p.get_numel(constrained) for p in self.hidden.priors())
 
-        self.hidden.parameters_from_array(array[..., :hid_shape], transformed=transformed)
-        self.observable.parameters_from_array(array[..., hid_shape:], transformed=transformed)
+        self.hidden.parameters_from_array(array[..., :hid_shape], constrained=constrained)
+        self.observable.parameters_from_array(array[..., hid_shape:], constrained=constrained)
 
         return self
 
@@ -72,15 +77,12 @@ class StateSpaceModel(Base):
         """
 
         procs = (
-            (newmodel.hidden.trainable_parameters, self.hidden.trainable_parameters),
-            (newmodel.observable.trainable_parameters, self.observable.trainable_parameters),
+            (newmodel.hidden.parameters(), self.hidden.parameters()),
+            (newmodel.observable.parameters(), self.observable.parameters()),
         )
 
         for proc in procs:
             for new_param, self_param in zip(*proc):
-                self_param.values[indices] = new_param.values[indices]
+                self_param[indices] = new_param[indices]
 
         return self
-
-    def populate_state_dict(self):
-        return {"hidden": self.hidden.state_dict(), "observable": self.observable.state_dict()}

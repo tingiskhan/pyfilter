@@ -1,16 +1,15 @@
 from torch.distributions import Distribution
 import torch
-from .parameter import Parameter
 from copy import deepcopy
-from torch.nn import Module
-from typing import Tuple, Union, Callable, TypeVar
+from typing import Tuple, Union, TypeVar
 from ..utils import ShapeLike
+from ..prior_module import PriorModule
 
 
 T = TypeVar("T")
 
 
-class Base(Module):
+class Base(PriorModule):
     def parameters_to_array(self, transformed=False, as_tuple=False) -> torch.Tensor:
         raise NotImplementedError()
 
@@ -22,10 +21,8 @@ class Base(Module):
         Samples the parameters of the model in place.
         """
 
-        for param in self.trainable_parameters:
-            param.sample_(shape)
-
-        self.viewify_params(shape)
+        for param, prior in self.parameters_and_priors():
+            param.sample_(prior, shape)
 
         return self
 
@@ -74,49 +71,13 @@ class Base(Module):
 
         raise NotImplementedError()
 
-    def p_apply(self, func: Callable[[Parameter], Parameter], transformed=False):
+    def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
         """
-        Applies `func` to each parameter of the model inplace.
-        :param func: Function to apply, must be of the structure func(param)
-        :param transformed: Whether or not results from applied function are transformed variables
-        :return: Self
+        Calculates the prior log-likelihood of the current values of the parameters.
+        :param constrained: If you use an unconstrained proposal you need to use `transformed=True`
         """
 
-        for p in self.trainable_parameters:
-            if transformed:
-                p.t_values = func(p)
-            else:
-                p.values = func(p)
-
-        return self
-
-    def p_prior(self, transformed=True) -> torch.Tensor:
-        """
-        Calculates the prior log-likelihood of the current values.
-        :param transformed: If you use an unconstrained proposal you need to use `transformed=True`
-        :return: The prior of the current parameter values
-        """
-
-        if transformed:
-            res = self.p_map(lambda u: u.bijected_prior.log_prob(u.t_values))
-        else:
-            res = self.p_map(lambda u: u.prior.log_prob(u.values))
-
-        return sum(res)
-
-    def p_map(self, func: Callable[[Parameter], T]) -> Tuple[T, ...]:
-        """
-        Applies the func to the parameters and returns a tuple of objects. Note that it is only applied to parameters
-        that are distributions.
-        :param func: The function to apply to parameters.
-        :return: Returns tuple of values
-        """
-
-        out = tuple()
-        for p in self.trainable_parameters:
-            out += (func(p),)
-
-        return out
+        return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
     def copy(self, view_shape=torch.Size([])):
         """
@@ -124,6 +85,5 @@ class Base(Module):
         :return: Copy of current instance
         """
         res = deepcopy(self)
-        res.viewify_params(view_shape)
 
         return res

@@ -6,7 +6,8 @@ from ...normalization import normalize
 
 class FilteringAlgorithmState(AlgorithmState):
     def __init__(self, weights: Tensor, filter_state: FilterResult):
-        self.w = weights
+        super().__init__()
+        self.register_buffer("w", weights)
         self.filter_state = filter_state
 
     def normalized_weights(self):

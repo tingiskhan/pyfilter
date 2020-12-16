@@ -42,14 +42,14 @@ class AffineProcess(StochasticProcess):
 
         return self._mean_scale(x)
 
-    def _mean_scale(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _mean_scale(self, x: torch.Tensor, parameters=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the mean and scale of the process.
         :param x: The previous state
         :return: (mean, scale)
         """
-
-        return self.f(x, *self.functional_parameters()), self.g(x, *self.functional_parameters())
+        params = parameters or self.functional_parameters()
+        return self.f(x, *params), self.g(x, *params)
 
     def _define_transdist(self, loc: torch.Tensor, scale: torch.Tensor):
         """
@@ -60,8 +60,8 @@ class AffineProcess(StochasticProcess):
 
         return _define_transdist(loc, scale, self.increment_dist(), self.ndim)
 
-    def _propagate_u(self, x, u):
-        loc, scale = self._mean_scale(x)
+    def _propagate_u(self, x, u, parameters=None):
+        loc, scale = self._mean_scale(x, parameters=parameters)
         return loc + scale * u
 
     def prop_apf(self, x):

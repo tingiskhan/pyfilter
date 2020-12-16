@@ -3,6 +3,7 @@ from torch.distributions import Normal, Independent
 import torch
 from ...utils import concater
 from math import sqrt
+from ...distributions import DistributionWrapper
 
 
 def f(x, beta, gamma, sigma):
@@ -32,5 +33,7 @@ class OneFactorSIR(AffineEulerMaruyama):
         if initial_dist.event_shape != torch.Size([3]):
             raise ValueError(f"Initial distribution must be of shape 3, but got: {initial_dist.event_shape}")
 
-        increment_dist = Independent(Normal(torch.zeros(1), sqrt(dt) * torch.ones(1)), 1)
+        increment_dist = DistributionWrapper(
+            lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(1), scale=sqrt(dt) * torch.ones(1)
+        )
         super().__init__((f, g), parameters, initial_dist, increment_dist, dt, **kwargs)

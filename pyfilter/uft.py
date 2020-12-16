@@ -1,26 +1,24 @@
-from .timeseries import StateSpaceModel, StochasticProcess
 import torch
 from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
-from .utils import construct_diag, TempOverride, ShapeLike
 from torch.nn import Module
-from .timeseries.parameter import size_getter
 from typing import Tuple
+from .utils import construct_diag, ShapeLike, TensorList, size_getter
+from .timeseries import StateSpaceModel, StochasticProcess
+from .parameter import ExtendedParameter
 
 
 def _propagate_sps(
-    spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
+        spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
 ):
-
     is_md = process.ndim > 0
 
     if not is_md:
         spx = spx.squeeze(-1)
         spn = spn.squeeze(-1)
 
-    with TempOverride(process, "_parameter_views", temp_params):
-        out = process.propagate_u(spx, u=spn)
-        return out if is_md else out.unsqueeze(-1)
+    out = process.propagate_u(spx, u=spn, parameters=temp_params)
+    return out if is_md else out.unsqueeze(-1)
 
 
 def _covariance(a: torch.Tensor, b: torch.Tensor, wc: torch.Tensor):
@@ -98,16 +96,17 @@ class UnscentedFilterTransform(Module):
         """
 
         super().__init__()
-        if len(model.hidden.increment_dist.event_shape) > 1:
+        if len(model.hidden.increment_dist().event_shape) > 1:
             raise ValueError("Can at most handle vector valued processes!")
 
-        if model.hidden._dist_builder or model.observable._dist_builder:
+        if any(model.hidden.increment_dist.named_parameters()) or any(
+                model.observable.increment_dist.named_parameters()):
             raise ValueError("Cannot currently handle case when distribution is parameterized!")
 
         # ===== Model ===== #
         self._model = model
         self._trans_dim = (
-            1 if len(model.hidden.increment_dist.event_shape) == 0 else model.hidden.increment_dist.event_shape[0]
+            1 if len(model.hidden.increment_dist().event_shape) == 0 else model.hidden.increment_dist().event_shape[0]
         )
 
         self._ndim = model.hidden.num_vars + self._trans_dim + model.observable.num_vars
@@ -118,7 +117,8 @@ class UnscentedFilterTransform(Module):
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
 
         # ===== Auxiliary variables ===== #
-        self._views = None
+        self._hidden_views = None
+        self._obs_views = None
 
         self._diaginds = range(model.hidden_ndim)
 
@@ -142,7 +142,16 @@ class UnscentedFilterTransform(Module):
 
     def _set_arrays(self, shape: torch.Size):
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
-        self._views = self._model.viewify_params(view_shape, in_place=False)
+
+        self._hidden_views = TensorList(
+            *(p.view(view_shape) if isinstance(p, ExtendedParameter) else p
+              for p in self._model.hidden.functional_parameters())
+        )
+
+        self._obs_views = TensorList(
+            *(p.view(view_shape) if isinstance(p, ExtendedParameter) else p
+              for p in self._model.observable.functional_parameters())
+        )
 
         return self
 
@@ -162,7 +171,7 @@ class UnscentedFilterTransform(Module):
         mean[..., self._sslc] = s_mean
 
         # ==== Set state covariance ===== #
-        var = s_cov = self._model.hidden.initial_dist.variance
+        var = s_cov = self._model.hidden.initial_dist().variance
 
         if self._model.hidden_ndim > 0:
             s_cov = construct_diag(var)
@@ -170,8 +179,8 @@ class UnscentedFilterTransform(Module):
         cov[..., self._sslc, self._sslc] = s_cov
 
         # ==== Set noise covariance ===== #
-        cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist.variance)
-        cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist.variance)
+        cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist().variance)
+        cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist().variance)
 
         return UFTCorrectionResult(mean, cov, self._sslc, None, None)
 
@@ -187,8 +196,8 @@ class UnscentedFilterTransform(Module):
     def predict(self, utf_corr: UFTCorrectionResult):
         sps = self._get_sps(utf_corr)
 
-        spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._views[0])
-        spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._views[1])
+        spx = _propagate_sps(sps[..., self._sslc], sps[..., self._hslc], self._model.hidden, self._hidden_views)
+        spy = _propagate_sps(spx, sps[..., self._oslc], self._model.observable, self._obs_views)
 
         return UFTPredictionResult(spx, spy)
 
@@ -199,12 +208,12 @@ class UnscentedFilterTransform(Module):
         return AggregatedResult(xmean, xcov, ymean, ycov)
 
     def update_state(
-        self,
-        xm: torch.Tensor,
-        xc: torch.Tensor,
-        state: UFTCorrectionResult,
-        ym: torch.Tensor = None,
-        yc: torch.Tensor = None,
+            self,
+            xm: torch.Tensor,
+            xc: torch.Tensor,
+            state: UFTCorrectionResult,
+            ym: torch.Tensor = None,
+            yc: torch.Tensor = None,
     ):
         # ===== Overwrite ===== #
         mean = state.mean.clone()

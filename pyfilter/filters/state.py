@@ -22,8 +22,8 @@ class BaseState(Module):
 class KalmanState(BaseState):
     def __init__(self, utf: UFTCorrectionResult, ll: Tensor):
         super().__init__()
-        self.utf = utf
-        self.ll = ll
+        self.add_module("utf", utf)
+        self.register_buffer("ll", ll)
 
     def get_mean(self):
         return self.utf.xm
@@ -53,10 +53,10 @@ class KalmanState(BaseState):
 class ParticleState(BaseState):
     def __init__(self, x: Tensor, w: Tensor, ll: Tensor, prev_inds: Tensor):
         super().__init__()
-        self.x = x
-        self.w = w
-        self.ll = ll
-        self.prev_inds = prev_inds
+        self.register_buffer("x", x)
+        self.register_buffer("w", w)
+        self.register_buffer("ll", ll)
+        self.register_buffer("prev_inds", prev_inds)
 
     def get_mean(self):
         normw = self.normalized_weights()

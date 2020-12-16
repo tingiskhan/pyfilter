@@ -4,7 +4,7 @@ from ...utils import _construct_mvn, PropConstructor, run_pmmh
 
 class SymmetricMH(object):
     def __call__(self, state, filter_, y):
-        values = filter_.ssm.parameters_to_array(transformed=True)
+        values = filter_.ssm.parameters_to_array(constrained=False)
         weights = state.normalized_weights()
 
         return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles

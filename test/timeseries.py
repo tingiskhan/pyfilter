@@ -2,14 +2,13 @@ import unittest
 from pyfilter.timeseries import (
     AffineProcess,
     OneStepEulerMaruyma,
-    Parameter,
     AffineEulerMaruyama,
     models as m
 )
 import torch
 from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
 import math
-from pyfilter.distributions import DistributionWrapper
+from pyfilter.distributions import DistributionWrapper, Prior
 
 
 def f(x, alpha, sigma):
@@ -227,7 +226,7 @@ class Tests(unittest.TestCase):
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
-        dist = DistributionWrapper(Normal, loc=0., scale=Parameter(Exponential(10.)))
+        dist = DistributionWrapper(Normal, loc=0., scale=Prior(Exponential, rate=10.0))
 
         init = DistributionWrapper(Normal, loc=a, scale=1.)
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
@@ -256,18 +255,3 @@ class Tests(unittest.TestCase):
         x = ar.sample_path(100)
 
         self.assertEqual(x.shape, torch.Size([100]))
-
-    def test_ParametersToFromArray(self):
-        sde = m.OrnsteinUhlenbeck(Exponential(10.), Normal(0., 1.), Exponential(5.), 1, dt=1.)
-        sde.sample_params(100)
-
-        as_array = sde.parameters_to_array(transformed=False)
-
-        assert as_array.shape == torch.Size([100, 3])
-
-        offset = 1.
-        sde.parameters_from_array(as_array + offset, transformed=False)
-        assert len(sde.parameters) == as_array.shape[-1]
-
-        for i, p in enumerate(sde.trainable_parameters):
-            assert (((p - offset) - as_array[:, i]).abs() < 1e-6).all()

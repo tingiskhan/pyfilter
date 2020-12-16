@@ -1,7 +1,8 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
-from .....timeseries import Parameter, StochasticProcess
+from .....timeseries import StochasticProcess
+from .....distributions import Prior
 from typing import Tuple
 
 
@@ -41,14 +42,14 @@ class ParameterMeanField(BaseApproximation):
     def get_parameters(self):
         return self._mean, self._log_std
 
-    def initialize(self, parameters: Tuple[Parameter, ...], *args):
+    def initialize(self, priors: Tuple[Prior, ...], *args):
         self._bijections = tuple()
 
         means = tuple()
         self._mask = tuple()
 
         left = 0
-        for p in parameters:
+        for p in priors:
             slc, numel = p.get_slice_for_parameter(left, True)
 
             means += (p.bijection.inv(p.prior.mean),)

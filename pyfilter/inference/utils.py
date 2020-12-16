@@ -60,17 +60,17 @@ def run_pmmh(
     """
 
     rvs = prop_kernel.sample(size)
-    prop_filt.ssm.parameters_from_array(rvs, transformed=True)
+    prop_filt.ssm.parameters_from_array(rvs, constrained=False)
 
     new_res = prop_filt.longfilter(y, bar=False, **kwargs)
 
     diff_logl = new_res.loglikelihood - state.loglikelihood
-    diff_prior = prop_filt.ssm.p_prior() - filter_.ssm.p_prior()
+    diff_prior = (prop_filt.ssm.eval_prior_log_prob(False) - filter_.ssm.eval_prior_log_prob(False)).squeeze()
 
     if isinstance(prop_kernel, Independent) and size == torch.Size([]):
         diff_prop = 0.0
     else:
-        diff_prop = prop_kernel.log_prob(filter_.ssm.parameters_to_array(transformed=True)) - prop_kernel.log_prob(rvs)
+        diff_prop = prop_kernel.log_prob(filter_.ssm.parameters_to_array(constrained=False)) - prop_kernel.log_prob(rvs)
 
     log_acc_prob = diff_prop + diff_prior + diff_logl
     res: torch.Tensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob

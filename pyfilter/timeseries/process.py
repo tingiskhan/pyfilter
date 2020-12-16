@@ -3,12 +3,10 @@ from torch.distributions import Distribution
 import torch
 from torch.nn import Parameter
 from functools import lru_cache
-from .parameter import size_getter, ArrayType, TensorOrDist
-from typing import Tuple, Union, Callable, Dict, Optional
-from ..utils import ShapeLike
+from typing import Tuple, Union, Callable, Optional
+from ..utils import ShapeLike, ArrayType, size_getter, TensorOrDist
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
-from ..parameter import ExtendedParameter
 
 
 DistOrBuilder = DistributionWrapper
@@ -41,14 +39,13 @@ class StochasticProcess(Base, ABC):
             name = f"parameter_{i}"
 
             if isinstance(p, Prior):
-                self.add_module(f"prior__{name}", p)
-                self.register_parameter(name, ExtendedParameter(p, requires_grad=False))
+                self.register_prior(name, p)
             elif isinstance(p, Parameter):
                 self.register_parameter(name, p)
             else:
                 self.register_buffer(name, p if isinstance(p, torch.Tensor) else torch.tensor(p))
 
-    def functional_parameters(self):
+    def functional_parameters(self) -> Tuple[Parameter, ...]:
         res = dict()
         res.update(self._parameters)
         res.update(self._buffers)
@@ -75,10 +72,10 @@ class StochasticProcess(Base, ABC):
         dist = self.initial_dist or self.increment_dist
         return dist().event_shape.numel()
 
-    def parameters_to_array(self, transformed=False, as_tuple=False):
+    def parameters_to_array(self, constrained=True, as_tuple=False):
         res = tuple(
-            (p.values if not transformed else p.t_values).view(-1, p.numel_(transformed))
-            for p in self.trainable_parameters
+            (p if constrained else prior.get_unconstrained(p)).view(-1, prior.get_numel(constrained))
+            for p, prior in self.parameters_and_priors()
         )
 
         if not res or as_tuple:
@@ -86,20 +83,16 @@ class StochasticProcess(Base, ABC):
 
         return torch.cat(res, dim=-1)
 
-    def parameters_from_array(self, array, transformed=False):
-        tot_shape = sum(p.numel_(transformed) for p in self.trainable_parameters)
+    def parameters_from_array(self, array, constrained=True):
+        tot_shape = sum(p.get_numel(constrained) for p in self.priors())
 
         if array.shape[-1] != tot_shape:
             raise ValueError(f"Shapes not congruent, {array.shape[-1]} != {tot_shape}")
 
         left = 0
-        for p in self.trainable_parameters:
-            slc, numel = p.get_slice_for_parameter(left, transformed)
-
-            if transformed:
-                p.t_values = array[..., slc].reshape(p.t_values.shape)
-            else:
-                p.values = array[..., slc].reshape(p.shape)
+        for p, prior in self.parameters_and_priors():
+            slc, numel = prior.get_slice_for_parameter(left, constrained)
+            p.update_values(array[..., slc], prior, constrained)
 
             left += numel
 
@@ -133,16 +126,17 @@ class StochasticProcess(Base, ABC):
 
         return out
 
-    def propagate_u(self, x: torch.Tensor, u: torch.Tensor):
+    def propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None):
         """
         Propagate the process conditional on both state and draws from incremental distribution.
         :param x: The previous state
         :param u: The current draws from the incremental distribution
+        :param parameters: Whether to override the parameters that go into the functions with some other values
         """
 
-        return self._propagate_u(x, u)
+        return self._propagate_u(x, u, parameters=parameters)
 
-    def _propagate_u(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
+    def _propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()
 
     def prop_apf(self, x: torch.Tensor) -> torch.Tensor:
@@ -154,8 +148,3 @@ class StochasticProcess(Base, ABC):
 
         raise NotImplementedError()
 
-    def populate_state_dict(self):
-        return {
-            "_parameters": self._parameters,
-            "_dist_builder": None if self._dist_builder is None else self._dist_builder.state_dict(),
-        }

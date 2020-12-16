@@ -1,11 +1,13 @@
 import unittest
 import numpy as np
 import pykalman
+from math import sqrt
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF, proposals as prop
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama
 import torch
 from pyfilter.utils import concater
+from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
@@ -36,12 +38,12 @@ def gmvn(x, alpha, sigma):
 
 class Tests(unittest.TestCase):
     # ===== Simple 1D model ===== #
-    norm = Normal(0., 1.)
+    norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
     linear = AffineProcess((f, g), (1., 1.), norm, norm)
     model = LinearGaussianObservations(linear, 1., 1.)
 
     # ===== Simple 2D model ===== #
-    mvn = Independent(Normal(torch.zeros(2), torch.ones(2)), 1)
+    mvn = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2))
     mvn = AffineProcess((fmvn, gmvn), (0.5, 1.), mvn, mvn)
     a = torch.tensor([1., 2.])
 
@@ -128,7 +130,10 @@ class Tests(unittest.TestCase):
         def g(x, a, s):
             return s
 
-        em = AffineEulerMaruyama((f, g), (0.02, 0.15), Normal(0., 1.), Normal(0., 1.), dt=1e-2, num_steps=10)
+        dt = 1e-2
+        norm = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
+
+        em = AffineEulerMaruyama((f, g), (0.02, 0.15), norm, norm, dt=1e-2, num_steps=10)
         model = LinearGaussianObservations(em, scale=1e-3)
 
         x, y = model.sample_path(500)
