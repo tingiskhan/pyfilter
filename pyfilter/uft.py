@@ -9,7 +9,7 @@ from .parameter import ExtendedParameter
 
 
 def _propagate_sps(
-        spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
+    spx: torch.Tensor, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
 ):
     is_md = process.ndim > 0
 
@@ -100,7 +100,8 @@ class UnscentedFilterTransform(Module):
             raise ValueError("Can at most handle vector valued processes!")
 
         if any(model.hidden.increment_dist.named_parameters()) or any(
-                model.observable.increment_dist.named_parameters()):
+            model.observable.increment_dist.named_parameters()
+        ):
             raise ValueError("Cannot currently handle case when distribution is parameterized!")
 
         # ===== Model ===== #
@@ -144,13 +145,17 @@ class UnscentedFilterTransform(Module):
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
         self._hidden_views = TensorList(
-            *(p.view(view_shape) if isinstance(p, ExtendedParameter) else p
-              for p in self._model.hidden.functional_parameters())
+            *(
+                p.view(view_shape) if isinstance(p, ExtendedParameter) else p
+                for p in self._model.hidden.functional_parameters()
+            )
         )
 
         self._obs_views = TensorList(
-            *(p.view(view_shape) if isinstance(p, ExtendedParameter) else p
-              for p in self._model.observable.functional_parameters())
+            *(
+                p.view(view_shape) if isinstance(p, ExtendedParameter) else p
+                for p in self._model.observable.functional_parameters()
+            )
         )
 
         return self
@@ -208,12 +213,12 @@ class UnscentedFilterTransform(Module):
         return AggregatedResult(xmean, xcov, ymean, ycov)
 
     def update_state(
-            self,
-            xm: torch.Tensor,
-            xc: torch.Tensor,
-            state: UFTCorrectionResult,
-            ym: torch.Tensor = None,
-            yc: torch.Tensor = None,
+        self,
+        xm: torch.Tensor,
+        xc: torch.Tensor,
+        state: UFTCorrectionResult,
+        ym: torch.Tensor = None,
+        yc: torch.Tensor = None,
     ):
         # ===== Overwrite ===== #
         mean = state.mean.clone()

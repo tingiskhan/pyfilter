@@ -147,4 +147,3 @@ class StochasticProcess(Base, ABC):
         """
 
         raise NotImplementedError()
-
