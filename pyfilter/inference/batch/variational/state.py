@@ -15,6 +15,7 @@ class VariationalState(AlgorithmState):
         state_approx: Optional[StateMeanField] = None,
     ):
 
+        super().__init__()
         self.converged = converged
         self.loss = loss
         self.iterations = iterations

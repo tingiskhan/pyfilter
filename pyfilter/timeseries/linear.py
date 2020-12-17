@@ -1,8 +1,10 @@
 from .model import StateSpaceModel
 from .observable import AffineObservations
 import torch
-from torch import distributions as dists
+from torch.distributions import Distribution, Normal, Independent
 from typing import Union
+from ..distributions import DistributionWrapper
+from ..distributions import Prior
 
 
 def f_0d(x, a, scale):
@@ -26,7 +28,7 @@ def g(x, a, *scale):
 
 def _get_shape(a):
     is_1d = False
-    if isinstance(a, dists.Distribution):
+    if isinstance(a, Distribution):
         dim = a.event_shape
         is_1d = len(a.event_shape) == 1
     elif isinstance(a, float) or a.dim() < 2:
@@ -42,8 +44,8 @@ class LinearObservations(StateSpaceModel):
     def __init__(
         self,
         hidden,
-        a: Union[torch.Tensor, float, dists.Distribution],
-        scale: Union[torch.Tensor, float, dists.Distribution],
+        a: Union[torch.Tensor, float, Distribution],
+        scale: Union[torch.Tensor, float, Distribution],
         base_dist,
     ):
         """
@@ -58,7 +60,7 @@ class LinearObservations(StateSpaceModel):
         dim, is_1d = _get_shape(a)
 
         # ===== Assert distributions make sense ===== #
-        if base_dist.event_shape != dim:
+        if base_dist().event_shape != dim:
             raise ValueError("The distribution is not of correct shape!")
 
         # ===== Determine propagator function ===== #
@@ -88,9 +90,11 @@ class LinearGaussianObservations(LinearObservations):
         dim, is_1d = _get_shape(a)
 
         # ====== Define distributions ===== #
-        n = dists.Normal(0.0, 1.0) if is_1d else dists.Independent(dists.Normal(torch.zeros(dim), torch.ones(dim)), 1)
-
-        if not isinstance(scale, (torch.Tensor, float, dists.Distribution)):
-            raise ValueError(f"`scale` parameter must be numeric type!")
+        if is_1d:
+            n = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        else:
+            n = DistributionWrapper(
+                lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(dim), scale=torch.ones(dim)
+            )
 
         super().__init__(hidden, a, scale, n)

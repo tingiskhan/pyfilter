@@ -4,7 +4,7 @@ from ...utils import _construct_mvn, PropConstructor, run_pmmh
 
 class SymmetricMH(object):
     def __call__(self, state, filter_, y):
-        values = filter_.ssm.parameters_to_array(transformed=True)
+        values = filter_.ssm.parameters_to_array(constrained=False)
         weights = state.normalized_weights()
 
         return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
@@ -24,7 +24,7 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def _update(self, filter_, state, y, *args):
-        prop_filt = filter_.copy((*filter_.n_parallel, 1))
+        prop_filt = filter_.copy()
 
         for _ in range(self._n_steps):
             # ===== Find the best particles ===== #

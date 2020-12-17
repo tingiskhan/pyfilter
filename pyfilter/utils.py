@@ -1,9 +1,83 @@
-from .normalization import normalize
 import torch
+from torch.distributions import Distribution
+import numpy as np
 from typing import Union, Tuple, Iterable
+from torch.nn import Module
+from .constants import INFTY
 
-
+TensorOrDist = Union[Distribution, torch.Tensor]
+ArrayType = Union[float, int, np.ndarray]
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]
+
+
+def size_getter(shape: ShapeLike) -> torch.Size:
+    if shape is None:
+        return torch.Size([])
+    elif isinstance(shape, torch.Size):
+        return shape
+    elif isinstance(shape, int):
+        return torch.Size([shape])
+
+    return torch.Size(shape)
+
+
+class TensorList(Module):
+    def __init__(self, *args):
+        super().__init__()
+        self._i = -1
+
+        for a in args:
+            self.append(a)
+
+    def append(self, x: torch.Tensor):
+        self._i += 1
+        self.register_buffer(str(self._i), x)
+
+    def __getitem__(self, item: int):
+        if item < 0:
+            return self._buffers[str(self._i + 1 + item)]
+
+        return self._buffers[str(item)]
+
+    def __iter__(self):
+        return (v for v in self._buffers.values())
+
+    def __len__(self):
+        return len(self._buffers)
+
+    def values(self):
+        if self._i == 0:
+            return torch.empty(0)
+
+        return torch.stack(tuple(self._buffers.values()), 0)
+
+
+class ModuleList(Module):
+    def __init__(self, *args):
+        super().__init__()
+        self._i = -1
+
+        for a in args:
+            self.append(a)
+
+    def append(self, x: Module):
+        self._i += 1
+        self.add_module(str(self._i), x)
+
+    def __getitem__(self, item: int):
+        if item < 0:
+            return self._modules[str(self._i + 1 + item)]
+
+        return self._modules[str(item)]
+
+    def __iter__(self):
+        return (v for v in self._modules.values())
+
+    def __len__(self):
+        return len(self._modules)
+
+    def values(self):
+        return tuple(self._modules.values())
 
 
 def get_ess(w: torch.Tensor, normalized=False):
@@ -63,26 +137,25 @@ def construct_diag(x: torch.Tensor):
     return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 
 
-class TempOverride(object):
-    def __init__(self, obj: object, attr: str, new_vals: object):
-        """
-        Implements a temporary override of attribute of an object.
-        :param obj: An object
-        :param attr: The attribute to override
-        :param new_vals: The new values
-        """
-        self._obj = obj
-        self._attr = attr
-        self._new_vals = new_vals
-        self._old_vals = None
+def normalize(w: torch.Tensor):
+    """
+    Normalizes a 1D or 2D array of log weights.
+    :param w: The weights
+    :return: Normalized weights
+    """
 
-    def __enter__(self):
-        self._old_vals = getattr(self._obj, self._attr)
-        setattr(self._obj, self._attr, self._new_vals)
+    is_1d = w.dim() == 1
 
-        return self
+    if is_1d:
+        w = w.unsqueeze(0)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        setattr(self._obj, self._attr, self._old_vals)
+    mask = torch.isfinite(w)
+    w[~mask] = -INFTY
 
-        return False
+    reweighed = torch.exp(w - w.max(-1)[0][..., None])
+    normalized = reweighed / reweighed.sum(-1)[..., None]
+
+    ax_sum = normalized.sum(1)
+    normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
+
+    return normalized.squeeze(0) if is_1d else normalized

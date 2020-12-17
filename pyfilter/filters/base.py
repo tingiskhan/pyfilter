@@ -4,8 +4,9 @@ from ..timeseries import StateSpaceModel
 from tqdm import tqdm
 import torch
 from ..utils import choose
-from ..module import Module
-from .utils import enforce_tensor, FilterResult
+from torch.nn import Module
+from .utils import enforce_tensor
+from .result import FilterResult
 from typing import Tuple, Union, Iterable
 from .state import BaseState
 
@@ -27,11 +28,6 @@ class BaseFilter(Module, ABC):
     @property
     def n_parallel(self) -> torch.Size:
         return self._n_parallel
-
-    def viewify_params(self, shape: Union[int, torch.Size]):
-        self.ssm.viewify_params(shape)
-
-        return self
 
     def set_nparallel(self, n: int):
         """
@@ -85,9 +81,8 @@ class BaseFilter(Module, ABC):
 
         return result
 
-    def copy(self, view_shape=torch.Size([])):
+    def copy(self):
         res = copy.deepcopy(self)
-        res.viewify_params(view_shape)
         return res
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -100,7 +95,8 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        self.ssm.p_apply(lambda u: choose(u.values, inds))
+        for p in self.parameters():
+            p.data[:] = choose(p, inds)
 
         return self
 
@@ -116,9 +112,6 @@ class BaseFilter(Module, ABC):
         self._model.exchange(inds, filter_.ssm)
 
         return self
-
-    def populate_state_dict(self):
-        return {"_model": self.ssm.state_dict(), "_n_parallel": self._n_parallel}
 
     def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
         raise NotImplementedError()

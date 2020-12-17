@@ -95,7 +95,7 @@ class ParticleFilter(BaseFilter, ABC):
     def initialize(self) -> ParticleState:
         x = self._model.hidden.i_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
-        prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1])
+        prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1], device=x.device)
 
         return ParticleState(x, w, torch.zeros(self._n_parallel, device=x.device), prev_inds)
 
@@ -112,12 +112,6 @@ class ParticleFilter(BaseFilter, ABC):
         ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
 
         return xm[1:], ym[1:]
-
-    def populate_state_dict(self):
-        base = super(ParticleFilter, self).populate_state_dict()
-        base.update({"_particles": self.particles, "_rsample": self._rsample, "_th": self._th})
-
-        return base
 
     def smooth(self, states: Iterable[ParticleState]):
         hidden_copy = self.ssm.hidden.copy((*self.n_parallel, 1, 1))

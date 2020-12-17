@@ -2,6 +2,7 @@ from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Callable, Union
+from ..distributions import DistributionWrapper
 
 
 def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
@@ -42,14 +43,14 @@ class AffineProcess(StochasticProcess):
 
         return self._mean_scale(x)
 
-    def _mean_scale(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _mean_scale(self, x: torch.Tensor, parameters=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the mean and scale of the process.
         :param x: The previous state
         :return: (mean, scale)
         """
-
-        return self.f(x, *self.parameter_views), self.g(x, *self.parameter_views)
+        params = parameters or self.functional_parameters()
+        return self.f(x, *params), self.g(x, *params)
 
     def _define_transdist(self, loc: torch.Tensor, scale: torch.Tensor):
         """
@@ -58,14 +59,14 @@ class AffineProcess(StochasticProcess):
         :param scale: The scale
         """
 
-        return _define_transdist(loc, scale, self.increment_dist, self.ndim)
+        return _define_transdist(loc, scale, self.increment_dist(), self.ndim)
 
-    def _propagate_u(self, x, u):
-        loc, scale = self._mean_scale(x)
+    def _propagate_u(self, x, u, parameters=None):
+        loc, scale = self._mean_scale(x, parameters=parameters)
         return loc + scale * u
 
     def prop_apf(self, x):
-        return self.f(x, *self.parameter_views)
+        return self.f(x, *self.functional_parameters())
 
 
 def _f(x, s):
@@ -85,8 +86,13 @@ class RandomWalk(AffineProcess):
         """
 
         if not isinstance(std, torch.Tensor):
-            normal = Normal(0.0, 1.0)
+            normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
-            normal = Normal(0.0, 1.0) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
+            if std.shape[-1] < 2:
+                normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+            else:
+                normal = DistributionWrapper(
+                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros_like(std), scale=std
+                )
 
         super().__init__((_f, _g), (std,), initial_dist or normal, normal)

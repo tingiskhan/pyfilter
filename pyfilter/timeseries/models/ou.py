@@ -1,6 +1,7 @@
 from torch.distributions import Normal, Independent, AffineTransform, TransformedDistribution
 from ..affine import AffineProcess
 import torch
+from ...distributions import DistributionWrapper
 
 
 def init_trans(dist, kappa, gamma, sigma):
@@ -19,9 +20,11 @@ class OrnsteinUhlenbeck(AffineProcess):
         """
 
         if ndim > 1:
-            dist = Independent(Normal(torch.zeros(ndim), torch.ones(ndim)), 1)
+            dist = DistributionWrapper(
+                lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(ndim), scale=torch.ones(ndim)
+            )
         else:
-            dist = Normal(0.0, 1)
+            dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
         super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans)
         self._dt = torch.tensor(dt)

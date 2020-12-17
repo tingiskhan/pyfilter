@@ -1,10 +1,9 @@
 from ...timeseries import StateSpaceModel
 from torch.distributions import Distribution
-from ...module import Module
 import torch
 
 
-class Proposal(Module):
+class Proposal(object):
     def __init__(self):
         """
         Defines a proposal object for how to draw the particles.

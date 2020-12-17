@@ -1,10 +1,10 @@
-from .affine import AffineProcess, _define_transdist, MeanOrScaleFun
-from .process import StochasticProcess
 import torch
 from abc import ABC
-from .distributions import Empirical
 from typing import Callable, Tuple
 from torch.distributions import Distribution
+from .affine import AffineProcess, _define_transdist, MeanOrScaleFun
+from .process import StochasticProcess
+from ..distributions import Empirical
 
 
 DiffusionFunction = Callable[[torch.Tensor, float, Tuple[torch.Tensor, ...]], Distribution]
@@ -38,9 +38,10 @@ class OneStepEulerMaruyma(AffineProcess):
         super().__init__(dynamics, parameters, initial_dist, increment_dist, initial_transform=initial_transform)
         self._dt = dt
 
-    def _mean_scale(self, x):
-        mean = x + self.f(x, *self.parameter_views) * self._dt
-        scale = self.g(x, *self.parameter_views)
+    def _mean_scale(self, x, parameters=None):
+        params = parameters or self.functional_parameters()
+        mean = x + self.f(x, *params) * self._dt
+        scale = self.g(x, *params)
 
         return mean, scale
 
@@ -59,7 +60,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
 
     def define_density(self, x, u=None):
         for i in range(self._ns):
-            x = self._propagator(x, self._dt, *self.parameter_views).sample()
+            x = self._propagator(x, self._dt, *self.functional_parameters()).sample()
 
         return Empirical(x)
 
@@ -80,12 +81,13 @@ class AffineEulerMaruyama(EulerMaruyama):
         f = self.f(x, *params) * dt
         g = self.g(x, *params)
 
-        return _define_transdist(x + f, g, self.increment_dist, self.ndim)
+        return _define_transdist(x + f, g, self.increment_dist(), self.ndim)
 
-    def _propagate_u(self, x, u):
+    def _propagate_u(self, x, u, parameters=None):
+        params = parameters or self.functional_parameters()
         for i in range(self._ns):
-            f = self.f(x, *self.parameter_views) * self._dt
-            g = self.g(x, *self.parameter_views)
+            f = self.f(x, *params) * self._dt
+            g = self.g(x, *params)
 
             x += f + g * u
 
@@ -93,6 +95,6 @@ class AffineEulerMaruyama(EulerMaruyama):
 
     def prop_apf(self, x):
         for i in range(self._ns):
-            x += self.f(x, *self.parameter_views) * self._dt
+            x += self.f(x, *self.functional_parameters()) * self._dt
 
         return x

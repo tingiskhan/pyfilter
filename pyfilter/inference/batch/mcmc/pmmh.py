@@ -1,6 +1,5 @@
 from .utils import seed
 import torch
-from typing import Dict, Any
 from ..base import BatchFilterAlgorithm
 from ....logging import LoggingWrapper
 from .state import PMMHState
@@ -23,12 +22,12 @@ class PMMH(BatchFilterAlgorithm):
         self._filter = seed(self._filter, y, 50, self._num_chains)
         prev_res = self._filter.longfilter(y, bar=False, **self._filter_kw)
 
-        return PMMHState(self._filter.ssm.parameters_to_array(), prev_res)
+        return PMMHState(self._filter.ssm.parameters_to_array(constrained=True), prev_res)
 
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
         state = self.initialize(y, **kwargs)
 
-        prop_filt = self._filter.copy((*self._filter.n_parallel, 1))
+        prop_filt = self._filter.copy()
 
         logging_wrapper.set_num_iter(self._max_iter)
         for i in range(self._max_iter):
@@ -40,10 +39,7 @@ class PMMH(BatchFilterAlgorithm):
             state.filter_result.exchange(new_res, accept)
             self._filter.exchange(prop_filt, accept)
 
-            state.update(self._filter.ssm.parameters_to_array())
+            state.update(self._filter.ssm.parameters_to_array(constrained=True))
             logging_wrapper.do_log(i, self, y)
 
         return state
-
-    def populate_state_dict(self) -> Dict[str, Any]:
-        return {"_filter": self._filter.state_dict()}

@@ -29,7 +29,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         w = state.w + state.filter_state.latest_state.get_loglikelihood()
 
         # ===== Log ESS ===== #
-        self._logged_ess += (get_ess(state.w),)
+        self._logged_ess.append(get_ess(state.w))
         state.filter_state.append(fstate)
 
         return FilteringAlgorithmState(w, state.filter_state)
@@ -64,9 +64,3 @@ class FixedWidthNESS(BaseNESS):
     def do_update(self, state):
         self._num_iters += 1
         return (self._num_iters % self._bl == 0) or (~isfinite(state.w)).any()
-
-    def populate_state_dict(self):
-        res = super(FixedWidthNESS, self).populate_state_dict()
-        res["_num_iters"] = self._num_iters
-
-        return res

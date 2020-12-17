@@ -1,7 +1,7 @@
 from abc import ABC
 from ...filters import ParticleFilter, utils as u, FilterResult
 import torch
-from ...utils import normalize
+from ...utils import normalize, TensorList
 from ..base import BaseFilterAlgorithm
 from .state import FilteringAlgorithmState
 
@@ -43,7 +43,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         super().__init__(filter_)
 
         # ===== ESS related ===== #
-        self._logged_ess = tuple()
+        self._logged_ess = TensorList(torch.tensor(1000.0))
         self.particles = particles
 
     @property
@@ -56,10 +56,9 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     def initialize(self) -> FilteringAlgorithmState:
         self.filter.set_nparallel(*self.particles)
-        self.filter.ssm.sample_params(self.particles)
 
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.viewify_params(shape)
+        self.filter.ssm.sample_params(shape)
 
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
@@ -68,7 +67,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     @property
     def logged_ess(self) -> torch.Tensor:
-        return torch.stack(self._logged_ess)
+        return self._logged_ess.values()
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
@@ -83,13 +82,6 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         ym = (py * (wsqd if self.filter.ssm.obs_ndim > 1 else w)).sum(1)
 
         return xm, ym
-
-    def populate_state_dict(self):
-        base = super(SequentialParticleAlgorithm, self).populate_state_dict()
-
-        base.update(**{"_particles": self.particles, "_logged_ess": self._logged_ess})
-
-        return base
 
 
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
@@ -122,7 +114,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
     @property
     def logged_ess(self):
-        return torch.stack(self._first._logged_ess + self._second._logged_ess)
+        return torch.cat((self._first.logged_ess, self._second.logged_ess), 0)
 
     def _update(self, y: torch.Tensor, state):
         self._num_iters += 1
@@ -141,18 +133,3 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
             return self._first.predict(steps, state, aggregate=aggregate, **kwargs)
 
         return self._second.predict(steps, state, aggregate=aggregate, **kwargs)
-
-    def populate_state_dict(self):
-        base = super(CombinedSequentialParticleAlgorithm, self).populate_state_dict()
-
-        base.update(
-            **{
-                "_first": self._first.state_dict(),
-                "_second": self._second.state_dict(),
-                "_when_to_switch": self._when_to_switch,
-                "_is_switched": self._is_switched,
-                "_num_iters": self._num_iters,
-            }
-        )
-
-        return base
