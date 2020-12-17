@@ -4,6 +4,7 @@ import torch
 from torch.distributions import Distribution, Normal, Independent
 from typing import Union
 from ..distributions import DistributionWrapper
+from ..distributions import Prior
 
 
 def f_0d(x, a, scale):
@@ -95,8 +96,5 @@ class LinearGaussianObservations(LinearObservations):
             n = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(dim), scale=torch.ones(dim)
             )
-
-        if not isinstance(scale, (torch.Tensor, float, Distribution)):
-            raise ValueError(f"`scale` parameter must be numeric type!")
 
         super().__init__(hidden, a, scale, n)
