@@ -22,4 +22,4 @@ class ExtendedParameter(Parameter):
         if not support.any():
             raise ValueError("Some of the values were out of bounds!")
 
-        self.data[:] = value.view(self.shape)
+        self[:] = value.view(self.shape)

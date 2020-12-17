@@ -69,12 +69,12 @@ class VariationalBayes(BaseBatchAlgorithm):
 
     # TODO: Fix this one
     def sample_parameter_approximation(self, param_approximation: ParameterMeanField):
-        params = param_approximation.sample((self._ns, 1))
+        params = param_approximation.sample((self._ns,))
 
         for p in self._model.parameters():
             p.detach_()
 
-        self._model.parameters_from_array(params, constrained=True)
+        self._model.parameters_from_array(params, constrained=False)
 
         return self
 
@@ -105,10 +105,10 @@ class VariationalBayes(BaseBatchAlgorithm):
         else:
             logl = self._model.log_prob(y[1:], y[:-1]).sum(1)
 
-        return -(logl.mean(0) + self._model.eval_prior_log_prob(constrained=True).mean() + entropy)
+        return -(logl.mean(0) + self._model.eval_prior_log_prob(constrained=False).mean() + entropy)
 
     def _seed_init_path(self, y) -> [int, torch.Tensor]:
-        filt = UKF(self._model.copy()).set_nparallel(self._ns).viewify_params((self._ns, 1))
+        filt = UKF(self._model.copy()).set_nparallel(self._ns)
         state = filt.initialize()
         result = filt.longfilter(y, bar=False, init_state=state)
 
@@ -119,7 +119,7 @@ class VariationalBayes(BaseBatchAlgorithm):
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         # ===== Sample model in place for a primitive version of initialization ===== #
-        self._model.sample_params(self._ns)
+        self._model.sample_params((self._ns, 1))
 
         # ===== Setup the parameter approximation ===== #
         param_approx.initialize(self._model.priors())

@@ -40,6 +40,26 @@ def gmvn(x, alpha, sigma):
     return concater(sigma, sigma)
 
 
+def make_static_model():
+    dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+
+    linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
+    model = LinearGaussianObservations(linear, scale=0.1)
+
+    return model
+
+
+def make_prob_model():
+    dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+
+    priors = Prior(Exponential, rate=1.0), Prior(LogNormal, loc=0.0, scale=1.0)
+
+    hidden = AffineProcess((f, g), priors, dist, dist)
+    model = LinearGaussianObservations(hidden, 1., scale=0.1)
+
+    return model
+
+
 class InferenceAlgorithmTests(unittest.TestCase):
     def test_SequentialAlgorithms(self):
         # ===== Distributions ===== #
@@ -100,23 +120,12 @@ class InferenceAlgorithmTests(unittest.TestCase):
                     assert (posterior_log_prob > prior_log_prob.numpy()).all()
 
     def test_VariationalBayes(self):
-        # ===== Distributions ===== #
-        dist = Normal(0., 1.)
+        static_model = make_static_model()
+        x, y = static_model.sample_path(1000)
 
-        # ===== Define model ===== #
-        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
-        model = LinearGaussianObservations(linear, scale=0.1)
+        model = make_prob_model()
 
-        # ===== Sample ===== #
-        x, y = model.sample_path(1000)
-
-        # ==== Construct model to train ===== #
-        priors = Exponential(1.), LogNormal(0., 1.)
-
-        hidden1d = AffineProcess((f, g), priors, dist, dist)
-        oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
-
-        vb = VariationalBayes(oned, samples=12, max_iter=50_000)
+        vb = VariationalBayes(model, samples=12, max_iter=50_000)
         state = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
 
         assert state.converged
@@ -124,23 +133,12 @@ class InferenceAlgorithmTests(unittest.TestCase):
         # TODO: Check true values, not just convergence...
 
     def test_PMMH(self):
-        # ===== Distributions ===== #
-        dist = Normal(0., 1.)
+        static_model = make_static_model()
+        x, y = static_model.sample_path(1000)
 
-        # ===== Define model ===== #
-        linear = AffineProcess((f, g), (0.99, 0.25), dist, dist)
-        model = LinearGaussianObservations(linear, scale=0.1)
+        model = make_prob_model()
 
-        # ===== Sample ===== #
-        x, y = model.sample_path(500)
-
-        # ==== Construct model to train ===== #
-        priors = Exponential(1.), LogNormal(0., 1.)
-
-        hidden1d = AffineProcess((f, g), priors, dist, dist)
-        oned = LinearGaussianObservations(hidden1d, 1., scale=0.1)
-
-        filt = APF(oned, 200)
+        filt = APF(model, 200)
         pmmh = PMMH(filt, 500, num_chains=6)
 
         state = pmmh.fit(y)

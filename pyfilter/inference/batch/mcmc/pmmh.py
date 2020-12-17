@@ -27,7 +27,7 @@ class PMMH(BatchFilterAlgorithm):
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
         state = self.initialize(y, **kwargs)
 
-        prop_filt = self._filter.copy((*self._filter.n_parallel, 1))
+        prop_filt = self._filter.copy()
 
         logging_wrapper.set_num_iter(self._max_iter)
         for i in range(self._max_iter):

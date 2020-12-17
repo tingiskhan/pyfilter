@@ -34,7 +34,7 @@ class Prior(BuilderMixin, Module):
         if constrained:
             return self().log_prob(x)
 
-        return self.unconstrained_prior.log_prob(self.get_constrained(x))
+        return self.unconstrained_prior.log_prob(self.get_unconstrained(x))
 
     def get_numel(self, constrained=True):
         return (self().event_shape if not constrained else self.unconstrained_prior.event_shape).numel()

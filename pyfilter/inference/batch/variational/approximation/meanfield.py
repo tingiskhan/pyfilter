@@ -14,7 +14,7 @@ class StateMeanField(BaseApproximation):
         self._dim = None
 
     def initialize(self, data, model: StochasticProcess, *args):
-        self._mean = torch.zeros((data.shape[0] + 1, *model.increment_dist.event_shape), requires_grad=True)
+        self._mean = torch.zeros((data.shape[0] + 1, *model.increment_dist().event_shape), requires_grad=True)
         self._log_std = torch.zeros_like(self._mean, requires_grad=True)
         self._dim = model.ndim
 
@@ -50,9 +50,9 @@ class ParameterMeanField(BaseApproximation):
 
         left = 0
         for p in priors:
-            slc, numel = p.get_slice_for_parameter(left, True)
+            slc, numel = p.get_slice_for_parameter(left, False)
 
-            means += (p.bijection.inv(p.prior.mean),)
+            means += (p.bijection.inv(p().mean),)
             self._bijections += (p.bijection,)
             self._mask += (slc,)
 

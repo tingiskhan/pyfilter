@@ -79,7 +79,7 @@ class Base(PriorModule):
 
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
-    def copy(self, view_shape=torch.Size([])):
+    def copy(self):
         """
         Returns a deep copy of the object.
         :return: Copy of current instance

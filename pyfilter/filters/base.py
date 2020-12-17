@@ -28,11 +28,6 @@ class BaseFilter(Module, ABC):
     def n_parallel(self) -> torch.Size:
         return self._n_parallel
 
-    def viewify_params(self, shape: Union[int, torch.Size]):
-        self.ssm.viewify_params(shape)
-
-        return self
-
     def set_nparallel(self, n: int):
         """
         Sets the number of parallel filters to use
@@ -85,7 +80,7 @@ class BaseFilter(Module, ABC):
 
         return result
 
-    def copy(self, view_shape=torch.Size([])):
+    def copy(self):
         res = copy.deepcopy(self)
         return res
 
