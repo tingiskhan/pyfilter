@@ -24,7 +24,7 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def _update(self, filter_, state, y, *args):
-        prop_filt = filter_.copy((*filter_.n_parallel, 1))
+        prop_filt = filter_.copy()
 
         for _ in range(self._n_steps):
             # ===== Find the best particles ===== #

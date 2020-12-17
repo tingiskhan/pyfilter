@@ -2,6 +2,7 @@ from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Callable, Union
+from ..distributions import DistributionWrapper
 
 
 def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
@@ -85,8 +86,13 @@ class RandomWalk(AffineProcess):
         """
 
         if not isinstance(std, torch.Tensor):
-            normal = Normal(0.0, 1.0)
+            normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
-            normal = Normal(0.0, 1.0) if std.shape[-1] < 2 else Independent(Normal(torch.zeros_like(std), std), 1)
+            if std.shape[-1] < 2:
+                normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+            else:
+                normal = DistributionWrapper(
+                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros_like(std), scale=std
+                )
 
         super().__init__((_f, _g), (std,), initial_dist or normal, normal)

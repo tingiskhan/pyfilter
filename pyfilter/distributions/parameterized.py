@@ -19,7 +19,4 @@ class DistributionWrapper(BuilderMixin, PriorModule):
             if isinstance(v, Prior):
                 self.register_prior(k, v)
             else:
-                if not isinstance(v, torch.Tensor):
-                    v = torch.tensor(v)
-
-                self.register_buffer(k, v)
+                self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))

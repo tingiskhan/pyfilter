@@ -109,7 +109,7 @@ class StochasticProcess(Base, ABC):
         dist = self.initial_dist().expand(size_getter(shape))
 
         if self.init_transform is not None:
-            dist = self.init_transform(dist, *self.parameter_views)
+            dist = self.init_transform(dist, *self.functional_parameters())
 
         if as_dist:
             return dist

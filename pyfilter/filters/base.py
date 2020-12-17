@@ -5,7 +5,8 @@ from tqdm import tqdm
 import torch
 from ..utils import choose
 from torch.nn import Module
-from .utils import enforce_tensor, FilterResult
+from .utils import enforce_tensor
+from .result import FilterResult
 from typing import Tuple, Union, Iterable
 from .state import BaseState
 

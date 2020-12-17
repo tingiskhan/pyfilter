@@ -1,8 +1,7 @@
 from torch import Tensor
 from torch.nn import Module
 from ..uft import UFTCorrectionResult
-from ..utils import choose
-from ..normalization import normalize
+from ..utils import choose, normalize
 
 
 class BaseState(Module):

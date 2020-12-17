@@ -12,10 +12,7 @@ class Prior(BuilderMixin, Module):
         self.base_dist = base_dist
 
         for k, v in parameters.items():
-            if not isinstance(v, torch.Tensor):
-                v = torch.tensor(v)
-
-            self.register_buffer(k, v)
+            self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))
 
         self.bijection = biject_to(self().support)
         self.shape = self().event_shape

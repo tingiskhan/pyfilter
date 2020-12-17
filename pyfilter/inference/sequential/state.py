@@ -1,7 +1,7 @@
 from ..state import AlgorithmState
 from ...filters import FilterResult
 from torch import Tensor
-from ...normalization import normalize
+from ...utils import normalize
 
 
 class FilteringAlgorithmState(AlgorithmState):

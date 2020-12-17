@@ -1,4 +1,4 @@
-from .normalization import normalize
+from .utils import normalize
 import torch
 from typing import Union
 

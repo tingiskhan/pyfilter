@@ -9,7 +9,7 @@ class IndependentProposal(object):
         self._scale = scale
 
     def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
-        return Independent(Normal(filter_.ssm.parameters_to_array(True), self._scale), 1)
+        return Independent(Normal(filter_.ssm.parameters_to_array(constrained=False), self._scale), 1)
 
 
 class GradientBasedProposal(IndependentProposal):

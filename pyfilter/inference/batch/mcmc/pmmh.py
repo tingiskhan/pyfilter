@@ -22,7 +22,7 @@ class PMMH(BatchFilterAlgorithm):
         self._filter = seed(self._filter, y, 50, self._num_chains)
         prev_res = self._filter.longfilter(y, bar=False, **self._filter_kw)
 
-        return PMMHState(self._filter.ssm.parameters_to_array(), prev_res)
+        return PMMHState(self._filter.ssm.parameters_to_array(constrained=True), prev_res)
 
     def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
         state = self.initialize(y, **kwargs)
@@ -39,7 +39,7 @@ class PMMH(BatchFilterAlgorithm):
             state.filter_result.exchange(new_res, accept)
             self._filter.exchange(prop_filt, accept)
 
-            state.update(self._filter.ssm.parameters_to_array())
+            state.update(self._filter.ssm.parameters_to_array(constrained=True))
             logging_wrapper.do_log(i, self, y)
 
         return state
