@@ -43,7 +43,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         super().__init__(filter_)
 
         # ===== ESS related ===== #
-        self._logged_ess = [torch.tensor(particles)]
+        self._logged_ess = list()
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self.filter.set_nparallel(particles)
 
