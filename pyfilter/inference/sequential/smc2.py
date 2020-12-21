@@ -1,11 +1,12 @@
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings, SymmetricMH
 from .kernels.mh import PropConstructor
-from ...utils import get_ess, TensorList
+from ...utils import get_ess, AppendableTensorList
 from ...filters import ParticleFilter
 from torch import isfinite
 from .state import FilteringAlgorithmState
 from typing import Optional
+import torch
 
 
 class SMC2(SequentialParticleAlgorithm):
@@ -21,18 +22,18 @@ class SMC2(SequentialParticleAlgorithm):
         super().__init__(filter_, particles)
 
         # ===== When and how to update ===== #
-        self._threshold = threshold * particles
+        self.register_buffer("_threshold", torch.tensor(threshold * particles))
         self._kernel = ParticleMetropolisHastings(proposal=kernel or SymmetricMH(), **kwargs)
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
 
         # ===== Some helpers to figure out whether to raise ===== #
-        self._max_increases = max_increases
-        self._increases = 0
+        self.register_buffer("_max_increases", torch.tensor(max_increases, dtype=torch.int))
+        self.register_buffer("_increases", torch.tensor(0, dtype=torch.int))
 
         # ===== Save data ===== #
-        self._y = TensorList()
+        self._y = AppendableTensorList()
 
     def _update(self, y, state):
         # ===== Save data ===== #
@@ -75,10 +76,10 @@ class SMC2(SequentialParticleAlgorithm):
             raise Exception(f"Configuration only allows {self._max_increases}!")
 
         # ===== Create new filter with double the state particles ===== #
-        self.filter.particles = 2 * self.filter.particles[1]
+        self.filter._particles[-1] *= 2
         self.filter.set_nparallel(*self.particles)
 
-        fstate = self.filter.longfilter(self._y.values(), bar=False)
+        fstate = self.filter.longfilter(self._y, bar=False)
 
         # ===== Calculate new weights and replace filter ===== #
         w = fstate.loglikelihood - state.filter_state.loglikelihood

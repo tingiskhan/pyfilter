@@ -17,8 +17,8 @@ class UKF(BaseKalmanFilter):
         self._ut = UnscentedFilterTransform(model, **(utfkwargs or dict()))
 
     def initialize(self) -> KalmanState:
-        res = self._ut.initialize(self._n_parallel)
-        return KalmanState(res, torch.zeros(self._n_parallel, device=res.xm.device))
+        res = self._ut.initialize(self.n_parallel)
+        return KalmanState(res, torch.zeros(self.n_parallel, device=res.xm.device))
 
     def _filter(self, y, state: KalmanState):
         p = self._ut.predict(state.utf)

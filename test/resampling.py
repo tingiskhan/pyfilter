@@ -40,7 +40,7 @@ class ResamplingTests(TestCase):
         assert (pyfilter_inds.numpy() == filterpy_inds).all()
 
     def test_SystematicMatrix(self):
-        weights = torch.tensor(np.random.normal(size=(10000, 300)))
+        weights = torch.tensor(np.random.normal(size=(10, 300)))
 
         u = np.random.uniform(size=(weights.shape[0], 1))
 

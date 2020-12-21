@@ -5,7 +5,7 @@ from scipy.stats import gaussian_kde
 from pyfilter.filters import UKF, APF
 from pyfilter.distributions import Prior
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
-from pyfilter.utils import concater, normalize
+from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
@@ -73,18 +73,18 @@ class InferenceAlgorithmTests(unittest.TestCase):
             x, y = true_model.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
-                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                # (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                # (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 2)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
             ]
 
-            for alg, props in algs:
-                alg = alg(**props)
+            for alg_type, props in algs:
+                alg = alg_type(**props)
                 state = alg.fit(y)
 
-                w = normalize(state.w)
+                w = state.normalized_weights()
 
                 zipped = zip(
                     true_model.hidden.functional_parameters(),

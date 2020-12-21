@@ -16,7 +16,7 @@ class SISR(ParticleFilter):
 
         inds, mask = self._resample_state(state.w)
         to_prop = choose(state.x, inds)
-        self._proposal = self.proposal.construct(y, to_prop)
+        self.proposal.construct(y, to_prop)
 
         # ===== Propagate ===== #
         x = self.proposal.draw(self._rsample)

@@ -1,13 +1,13 @@
 from ...state import AlgorithmState
 import torch
 from ....filters import FilterResult
-from ....utils import TensorList
+from ....utils import AppendableTensorList
 
 
 class PMMHState(AlgorithmState):
     def __init__(self, initial_sample: torch.Tensor, filter_result: FilterResult):
         super().__init__()
-        self.samples = TensorList(initial_sample)
+        self.samples = AppendableTensorList(initial_sample)
         self.filter_result = filter_result
 
     def update(self, sample: torch.Tensor):

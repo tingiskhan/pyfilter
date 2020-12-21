@@ -69,7 +69,7 @@ def gomvn(x, sigma):
 class Tests(unittest.TestCase):
     def test_Sample(self):
         # ==== Hidden ==== #
-        norm = Normal(0., 1.)
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         linear = AffineProcess((f, g), (1., 1.), norm, norm)
 
         # ==== Observable ===== #
@@ -88,7 +88,8 @@ class Tests(unittest.TestCase):
     def test_CovariateSequential(self):
         latent = models.AR(0., 0.99, 0.08)
 
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), Normal(0., 1.))
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), norm)
         obs.add_covariate(lambda v: v)
 
         x = torch.empty(101)
@@ -104,7 +105,8 @@ class Tests(unittest.TestCase):
     def test_CovariateModel(self):
         latent = models.AR(0., 0.99, 0.08)
 
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), Normal(0., 1.))
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), norm)
         obs.add_covariate(lambda v: v)
 
         mod = StateSpaceModel(latent, obs)

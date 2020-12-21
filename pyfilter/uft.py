@@ -3,7 +3,7 @@ from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from torch.nn import Module
 from typing import Tuple
-from .utils import construct_diag, ShapeLike, TensorList, size_getter
+from .utils import construct_diag, ShapeLike, AppendableTensorList, size_getter
 from .timeseries import StateSpaceModel, StochasticProcess
 from .parameter import ExtendedParameter
 
@@ -40,11 +40,11 @@ def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
 class UFTCorrectionResult(Module):
     def __init__(self, mean: torch.Tensor, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor):
         super().__init__()
-        self.ym = ym
-        self.yc = yc
+        self.register_buffer("ym", ym)
+        self.register_buffer("yc", yc)
 
-        self.mean = mean
-        self.cov = cov
+        self.register_buffer("mean", mean)
+        self.register_buffer("cov", cov)
         self._sslc = state_slice
 
     @property
@@ -144,18 +144,14 @@ class UnscentedFilterTransform(Module):
     def _set_arrays(self, shape: torch.Size):
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
-        self._hidden_views = TensorList(
-            *(
+        self._hidden_views = tuple(
                 p.view(view_shape) if isinstance(p, ExtendedParameter) else p
                 for p in self._model.hidden.functional_parameters()
-            )
         )
 
-        self._obs_views = TensorList(
-            *(
+        self._obs_views = tuple(
                 p.view(view_shape) if isinstance(p, ExtendedParameter) else p
                 for p in self._model.observable.functional_parameters()
-            )
         )
 
         return self

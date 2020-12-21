@@ -27,47 +27,41 @@ def g_sde(x, alpha, sigma):
     return sigma
 
 
+def build_model():
+    norm = DistributionWrapper(Normal, loc=0., scale=1.)
+    return AffineProcess((f, g), (1., 1.), norm, norm)
+
+
 class Tests(unittest.TestCase):
+    def assert_timeseries_sampling(self, steps, model, initial, shape, expected_shape=None):
+        samps = [initial]
+        for t in range(steps):
+            samps.append(model.propagate(samps[-1]))
+
+        samps = torch.stack(samps)
+        self.assertEqual(samps.size(), torch.Size([steps + 1, *(expected_shape or shape)]))
+
+        # ===== Sample path ===== #
+        path = model.sample_path(steps + 1, shape)
+        self.assertEqual(samps.shape, path.shape)
+
     def test_LinearNoBatch(self):
-        norm = DistributionWrapper(Normal, loc=0., scale=1.)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+        linear = build_model()
 
         # ===== Initialize ===== #
         x = linear.i_sample()
 
         # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(linear.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1]))
-
-        # ===== Sample path ===== #
-        path = linear.sample_path(num + 1)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, linear, x, ())
 
     def test_LinearBatch(self):
-        norm = DistributionWrapper(Normal, loc=0., scale=1.)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+        linear = build_model()
 
         # ===== Initialize ===== #
         shape = 1000, 100
         x = linear.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(linear.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = linear.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, linear, x, shape)
 
     def test_BatchedParameter(self):
         norm = DistributionWrapper(Normal, loc=0., scale=1.)
@@ -81,18 +75,7 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = linear.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(linear.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = linear.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, linear, x, shape)
 
     def test_MultiDimensional(self):
         mu = torch.zeros(2)
@@ -107,17 +90,7 @@ class Tests(unittest.TestCase):
         x = mvn.i_sample(shape)
 
         # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(mvn.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape, *mu.shape]))
-
-        # ===== Sample path ===== #
-        path = mvn.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, mvn, x, shape, (*shape, 2))
 
     def test_OneStepEuler(self):
         shape = 1000, 100
@@ -134,18 +107,7 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(sde.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = sde.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_OrnsteinUhlenbeck(self):
         shape = 1000, 100
@@ -156,25 +118,13 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(sde.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = sde.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_SDE(self):
         shape = 1000, 100
 
         a = 1e-2 * torch.ones((shape[0], 1))
         dt = 0.1
-        norm = DistributionWrapper(Normal, loc=0., scale=math.sqrt(dt))
 
         init = norm = DistributionWrapper(Normal, loc=a, scale=math.sqrt(dt))
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
@@ -182,18 +132,7 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 100
-        samps = [x]
-        for t in range(num):
-            samps.append(sde.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = sde.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_Poisson(self):
         shape = 10, 100
@@ -208,18 +147,7 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 1000
-        samps = [x]
-        for t in range(num):
-            samps.append(sde.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = sde.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_ParameterInDistribution(self):
         shape = 10, 100
@@ -236,18 +164,7 @@ class Tests(unittest.TestCase):
         # ===== Initialize ===== #
         x = sde.i_sample(shape)
 
-        # ===== Propagate ===== #
-        num = 1000
-        samps = [x]
-        for t in range(num):
-            samps.append(sde.propagate(samps[-1]))
-
-        samps = torch.stack(samps)
-        self.assertEqual(samps.size(), torch.Size([num + 1, *shape]))
-
-        # ===== Sample path ===== #
-        path = sde.sample_path(num + 1, shape)
-        self.assertEqual(samps.shape, path.shape)
+        self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_AR(self):
         ar = m.AR(0., 0.99, 0.08)

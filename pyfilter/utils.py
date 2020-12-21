@@ -4,9 +4,11 @@ import numpy as np
 from typing import Union, Tuple, Iterable
 from torch.nn import Module
 from .constants import INFTY
+from .distributions import Prior
 
-TensorOrDist = Union[Distribution, torch.Tensor]
-ArrayType = Union[float, int, np.ndarray]
+
+TensorOrDist = Union[Distribution, torch.Tensor, Prior]
+ArrayType = Union[float, int, np.ndarray, TensorOrDist]
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]
 
 
@@ -21,7 +23,10 @@ def size_getter(shape: ShapeLike) -> torch.Size:
     return torch.Size(shape)
 
 
-class TensorList(Module):
+KEY_PREFIX = "item"
+
+
+class AppendableTensorList(Module):
     def __init__(self, *args):
         super().__init__()
         self._i = -1
@@ -29,15 +34,21 @@ class TensorList(Module):
         for a in args:
             self.append(a)
 
+        self._register_load_state_dict_pre_hook(self._hook)
+
+    @staticmethod
+    def _make_key(i: int):
+        return f"{KEY_PREFIX}_{i}"
+
     def append(self, x: torch.Tensor):
         self._i += 1
-        self.register_buffer(str(self._i), x)
+        self.register_buffer(self._make_key(self._i), x)
 
     def __getitem__(self, item: int):
         if item < 0:
-            return self._buffers[str(self._i + 1 + item)]
+            return self._buffers[self._make_key(self._i + 1 + item)]
 
-        return self._buffers[str(item)]
+        return self._buffers[self._make_key(item)]
 
     def __iter__(self):
         return (v for v in self._buffers.values())
@@ -51,33 +62,17 @@ class TensorList(Module):
 
         return torch.stack(tuple(self._buffers.values()), 0)
 
+    def _hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        for k, v in state_dict.items():
+            if prefix:
+                k = k.replace(prefix, "")
 
-class ModuleList(Module):
-    def __init__(self, *args):
-        super().__init__()
-        self._i = -1
+            if not k.startswith(KEY_PREFIX):
+                continue
 
-        for a in args:
-            self.append(a)
+            self.register_buffer(k, v)
 
-    def append(self, x: Module):
-        self._i += 1
-        self.add_module(str(self._i), x)
-
-    def __getitem__(self, item: int):
-        if item < 0:
-            return self._modules[str(self._i + 1 + item)]
-
-        return self._modules[str(item)]
-
-    def __iter__(self):
-        return (v for v in self._modules.values())
-
-    def __len__(self):
-        return len(self._modules)
-
-    def values(self):
-        return tuple(self._modules.values())
+        return
 
 
 def get_ess(w: torch.Tensor, normalized=False):
