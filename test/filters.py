@@ -39,15 +39,15 @@ def gmvn(x, alpha, sigma):
 class Tests(unittest.TestCase):
     # ===== Simple 1D model ===== #
     norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-    linear = AffineProcess((f, g), (1., 1.), norm, norm)
-    model = LinearGaussianObservations(linear, 1., 1.)
+    linear = AffineProcess((f, g), (1.0, 1.0), norm, norm)
+    model = LinearGaussianObservations(linear, 1.0, 1.0)
 
     # ===== Simple 2D model ===== #
     mvn = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2))
-    mvn = AffineProcess((fmvn, gmvn), (0.5, 1.), mvn, mvn)
-    a = torch.tensor([1., 2.])
+    mvn = AffineProcess((fmvn, gmvn), (0.5, 1.0), mvn, mvn)
+    a = torch.tensor([1.0, 2.0])
 
-    mvnmodel = LinearGaussianObservations(mvn, a, 1.)
+    mvnmodel = LinearGaussianObservations(mvn, a, 1.0)
 
     def test_InitializeFilter(self):
         state = SISR(self.model, 1000).initialize()
@@ -59,10 +59,10 @@ class Tests(unittest.TestCase):
             x, y = model.sample_path(500)
 
             for filter_type, props in [
-                (SISR, {'particles': 500}),
-                (APF, {'particles': 500}),
+                (SISR, {"particles": 500}),
+                (APF, {"particles": 500}),
                 (UKF, {}),
-                (SISR, {'particles': 50, 'proposal': prop.Unscented()})
+                (SISR, {"particles": 50, "proposal": prop.Unscented()}),
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)
@@ -71,9 +71,11 @@ class Tests(unittest.TestCase):
 
                 # ===== Run Kalman ===== #
                 if model is self.model:
-                    kf = pykalman.KalmanFilter(transition_matrices=1., observation_matrices=1.)
+                    kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
                 else:
-                    kf = pykalman.KalmanFilter(transition_matrices=[[0.5, 1 / 3], [0, 1.]], observation_matrices=[1, 2])
+                    kf = pykalman.KalmanFilter(
+                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=[1, 2]
+                    )
 
                 f_mean, _ = kf.filter(y.numpy())
 
@@ -92,7 +94,7 @@ class Tests(unittest.TestCase):
 
         shape = 3000
 
-        linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
+        linear = AffineProcess((f, g), (1.0, 1.0), self.norm, self.norm)
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000).set_nparallel(shape)
@@ -110,7 +112,7 @@ class Tests(unittest.TestCase):
 
         shape = 30
 
-        linear = AffineProcess((f, g), (1., 1.), self.norm, self.norm)
+        linear = AffineProcess((f, g), (1.0, 1.0), self.norm, self.norm)
         self.model.hidden = linear
 
         filt = SISR(self.model, 1000, proposal=prop.Unscented()).set_nparallel(shape)

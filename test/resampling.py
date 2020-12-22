@@ -16,7 +16,7 @@ def filterpy_systematic_resample(weights, u):
     # make N subdivisions, and choose positions with a consistent random offset
     positions = (u + np.arange(N)) / N
 
-    indexes = np.zeros(N, 'i')
+    indexes = np.zeros(N, "i")
     cumulative_sum = np.cumsum(weights)
     i, j = 0, 0
     while i < N:
@@ -49,5 +49,3 @@ class ResamplingTests(TestCase):
         for i in range(weights.shape[0]):
             filterpy_inds = filterpy_systematic_resample(normalize(weights[i]), u[i])
             assert (pyfilter_inds[i].numpy() == filterpy_inds).all()
-
-

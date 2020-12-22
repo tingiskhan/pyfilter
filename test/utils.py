@@ -27,8 +27,8 @@ class UtilTests(unittest.TestCase):
             return sigma
 
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
-        model = LinearGaussianObservations(linear, 1., 1.)
+        linear = AffineProcess((f, g), (1.0, 1.0), norm, norm)
+        model = LinearGaussianObservations(linear, 1.0, 1.0)
 
         x, y = model.sample_path(100)
 
@@ -46,5 +46,5 @@ class UtilTests(unittest.TestCase):
         self.assertTrue((res2.filter_means == res.filter_means).all())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

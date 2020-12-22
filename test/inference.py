@@ -73,11 +73,11 @@ class InferenceAlgorithmTests(unittest.TestCase):
             x, y = true_model.sample_path(1000)
 
             algs = [
-                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
-                (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 2)}),
-                (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})
+                (NESS, {"particles": particles, "filter_": APF(model.copy(), 200)}),
+                (NESS, {"particles": particles, "filter_": UKF(model.copy())}),
+                (SMC2, {"particles": particles, "filter_": APF(model.copy(), 125)}),
+                (SMC2FW, {"particles": particles, "filter_": APF(model.copy(), 200)}),
+                (NESSMC2, {"particles": particles, "filter_": APF(model.copy(), 200)}),
             ]
 
             for alg_type, props in algs:
@@ -86,10 +86,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
                 w = state.normalized_weights()
 
-                zipped = zip(
-                    true_model.hidden.functional_parameters(),
-                    alg.filter.ssm.parameters_and_priors()
-                )
+                zipped = zip(true_model.hidden.functional_parameters(), alg.filter.ssm.parameters_and_priors())
 
                 for true_p, (p, prior) in zipped:
                     kde = gaussian_kde(prior.get_unconstrained(p).squeeze().numpy(), weights=w.numpy())
@@ -128,5 +125,5 @@ class InferenceAlgorithmTests(unittest.TestCase):
         # TODO: Add check for posterior
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

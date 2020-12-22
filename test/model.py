@@ -70,10 +70,10 @@ class Tests(unittest.TestCase):
     def test_Sample(self):
         # ==== Hidden ==== #
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
+        linear = AffineProcess((f, g), (1.0, 1.0), norm, norm)
 
         # ==== Observable ===== #
-        obs = AffineObservations((fo, go), (1., 0.), norm)
+        obs = AffineObservations((fo, go), (1.0, 0.0), norm)
 
         # ===== Model ===== #
         mod = StateSpaceModel(linear, obs)
@@ -86,10 +86,10 @@ class Tests(unittest.TestCase):
         assert x.shape == y.shape and x.shape[0] == 100 and diff < 1e-3
 
     def test_CovariateSequential(self):
-        latent = models.AR(0., 0.99, 0.08)
+        latent = models.AR(0.0, 0.99, 0.08)
 
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), norm)
+        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.0)), (), norm)
         obs.add_covariate(lambda v: v)
 
         x = torch.empty(101)
@@ -103,10 +103,10 @@ class Tests(unittest.TestCase):
         assert (((y - torch.arange(y.shape[0])) - x[1:]) < 1e-3).all()
 
     def test_CovariateModel(self):
-        latent = models.AR(0., 0.99, 0.08)
+        latent = models.AR(0.0, 0.99, 0.08)
 
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.)), (), norm)
+        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.0)), (), norm)
         obs.add_covariate(lambda v: v)
 
         mod = StateSpaceModel(latent, obs)
@@ -118,11 +118,11 @@ class Tests(unittest.TestCase):
 
     def test_ParametersToFromArray(self):
         priors = Prior(Exponential, rate=10.0), Prior(Normal, loc=0.0, scale=1.0), Prior(Exponential, rate=5.0)
-        sde = models.OrnsteinUhlenbeck(*priors, 1, dt=1.)
+        sde = models.OrnsteinUhlenbeck(*priors, 1, dt=1.0)
 
-        dist = DistributionWrapper(Normal, loc=0., scale=Prior(Exponential, rate=5.0))
+        dist = DistributionWrapper(Normal, loc=0.0, scale=Prior(Exponential, rate=5.0))
         priors = Prior(Normal, loc=0.0, scale=1.0), Prior(Exponential, rate=1.0)
-        obs = AffineObservations((lambda u: u, lambda u: 1.), priors, dist)
+        obs = AffineObservations((lambda u: u, lambda u: 1.0), priors, dist)
 
         mod = StateSpaceModel(sde, obs)
 
@@ -132,7 +132,7 @@ class Tests(unittest.TestCase):
 
         assert as_array.shape == torch.Size([100, 6])
 
-        offset = 1.
+        offset = 1.0
         mod.parameters_from_array(as_array + offset, constrained=False)
         assert len(tuple(mod.parameters())) == as_array.shape[-1]
 
