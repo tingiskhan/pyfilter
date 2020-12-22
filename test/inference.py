@@ -73,8 +73,8 @@ class InferenceAlgorithmTests(unittest.TestCase):
             x, y = true_model.sample_path(1000)
 
             algs = [
-                # (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
-                # (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
+                (NESS, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
+                (NESS, {'particles': particles, 'filter_': UKF(model.copy())}),
                 (SMC2, {'particles': particles, 'filter_': APF(model.copy(), 2)}),
                 (SMC2FW, {'particles': particles, 'filter_': APF(model.copy(), 200)}),
                 (NESSMC2, {'particles': particles, 'filter_': APF(model.copy(), 200)})

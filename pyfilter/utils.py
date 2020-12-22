@@ -26,7 +26,7 @@ def size_getter(shape: ShapeLike) -> torch.Size:
 KEY_PREFIX = "item"
 
 
-class AppendableTensorList(Module):
+class TensorTuple(Module):
     def __init__(self, *args):
         super().__init__()
         self._i = -1
@@ -99,7 +99,6 @@ def choose(array: torch.Tensor, indices: torch.Tensor):
 def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None):
     maxw, _ = w.max(-1)
 
-    # ===== Calculate the second term ===== #
     if weights is None:
         temp = torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)).mean(-1).log()
     else:

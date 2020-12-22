@@ -2,7 +2,7 @@ import torch
 from torch.nn import Module
 from typing import List
 from .state import BaseState
-from ..utils import AppendableTensorList
+from ..utils import TensorTuple
 
 
 class FilterResult(Module):
@@ -14,7 +14,7 @@ class FilterResult(Module):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self._filter_means = AppendableTensorList()
+        self._filter_means = TensorTuple()
         self._latest_state = init_state
         self._states = list()   # TODO: Can't really seem to be able to serialize these
 
@@ -47,10 +47,11 @@ class FilterResult(Module):
 
         # ===== Filter means ====== #
         # TODO: Not the best...
-        for old_fm, new_fm in zip(self.filter_means, res.filter_means):
+        for old_fm, new_fm in zip(self._filter_means, res._filter_means):
             old_fm[inds] = new_fm[inds]
 
-        for ns, os in zip(res.states, self.states):
+        self._latest_state.exchange(res.latest_state, inds)
+        for ns, os in zip(res.states[:-1], self.states[:-1]):
             os.exchange(ns, inds)
 
         return self
@@ -63,10 +64,11 @@ class FilterResult(Module):
         self._loglikelihood = self.loglikelihood[inds]
 
         if entire_history:
-            for mean in self.filter_means:
+            for mean in self._filter_means:
                 mean[:] = mean[inds]
 
-        for s in self._states:
+        self._latest_state.resample(inds)
+        for s in self.states[:-1]:
             s.resample(inds)
 
         return self

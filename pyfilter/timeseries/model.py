@@ -67,22 +67,16 @@ class StateSpaceModel(Base):
 
         return hidden, obs
 
-    def exchange(self, indices: torch.Tensor, newmodel):
+    def exchange(self, indices: torch.Tensor, new_model):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
         :param indices: The indices to exchange
-        :param newmodel: The model which to exchange with
-        :type newmodel: StateSpaceModel
+        :param new_model: The model which to exchange with
+        :type new_model: StateSpaceModel
         :return: Self
         """
 
-        procs = (
-            (newmodel.hidden.parameters(), self.hidden.parameters()),
-            (newmodel.observable.parameters(), self.observable.parameters()),
-        )
-
-        for proc in procs:
-            for new_param, self_param in zip(*proc):
-                self_param[indices] = new_param[indices]
+        for new_param, self_param in zip(new_model.parameters(), self.parameters()):
+            self_param[indices] = new_param[indices]
 
         return self

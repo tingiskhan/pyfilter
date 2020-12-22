@@ -1,5 +1,5 @@
 import unittest
-from pyfilter.utils import AppendableTensorList
+from pyfilter.utils import TensorTuple
 import torch
 from torch.distributions import Normal
 from pyfilter.filters import SISR
@@ -8,16 +8,16 @@ from pyfilter.distributions import DistributionWrapper
 from pyfilter.filters import FilterResult
 
 
-class MyTestCase(unittest.TestCase):
+class UtilTests(unittest.TestCase):
     def test_TensorList(self):
         rands = torch.empty(1000).normal_()
 
-        tens_list = AppendableTensorList(*list(rands))
+        tens_tuple = TensorTuple(*list(rands))
 
-        to_load = AppendableTensorList()
-        to_load.load_state_dict(tens_list.state_dict())
+        to_load = TensorTuple()
+        to_load.load_state_dict(tens_tuple.state_dict())
 
-        self.assertTrue((to_load.values() == tens_list.values()).all())
+        self.assertTrue((to_load.values() == tens_tuple.values()).all())
 
     def test_LoadModule(self):
         def f(x_, alpha, sigma):

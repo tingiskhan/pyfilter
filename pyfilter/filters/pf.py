@@ -40,14 +40,11 @@ class ParticleFilter(BaseFilter, ABC):
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self._th = ess
 
-        # ===== Auxiliary variable ===== #
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
         self._rsample = need_grad
 
-        # ===== Resampling function ===== #
         self._resampler = resampling
 
-        # ===== Proposal ===== #
         if proposal == "auto":
             try:
                 proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
@@ -65,14 +62,11 @@ class ParticleFilter(BaseFilter, ABC):
         return self._proposal
 
     def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
-        # ===== Get the ones requiring resampling ====== #
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._th
 
-        # ===== Create a default array for resampling ===== #
         out = _construct_empty(w)
 
-        # ===== Return based on if it's nested or not ===== #
         if not mask.any():
             return out, mask
         elif not isinstance(self._particles, tuple):

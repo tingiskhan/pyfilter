@@ -9,7 +9,6 @@ class UKF(BaseKalmanFilter):
     def __init__(self, model, utfkwargs: Dict[str, object] = None):
         """
         Implements the Unscented Kalman Filter by van der Merwe.
-        :param kwargs: Any kwargs passed to `BaseFilter`
         :param utfkwargs: Any kwargs passed to `UnscentedFilterTransform`
         """
 

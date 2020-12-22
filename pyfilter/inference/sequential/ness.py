@@ -20,19 +20,16 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         raise NotImplementedError()
 
     def _update(self, y, state):
-        # ===== Jitter ===== #
         if self.do_update(state):
             self._kernel.update(self.filter, state)
 
-        # ===== Propagate filter ===== #
         fstate = self.filter.filter(y, state.filter_state.latest_state)
         w = state.w + state.filter_state.latest_state.get_loglikelihood()
 
-        # ===== Log ESS ===== #
-        self._logged_ess.append(get_ess(state.w))
+        state.append_ess(get_ess(state.w))
         state.filter_state.append(fstate)
 
-        return FilteringAlgorithmState(w, state.filter_state)
+        return FilteringAlgorithmState(w, state.filter_state, state.ess)
 
 
 class NESS(BaseNESS):
@@ -46,7 +43,7 @@ class NESS(BaseNESS):
         self._threshold = threshold * particles
 
     def do_update(self, state):
-        return (any(self._logged_ess) and self._logged_ess[-1] < self._threshold) or (~isfinite(state.w)).any()
+        return (any(state.ess) and state.ess[-1] < self._threshold) or (~isfinite(state.w)).any()
 
 
 class FixedWidthNESS(BaseNESS):

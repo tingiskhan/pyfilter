@@ -10,7 +10,6 @@ class SISR(ParticleFilter):
     """
 
     def _filter(self, y, state: ParticleState):
-        # ===== Resample among old ===== #
         # TODO: Not optimal as we normalize in several other functions, fix this
         old_normw = state.normalized_weights()
 
@@ -18,13 +17,11 @@ class SISR(ParticleFilter):
         to_prop = choose(state.x, inds)
         self.proposal.construct(y, to_prop)
 
-        # ===== Propagate ===== #
         x = self.proposal.draw(self._rsample)
         weights = self.proposal.weight(y, x, to_prop)
 
         self.proposal.resample(inds)
 
-        # ===== Update weights ===== #
         tw = torch.zeros_like(weights)
         tw[~mask] = state.w[~mask]
 
