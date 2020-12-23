@@ -1,8 +1,8 @@
 import torch
 from torch.nn import Module
-from typing import Tuple
+from typing import List
 from .state import BaseState
-from ..utils import TensorList, ModuleList
+from ..utils import TensorTuple
 
 
 class FilterResult(Module):
@@ -14,8 +14,9 @@ class FilterResult(Module):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self._filter_means = TensorList()
-        self._states = ModuleList(init_state)
+        self._filter_means = TensorTuple()
+        self._latest_state = init_state
+        self._states = list()   # TODO: Can't really seem to be able to serialize these
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -26,12 +27,12 @@ class FilterResult(Module):
         return self._filter_means.values()
 
     @property
-    def states(self) -> Tuple[BaseState, ...]:
-        return self._states.values()
+    def states(self) -> List[BaseState]:
+        return self._states
 
     @property
     def latest_state(self) -> BaseState:
-        return self._states[-1]
+        return self._latest_state
 
     def exchange(self, res, inds: torch.Tensor):
         """
@@ -49,7 +50,8 @@ class FilterResult(Module):
         for old_fm, new_fm in zip(self._filter_means, res._filter_means):
             old_fm[inds] = new_fm[inds]
 
-        for ns, os in zip(res.states, self.states):
+        self._latest_state.exchange(res.latest_state, inds)
+        for ns, os in zip(res.states[:-1], self.states[:-1]):
             os.exchange(ns, inds)
 
         return self
@@ -65,7 +67,8 @@ class FilterResult(Module):
             for mean in self._filter_means:
                 mean[:] = mean[inds]
 
-        for s in self._states:
+        self._latest_state.resample(inds)
+        for s in self.states[:-1]:
             s.resample(inds)
 
         return self
@@ -74,9 +77,9 @@ class FilterResult(Module):
         self._filter_means.append(state.get_mean())
 
         self._loglikelihood += state.get_loglikelihood()
-        if only_latest:
-            self._states = ModuleList(state)
-        else:
+        self._latest_state = state
+
+        if not only_latest:
             self._states.append(state)
 
         return self

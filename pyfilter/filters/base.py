@@ -19,7 +19,7 @@ class BaseFilter(Module, ABC):
             raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
 
         self._model = model
-        self._n_parallel = torch.Size([])
+        self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -27,7 +27,10 @@ class BaseFilter(Module, ABC):
 
     @property
     def n_parallel(self) -> torch.Size:
-        return self._n_parallel
+        if self._n_parallel == 0:
+            return torch.Size([])
+
+        return torch.Size([self._n_parallel])
 
     def set_nparallel(self, n: int):
         """
@@ -95,8 +98,8 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        for p in self.parameters():
-            p.data[:] = choose(p, inds)
+        for p, prior in self.ssm.parameters_and_priors():
+            p.update_values(choose(p, inds), prior, constrained=True)
 
         return self
 
@@ -119,6 +122,6 @@ class BaseFilter(Module, ABC):
 
 class BaseKalmanFilter(BaseFilter, ABC):
     def set_nparallel(self, n):
-        self._n_parallel = torch.Size([n])
+        self._n_parallel = torch.tensor(n)
 
         return self

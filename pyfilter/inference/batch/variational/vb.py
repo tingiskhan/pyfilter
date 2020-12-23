@@ -34,10 +34,8 @@ class VariationalBayes(BaseBatchAlgorithm):
         self._model = model
         self._ns = samples
 
-        # ===== Helpers ===== #
         self._use_filter = use_filter
 
-        # ===== Optimization stuff ===== #
         self._opt_type = optimizer
         self._optimizer = None
         self.optkwargs = optkwargs or dict()
@@ -84,10 +82,8 @@ class VariationalBayes(BaseBatchAlgorithm):
         entropy = state.param_approx.entropy()
 
         if isinstance(self._model, StateSpaceModel):
-            # ===== Sample states ===== #
             transformed = state.state_approx.sample(self._ns)
 
-            # ===== Helpers ===== #
             x_t = transformed[:, 1:]
             x_tm1 = transformed[:, :-1]
 
@@ -118,25 +114,20 @@ class VariationalBayes(BaseBatchAlgorithm):
         return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
-        # ===== Sample model in place for a primitive version of initialization ===== #
         self._model.sample_params((self._ns, 1))
 
-        # ===== Setup the parameter approximation ===== #
         param_approx.initialize(self._model.priors())
         opt_params = param_approx.get_parameters()
 
-        # ===== Initialize the state approximation ===== #
         if isinstance(self._model, StateSpaceModel):
             state_approx.initialize(y, self._model.hidden)
 
-            # ===== Run filter and use means for initialization ====== #
             if self._use_filter:
                 maxind, means = self._seed_init_path(y)
 
                 state_approx._mean.data[:] = means
                 param_approx._mean.data[:] = self._model.parameters_to_array(constrained=False)[maxind]
 
-            # ===== Append parameters ===== #
             opt_params += state_approx.get_parameters()
 
         optimizer = self._opt_type(opt_params, **self.optkwargs)

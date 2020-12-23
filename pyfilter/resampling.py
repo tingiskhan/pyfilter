@@ -57,22 +57,18 @@ def residual(w: torch.Tensor, normalized=False):
 
     w = normalize(w) if not normalized else w
 
-    # ===== Calculate the number of deterministic to get ===== #
     mw = w.shape[-1] * w
     floored = mw.floor()
     res = mw - floored
 
-    # ===== Make flat ===== #
     out = torch.ones_like(w, dtype=torch.long)
 
-    # ===== Get the indexes of those to sample ===== #
     numelems = floored.sum(-1)
     res /= numelems
 
     intpart = floored.long()
     ranged = torch.arange(w.shape[-1], dtype=intpart.dtype, device=w.device) * out
 
-    # ===== Repeat the integers and transform to correct ===== #
     modded = ranged.repeat_interleave(intpart)
     aslong = numelems.long()
 

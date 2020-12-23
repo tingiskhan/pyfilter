@@ -3,7 +3,7 @@ from math import sqrt
 from torch.distributions import Normal, MultivariateNormal
 from torch.nn import Module
 from typing import Tuple
-from .utils import construct_diag, ShapeLike, TensorList, size_getter
+from .utils import construct_diag, ShapeLike, size_getter
 from .timeseries import StateSpaceModel, StochasticProcess
 from .parameter import ExtendedParameter
 
@@ -40,11 +40,11 @@ def _get_meancov(spxy: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor):
 class UFTCorrectionResult(Module):
     def __init__(self, mean: torch.Tensor, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor):
         super().__init__()
-        self.ym = ym
-        self.yc = yc
+        self.register_buffer("ym", ym)
+        self.register_buffer("yc", yc)
 
-        self.mean = mean
-        self.cov = cov
+        self.register_buffer("mean", mean)
+        self.register_buffer("cov", cov)
         self._sslc = state_slice
 
     @property
@@ -104,7 +104,6 @@ class UnscentedFilterTransform(Module):
         ):
             raise ValueError("Cannot currently handle case when distribution is parameterized!")
 
-        # ===== Model ===== #
         self._model = model
         self._trans_dim = (
             1 if len(model.hidden.increment_dist().event_shape) == 0 else model.hidden.increment_dist().event_shape[0]
@@ -112,12 +111,10 @@ class UnscentedFilterTransform(Module):
 
         self._ndim = model.hidden.num_vars + self._trans_dim + model.observable.num_vars
 
-        # ===== Parameters =====#
         self._a = a
         self._b = b
         self._lam = a ** 2 * (self._ndim + k) - self._ndim
 
-        # ===== Auxiliary variables ===== #
         self._hidden_views = None
         self._obs_views = None
 
@@ -144,18 +141,14 @@ class UnscentedFilterTransform(Module):
     def _set_arrays(self, shape: torch.Size):
         view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
-        self._hidden_views = TensorList(
-            *(
+        self._hidden_views = tuple(
                 p.view(view_shape) if isinstance(p, ExtendedParameter) else p
                 for p in self._model.hidden.functional_parameters()
-            )
         )
 
-        self._obs_views = TensorList(
-            *(
+        self._obs_views = tuple(
                 p.view(view_shape) if isinstance(p, ExtendedParameter) else p
                 for p in self._model.observable.functional_parameters()
-            )
         )
 
         return self
@@ -164,26 +157,20 @@ class UnscentedFilterTransform(Module):
         shape = size_getter(shape)
         self._set_weights()._set_slices()._set_arrays(shape)
 
-        # ===== Define and covariance ===== #
         mean = torch.zeros((*shape, self._ndim))
         cov = torch.zeros((*shape, self._ndim, self._ndim))
 
-        # ===== Set mean ===== #
         s_mean = self._model.hidden.i_sample((1000, *shape)).mean(0)
         if self._model.hidden_ndim < 1:
             s_mean.unsqueeze_(-1)
 
         mean[..., self._sslc] = s_mean
 
-        # ==== Set state covariance ===== #
         var = s_cov = self._model.hidden.initial_dist().variance
-
         if self._model.hidden_ndim > 0:
             s_cov = construct_diag(var)
 
         cov[..., self._sslc, self._sslc] = s_cov
-
-        # ==== Set noise covariance ===== #
         cov[..., self._hslc, self._hslc] = construct_diag(self._model.hidden.increment_dist().variance)
         cov[..., self._oslc, self._oslc] = construct_diag(self._model.observable.increment_dist().variance)
 
@@ -230,11 +217,9 @@ class UnscentedFilterTransform(Module):
         return UFTCorrectionResult(mean, cov, self._sslc, ym, yc)
 
     def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult):
-        # ===== Calculate mean and covariance ====== #
         correction = self.calc_mean_cov(uft_pred)
         xmean, xcov, ymean, ycov = correction.xm, correction.xc, correction.ym, correction.yc
 
-        # ==== Calculate cross covariance ==== #
         if xmean.dim() > 1:
             tx = uft_pred.spx - xmean.unsqueeze(-2)
         else:
@@ -247,14 +232,11 @@ class UnscentedFilterTransform(Module):
 
         xycov = _covariance(tx, ty, self._wc)
 
-        # ==== Calculate the gain ==== #
         gain = torch.matmul(xycov, ycov.inverse())
 
-        # ===== Calculate true mean and covariance ==== #
         txmean = xmean + torch.matmul(gain, (y - ymean).unsqueeze(-1))[..., 0]
 
         temp = torch.matmul(ycov, gain.transpose(-1, -2))
         txcov = xcov - torch.matmul(gain, temp)
 
-        # ===== Overwrite ===== #
         return self.update_state(txmean, txcov, prev_corr, ymean, ycov)

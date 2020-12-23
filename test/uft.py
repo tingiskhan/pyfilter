@@ -4,6 +4,7 @@ from torch.distributions import Normal, MultivariateNormal
 from pyfilter.uft import UnscentedFilterTransform
 import torch
 from pyfilter.utils import concater
+from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
@@ -57,16 +58,16 @@ def gomvn(x, sigma):
 class Tests(unittest.TestCase):
     def test_UnscentedTransform1D(self):
         # ===== 1D model ===== #
-        norm = Normal(0., 1.)
-        linear = AffineProcess((f, g), (1., 1.), norm, norm)
-        linearobs = AffineObservations((fo, go), (1., 1.), norm)
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        linear = AffineProcess((f, g), (1.0, 1.0), norm, norm)
+        linearobs = AffineObservations((fo, go), (1.0, 1.0), norm)
         model = StateSpaceModel(linear, linearobs)
 
         # ===== Perform unscented transform ===== #
         uft = UnscentedFilterTransform(model)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(torch.tensor(0.), p, res)
+        c = uft.correct(torch.tensor(0.0), p, res)
 
         assert isinstance(c.x_dist(), Normal) and c.x_dist().mean.shape == torch.Size([3000])
 
@@ -75,10 +76,11 @@ class Tests(unittest.TestCase):
         mat = torch.eye(2)
         scale = torch.diag(mat)
 
-        norm = Normal(0., 1.)
-        mvn = MultivariateNormal(torch.zeros(2), torch.eye(2))
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        mvn = DistributionWrapper(MultivariateNormal, loc=torch.zeros(2), covariance_matrix=torch.eye(2))
+
         mvnlinear = AffineProcess((fmvn, g), (mat, scale), mvn, mvn)
-        mvnoblinear = AffineObservations((fomvn, gomvn), (1.,), norm)
+        mvnoblinear = AffineObservations((fomvn, gomvn), (1.0,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
@@ -86,7 +88,6 @@ class Tests(unittest.TestCase):
         uft = UnscentedFilterTransform(mvnmodel)
         res = uft.initialize(3000)
         p = uft.predict(res)
-        c = uft.correct(torch.tensor(0.), p, res)
+        c = uft.correct(torch.tensor(0.0), p, res)
 
         assert isinstance(c.x_dist(), MultivariateNormal) and c.x_dist().mean.shape == torch.Size([3000, 2])
-

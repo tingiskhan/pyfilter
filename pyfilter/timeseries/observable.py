@@ -31,6 +31,6 @@ class AffineObservations(AffineProcess):
         loc, scale = self._mean_scale(x)
 
         if (u is not None) and (self._covariate is not None):
-            loc += self._covariate(u, *self.parameter_views)
+            loc += self._covariate(u, *self.functional_parameters())
 
         return self._define_transdist(loc, scale)

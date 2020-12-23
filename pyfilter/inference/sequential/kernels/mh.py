@@ -39,7 +39,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             # ===== Update parameters ===== #
             to_accept, prop_state, prop_filt = run_pmmh(
-                filter_, state.filter_state, dist, prop_filt, y, filter_._n_parallel
+                filter_, state.filter_state, dist, prop_filt, y, filter_.n_parallel
             )
 
             # ===== Update the description ===== #

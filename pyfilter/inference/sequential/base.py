@@ -1,7 +1,7 @@
 from abc import ABC
 from ...filters import ParticleFilter, utils as u, FilterResult
 import torch
-from ...utils import normalize, TensorList
+from ...utils import normalize
 from ..base import BaseFilterAlgorithm
 from .state import FilteringAlgorithmState
 
@@ -42,32 +42,24 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     def __init__(self, filter_, particles: int):
         super().__init__(filter_)
 
-        # ===== ESS related ===== #
-        self._logged_ess = TensorList(torch.tensor(1000.0))
-        self.particles = particles
+        self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
+        self.filter.set_nparallel(particles)
 
     @property
     def particles(self) -> torch.Size:
-        return self._particles
+        return torch.Size([self._particles])
 
-    @particles.setter
-    def particles(self, x: int):
-        self._particles = torch.Size([x])
-
-    def initialize(self) -> FilteringAlgorithmState:
-        self.filter.set_nparallel(*self.particles)
-
+    def sample_params(self):
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
         self.filter.ssm.sample_params(shape)
+
+    def initialize(self) -> FilteringAlgorithmState:
+        self.sample_params()
 
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
         return FilteringAlgorithmState(init_weights, FilterResult(init_state))
-
-    @property
-    def logged_ess(self) -> torch.Tensor:
-        return self._logged_ess.values()
 
     def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
@@ -111,10 +103,6 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def initialize(self):
         return self._first.initialize()
-
-    @property
-    def logged_ess(self):
-        return torch.cat((self._first.logged_ess, self._second.logged_ess), 0)
 
     def _update(self, y: torch.Tensor, state):
         self._num_iters += 1

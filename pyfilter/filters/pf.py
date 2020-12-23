@@ -37,17 +37,14 @@ class ParticleFilter(BaseFilter, ABC):
 
         super().__init__(model, **kwargs)
 
-        self.particles = particles
+        self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self._th = ess
 
-        # ===== Auxiliary variable ===== #
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
         self._rsample = need_grad
 
-        # ===== Resampling function ===== #
         self._resampler = resampling
 
-        # ===== Proposal ===== #
         if proposal == "auto":
             try:
                 proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
@@ -58,25 +55,18 @@ class ParticleFilter(BaseFilter, ABC):
 
     @property
     def particles(self) -> torch.Size:
-        return self._particles
-
-    @particles.setter
-    def particles(self, x: Tuple[int, int] or int):
-        self._particles = torch.Size([x]) if not isinstance(x, (tuple, list)) else torch.Size(x)
+        return torch.Size([self._particles] if self._particles.dim() == 0 else self._particles)
 
     @property
     def proposal(self) -> Proposal:
         return self._proposal
 
     def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
-        # ===== Get the ones requiring resampling ====== #
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._th
 
-        # ===== Create a default array for resampling ===== #
         out = _construct_empty(w)
 
-        # ===== Return based on if it's nested or not ===== #
         if not mask.any():
             return out, mask
         elif not isinstance(self._particles, tuple):
@@ -87,8 +77,10 @@ class ParticleFilter(BaseFilter, ABC):
         return out, mask
 
     def set_nparallel(self, n: int):
-        self._n_parallel = torch.Size([n])
-        self.particles = (*self._n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:]))
+        self._n_parallel = torch.tensor(n)
+        self._particles = torch.tensor(
+            (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])), dtype=torch.int
+        )
 
         return self
 
@@ -97,7 +89,7 @@ class ParticleFilter(BaseFilter, ABC):
         w = torch.zeros(self.particles, device=x.device)
         prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1], device=x.device)
 
-        return ParticleState(x, w, torch.zeros(self._n_parallel, device=x.device), prev_inds)
+        return ParticleState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 
     def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)
@@ -113,6 +105,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return xm[1:], ym[1:]
 
+    # FIXME: Fix this, not working currently I think
     def smooth(self, states: Iterable[ParticleState]):
         hidden_copy = self.ssm.hidden.copy((*self.n_parallel, 1, 1))
         offset = -(2 + self.ssm.hidden_ndim)
