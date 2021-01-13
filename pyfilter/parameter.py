@@ -10,7 +10,7 @@ class ExtendedParameter(Parameter):
         value = x if constrained else prior.get_constrained(x)
         support = prior().support.check(value)
 
-        if not support.any():
+        if not support.all():
             raise ValueError("Some of the values were out of bounds!")
 
         self[:] = value.view(self.shape)
