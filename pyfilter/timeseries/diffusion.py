@@ -5,9 +5,10 @@ from torch.distributions import Distribution
 from .affine import AffineProcess, _define_transdist, MeanOrScaleFun
 from .process import StochasticProcess
 from ..distributions import Empirical
+from .timeseriesstate import TimeseriesState
 
 
-DiffusionFunction = Callable[[torch.Tensor, float, Tuple[torch.Tensor, ...]], Distribution]
+DiffusionFunction = Callable[[TimeseriesState, float, Tuple[torch.Tensor, ...]], Distribution]
 
 
 class StochasticDifferentialEquation(StochasticProcess, ABC):
@@ -40,7 +41,7 @@ class OneStepEulerMaruyma(AffineProcess):
 
     def _mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
-        mean = x + self.f(x, *params) * self._dt
+        mean = x.state + self.f(x, *params) * self._dt
         scale = self.g(x, *params)
 
         return mean, scale
@@ -58,11 +59,12 @@ class EulerMaruyama(StochasticDifferentialEquation):
         super().__init__(parameters, initial_dist, kwargs.pop("increment_dist", None), dt, num_steps, **kwargs)
         self._propagator = prop_state
 
-    def define_density(self, x, u=None):
+    def define_density(self, x):
         for i in range(self._ns):
-            x = self._propagator(x, self._dt, *self.functional_parameters()).sample()
+            dist = self._propagator(x, self._dt, *self.functional_parameters())
+            x = TimeseriesState(x.time_index + self._dt, dist.sample())
 
-        return Empirical(x)
+        return Empirical(x.state)
 
 
 class AffineEulerMaruyama(EulerMaruyama):
@@ -81,7 +83,7 @@ class AffineEulerMaruyama(EulerMaruyama):
         f = self.f(x, *params) * dt
         g = self.g(x, *params)
 
-        return _define_transdist(x + f, g, self.increment_dist(), self.ndim)
+        return _define_transdist(x.state + f, g, self.increment_dist(), self.ndim)
 
     def _propagate_u(self, x, u, parameters=None):
         params = parameters or self.functional_parameters()

@@ -4,6 +4,7 @@ from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
 from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma
 from .process import StochasticProcess
+from .timeseriesstate import TimeseriesState
 
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "OneStepEulerMaruyma",
     "StochasticProcess",
     "models",
+    "TimeseriesState"
 ]

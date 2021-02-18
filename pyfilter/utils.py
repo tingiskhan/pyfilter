@@ -1,15 +1,8 @@
 import torch
-from torch.distributions import Distribution
-import numpy as np
-from typing import Union, Tuple, Iterable
+from typing import Union, Iterable
 from torch.nn import Module
 from .constants import INFTY
-from .distributions import Prior
-
-
-TensorOrDist = Union[Distribution, torch.Tensor, Prior]
-ArrayType = Union[float, int, np.ndarray, TensorOrDist]
-ShapeLike = Union[int, Tuple[int, ...], torch.Size]
+from .typing import ShapeLike
 
 
 def size_getter(shape: ShapeLike) -> torch.Size:

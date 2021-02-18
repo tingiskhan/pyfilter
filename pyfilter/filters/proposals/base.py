@@ -1,6 +1,5 @@
-from ...timeseries import StateSpaceModel
-from torch.distributions import Distribution
 import torch
+from ...timeseries import StateSpaceModel, TimeseriesState
 
 
 class Proposal(object):
@@ -12,33 +11,16 @@ class Proposal(object):
         super().__init__()
 
         self._model = None  # type: StateSpaceModel
-        self._kernel = None  # type: Distribution
-
-    @property
-    def kernel(self):
-        return self._kernel
 
     def set_model(self, model: StateSpaceModel):
         self._model = model
 
         return self
 
-    def construct(self, y: torch.Tensor, x: torch.Tensor):
+    def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
         raise NotImplementedError()
 
-    def draw(self, rsample=False):
-        if not rsample:
-            return self._kernel.sample()
-
-        return self._kernel.rsample()
-
-    def weight(self, y: torch.Tensor, xn: torch.Tensor, xo: torch.Tensor):
-        return self._model.log_prob(y, xn) + self._model.hidden.log_prob(xn, xo) - self._kernel.log_prob(xn)
-
-    def resample(self, inds: torch.Tensor):
-        return self
-
-    def pre_weight(self, y: torch.Tensor, x: torch.Tensor):
+    def pre_weight(self, y: torch.Tensor, x: TimeseriesState):
         """
         Pre-weights the sample, used in APF.
         :param y: The next observed value

@@ -4,11 +4,10 @@ import torch
 from torch.distributions import Distribution, Normal, Independent
 from typing import Union
 from ..distributions import DistributionWrapper
-from ..distributions import Prior
 
 
 def f_0d(x, a, scale):
-    return a * x
+    return a * x.state
 
 
 def f_1d(x, a, scale):
@@ -16,7 +15,7 @@ def f_1d(x, a, scale):
 
 
 def f_2d(x, a, scale):
-    return torch.matmul(a, x.unsqueeze(-1))[..., 0]
+    return torch.matmul(a, x.state.unsqueeze(-1))[..., 0]
 
 
 def g(x, a, *scale):

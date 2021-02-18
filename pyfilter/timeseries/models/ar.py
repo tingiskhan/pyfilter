@@ -5,7 +5,7 @@ from ...distributions import DistributionWrapper
 
 
 def _f(x, alpha, beta, sigma):
-    return alpha + beta * x
+    return alpha + beta * x.state
 
 
 def _g(x, alpha, beta, sigma):

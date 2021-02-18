@@ -11,7 +11,7 @@ from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -19,7 +19,7 @@ def g(x, alpha, sigma):
 
 
 def fo(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def go(x, alpha, sigma):
@@ -27,8 +27,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x[..., 0] + x[..., 1] / 3
-    x2 = x[..., 1]
+    x1 = alpha * x.state[..., 0] + x.state[..., 1] / 3
+    x2 = x.state[..., 1]
     return concater(x1, x2)
 
 

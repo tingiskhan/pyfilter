@@ -2,6 +2,7 @@ from torch import Tensor
 from torch.nn import Module
 from ..uft import UFTCorrectionResult
 from ..utils import choose, normalize
+from ..timeseries import TimeseriesState
 
 
 class BaseState(Module):
@@ -50,19 +51,19 @@ class KalmanState(BaseState):
 
 
 class ParticleState(BaseState):
-    def __init__(self, x: Tensor, w: Tensor, ll: Tensor, prev_inds: Tensor):
+    def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_inds: Tensor):
         super().__init__()
-        self.register_buffer("x", x)
+        self.add_module("x", x)
         self.register_buffer("w", w)
         self.register_buffer("ll", ll)
         self.register_buffer("prev_inds", prev_inds)
 
     def get_mean(self):
         normw = self.normalized_weights()
-        if self.x.dim() == self.w.dim() + 1:
-            return (self.x * normw.unsqueeze(-1)).sum(-2)
-        elif self.x.dim() == self.w.dim():
-            return (self.x * normw).sum(-1)
+        if self.x.state.dim() == self.w.dim() + 1:
+            return (self.x.state * normw.unsqueeze(-1)).sum(-2)
+        elif self.x.state.dim() == self.w.dim():
+            return (self.x.state * normw).sum(-1)
 
         raise NotImplementedError()
 
@@ -70,7 +71,7 @@ class ParticleState(BaseState):
         return normalize(self.w)
 
     def resample(self, inds):
-        self.x = choose(self.x, inds)
+        self.x.state = choose(self.x.state, inds)
         self.w = choose(self.w, inds)
         self.ll = choose(self.ll, inds)
         self.prev_inds = choose(self.prev_inds, inds)
@@ -79,7 +80,7 @@ class ParticleState(BaseState):
         return self.ll
 
     def exchange(self, state, inds):
-        self.x[inds] = state.x[inds]
+        self.x.state[inds] = state.x.state[inds]
         self.w[inds] = state.w[inds]
         self.ll[inds] = state.ll[inds]
         self.prev_inds[inds] = state.prev_inds[inds]

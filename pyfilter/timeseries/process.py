@@ -4,9 +4,11 @@ import torch
 from torch.nn import Parameter
 from functools import lru_cache
 from typing import Tuple, Union, Callable, Optional
-from ..utils import ShapeLike, ArrayType, size_getter, TensorOrDist
+from ..utils import size_getter
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
+from ..typing import ShapeLike, ArrayType, StateLike
+from .timeseriesstate import TimeseriesState
 
 
 DistOrBuilder = DistributionWrapper
@@ -34,6 +36,7 @@ class StochasticProcess(Base, ABC):
         self.increment_dist = increment_dist
 
         self._input_dim = self.ndim
+        self._build_state_meth: Callable[[torch.Tensor, TimeseriesState], TimeseriesState] = None
 
         for i, p in enumerate(parameters):
             name = f"parameter_{i}"
@@ -51,6 +54,15 @@ class StochasticProcess(Base, ABC):
         res.update(self._buffers)
 
         return tuple(v for _, v in sorted(res.items(), key=lambda k: k[0]))
+
+    def build_state(self, new_values, prev_state):
+        if self._build_state_meth is None:
+            return super(StochasticProcess, self).build_state(new_values, prev_state)
+
+        return self._build_state_meth(new_values, prev_state)
+
+    def register_state_builder(self, func: Callable[[torch.Tensor, TimeseriesState], TimeseriesState]):
+        self._build_state_meth = func
 
     @property
     @lru_cache()
@@ -98,7 +110,7 @@ class StochasticProcess(Base, ABC):
 
         return self
 
-    def i_sample(self, shape: ShapeLike = None, as_dist=False) -> TensorOrDist:
+    def i_sample(self, shape: ShapeLike = None, as_dist=False) -> StateLike:
         """
         Samples from the initial distribution.
         :param shape: The number of samples
@@ -114,19 +126,18 @@ class StochasticProcess(Base, ABC):
         if as_dist:
             return dist
 
-        return dist.sample()
+        return TimeseriesState(0.0, dist.sample())
 
     def sample_path(self, steps, samples=None, x_s=None, u=None) -> torch.Tensor:
         x_s = self.i_sample(samples) if x_s is None else x_s
-        out = torch.zeros(steps, *x_s.shape, device=x_s.device, dtype=x_s.dtype)
-        out[0] = x_s
 
+        res = (x_s,)
         for i in range(1, steps):
-            out[i] = self.propagate(out[i - 1])
+            res += (self.propagate(res[-1]),)
 
-        return out
+        return torch.stack(tuple(r.state for r in res), dim=0)
 
-    def propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None):
+    def propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None):
         """
         Propagate the process conditional on both state and draws from incremental distribution.
         :param x: The previous state
@@ -136,10 +147,10 @@ class StochasticProcess(Base, ABC):
 
         return self._propagate_u(x, u, parameters=parameters)
 
-    def _propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None) -> torch.Tensor:
+    def _propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()
 
-    def prop_apf(self, x: torch.Tensor) -> torch.Tensor:
+    def prop_apf(self, x: StateLike) -> TimeseriesState:
         """
         Method used by APF. Propagates the state one step forward.
         :param x: The previous state

@@ -31,8 +31,8 @@ class StateSpaceModel(Base):
     def propagate(self, x, u=None, as_dist=False):
         return self.hidden.propagate(x, u=u, as_dist=as_dist)
 
-    def log_prob(self, y, x, u=None):
-        return self.observable.log_prob(y, x, u=u)
+    def log_prob(self, y, x):
+        return self.observable.log_prob(y, x)
 
     def parameters_and_priors(self):
         return tuple(self.hidden.parameters_and_priors()) + tuple(self.observable.parameters_and_priors())
@@ -62,10 +62,16 @@ class StateSpaceModel(Base):
     def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
 
-        hidden = self.hidden.sample_path(steps, x_s=x)
-        obs = self.observable.propagate(hidden, u=u)
+        hidden = tuple()
+        obs = tuple()
 
-        return hidden, obs
+        for t in range(steps):
+            hidden += (x,)
+            obs += (self.observable.propagate(x),)
+
+            x = self.hidden.propagate(x)
+
+        return torch.stack([t.state for t in hidden]), torch.stack([t.state for t in obs])
 
     def exchange(self, indices: torch.Tensor, new_model):
         """

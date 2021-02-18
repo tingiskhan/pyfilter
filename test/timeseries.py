@@ -7,7 +7,7 @@ from pyfilter.distributions import DistributionWrapper, Prior
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -15,7 +15,7 @@ def g(x, alpha, sigma):
 
 
 def f_sde(x, alpha, sigma):
-    return -alpha * x
+    return -alpha * x.state
 
 
 def g_sde(x, alpha, sigma):
@@ -33,7 +33,7 @@ class Tests(unittest.TestCase):
         for t in range(steps):
             samps.append(model.propagate(samps[-1]))
 
-        samps = torch.stack(samps)
+        samps = torch.stack(tuple(s.state for s in samps))
         self.assertEqual(samps.size(), torch.Size([steps + 1, *(expected_shape or shape)]))
 
         # ===== Sample path ===== #

@@ -11,7 +11,7 @@ import torch
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -27,7 +27,7 @@ def g0(alpha, sigma):
 
 
 def fo(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def go(x, alpha, sigma):

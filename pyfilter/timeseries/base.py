@@ -4,6 +4,8 @@ from copy import deepcopy
 from typing import Tuple, Union, TypeVar
 from ..utils import ShapeLike
 from ..prior_module import PriorModule
+from .timeseriesstate import TimeseriesState
+from ..typing import StateLike
 
 
 T = TypeVar("T")
@@ -26,46 +28,46 @@ class Base(PriorModule):
 
         return self
 
-    def log_prob(self, y: torch.Tensor, x: torch.Tensor, u: torch.Tensor = None) -> torch.Tensor:
+    def log_prob(self, y: torch.Tensor, x: TimeseriesState) -> torch.Tensor:
         """
         Weights the process of the current state `x_t` with the previous `x_{t-1}`.
         :param y: The value at x_t
         :param x: The value at x_{t-1}
-        :param u: Covariate value at time t
         """
 
-        dist = self.define_density(x, u=u)
+        dist = self.define_density(x)
 
         return dist.log_prob(y)
 
-    def define_density(self, x: torch.Tensor, u: torch.Tensor = None) -> Distribution:
+    def define_density(self, x: TimeseriesState) -> Distribution:
         raise NotImplementedError()
 
-    def propagate(self, x: torch.Tensor, as_dist=False, u: torch.Tensor = None) -> Union[Distribution, torch.Tensor]:
+    def build_state(self, new_values: torch.Tensor, prev_state: StateLike):
+        return TimeseriesState(prev_state.time_index + 1, new_values)
+
+    def propagate(self, x: TimeseriesState, as_dist=False) -> StateLike:
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state
         :param as_dist: Whether to return the new value as a distribution
-        :param u: Any covariates
         :return: Samples from the model
         """
 
-        dist = self.define_density(x, u=u)
+        dist = self.define_density(x)
 
         if as_dist:
             return dist
 
-        return dist.sample()
+        return self.build_state(dist.sample(), x)
 
     def sample_path(
-        self, steps: int, samples: Union[int, Tuple[int, ...]] = None, x_s: torch.Tensor = None, u: torch.Tensor = None
+        self, steps: int, samples: Union[int, Tuple[int, ...]] = None, x_s: TimeseriesState = None
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """
         Samples a trajectory from the model.
         :param steps: The number of steps
         :param samples: Number of sample paths
         :param x_s: The start value for the latent process
-        :param u: Any covariates
         :return: An array of sampled values
         """
 

@@ -53,7 +53,7 @@ class LinearGaussianObservations(Proposal):
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov))
 
-    def construct(self, y, x):
+    def sample_and_weight(self, y, x):
         # ===== Hidden ===== #
         loc, scale = self._model.hidden.mean_scale(x)
         h_var_inv = 1 / scale ** 2
@@ -64,36 +64,42 @@ class LinearGaussianObservations(Proposal):
         o_var_inv = 1 / params[-1] ** 2
 
         if self._model.hidden_ndim == 0:
-            self._kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
+            kernel = self._kernel_1d(y, loc, h_var_inv, o_var_inv, c)
         else:
-            self._kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
+            kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
 
-        return self
+        new_x = kernel.sample()
+        new_state = self._model.hidden.build_state(new_x, x)
+
+        w = self._model.log_prob(y, new_state) + self._model.hidden.log_prob(new_x, x) - kernel.log_prob(new_x)
+
+        return new_state, w
 
     def pre_weight(self, y, x):
-        hloc, hscale = self._model.hidden.mean_scale(x)
-        oloc, oscale = self._model.observable.mean_scale(hloc)
+        h_loc, h_scale = self._model.hidden.mean_scale(x)
+        o_loc, o_scale = self._model.observable.mean_scale(self._model.hidden.build_state(h_loc, x))
+
+        o_var = o_scale ** 2
+        h_var = h_scale ** 2
 
         params = self._model.observable.functional_parameters()
         c = params[0]
-        ovar = oscale ** 2
-        hvar = hscale ** 2
 
         if self._model.obs_ndim < 1:
             if self._model.hidden_ndim < 1:
-                cov = ovar + c ** 2 * hvar
+                cov = o_var + c ** 2 * h_var
             else:
                 tc = c.unsqueeze(-2)
-                cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+                cov = (o_var + tc.matmul(tc.transpose(-2, -1)) * h_var)[..., 0, 0]
 
-            return Normal(oloc, cov.sqrt()).log_prob(y)
+            return Normal(o_loc, cov.sqrt()).log_prob(y)
 
         if self._model.hidden_ndim < 1:
             tc = c.unsqueeze(-2)
-            cov = (ovar + tc.matmul(tc.transpose(-2, -1)) * hvar)[..., 0, 0]
+            cov = (o_var + tc.matmul(tc.transpose(-2, -1)) * h_var)[..., 0, 0]
         else:
-            diag_ovar = construct_diag(ovar)
-            diag_hvar = construct_diag(hvar)
-            cov = diag_ovar + c.matmul(diag_hvar).matmul(c.transpose(-2, -1))
+            diag_o_var = construct_diag(o_var)
+            diag_h_var = construct_diag(h_var)
+            cov = diag_o_var + c.matmul(diag_h_var).matmul(c.transpose(-2, -1))
 
-        return MultivariateNormal(oloc, cov).log_prob(y)
+        return MultivariateNormal(o_loc, cov).log_prob(y)

@@ -14,13 +14,9 @@ class SISR(ParticleFilter):
         old_normw = state.normalized_weights()
 
         inds, mask = self._resample_state(state.w)
-        to_prop = choose(state.x, inds)
-        self.proposal.construct(y, to_prop)
+        state.x.state[:] = choose(state.x.state, inds)
 
-        x = self.proposal.draw(self._rsample)
-        weights = self.proposal.weight(y, x, to_prop)
-
-        self.proposal.resample(inds)
+        x, weights = self.proposal.sample_and_weight(y, state.x)
 
         tw = torch.zeros_like(weights)
         tw[~mask] = state.w[~mask]
