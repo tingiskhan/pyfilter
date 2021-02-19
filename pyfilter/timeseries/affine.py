@@ -1,9 +1,9 @@
 from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
-from typing import Tuple, Callable, Union
+from typing import Tuple, Union
 from ..distributions import DistributionWrapper
-from ..typing import StateLike
+from ..typing import StateLike, MeanOrScaleFun
 
 
 def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
@@ -12,9 +12,6 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribu
     shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
 
     return TransformedDistribution(inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim))
-
-
-MeanOrScaleFun = Callable[[StateLike, Tuple[torch.Tensor, ...]], torch.Tensor]
 
 
 class AffineProcess(StochasticProcess):
@@ -67,7 +64,7 @@ class AffineProcess(StochasticProcess):
         return loc + scale * u
 
     def prop_apf(self, x):
-        return self.f(x, *self.functional_parameters())
+        return self.propagate_state(self.f(x, *self.functional_parameters()), x)
 
 
 def _f(x, s):

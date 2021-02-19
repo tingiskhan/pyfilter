@@ -1,14 +1,14 @@
-from .base import BaseFilter
 from abc import ABC
-from ..resampling import systematic
-from ..timeseries import LinearGaussianObservations as LGO
-from .proposals import Bootstrap, Proposal, LinearGaussianObservations
-import torch
-from ..utils import get_ess, normalize, choose
-from .utils import _construct_empty
 from typing import Tuple, Union, Iterable
-from .state import ParticleState
+import torch
 from torch.distributions import Categorical
+from ..base import BaseFilter
+from ...resampling import systematic
+from ...timeseries import LinearGaussianObservations as LGO
+from .proposals import Bootstrap, Proposal, LinearGaussianObservations
+from ...utils import get_ess, normalize, choose
+from ..utils import _construct_empty
+from .state import ParticleState
 
 
 _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}

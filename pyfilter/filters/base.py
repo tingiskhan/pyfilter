@@ -1,13 +1,13 @@
 import copy
 from abc import ABC
-from ..timeseries import StateSpaceModel
 from tqdm import tqdm
 import torch
-from ..utils import choose
 from torch.nn import Module
+from typing import Tuple, Union, Iterable
+from ..timeseries import StateSpaceModel
+from ..utils import choose
 from .utils import enforce_tensor
 from .result import FilterResult
-from typing import Tuple, Union, Iterable
 from .state import BaseState
 
 
@@ -118,10 +118,3 @@ class BaseFilter(Module, ABC):
 
     def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
         raise NotImplementedError()
-
-
-class BaseKalmanFilter(BaseFilter, ABC):
-    def set_nparallel(self, n):
-        self._n_parallel = torch.tensor(n)
-
-        return self

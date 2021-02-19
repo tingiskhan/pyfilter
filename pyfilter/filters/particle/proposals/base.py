@@ -1,5 +1,6 @@
 import torch
-from ...timeseries import StateSpaceModel, TimeseriesState
+from torch.distributions import Distribution
+from ....timeseries import StateSpaceModel, TimeseriesState
 
 
 class Proposal(object):
@@ -16,6 +17,10 @@ class Proposal(object):
         self._model = model
 
         return self
+
+    def _weight_with_kernel(self, y: torch.Tensor, x_new: TimeseriesState, x_old: TimeseriesState, kernel: Distribution) -> torch.Tensor:
+        likelihood = self._model.log_prob(y, x_new) + self._model.hidden.log_prob(x_new.state, x_old)
+        return likelihood - kernel.log_prob(x_new.state)
 
     def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
         raise NotImplementedError()

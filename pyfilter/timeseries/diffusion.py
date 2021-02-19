@@ -1,14 +1,11 @@
 import torch
 from abc import ABC
-from typing import Callable, Tuple
-from torch.distributions import Distribution
+from typing import Tuple
 from .affine import AffineProcess, _define_transdist, MeanOrScaleFun
 from .process import StochasticProcess
 from ..distributions import Empirical
-from .timeseriesstate import TimeseriesState
-
-
-DiffusionFunction = Callable[[TimeseriesState, float, Tuple[torch.Tensor, ...]], Distribution]
+from .state import TimeseriesState
+from ..typing import DiffusionFunction
 
 
 class StochasticDifferentialEquation(StochasticProcess, ABC):
@@ -37,7 +34,7 @@ class OneStepEulerMaruyma(AffineProcess):
         """
 
         super().__init__(dynamics, parameters, initial_dist, increment_dist, initial_transform=initial_transform)
-        self._dt = dt
+        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
     def _mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
@@ -91,12 +88,12 @@ class AffineEulerMaruyama(EulerMaruyama):
             f = self.f(x, *params) * self._dt
             g = self.g(x, *params)
 
-            x += f + g * u
+            x = self.propagate_state(x.state + f + g * u, x)
 
-        return x
+        return x.state
 
     def prop_apf(self, x):
         for i in range(self._ns):
-            x += self.f(x, *self.functional_parameters()) * self._dt
+            x = self.propagate_state(x.time_index + self._dt, x.state + self.f(x, *self.functional_parameters()) * self._dt)
 
         return x

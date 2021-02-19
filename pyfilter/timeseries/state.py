@@ -17,6 +17,10 @@ class TimeseriesState(Module):
     def state(self) -> torch.Tensor:
         return self._buffers["_state"]
 
+    @state.setter
+    def state(self, x):
+        self._buffers["_state"] = x
+
     @property
     def shape(self):
         return self.state.shape
@@ -24,3 +28,6 @@ class TimeseriesState(Module):
     @property
     def device(self):
         return self.state.device
+
+    def copy(self, new_values: torch.Tensor):
+        return TimeseriesState(self.time_index, new_values)

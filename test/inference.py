@@ -29,8 +29,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x[..., 0]
-    x2 = x[..., 1]
+    x1 = alpha * x.state[..., 0]
+    x2 = x.state[..., 1]
     return concater(x1, x2)
 
 

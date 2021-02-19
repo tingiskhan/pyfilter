@@ -1,7 +1,7 @@
-from .base import BaseKalmanFilter
-from ..uft import UnscentedFilterTransform
 import torch
 from typing import Dict
+from .base import BaseKalmanFilter
+from .unscented import UnscentedFilterTransform
 from .state import KalmanState
 
 
@@ -31,7 +31,7 @@ class UKF(BaseKalmanFilter):
         p = self._ut.predict(state.utf)
         c = self._ut.calc_mean_cov(p)
 
-        utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
+        utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
 
         xres = torch.empty((steps, *c.xm.shape))
         yres = torch.empty((steps, *c.ym.shape))
@@ -43,7 +43,7 @@ class UKF(BaseKalmanFilter):
             p = self._ut.predict(utf_state)
             c = self._ut.calc_mean_cov(p)
 
-            utf_state = self._ut.update_state(c.xm, c.xc, utf_state)
+            utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
 
             xres[i + 1] = c.xm
             yres[i + 1] = c.ym

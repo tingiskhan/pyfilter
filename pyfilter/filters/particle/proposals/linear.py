@@ -1,8 +1,8 @@
 from .base import Proposal
-from torch.distributions import Normal, MultivariateNormal
-from ...timeseries import LinearGaussianObservations as LGO, AffineProcess
 import torch
-from ...utils import construct_diag
+from torch.distributions import Normal, MultivariateNormal
+from ....timeseries import LinearGaussianObservations as LGO, AffineProcess
+from ....utils import construct_diag_from_flat
 
 
 class LinearGaussianObservations(Proposal):
@@ -38,10 +38,10 @@ class LinearGaussianObservations(Proposal):
 
         # ===== Define covariance ===== #
         ttc = tc.transpose(-2, -1)
-        diag_o_var_inv = construct_diag(o_var_inv if self._model.observable.ndim > 0 else o_var_inv.unsqueeze(-1))
+        diag_o_var_inv = construct_diag_from_flat(o_var_inv, self._model.obs_ndim)
         t2 = torch.matmul(ttc, torch.matmul(diag_o_var_inv, tc))
 
-        cov = (construct_diag(h_var_inv) + t2).inverse()
+        cov = (construct_diag_from_flat(h_var_inv, self._model.hidden_ndim) + t2).inverse()
 
         # ===== Get mean ===== #
         t1 = h_var_inv * loc
@@ -68,16 +68,13 @@ class LinearGaussianObservations(Proposal):
         else:
             kernel = self._kernel_2d(y, loc, h_var_inv, o_var_inv, c)
 
-        new_x = kernel.sample()
-        new_state = self._model.hidden.build_state(new_x, x)
+        new_x = self._model.hidden.propagate_state(kernel.sample(), x)
 
-        w = self._model.log_prob(y, new_state) + self._model.hidden.log_prob(new_x, x) - kernel.log_prob(new_x)
-
-        return new_state, w
+        return new_x, self._weight_with_kernel(y, new_x, x, kernel)
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
-        o_loc, o_scale = self._model.observable.mean_scale(self._model.hidden.build_state(h_loc, x))
+        o_loc, o_scale = self._model.observable.mean_scale(self._model.hidden.propagate_state(h_loc, x))
 
         o_var = o_scale ** 2
         h_var = h_scale ** 2
@@ -98,8 +95,8 @@ class LinearGaussianObservations(Proposal):
             tc = c.unsqueeze(-2)
             cov = (o_var + tc.matmul(tc.transpose(-2, -1)) * h_var)[..., 0, 0]
         else:
-            diag_o_var = construct_diag(o_var)
-            diag_h_var = construct_diag(h_var)
+            diag_o_var = construct_diag_from_flat(o_var, self._model.obs_ndim)
+            diag_h_var = construct_diag_from_flat(h_var, self._model.hidden_ndim)
             cov = diag_o_var + c.matmul(diag_h_var).matmul(c.transpose(-2, -1))
 
         return MultivariateNormal(o_loc, cov).log_prob(y)

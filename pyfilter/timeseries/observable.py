@@ -1,4 +1,5 @@
 from .affine import AffineProcess
+from .state import TimeseriesState
 
 
 class AffineObservations(AffineProcess):
@@ -13,3 +14,6 @@ class AffineObservations(AffineProcess):
 
     def sample_path(self, steps, **kwargs):
         raise NotImplementedError("Cannot sample from Observable only!")
+
+    def propagate_state(self, new_values, prev_state):
+        return TimeseriesState(prev_state.time_index, new_values)

@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Tuple, Union, TypeVar
 from ..utils import ShapeLike
 from ..prior_module import PriorModule
-from .timeseriesstate import TimeseriesState
+from .state import TimeseriesState
 from ..typing import StateLike
 
 
@@ -42,7 +42,7 @@ class Base(PriorModule):
     def define_density(self, x: TimeseriesState) -> Distribution:
         raise NotImplementedError()
 
-    def build_state(self, new_values: torch.Tensor, prev_state: StateLike):
+    def propagate_state(self, new_values: torch.Tensor, prev_state: StateLike):
         return TimeseriesState(prev_state.time_index + 1, new_values)
 
     def propagate(self, x: TimeseriesState, as_dist=False) -> StateLike:
@@ -58,7 +58,7 @@ class Base(PriorModule):
         if as_dist:
             return dist
 
-        return self.build_state(dist.sample(), x)
+        return self.propagate_state(dist.sample(), x)
 
     def sample_path(
         self, steps: int, samples: Union[int, Tuple[int, ...]] = None, x_s: TimeseriesState = None

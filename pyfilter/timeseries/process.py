@@ -8,7 +8,7 @@ from ..utils import size_getter
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
 from ..typing import ShapeLike, ArrayType, StateLike
-from .timeseriesstate import TimeseriesState
+from .state import TimeseriesState
 
 
 DistOrBuilder = DistributionWrapper
@@ -55,9 +55,9 @@ class StochasticProcess(Base, ABC):
 
         return tuple(v for _, v in sorted(res.items(), key=lambda k: k[0]))
 
-    def build_state(self, new_values, prev_state):
+    def propagate_state(self, new_values, prev_state):
         if self._build_state_meth is None:
-            return super(StochasticProcess, self).build_state(new_values, prev_state)
+            return super(StochasticProcess, self).propagate_state(new_values, prev_state)
 
         return self._build_state_meth(new_values, prev_state)
 
@@ -137,7 +137,7 @@ class StochasticProcess(Base, ABC):
 
         return torch.stack(tuple(r.state for r in res), dim=0)
 
-    def propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None):
+    def propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None) -> TimeseriesState:
         """
         Propagate the process conditional on both state and draws from incremental distribution.
         :param x: The previous state
@@ -145,7 +145,7 @@ class StochasticProcess(Base, ABC):
         :param parameters: Whether to override the parameters that go into the functions with some other values
         """
 
-        return self._propagate_u(x, u, parameters=parameters)
+        return self.propagate_state(self._propagate_u(x, u, parameters=parameters), x)
 
     def _propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()

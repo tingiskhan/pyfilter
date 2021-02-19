@@ -107,19 +107,17 @@ def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
     return torch.stack(torch.broadcast_tensors(*x), dim=-1)
 
 
-def construct_diag(x: torch.Tensor):
+def construct_diag_from_flat(x: torch.Tensor, base_dim: int):
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
-    Do note that it only considers the last axis.
     """
 
-    if x.dim() < 1:
-        return x
-    elif x.shape[-1] < 2:
+    if base_dim == 0:
+        return x.unsqueeze(-1).unsqueeze(-1)
+
+    if base_dim == 1 and x.shape[-1] < 2:
         return x.unsqueeze(-1)
-    elif x.dim() < 2:
-        return torch.diag(x)
 
     return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 

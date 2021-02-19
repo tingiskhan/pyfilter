@@ -1,8 +1,8 @@
-from .base import Proposal
 import torch
 from torch.distributions import Normal, Independent
-from ...timeseries import AffineProcess
 from torch.autograd import grad
+from ....timeseries import AffineProcess
+from .base import Proposal
 
 
 class Linearized(Proposal):
@@ -25,13 +25,15 @@ class Linearized(Proposal):
 
         return self
 
-    def construct(self, y, x):
+    def sample_and_weight(self, y, x):
         # ===== Mean of propagated dist ===== #
         h_loc, h_scale = self._model.hidden.mean_scale(x)
         h_loc.requires_grad_(True)
 
         # ===== Get gradients ===== #
-        logl = self._model.observable.log_prob(y, h_loc) + self._model.hidden.log_prob(h_loc, x)
+        state = self._model.hidden.propagate_state(h_loc, x)
+
+        logl = self._model.observable.log_prob(y, state) + self._model.hidden.log_prob(h_loc, x)
         g = grad(logl, h_loc, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
         # ===== Define mean and scale ===== #
@@ -46,8 +48,10 @@ class Linearized(Proposal):
         x.detach_()
 
         if self._model.hidden_ndim == 0:
-            self._kernel = Normal(mean, std)
+            kernel = Normal(mean, std)
         else:
-            self._kernel = Independent(Normal(mean, std), self._model.hidden_ndim)
+            kernel = Independent(Normal(mean, std), self._model.hidden_ndim)
 
-        return self
+        new_x = self._model.hidden.propagate_state(kernel.sample(), x)
+
+        return new_x, self._weight_with_kernel(y, new_x, x)
