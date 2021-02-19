@@ -30,7 +30,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         self._dt = torch.tensor(dt)
 
     def _f(self, x, k, g, s):
-        return g + (x.current - g) * torch.exp(-k * self._dt)
+        return g + (x.state - g) * torch.exp(-k * self._dt)
 
     def _g(self, x, k, g, s):
         return s / (2 * k).sqrt() * (1 - torch.exp(-2 * k * self._dt)).sqrt()
