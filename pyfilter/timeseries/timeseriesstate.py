@@ -11,11 +11,11 @@ class TimeseriesState(Module):
 
     @property
     def time_index(self) -> torch.Tensor:
-        return self._time_index
+        return self._buffers["_time_index"]
 
     @property
     def state(self) -> torch.Tensor:
-        return self._state
+        return self._buffers["_state"]
 
     @property
     def shape(self):
