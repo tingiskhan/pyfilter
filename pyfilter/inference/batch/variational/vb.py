@@ -2,11 +2,15 @@ from ..base import BaseBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .approximation import StateMeanField, ParameterMeanField
-from ....timeseries import StateSpaceModel, StochasticProcess
+from ....timeseries import StateSpaceModel, StochasticProcess, TimeseriesState
 from ....filters import UKF
 from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
 from ....constants import EPS
+
+
+class BatchedState(TimeseriesState):
+    pass
 
 
 class VariationalBayes(BaseBatchAlgorithm):
@@ -93,7 +97,10 @@ class VariationalBayes(BaseBatchAlgorithm):
 
             init_dist = self._model.hidden.i_sample(as_dist=True)
 
-            logl = (self._model.log_prob(y, x_t) + self._model.hidden.log_prob(x_t, x_tm1)).sum(1)
+            state_t = BatchedState(torch.arange(1, x_t.shape[0]), x_t)
+            state_tm1 = BatchedState(torch.arange(x_t.shape[0] - 1), x_tm1)
+
+            logl = (self._model.log_prob(y, state_t) + self._model.hidden.log_prob(x_t, state_tm1)).sum(1)
             logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
 
             entropy += state.state_approx.entropy()
