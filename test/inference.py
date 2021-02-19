@@ -13,7 +13,7 @@ from pyfilter.inference.batch.mcmc import PMMH
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):

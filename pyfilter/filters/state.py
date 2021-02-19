@@ -71,10 +71,10 @@ class ParticleState(BaseState):
         return normalize(self.w)
 
     def resample(self, inds):
-        self.x.state = choose(self.x.state, inds)
-        self.w = choose(self.w, inds)
-        self.ll = choose(self.ll, inds)
-        self.prev_inds = choose(self.prev_inds, inds)
+        self.x.state[:] = choose(self.x.state, inds)
+        self.w[:] = choose(self.w, inds)
+        self.ll[:] = choose(self.ll, inds)
+        self.prev_inds[:] = choose(self.prev_inds, inds)
 
     def get_loglikelihood(self):
         return self.ll
