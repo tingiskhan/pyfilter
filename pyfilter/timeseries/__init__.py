@@ -18,5 +18,5 @@ __all__ = [
     "OneStepEulerMaruyma",
     "StochasticProcess",
     "models",
-    "TimeseriesState"
+    "TimeseriesState",
 ]

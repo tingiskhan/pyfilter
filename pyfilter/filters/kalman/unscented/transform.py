@@ -81,7 +81,9 @@ class UnscentedFilterTransform(Module):
         mean[..., self._state_slc] = initial_state_mean
 
         initial_state.state = mean
-        cov[..., self._state_slc, self._state_slc] = construct_diag_from_flat(initial_state_var, self._model.hidden_ndim)
+        cov[..., self._state_slc, self._state_slc] = construct_diag_from_flat(
+            initial_state_var, self._model.hidden_ndim
+        )
 
         cov[..., self._hidden_slc, self._hidden_slc] = construct_diag_from_flat(
             self._model.hidden.increment_dist().variance, self._model.hidden_ndim
@@ -103,8 +105,7 @@ class UnscentedFilterTransform(Module):
 
     def _get_params_as_view(self, module) -> Tuple[torch.Tensor, ...]:
         return tuple(
-            p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p
-            for p in module.functional_parameters()
+            p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p for p in module.functional_parameters()
         )
 
     def update_state(
@@ -129,9 +130,7 @@ class UnscentedFilterTransform(Module):
         sps = utf_corr.calculate_sigma_points(self._cov_scale)
 
         hidden_state = utf_corr.mean.copy(sps[..., self._state_slc])
-        spx = propagate_sps(
-            hidden_state, sps[..., self._hidden_slc], self._model.hidden, self._hidden_views
-        )
+        spx = propagate_sps(hidden_state, sps[..., self._hidden_slc], self._model.hidden, self._hidden_views)
 
         spy = propagate_sps(spx, sps[..., self._obs_slc], self._model.observable, self._obs_views)
 
