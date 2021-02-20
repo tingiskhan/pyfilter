@@ -20,7 +20,7 @@ class FilterResult(Module):
 
     @property
     def loglikelihood(self) -> torch.Tensor:
-        return self._loglikelihood
+        return self._buffers["_loglikelihood"]
 
     @property
     def filter_means(self) -> torch.Tensor:
