@@ -61,7 +61,7 @@ class FilterResult(Module):
         Resamples the specified indices of self with res.
         """
 
-        self._loglikelihood = self.loglikelihood[inds]
+        self._buffers["_loglikelihood"][:] = self.loglikelihood[inds]
 
         if entire_history:
             for mean in self._filter_means:
