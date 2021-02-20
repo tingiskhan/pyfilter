@@ -13,6 +13,11 @@ from .state import BaseState
 
 class BaseFilter(Module, ABC):
     def __init__(self, model: StateSpaceModel):
+        """
+        Base class for filters.
+        :param model: The state space model for which to perform filtering.
+        """
+
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
