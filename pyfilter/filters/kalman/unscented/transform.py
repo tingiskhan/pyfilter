@@ -71,7 +71,7 @@ class UnscentedFilterTransform(Module):
         mean = torch.zeros((*shape, self._n_dim))
         cov = torch.zeros((*shape, self._n_dim, self._n_dim))
 
-        initial_state = self._model.hidden.i_sample((self.MONTE_CARLO_ESTIMATES, *shape))
+        initial_state = self._model.hidden.initial_sample((self.MONTE_CARLO_ESTIMATES, *shape))
         initial_state_mean = initial_state.state.mean(0)
         initial_state_var = initial_state.state.var(0)
 

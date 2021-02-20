@@ -80,7 +80,7 @@ class AffineEulerMaruyama(EulerMaruyama):
         f = self.f(x, *params) * dt
         g = self.g(x, *params)
 
-        return _define_transdist(x.state + f, g, self.increment_dist(), self.ndim)
+        return _define_transdist(x.state + f, g, self.increment_dist(), self.n_dim)
 
     def _propagate_u(self, x, u, parameters=None):
         params = parameters or self.functional_parameters()

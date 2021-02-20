@@ -65,7 +65,7 @@ class LinearObservations(StateSpaceModel):
         # ===== Determine propagator function ===== #
         if not is_1d:
             f = f_2d
-        elif is_1d and hidden.ndim > 0:
+        elif is_1d and hidden.n_dim > 0:
             f = f_1d
         else:
             f = f_0d

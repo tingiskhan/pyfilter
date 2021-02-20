@@ -85,7 +85,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def initialize(self) -> ParticleState:
-        x = self._model.hidden.i_sample(self.particles)
+        x = self._model.hidden.initial_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
         prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1], device=x.device)
 

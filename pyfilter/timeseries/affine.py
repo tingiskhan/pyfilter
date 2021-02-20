@@ -57,7 +57,7 @@ class AffineProcess(StochasticProcess):
         :param scale: The scale
         """
 
-        return _define_transdist(loc, scale, self.increment_dist(), self.ndim)
+        return _define_transdist(loc, scale, self.increment_dist(), self.n_dim)
 
     def _propagate_u(self, x, u, parameters=None):
         loc, scale = self._mean_scale(x, parameters=parameters)

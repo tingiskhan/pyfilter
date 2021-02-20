@@ -16,7 +16,7 @@ class StateMeanField(BaseApproximation):
     def initialize(self, data, model: StochasticProcess, *args):
         self._mean = torch.zeros((data.shape[0] + 1, *model.increment_dist().event_shape), requires_grad=True)
         self._log_std = torch.zeros_like(self._mean, requires_grad=True)
-        self._dim = model.ndim
+        self._dim = model.n_dim
 
         return self
 

@@ -40,6 +40,13 @@ class Base(PriorModule):
         return dist.log_prob(y)
 
     def define_density(self, x: TimeseriesState) -> Distribution:
+        """
+        Method for defining the density used in `propagate`. Differs whether it's an observable or hidden process. If
+        it's an observable process this method corresponds to the observation density, whereas for a hidden process it
+        corresponds to the transition density.
+        :param x: The current or previous state of the hidden state - depending on whether self is observable or hidden.
+        """
+
         raise NotImplementedError()
 
     def propagate_state(self, new_values: torch.Tensor, prev_state: StateLike):

@@ -22,11 +22,11 @@ class StateSpaceModel(Base):
 
     @property
     def hidden_ndim(self) -> int:
-        return self.hidden.ndim
+        return self.hidden.n_dim
 
     @property
     def obs_ndim(self) -> int:
-        return self.observable.ndim
+        return self.observable.n_dim
 
     def propagate(self, x, u=None, as_dist=False):
         return self.hidden.propagate(x, u=u, as_dist=as_dist)
@@ -60,7 +60,7 @@ class StateSpaceModel(Base):
         return self
 
     def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
-        x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
+        x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
 
         hidden = tuple()
         obs = tuple()
