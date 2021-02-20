@@ -16,7 +16,7 @@ class FilterResult(Module):
 
         self._filter_means = TensorTuple()
         self._latest_state = init_state
-        self._states = list()  # TODO: Can't really seem to be able to serialize these
+        self._states = list()
 
     @property
     def loglikelihood(self) -> torch.Tensor:
