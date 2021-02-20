@@ -10,7 +10,6 @@ class AffineObservations(AffineProcess):
         """
 
         super().__init__(funcs, parameters, None, increment_dist)
-        self._covariate = None
 
     def sample_path(self, steps, **kwargs):
         raise NotImplementedError("Cannot sample from Observable only!")
