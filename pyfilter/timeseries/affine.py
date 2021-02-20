@@ -1,17 +1,18 @@
-from .process import StochasticProcess
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Union
+from .process import StochasticProcess
 from ..distributions import DistributionWrapper
-from ..typing import StateLike, MeanOrScaleFun
+from .typing import MeanOrScaleFun
+from .state import TimeseriesState
 
 
-def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, ndim: int):
+def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, inc_dist: Distribution, n_dim: int):
     loc, scale = torch.broadcast_tensors(loc, scale)
 
-    shape = loc.shape[:-ndim] if ndim > 0 else loc.shape
+    shape = loc.shape[:-n_dim] if n_dim > 0 else loc.shape
 
-    return TransformedDistribution(inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=ndim))
+    return TransformedDistribution(inc_dist.expand(shape), AffineTransform(loc, scale, event_dim=n_dim))
 
 
 class AffineProcess(StochasticProcess):
@@ -33,7 +34,7 @@ class AffineProcess(StochasticProcess):
 
         return self._define_transdist(loc, scale)
 
-    def mean_scale(self, x: StateLike):
+    def mean_scale(self, x: TimeseriesState):
         """
         Returns the mean and scale of the process evaluated at x_t
         :param x: The previous state
@@ -41,7 +42,7 @@ class AffineProcess(StochasticProcess):
 
         return self._mean_scale(x)
 
-    def _mean_scale(self, x: StateLike, parameters=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _mean_scale(self, x: TimeseriesState, parameters=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the mean and scale of the process.
         :param x: The previous state

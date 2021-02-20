@@ -5,7 +5,7 @@ from .affine import AffineProcess, _define_transdist, MeanOrScaleFun
 from .process import StochasticProcess
 from ..distributions import Empirical
 from .state import TimeseriesState
-from ..typing import DiffusionFunction
+from .typing import DiffusionFunction
 
 
 class StochasticDifferentialEquation(StochasticProcess, ABC):

@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Tuple, Union, TypeVar
 from ..prior_module import PriorModule
 from .state import TimeseriesState
-from ..typing import StateLike, ShapeLike
+from ..typing import ShapeLike
 
 
 T = TypeVar("T")
@@ -48,10 +48,10 @@ class Base(PriorModule):
 
         raise NotImplementedError()
 
-    def propagate_state(self, new_values: torch.Tensor, prev_state: StateLike):
+    def propagate_state(self, new_values: torch.Tensor, prev_state: TimeseriesState):
         return TimeseriesState(prev_state.time_index + 1, new_values)
 
-    def propagate(self, x: TimeseriesState, as_dist=False) -> StateLike:
+    def propagate(self, x: TimeseriesState, as_dist=False) -> Union[Distribution, TimeseriesState]:
         """
         Propagates the model forward conditional on the previous state and current parameters.
         :param x: The previous state

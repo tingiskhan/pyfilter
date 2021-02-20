@@ -1,7 +1,7 @@
 import unittest
-from pyfilter.utils import TensorTuple
 import torch
 from torch.distributions import Normal
+from pyfilter.utils import TensorTuple
 from pyfilter.filters import SISR
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations
 from pyfilter.distributions import DistributionWrapper
@@ -21,7 +21,7 @@ class UtilTests(unittest.TestCase):
 
     def test_LoadModule(self):
         def f(x_, alpha, sigma):
-            return alpha * x_
+            return alpha * x_.state
 
         def g(x_, alpha, sigma):
             return sigma

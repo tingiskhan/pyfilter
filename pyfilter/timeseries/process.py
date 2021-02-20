@@ -6,7 +6,7 @@ from functools import lru_cache
 from typing import Tuple, Union, Callable, Optional
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
-from ..typing import ShapeLike, ArrayType, StateLike
+from ..typing import ShapeLike, ArrayType
 from .state import TimeseriesState
 from ..utils import size_getter
 
@@ -110,7 +110,7 @@ class StochasticProcess(Base, ABC):
 
         return self
 
-    def initial_sample(self, shape: ShapeLike = None, as_dist=False) -> StateLike:
+    def initial_sample(self, shape: ShapeLike = None, as_dist=False) -> Union[Distribution, TimeseriesState]:
         """
         Samples a state from the initial distribution.
         :param shape: The number of samples
@@ -137,7 +137,7 @@ class StochasticProcess(Base, ABC):
 
         return torch.stack(tuple(r.state for r in res), dim=0)
 
-    def propagate_conditional(self, x: StateLike, u: torch.Tensor, parameters=None) -> TimeseriesState:
+    def propagate_conditional(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> TimeseriesState:
         """
         Propagate the process conditional on both state and draws from incremental distribution.
         :param x: The current or previous state, depending on whether it's a hidden or observable process
@@ -147,10 +147,10 @@ class StochasticProcess(Base, ABC):
 
         return self.propagate_state(self._propagate_u(x, u, parameters=parameters), x)
 
-    def _propagate_u(self, x: StateLike, u: torch.Tensor, parameters=None) -> torch.Tensor:
+    def _propagate_u(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()
 
-    def prop_apf(self, x: StateLike) -> TimeseriesState:
+    def prop_apf(self, x: TimeseriesState) -> TimeseriesState:
         """
         Method used by APF. Propagates the state one step forward.
         :param x: The previous state
