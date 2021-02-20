@@ -6,11 +6,11 @@ from ...distributions import DistributionWrapper
 
 
 def f(x, k, g, s):
-    return k.current * (g - x) * x.current
+    return k.state * (g - x) * x.state
 
 
 def g_(x, k, g, s):
-    return s * x.current
+    return s * x.state
 
 
 def init_transform(dist, k, g, s):

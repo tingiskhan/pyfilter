@@ -7,16 +7,16 @@ from ...distributions import DistributionWrapper
 
 
 def f(x, beta, gamma, sigma):
-    s = beta * x.current[..., 0] * x.current[..., 1]
+    s = beta * x.state[..., 0] * x.state[..., 1]
 
-    r = x.current[..., 1] * gamma
+    r = x.state[..., 1] * gamma
     i = s - r
 
     return concater(-s, i, r)
 
 
 def g(x, beta, gamma, sigma):
-    s = -sigma * x.current[..., 0] * x.current[..., 1]
+    s = -sigma * x.state[..., 0] * x.state[..., 1]
     r = torch.zeros_like(s)
 
     return concater(s, -s, r)
