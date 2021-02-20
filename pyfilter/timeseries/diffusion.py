@@ -22,6 +22,9 @@ class StochasticDifferentialEquation(StochasticProcess, ABC):
         self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
         self._ns = num_steps
 
+    def propagate_state(self, new_values, prev_state):
+        return TimeseriesState(prev_state.time_index + self._dt, new_values)
+
 
 class OneStepEulerMaruyma(AffineProcess):
     def __init__(self, dynamics, parameters, initial_dist, increment_dist, dt: float, initial_transform=None):
@@ -94,8 +97,6 @@ class AffineEulerMaruyama(EulerMaruyama):
 
     def prop_apf(self, x):
         for i in range(self._ns):
-            x = self.propagate_state(
-                x.time_index + self._dt, x.state + self.f(x, *self.functional_parameters()) * self._dt
-            )
+            x = self.propagate_state(x.state + self.f(x, *self.functional_parameters()) * self._dt, x)
 
         return x
