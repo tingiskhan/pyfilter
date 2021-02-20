@@ -4,11 +4,11 @@ import torch
 from torch.nn import Parameter
 from functools import lru_cache
 from typing import Tuple, Union, Callable, Optional
-from ..utils import size_getter
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
 from ..typing import ShapeLike, ArrayType, StateLike
 from .state import TimeseriesState
+from ..utils import size_getter
 
 
 DistOrBuilder = DistributionWrapper

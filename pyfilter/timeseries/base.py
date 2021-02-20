@@ -2,10 +2,9 @@ from torch.distributions import Distribution
 import torch
 from copy import deepcopy
 from typing import Tuple, Union, TypeVar
-from ..utils import ShapeLike
 from ..prior_module import PriorModule
 from .state import TimeseriesState
-from ..typing import StateLike
+from ..typing import StateLike, ShapeLike
 
 
 T = TypeVar("T")
