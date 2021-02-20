@@ -8,7 +8,7 @@ from ..utils import TensorTuple
 class FilterResult(Module):
     def __init__(self, init_state: BaseState):
         """
-        Implements a basic object for storing log likelihoods and the filtered means of a filter.
+        Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
         """
         super().__init__()
 
