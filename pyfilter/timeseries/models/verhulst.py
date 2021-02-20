@@ -6,7 +6,7 @@ from ...distributions import DistributionWrapper
 
 
 def f(x, k, g, s):
-    return k.state * (g - x) * x.state
+    return k * (g - x.state) * x.state
 
 
 def g_(x, k, g, s):
