@@ -63,6 +63,8 @@ class Tests(unittest.TestCase):
                 (SISR, {"particles": 500}),
                 (APF, {"particles": 500}),
                 (UKF, {}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(alpha=None)}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(alpha=0.01)})
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)

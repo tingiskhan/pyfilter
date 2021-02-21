@@ -26,17 +26,14 @@ class Linearized(Proposal):
         return self
 
     def sample_and_weight(self, y, x):
-        # ===== Mean of propagated dist ===== #
         h_loc, h_scale = self._model.hidden.mean_scale(x)
         h_loc.requires_grad_(True)
 
-        # ===== Get gradients ===== #
         state = self._model.hidden.propagate_state(h_loc, x)
 
         logl = self._model.observable.log_prob(y, state) + self._model.hidden.log_prob(h_loc, x)
         g = grad(logl, h_loc, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
-        # ===== Define mean and scale ===== #
         if self._alpha is None:
             step = -1 / grad(g, h_loc, grad_outputs=torch.ones_like(g))[-1]
             std = step.sqrt()
@@ -45,7 +42,6 @@ class Linearized(Proposal):
             step = self._alpha
 
         mean = h_loc.detach() + step * g.detach()
-        x.detach_()
 
         if self._model.hidden_ndim == 0:
             kernel = Normal(mean, std)
