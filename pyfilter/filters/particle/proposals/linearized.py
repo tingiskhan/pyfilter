@@ -9,7 +9,7 @@ class Linearized(Proposal):
     def __init__(self, alpha=0.25):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
-        models that are log-concave in the observation density. Otherwise `Unscented` is more suitable.
+        models that are log-concave in the observation density.
         :param alpha: If `None`, uses second order information about the likelihood function, else takes step
         proportional to `alpha`.
         :type alpha: None|float
