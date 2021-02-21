@@ -97,6 +97,7 @@ class AffineEulerMaruyama(EulerMaruyama):
 
     def prop_apf(self, x):
         for i in range(self._ns):
-            x = self.propagate_state(x.state + self.f(x, *self.functional_parameters()) * self._dt, x)
+            f = self.f(x, *self.functional_parameters()) * self._dt
+            x = self.propagate_state(x.state + f, x)
 
         return x
