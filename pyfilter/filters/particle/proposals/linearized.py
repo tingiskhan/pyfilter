@@ -54,4 +54,4 @@ class Linearized(Proposal):
 
         new_x = self._model.hidden.propagate_state(kernel.sample(), x)
 
-        return new_x, self._weight_with_kernel(y, new_x, x)
+        return new_x, self._weight_with_kernel(y, new_x, x, kernel)
