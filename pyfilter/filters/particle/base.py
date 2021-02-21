@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Tuple, Union, Iterable
+from typing import Tuple, Union, Iterable, Callable
 import torch
 from torch.distributions import Categorical
 from ..base import BaseFilter
@@ -19,7 +19,7 @@ class ParticleFilter(BaseFilter, ABC):
         self,
         model,
         particles: int,
-        resampling=systematic,
+        resampling: Callable[[torch.Tensor], torch.Tensor] = systematic,
         proposal: Union[str, Proposal] = "auto",
         ess=0.9,
         need_grad=False,
