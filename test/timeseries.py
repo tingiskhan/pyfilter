@@ -167,3 +167,15 @@ class Tests(unittest.TestCase):
         x = ar.sample_path(100)
 
         self.assertEqual(x.shape, torch.Size([100]))
+
+    def test_RegisterPostProcess(self):
+        ar = m.AR(0.0, 0.99, 0.08)
+
+        def post_proc(current, previous):
+            current.register_buffer("previous_state", previous.state)
+
+        ar.register_state_post_process(post_proc)
+        initial = ar.initial_sample()
+        x = ar.propagate(initial)
+
+        self.assertTrue("previous_state" in x._buffers)

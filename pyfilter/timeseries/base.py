@@ -13,7 +13,7 @@ T = TypeVar("T")
 class Base(PriorModule):
     def __init__(self):
         super().__init__()
-        self._post_process_state: Callable[[TimeseriesState, TimeseriesState], TimeseriesState] = None
+        self._post_process_state: Callable[[TimeseriesState, TimeseriesState], None] = None
         self._time_inc = 1
 
     def parameters_to_array(self, transformed=False, as_tuple=False) -> torch.Tensor:
@@ -56,12 +56,12 @@ class Base(PriorModule):
     def propagate_state(self, new_values: torch.Tensor, prev_state: TimeseriesState):
         new_state = TimeseriesState(prev_state.time_index + self._time_inc, new_values)
 
-        if self._post_process_state is None:
-            return new_state
+        if self._post_process_state is not None:
+            self._post_process_state(new_state, prev_state)
 
-        return self._post_process_state(new_state, prev_state)
+        return new_state
 
-    def register_state_post_process(self, func: Callable[[TimeseriesState, TimeseriesState], TimeseriesState]):
+    def register_state_post_process(self, func: Callable[[TimeseriesState, TimeseriesState], None]):
         self._post_process_state = func
 
     def propagate(self, x: TimeseriesState, as_dist=False) -> Union[Distribution, TimeseriesState]:
