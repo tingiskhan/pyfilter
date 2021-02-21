@@ -19,11 +19,8 @@ class StochasticDifferentialEquation(StochasticProcess, ABC):
 
         super().__init__(parameters, initial_dist, increment_dist, **kwargs)
 
-        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self._dt = self._time_inc = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
         self._ns = num_steps
-
-    def propagate_state(self, new_values, prev_state):
-        return TimeseriesState(prev_state.time_index + self._dt, new_values)
 
 
 class OneStepEulerMaruyma(AffineProcess):
@@ -37,7 +34,10 @@ class OneStepEulerMaruyma(AffineProcess):
         """
 
         super().__init__(dynamics, parameters, initial_dist, increment_dist, initial_transform=initial_transform)
-        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self._dt = self._time_inc = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+
+    def propagate_state(self, new_values, prev_state):
+        return TimeseriesState(prev_state.time_index + self._dt, new_values)
 
     def _mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
@@ -62,7 +62,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
     def define_density(self, x):
         for i in range(self._ns):
             dist = self._propagator(x, self._dt, *self.functional_parameters())
-            x = TimeseriesState(x.time_index + self._dt, dist.sample())
+            x = self.propagate_state(dist.sample(), x)
 
         return Empirical(x.state)
 

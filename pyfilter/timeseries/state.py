@@ -31,3 +31,7 @@ class TimeseriesState(Module):
 
     def copy(self, new_values: torch.Tensor):
         return TimeseriesState(self.time_index, new_values)
+
+
+class BatchedState(TimeseriesState):
+    pass

@@ -36,7 +36,6 @@ class StochasticProcess(Base, ABC):
         self.increment_dist = increment_dist
 
         self._input_dim = self.n_dim
-        self._build_state_meth: Callable[[torch.Tensor, TimeseriesState], TimeseriesState] = None
 
         for i, p in enumerate(parameters):
             name = f"parameter_{i}"
@@ -54,15 +53,6 @@ class StochasticProcess(Base, ABC):
         res.update(self._buffers)
 
         return tuple(v for _, v in sorted(res.items(), key=lambda k: k[0]))
-
-    def propagate_state(self, new_values, prev_state):
-        if self._build_state_meth is None:
-            return super(StochasticProcess, self).propagate_state(new_values, prev_state)
-
-        return self._build_state_meth(new_values, prev_state)
-
-    def register_state_builder(self, func: Callable[[torch.Tensor, TimeseriesState], TimeseriesState]):
-        self._build_state_meth = func
 
     @property
     @lru_cache()
