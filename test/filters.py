@@ -124,7 +124,8 @@ class Tests(unittest.TestCase):
 
         x, y = model.sample_path(500)
 
-        for filt in [SISR(model, 500, proposal=prop.Bootstrap()), UKF(model)]:
+        filters = [SISR(model, 500, proposal=prop.Bootstrap()), APF(model, 500, proposal=prop.Bootstrap()), UKF(model)]
+        for filt in filters:
             result = filt.longfilter(y)
 
             means = result.filter_means
