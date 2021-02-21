@@ -33,7 +33,6 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
         """
         Base class for algorithms utilizing filters for inference.
         :param filter_: The filter
-        :type filter_: BaseFilter
         """
 
         super().__init__()
