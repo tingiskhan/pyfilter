@@ -89,9 +89,8 @@ class BaseFilter(Module, ABC):
 
         return result
 
-    def copy(self):
-        res = copy.deepcopy(self)
-        return res
+    def copy(self) -> "BaseFilter":
+        return copy.deepcopy(self)
 
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError()
