@@ -36,9 +36,6 @@ class OneStepEulerMaruyma(AffineProcess):
         super().__init__(dynamics, parameters, initial_dist, increment_dist, initial_transform=initial_transform)
         self._dt = self._time_inc = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
-    def propagate_state(self, new_values, prev_state):
-        return TimeseriesState(prev_state.time_index + self._dt, new_values)
-
     def _mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
         mean = x.state + self.f(x, *params) * self._dt
@@ -96,8 +93,9 @@ class AffineEulerMaruyama(EulerMaruyama):
         return x.state
 
     def prop_apf(self, x):
+        x_t = x
         for i in range(self._ns):
-            f = self.f(x, *self.functional_parameters()) * self._dt
-            x = self.propagate_state(x.state + f, x)
+            f = self.f(x_t, *self.functional_parameters()) * self._dt
+            x_t = self.propagate_state(x.state + f, x_t)
 
-        return x
+        return self.propagate_state(x_t.state, x)
