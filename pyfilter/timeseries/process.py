@@ -120,7 +120,7 @@ class StochasticProcess(Base, ABC):
 
         return TimeseriesState(0.0, dist.sample())
 
-    def sample_path(self, steps, samples=None, x_s=None, u=None) -> torch.Tensor:
+    def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
         x_s = self.initial_sample(samples) if x_s is None else x_s
 
         res = (x_s,)

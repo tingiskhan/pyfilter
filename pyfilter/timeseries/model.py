@@ -60,7 +60,7 @@ class StateSpaceModel(Base):
 
         return self
 
-    def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
 
         hidden = tuple()
