@@ -49,6 +49,7 @@ class LinearObservations(StateSpaceModel):
     ):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.
+
         :param hidden: The hidden dynamics
         :param a: The A-matrix
         :param scale: The variance of the observations
@@ -80,6 +81,7 @@ class LinearGaussianObservations(LinearObservations):
         """
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
+
         :param hidden: The hidden dynamics
         :param a: The A-matrix
         :param scale: The variance of the observations

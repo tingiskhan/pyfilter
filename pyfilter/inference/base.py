@@ -32,6 +32,7 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
     def __init__(self, filter_: BaseFilter):
         """
         Base class for algorithms utilizing filters for inference.
+
         :param filter_: The filter
         """
 

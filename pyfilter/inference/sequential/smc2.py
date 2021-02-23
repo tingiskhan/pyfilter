@@ -15,6 +15,7 @@ class SMC2(SequentialParticleAlgorithm):
     ):
         """
         Implements the SMC2 algorithm by Chopin et al.
+
         :param threshold: The threshold at which to perform MCMC rejuvenation
         :param kernel: The kernel to use when updating the parameters
         """
@@ -54,7 +55,6 @@ class SMC2(SequentialParticleAlgorithm):
     def rejuvenate(self, state: SMC2State):
         """
         Rejuvenates the particles using a PMCMC move.
-        :return: Self
         """
 
         self._kernel.update(self.filter, state, state.parsed_data)

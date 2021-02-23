@@ -68,9 +68,10 @@ class TensorTuple(Module):
         return
 
 
-def get_ess(w: torch.Tensor, normalized=False):
+def get_ess(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Calculates the ESS from an array of log weights.
+
     :param w: The log weights
     :param normalized: Whether input is normalized
     :return: The effective sample size
@@ -82,14 +83,14 @@ def get_ess(w: torch.Tensor, normalized=False):
     return w.sum(-1) ** 2 / (w ** 2).sum(-1)
 
 
-def choose(array: torch.Tensor, indices: torch.Tensor):
+def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
     if indices.dim() < 2:
         return array[indices]
 
     return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
 
 
-def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None):
+def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
     maxw, _ = w.max(-1)
 
     if weights is None:
@@ -107,7 +108,7 @@ def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
     return torch.stack(torch.broadcast_tensors(*x), dim=-1)
 
 
-def construct_diag_from_flat(x: torch.Tensor, base_dim: int):
+def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
@@ -122,9 +123,10 @@ def construct_diag_from_flat(x: torch.Tensor, base_dim: int):
     return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 
 
-def normalize(w: torch.Tensor):
+def normalize(w: torch.Tensor) -> torch.Tensor:
     """
     Normalizes a 1D or 2D array of log weights.
+
     :param w: The weights
     :return: Normalized weights
     """

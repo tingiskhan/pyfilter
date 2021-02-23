@@ -15,6 +15,7 @@ class BaseFilter(Module, ABC):
     def __init__(self, model: StateSpaceModel):
         """
         Base class for filters.
+
         :param model: The state space model for which to perform filtering.
         """
 
@@ -40,6 +41,7 @@ class BaseFilter(Module, ABC):
     def set_nparallel(self, n: int):
         """
         Sets the number of parallel filters to use
+
         :param n: The number of parallel filters
         """
 
@@ -52,6 +54,7 @@ class BaseFilter(Module, ABC):
     def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         """
         Performs a filtering move given the observation `y`.
+
         :param y: The observation
         :param state: The previous state
         :return: Self and log-likelihood
@@ -71,6 +74,7 @@ class BaseFilter(Module, ABC):
     ) -> FilterResult:
         """
         Filters the entire data set `y`.
+
         :param y: An array of data. Could either be 1D or 2D.
         :param bar: Whether to print a progressbar
         :param record_states: Whether to record states on a tuple
@@ -98,6 +102,7 @@ class BaseFilter(Module, ABC):
     def resample(self, inds: torch.Tensor):
         """
         Resamples the filter, used in cases where we use nested filters.
+
         :param inds: The indices
         :return: Self
         """
@@ -110,6 +115,7 @@ class BaseFilter(Module, ABC):
     def exchange(self, filter_, inds: torch.Tensor):
         """
         Exchanges the filters.
+
         :param filter_: The new filter
         :type filter_: BaseFilter
         :param inds: The indices

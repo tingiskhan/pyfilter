@@ -22,16 +22,15 @@ class ParticleFilter(BaseFilter, ABC):
         resampling: Callable[[torch.Tensor], torch.Tensor] = systematic,
         proposal: Union[str, Proposal] = "auto",
         ess=0.9,
-        need_grad=False,
         **kwargs
     ):
         """
         Implements the base functionality of a particle filter.
+
         :param particles: How many particles to use
         :param resampling: Which resampling method to use
         :param proposal: Which proposal to use, set to `auto` to let algorithm decide
         :param ess: At which level to resample
-        :param need_grad: Whether we need the gradient'
         :param kwargs: Any key-worded arguments passed to `BaseFilter`
         """
 
@@ -41,7 +40,6 @@ class ParticleFilter(BaseFilter, ABC):
         self._th = ess
 
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
-        self._rsample = need_grad
 
         self._resampler = resampling
 

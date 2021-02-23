@@ -16,7 +16,7 @@ class UnscentedFilterTransform(Module):
     def __init__(self, model: StateSpaceModel, a=1.0, b=2.0, k=0.0):
         """
         Implements the Unscented Transform for a state space model.
-        :param model: The model
+
         :param a: The alpha parameter. Defined on the interval [0, 1]
         :param b: The beta parameter. Optimal value for Gaussian models is 2
         :param k: The kappa parameter. To control the semi-definiteness

@@ -21,6 +21,7 @@ class AffineProcess(StochasticProcess):
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
         that is, given a base distribution X we get a new distribution Y as
             Y = loc + scale * X
+
         :param funcs: The functions governing the dynamics of the process
         """
 
@@ -37,6 +38,7 @@ class AffineProcess(StochasticProcess):
     def mean_scale(self, x: TimeseriesState):
         """
         Returns the mean and scale of the process evaluated at x_t
+
         :param x: The previous state
         """
 
@@ -45,6 +47,7 @@ class AffineProcess(StochasticProcess):
     def _mean_scale(self, x: TimeseriesState, parameters=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Returns the mean and scale of the process.
+
         :param x: The previous state
         :return: (mean, scale)
         """
@@ -54,13 +57,14 @@ class AffineProcess(StochasticProcess):
     def _define_transdist(self, loc: torch.Tensor, scale: torch.Tensor):
         """
         Helper method for defining the transition density
+
         :param loc: The mean
         :param scale: The scale
         """
 
         return _define_transdist(loc, scale, self.increment_dist(), self.n_dim)
 
-    def _propagate_u(self, x, u, parameters=None):
+    def _propagate_conditional(self, x, u, parameters=None):
         loc, scale = self._mean_scale(x, parameters=parameters)
         return loc + scale * u
 
@@ -80,6 +84,7 @@ class RandomWalk(AffineProcess):
     def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist=None):
         """
         Defines a random walk.
+
         :param std: The vector of standard deviations
         :type std: torch.Tensor|float|Distribution
         """

@@ -36,6 +36,7 @@ class NESS(BaseNESS):
     def __init__(self, filter_, particles, threshold=0.95, **kwargs):
         """
         Implements the NESS algorithm by Miguez and Crisan.
+
         :param kde: The kernel density estimator to use for sampling new parameters.
         """
 
@@ -51,6 +52,7 @@ class FixedWidthNESS(BaseNESS):
         """
         Implements a fixed observation width NESS which updates when the number of parsed observations is a modulo of
         `block_len`.
+
         :param block_len: The minimum block length to use
         """
 

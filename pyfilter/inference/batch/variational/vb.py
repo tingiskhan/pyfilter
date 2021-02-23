@@ -22,10 +22,9 @@ class VariationalBayes(BaseBatchAlgorithm):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.
-        :param model: The model
-        :param samples: The number of samples
-        :param optimizer: The optimizer
-        :param max_iter: The maximum number of iterations
+
+        :param samples: The number of samples to use when approximating the mean
+        :param max_iter: The maximum number of iterations for optimizer
         :param optkwargs: Any optimizer specific kwargs
         :param use_filter: Whether to initialize VB with using filtered estimates
         """

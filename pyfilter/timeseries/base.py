@@ -14,7 +14,6 @@ class Base(PriorModule):
     def __init__(self):
         super().__init__()
         self._post_process_state: Callable[[TimeseriesState, TimeseriesState], None] = None
-        self._time_inc = 1
 
     def parameters_to_array(self, transformed=False, as_tuple=False) -> torch.Tensor:
         raise NotImplementedError()
@@ -34,9 +33,10 @@ class Base(PriorModule):
 
     def log_prob(self, y: torch.Tensor, x: TimeseriesState) -> torch.Tensor:
         """
-        Weights the process of the current state `x_t` with the previous `x_{t-1}`.
-        :param y: The value at x_t
-        :param x: The value at x_{t-1}
+        Depending on whether the process is an observable or not, `x` and `y` take on different meanings.
+
+        :param y: If observable corresponds to observed data, else the process value at x_t
+        :param x: If observable corresponds to process value at x_t, else timeseries value at x_{t-1}
         """
 
         dist = self.define_density(x)
@@ -48,34 +48,33 @@ class Base(PriorModule):
         Method for defining the density used in `propagate`. Differs whether it's an observable or hidden process. If
         it's an observable process this method corresponds to the observation density, whereas for a hidden process it
         corresponds to the transition density.
+
         :param x: The current or previous state of the hidden state - depending on whether self is observable or hidden.
         """
 
         raise NotImplementedError()
 
-    def propagate_state(self, new_values: torch.Tensor, prev_state: TimeseriesState):
-        new_state = TimeseriesState(prev_state.time_index + self._time_inc, new_values)
+    def propagate_state(self, new_values: torch.Tensor, prev_state: TimeseriesState, time_increment=1.0):
+        new_state = TimeseriesState(prev_state.time_index + time_increment, new_values)
 
         if self._post_process_state is not None:
             self._post_process_state(new_state, prev_state)
 
         return new_state
 
+    # TODO: Perhaps use forward instead and register forward hook?
     def register_state_post_process(self, func: Callable[[TimeseriesState, TimeseriesState], None]):
         self._post_process_state = func
 
-    def propagate(self, x: TimeseriesState, as_dist=False) -> Union[Distribution, TimeseriesState]:
+    def propagate(self, x: TimeseriesState) -> TimeseriesState:
         """
         Propagates the model forward conditional on the previous state and current parameters.
+
         :param x: The previous state
-        :param as_dist: Whether to return the new value as a distribution
         :return: Samples from the model
         """
 
         dist = self.define_density(x)
-
-        if as_dist:
-            return dist
 
         return self.propagate_state(dist.sample(), x)
 
@@ -84,6 +83,7 @@ class Base(PriorModule):
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
         """
         Samples a trajectory from the model.
+
         :param steps: The number of steps
         :param samples: Number of sample paths
         :param x_s: The start value for the latent process
@@ -95,6 +95,7 @@ class Base(PriorModule):
     def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
         """
         Calculates the prior log-likelihood of the current values of the parameters.
+
         :param constrained: If you use an unconstrained proposal you need to use `transformed=True`
         """
 
@@ -103,6 +104,7 @@ class Base(PriorModule):
     def copy(self):
         """
         Returns a deep copy of the object.
+
         :return: Copy of current instance
         """
         res = deepcopy(self)

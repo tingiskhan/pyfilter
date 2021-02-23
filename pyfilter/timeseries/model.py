@@ -8,6 +8,7 @@ class StateSpaceModel(Base):
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         """
         Combines a hidden and observable processes to constitute a state-space model.
+
         :param hidden: The hidden process(es) constituting the SSM
         :param observable: The observable process(es) constituting the SSM
         """
@@ -28,8 +29,8 @@ class StateSpaceModel(Base):
     def obs_ndim(self) -> int:
         return self.observable.n_dim
 
-    def propagate(self, x, u=None, as_dist=False):
-        return self.hidden.propagate(x, u=u, as_dist=as_dist)
+    def propagate(self, x):
+        return self.hidden.propagate(x)
 
     def log_prob(self, y, x):
         return self.observable.log_prob(y, x)
@@ -76,6 +77,7 @@ class StateSpaceModel(Base):
     def exchange(self, indices: torch.Tensor, new_model):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
+
         :param indices: The indices to exchange
         :param new_model: The model which to exchange with
         :type new_model: StateSpaceModel

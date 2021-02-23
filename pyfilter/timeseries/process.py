@@ -24,6 +24,7 @@ class StochasticProcess(Base, ABC):
     ):
         """
         The base class for time series.
+
         :param parameters: The parameters governing the dynamics
         :param initial_dist: The initial distribution
         :param increment_dist: The distribution of the increments
@@ -103,6 +104,7 @@ class StochasticProcess(Base, ABC):
     def initial_sample(self, shape: ShapeLike = None, as_dist=False) -> Union[Distribution, TimeseriesState]:
         """
         Samples a state from the initial distribution.
+
         :param shape: The number of samples
         :param as_dist: Whether to return the new value as a distribution
         :return: Samples from the initial distribution
@@ -130,19 +132,21 @@ class StochasticProcess(Base, ABC):
     def propagate_conditional(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> TimeseriesState:
         """
         Propagate the process conditional on both state and draws from incremental distribution.
+
         :param x: The current or previous state, depending on whether it's a hidden or observable process
         :param u: The current draws from the incremental distribution
         :param parameters: Whether to override the parameters that go into the functions with some other values
         """
 
-        return self.propagate_state(self._propagate_u(x, u, parameters=parameters), x)
+        return self.propagate_state(self._propagate_conditional(x, u, parameters=parameters), x)
 
-    def _propagate_u(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> torch.Tensor:
+    def _propagate_conditional(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()
 
     def prop_apf(self, x: TimeseriesState) -> TimeseriesState:
         """
         Method used by APF. Propagates the state one step forward.
+
         :param x: The previous state
         :return: The new state
         """

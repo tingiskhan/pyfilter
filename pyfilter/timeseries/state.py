@@ -15,6 +15,10 @@ class TimeseriesState(Module):
     def time_index(self) -> torch.Tensor:
         return self._buffers["_time_index"]
 
+    @time_index.setter
+    def time_index(self, x):
+        self._buffers["_time_index"] = x
+
     @property
     def state(self) -> torch.Tensor:
         return self._buffers["_state"]

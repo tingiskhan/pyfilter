@@ -14,9 +14,9 @@ class ParticleState(BaseState):
 
     def get_mean(self):
         normw = self.normalized_weights()
-        if self.x.state.dim() == self.w.dim() + 1:
+        if self.x.state.dim() == normw.dim() + 1:
             return (self.x.state * normw.unsqueeze(-1)).sum(-2)
-        elif self.x.state.dim() == self.w.dim():
+        elif self.x.state.dim() == normw.dim():
             return (self.x.state * normw).sum(-1)
 
         raise NotImplementedError()
