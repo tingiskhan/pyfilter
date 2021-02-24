@@ -68,8 +68,8 @@ class UnscentedFilterTransform(Module):
         shape = size_getter(shape)
         self._view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
-        mean = torch.zeros((*shape, self._n_dim))
-        cov = torch.zeros((*shape, self._n_dim, self._n_dim))
+        mean = torch.zeros((*shape, self._n_dim), device=self._wm.device)
+        cov = torch.zeros((*shape, self._n_dim, self._n_dim), device=self._wm.device)
 
         initial_state = self._model.hidden.initial_sample((self.MONTE_CARLO_ESTIMATES, *shape))
         initial_state_mean = initial_state.state.mean(0)
@@ -117,7 +117,6 @@ class UnscentedFilterTransform(Module):
         ym: torch.Tensor = None,
         yc: torch.Tensor = None,
     ):
-        # ===== Overwrite ===== #
         mean = prev_corr.mean.state.clone()
         cov = prev_corr.cov.clone()
 

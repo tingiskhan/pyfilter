@@ -1,6 +1,6 @@
 from .base import Proposal
 import torch
-from torch.distributions import Normal, MultivariateNormal
+from torch.distributions import Normal, MultivariateNormal, AffineTransform, TransformedDistribution
 from ....timeseries import LinearGaussianObservations as LGO, AffineProcess
 from ....utils import construct_diag_from_flat
 
@@ -54,11 +54,12 @@ class LinearGaussianObservations(Proposal):
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov))
 
     def sample_and_weight(self, y, x):
-        # ===== Hidden ===== #
-        loc, scale = self._model.hidden.mean_scale(x)
+        hidden_dist: TransformedDistribution = self._model.hidden.define_density(x)
+        affine_transform = next(trans for trans in hidden_dist.transforms if isinstance(trans, AffineTransform))
+
+        loc, scale = affine_transform.loc, affine_transform.scale
         h_var_inv = 1 / scale ** 2
 
-        # ===== Observable ===== #
         params = self._model.observable.functional_parameters()
         c = params[0]
         o_var_inv = 1 / params[-1] ** 2
@@ -70,7 +71,7 @@ class LinearGaussianObservations(Proposal):
 
         new_x = self._model.hidden.propagate_state(kernel.sample(), x)
 
-        return new_x, self._weight_with_kernel(y, new_x, x, kernel)
+        return new_x, self._weight_with_kernel(y, new_x, hidden_dist, kernel)
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
