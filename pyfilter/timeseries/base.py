@@ -104,9 +104,6 @@ class Base(PriorModule):
     def copy(self):
         """
         Returns a deep copy of the object.
-
-        :return: Copy of current instance
         """
-        res = deepcopy(self)
 
-        return res
+        return deepcopy(self)

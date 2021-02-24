@@ -74,14 +74,12 @@ class StateSpaceModel(Base):
 
         return torch.stack([t.state for t in hidden]), torch.stack([t.state for t in obs])
 
-    def exchange(self, indices: torch.Tensor, new_model):
+    def exchange(self, indices: torch.Tensor, new_model: "StateSpaceModel"):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
 
         :param indices: The indices to exchange
         :param new_model: The model which to exchange with
-        :type new_model: StateSpaceModel
-        :return: Self
         """
 
         for new_param, self_param in zip(new_model.parameters(), self.parameters()):

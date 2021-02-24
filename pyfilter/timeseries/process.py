@@ -101,13 +101,9 @@ class StochasticProcess(Base, ABC):
 
         return self
 
-    def initial_sample(self, shape: ShapeLike = None, as_dist=False) -> Union[Distribution, TimeseriesState]:
+    def define_initial_density(self, shape: ShapeLike = None) -> Distribution:
         """
-        Samples a state from the initial distribution.
-
-        :param shape: The number of samples
-        :param as_dist: Whether to return the new value as a distribution
-        :return: Samples from the initial distribution
+        Defines and returns the initial density.
         """
 
         dist = self.initial_dist().expand(size_getter(shape))
@@ -115,10 +111,14 @@ class StochasticProcess(Base, ABC):
         if self.init_transform is not None:
             dist = self.init_transform(dist, *self.functional_parameters())
 
-        if as_dist:
-            return dist
+        return dist
 
-        return TimeseriesState(0.0, dist.sample())
+    def initial_sample(self, shape: ShapeLike = None) -> TimeseriesState:
+        """
+        Samples a state from the initial distribution.
+        """
+
+        return TimeseriesState(0.0, self.define_initial_density(shape).sample())
 
     def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
         x_s = self.initial_sample(samples) if x_s is None else x_s

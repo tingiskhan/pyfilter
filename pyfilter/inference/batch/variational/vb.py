@@ -90,7 +90,7 @@ class VariationalBayes(BaseBatchAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            init_dist = self._model.hidden.initial_sample(as_dist=True)
+            init_dist = self._model.hidden.define_initial_density()
 
             state_t = BatchedState(torch.arange(1, x_t.shape[0]), x_t)
             state_tm1 = BatchedState(torch.arange(x_t.shape[0] - 1), x_tm1)

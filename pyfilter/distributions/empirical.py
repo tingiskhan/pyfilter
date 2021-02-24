@@ -9,7 +9,6 @@ class Empirical(Distribution):
         """
         super().__init__()
         self.loc = self._samples = samples
-        self.scale = torch.zeros_like(samples)
 
     def sample(self, sample_shape=torch.Size()):
         if sample_shape != self._samples.shape and sample_shape != torch.Size():
