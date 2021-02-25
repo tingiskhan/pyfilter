@@ -1,16 +1,12 @@
-from torch.distributions import Distribution
 import torch
-from typing import Type, Dict, Union, Callable
 from ..prior_module import PriorModule
 from .mixin import BuilderMixin
 from .prior import Prior
-
-
-DistributionType = Union[Type[Distribution], Callable[[Dict], Distribution]]
+from .typing import DistributionOrBuilder, Parameters
 
 
 class DistributionWrapper(BuilderMixin, PriorModule):
-    def __init__(self, base_dist: DistributionType, **parameters):
+    def __init__(self, base_dist: DistributionOrBuilder, **parameters: Parameters):
         super().__init__()
 
         self.base_dist = base_dist

@@ -63,8 +63,9 @@ class Tests(unittest.TestCase):
                 (SISR, {"particles": 500}),
                 (APF, {"particles": 500}),
                 (UKF, {}),
-                (SISR, {"particles": 500, "proposal": prop.Linearized(alpha=None)}),
-                (SISR, {"particles": 500, "proposal": prop.Linearized(alpha=0.01)})
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
+                (SISR, {"particles": 500, "proposal": prop.LocalLinearization()})
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)
@@ -76,7 +77,7 @@ class Tests(unittest.TestCase):
                     kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
                 else:
                     kf = pykalman.KalmanFilter(
-                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=[1, 2]
+                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=self.a.numpy()
                     )
 
                 f_mean, _ = kf.filter(y.numpy())

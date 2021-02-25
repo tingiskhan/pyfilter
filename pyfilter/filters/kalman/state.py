@@ -7,7 +7,7 @@ from ...utils import choose
 class KalmanState(BaseState):
     def __init__(self, utf: UFTCorrectionResult, ll: Tensor):
         super().__init__()
-        self.add_module("utf", utf)
+        self.utf = utf
         self.register_buffer("ll", ll)
 
     def get_mean(self):
@@ -26,7 +26,7 @@ class KalmanState(BaseState):
         return self.ll
 
     def exchange(self, state, inds):
-        self.utf.mean[inds] = state.utf.mean[inds]
+        self.utf.mean.state[inds] = state.utf.mean.state[inds]
         self.utf.cov[inds] = state.utf.cov[inds]
 
         self.utf.ym[inds] = state.utf.ym[inds]

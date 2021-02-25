@@ -1,12 +1,13 @@
 from torch.distributions import TransformedDistribution, biject_to
 import torch
-from typing import Tuple
+from typing import Tuple, Dict
 from torch.nn import Module
 from .mixin import BuilderMixin
+from .typing import DistributionOrBuilder, Parameters
 
 
 class Prior(BuilderMixin, Module):
-    def __init__(self, base_dist, **parameters):
+    def __init__(self, base_dist: DistributionOrBuilder, **parameters: Parameters):
         super().__init__()
 
         self.base_dist = base_dist
@@ -14,8 +15,11 @@ class Prior(BuilderMixin, Module):
         for k, v in parameters.items():
             self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))
 
-        self.bijection = biject_to(self().support)
         self.shape = self().event_shape
+
+    @property
+    def bijection(self):
+        return biject_to(self().support)
 
     @property
     def unconstrained_prior(self):

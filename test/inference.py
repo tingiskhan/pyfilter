@@ -124,6 +124,20 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         # TODO: Add check for posterior
 
+    def test_PMMHCuda(self):
+        if not torch.cuda.is_available():
+            self.assertFalse(True)
+
+        static_model = make_model(False)
+        x, y = static_model.sample_path(100)
+
+        model = make_model(True)
+
+        filt = APF(model, 500)
+        pmmh = PMMH(filt, 100, num_chains=6).to("cuda:0")
+
+        state = pmmh.fit(y)
+
 
 if __name__ == "__main__":
     unittest.main()

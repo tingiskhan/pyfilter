@@ -7,7 +7,7 @@ from ...timeseries import TimeseriesState
 class ParticleState(BaseState):
     def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_inds: Tensor):
         super().__init__()
-        self.add_module("x", x)
+        self.x = x
         self.register_buffer("w", w)
         self.register_buffer("ll", ll)
         self.register_buffer("prev_inds", prev_inds)
