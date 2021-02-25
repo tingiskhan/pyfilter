@@ -44,7 +44,7 @@ class LinearGaussianObservations(Proposal):
 
         t1 = h_var_inv * loc
 
-        t2 = torch.matmul(diag_o_var_inv, y if y.dim() > 0 else y.unsqueeze(-1))
+        t2 = torch.matmul(diag_o_var_inv, y if self._model.obs_ndim > 0 else y.unsqueeze(-1))
         t3 = torch.matmul(ttc, t2.unsqueeze(-1))[..., 0]
 
         m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
