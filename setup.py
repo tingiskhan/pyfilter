@@ -22,5 +22,5 @@ setup(
     author_email="victor.gruselius@gmail.com",
     description="Package for performing online Bayesian inference in state space models",
     packages=find_packages(),
-    install_requires=["scipy>=0.18.1", "torch>1.5.0", "tqdm>=4.26", "numpy"],
+    install_requires=["torch>1.5.0", "tqdm>=4.26", "numpy"],
 )
