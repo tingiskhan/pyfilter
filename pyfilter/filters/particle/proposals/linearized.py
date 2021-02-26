@@ -13,8 +13,7 @@ class Linearized(Proposal):
         models that are log-concave in the observation density.
 
         :param n_steps: The number of steps to take when approximating the mean of the proposal density
-        :param alpha: If `None`, uses second order information about the likelihood function, else takes step
-        proportional to `alpha`.
+        :param alpha: Takes step proportional to `alpha` if not None, else uses second order information
         """
         super().__init__()
         self._alpha = alpha

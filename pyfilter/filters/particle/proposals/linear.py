@@ -13,10 +13,6 @@ class LinearGaussianObservations(Proposal):
     combination.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._mat = None
-
     def set_model(self, model):
         if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
             raise ValueError("Model combination not supported!")
@@ -44,7 +40,11 @@ class LinearGaussianObservations(Proposal):
 
         t1 = h_var_inv * loc
 
-        t2 = torch.matmul(diag_o_var_inv, y if self._model.obs_ndim > 0 else y.unsqueeze(-1))
+        if self._model.obs_ndim == 0:
+            t2 = (diag_o_var_inv.squeeze(-1) * y).unsqueeze(-1)
+        else:
+            t2 = torch.matmul(diag_o_var_inv, y)
+
         t3 = torch.matmul(ttc, t2.unsqueeze(-1))[..., 0]
 
         m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
@@ -84,13 +84,14 @@ class LinearGaussianObservations(Proposal):
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
-        o_loc, o_scale = self._model.observable.mean_scale(self._model.hidden.propagate_state(h_loc, x))
+        new_state = self._model.hidden.propagate_state(h_loc, x)
+        o_loc, o_scale = self._model.observable.mean_scale(new_state)
 
         o_var = o_scale ** 2
         h_var = h_scale ** 2
 
         params = self._model.observable.functional_parameters()
-        c, offset = self.get_constant_and_offset(params, self._model.hidden.propagate_state(h_loc, x))
+        c, offset = self.get_constant_and_offset(params, new_state)
 
         if offset is not None:
             o_loc = offset
