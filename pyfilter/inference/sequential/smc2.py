@@ -40,7 +40,7 @@ class SMC2(SequentialParticleAlgorithm):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
-        state.w += state.filter_state.latest_state.get_loglikelihood()
+        state.w += filter_state.get_loglikelihood()
 
         ess = get_ess(state.w)
         state.append_ess(ess)

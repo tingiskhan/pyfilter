@@ -24,7 +24,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
             self._kernel.update(self.filter, state)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
-        state.w += state.filter_state.latest_state.get_loglikelihood()
+        state.w += filter_state.get_loglikelihood()
 
         state.append_ess(get_ess(state.w))
         state.filter_state.append(filter_state)
