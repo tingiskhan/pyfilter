@@ -8,6 +8,7 @@ class StateSpaceModel(Base):
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         """
         Combines a hidden and observable processes to constitute a state-space model.
+
         :param hidden: The hidden process(es) constituting the SSM
         :param observable: The observable process(es) constituting the SSM
         """
@@ -22,17 +23,17 @@ class StateSpaceModel(Base):
 
     @property
     def hidden_ndim(self) -> int:
-        return self.hidden.ndim
+        return self.hidden.n_dim
 
     @property
     def obs_ndim(self) -> int:
-        return self.observable.ndim
+        return self.observable.n_dim
 
-    def propagate(self, x, u=None, as_dist=False):
-        return self.hidden.propagate(x, u=u, as_dist=as_dist)
+    def propagate(self, x):
+        return self.hidden.propagate(x)
 
-    def log_prob(self, y, x, u=None):
-        return self.observable.log_prob(y, x, u=u)
+    def log_prob(self, y, x):
+        return self.observable.log_prob(y, x)
 
     def parameters_and_priors(self):
         return tuple(self.hidden.parameters_and_priors()) + tuple(self.observable.parameters_and_priors())
@@ -59,21 +60,26 @@ class StateSpaceModel(Base):
 
         return self
 
-    def sample_path(self, steps, samples=None, x_s=None, u=None) -> Tuple[torch.Tensor, torch.Tensor]:
-        x = x_s if x_s is not None else self.hidden.i_sample(shape=samples)
+    def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
+        x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
 
-        hidden = self.hidden.sample_path(steps, x_s=x)
-        obs = self.observable.propagate(hidden, u=u)
+        hidden = tuple()
+        obs = tuple()
 
-        return hidden, obs
+        for t in range(steps):
+            hidden += (x,)
+            obs += (self.observable.propagate(x),)
 
-    def exchange(self, indices: torch.Tensor, new_model):
+            x = self.hidden.propagate(x)
+
+        return torch.stack([t.state for t in hidden]), torch.stack([t.state for t in obs])
+
+    def exchange(self, indices: torch.Tensor, new_model: "StateSpaceModel"):
         """
         Exchanges the parameters of `self` with `newmodel` at indices.
+
         :param indices: The indices to exchange
         :param new_model: The model which to exchange with
-        :type new_model: StateSpaceModel
-        :return: Self
         """
 
         for new_param, self_param in zip(new_model.parameters(), self.parameters()):

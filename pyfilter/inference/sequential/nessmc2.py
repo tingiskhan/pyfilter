@@ -18,6 +18,7 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
         SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
         demanding to use the SMC2.
+
         :param smc2_kw: Any key worded arguments to SMC2
         :param ness_kw: Any key worded arguments for NESS
         """

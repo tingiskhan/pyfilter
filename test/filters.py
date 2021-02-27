@@ -3,7 +3,8 @@ import numpy as np
 import pykalman
 from math import sqrt
 from torch.distributions import Normal, Independent
-from pyfilter.filters import SISR, APF, UKF, proposals as prop
+from pyfilter.filters import SISR, APF, UKF
+from pyfilter.filters.particle import proposals as prop
 from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama
 import torch
 from pyfilter.utils import concater
@@ -11,7 +12,7 @@ from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -19,7 +20,7 @@ def g(x, alpha, sigma):
 
 
 def fo(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def go(x, alpha, sigma):
@@ -27,8 +28,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x[..., 0] + x[..., 1] / 3
-    x2 = x[..., 1]
+    x1 = alpha * x.state[..., 0] + x.state[..., 1] / 3
+    x2 = x.state[..., 1]
     return concater(x1, x2)
 
 
@@ -47,7 +48,7 @@ class Tests(unittest.TestCase):
     mvn = AffineProcess((fmvn, gmvn), (0.5, 1.0), mvn, mvn)
     a = torch.tensor([1.0, 2.0])
 
-    mvnmodel = LinearGaussianObservations(mvn, a, 1.0)
+    mv_model = LinearGaussianObservations(mvn, a, 1.0)
 
     def test_InitializeFilter(self):
         state = SISR(self.model, 1000).initialize()
@@ -55,14 +56,16 @@ class Tests(unittest.TestCase):
         assert state.x.shape == torch.Size([1000])
 
     def test_Filters(self):
-        for model in [self.model, self.mvnmodel]:
+        for model in [self.model, self.mv_model]:
             x, y = model.sample_path(500)
 
             for filter_type, props in [
                 (SISR, {"particles": 500}),
                 (APF, {"particles": 500}),
                 (UKF, {}),
-                (SISR, {"particles": 50, "proposal": prop.Unscented()}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
+                (SISR, {"particles": 500, "proposal": prop.LocalLinearization()})
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)
@@ -74,7 +77,7 @@ class Tests(unittest.TestCase):
                     kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
                 else:
                     kf = pykalman.KalmanFilter(
-                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=[1, 2]
+                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=self.a.numpy()
                     )
 
                 f_mean, _ = kf.filter(y.numpy())
@@ -107,27 +110,9 @@ class Tests(unittest.TestCase):
 
         assert mape.median(0)[0].max() < 0.05
 
-    def test_ParallelUnscented(self):
-        x, y = self.model.sample_path(50)
-
-        shape = 30
-
-        linear = AffineProcess((f, g), (1.0, 1.0), self.norm, self.norm)
-        self.model.hidden = linear
-
-        filt = SISR(self.model, 1000, proposal=prop.Unscented()).set_nparallel(shape)
-        result = filt.longfilter(y)
-
-        filtermeans = result.filter_means
-
-        x = filtermeans[:, :1]
-        mape = ((x - filtermeans[:, 1:]) / x).abs()
-
-        assert mape.median(0)[0].max() < 0.05
-
     def test_SDE(self):
         def f(x, a, s):
-            return -a * x
+            return -a * x.state
 
         def g(x, a, s):
             return s
@@ -140,7 +125,8 @@ class Tests(unittest.TestCase):
 
         x, y = model.sample_path(500)
 
-        for filt in [SISR(model, 500, proposal=prop.Bootstrap()), UKF(model)]:
+        filters = [SISR(model, 500, proposal=prop.Bootstrap()), APF(model, 500, proposal=prop.Bootstrap()), UKF(model)]
+        for filt in filters:
             result = filt.longfilter(y)
 
             means = result.filter_means

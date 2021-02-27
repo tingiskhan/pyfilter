@@ -27,22 +27,16 @@ class ParticleMetropolisHastings(BaseKernel):
         prop_filt = filter_.copy()
 
         for _ in range(self._n_steps):
-            # ===== Find the best particles ===== #
             inds = self._resampler(state.normalized_weights(), normalized=True)
-
-            # ===== Construct distribution ===== #
             dist = self._proposal(state, filter_, y)
 
-            # ===== Choose particles ===== #
             filter_.resample(inds)
             state.filter_state.resample(inds)
 
-            # ===== Update parameters ===== #
             to_accept, prop_state, prop_filt = run_pmmh(
                 filter_, state.filter_state, dist, prop_filt, y, filter_.n_parallel
             )
 
-            # ===== Update the description ===== #
             self.accepted = to_accept.sum().float() / float(to_accept.shape[0])
 
             filter_.exchange(prop_filt, to_accept)

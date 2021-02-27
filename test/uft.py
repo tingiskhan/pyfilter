@@ -1,14 +1,14 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, AffineObservations, StateSpaceModel
 from torch.distributions import Normal, MultivariateNormal
-from pyfilter.uft import UnscentedFilterTransform
+from pyfilter.filters.kalman.unscented import UnscentedFilterTransform
 import torch
 from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -23,47 +23,29 @@ def g0(alpha, sigma):
     return sigma
 
 
-def fo(x, alpha, sigma):
-    return alpha * x
+def f_mv(x, a, sigma):
+    return concater(x.state[..., 0], x.state[..., 1])
 
 
-def go(x, alpha, sigma):
-    return sigma
-
-
-def foo(x1, x2, alpha, sigma):
-    return alpha * x1 + x2
-
-
-def goo(x1, x2, alpha, sigma):
-    return sigma
-
-
-def fmvn(x, a, sigma):
-    return concater(x[..., 0], x[..., 1])
-
-
-def f0mvn(a, sigma):
+def f0_mv(a, sigma):
     return torch.zeros(2)
 
 
-def fomvn(x, sigma):
-    return x[..., 0] + x[..., 1] / 2
+def fo_mv(x, sigma):
+    return x.state[..., 0] + x.state[..., 1] / 2
 
 
-def gomvn(x, sigma):
+def go_mv(x, sigma):
     return sigma
 
 
 class Tests(unittest.TestCase):
     def test_UnscentedTransform1D(self):
-        # ===== 1D model ===== #
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         linear = AffineProcess((f, g), (1.0, 1.0), norm, norm)
-        linearobs = AffineObservations((fo, go), (1.0, 1.0), norm)
+        linearobs = AffineObservations((f, g), (1.0, 1.0), norm)
         model = StateSpaceModel(linear, linearobs)
 
-        # ===== Perform unscented transform ===== #
         uft = UnscentedFilterTransform(model)
         res = uft.initialize(3000)
         p = uft.predict(res)
@@ -72,19 +54,17 @@ class Tests(unittest.TestCase):
         assert isinstance(c.x_dist(), Normal) and c.x_dist().mean.shape == torch.Size([3000])
 
     def test_UnscentedTransform2D(self):
-        # ===== 2D model ===== #
         mat = torch.eye(2)
         scale = torch.diag(mat)
 
         norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         mvn = DistributionWrapper(MultivariateNormal, loc=torch.zeros(2), covariance_matrix=torch.eye(2))
 
-        mvnlinear = AffineProcess((fmvn, g), (mat, scale), mvn, mvn)
-        mvnoblinear = AffineObservations((fomvn, gomvn), (1.0,), norm)
+        mvnlinear = AffineProcess((f_mv, g), (mat, scale), mvn, mvn)
+        mvnoblinear = AffineObservations((fo_mv, go_mv), (1.0,), norm)
 
         mvnmodel = StateSpaceModel(mvnlinear, mvnoblinear)
 
-        # ===== Perform unscented transform ===== #
         uft = UnscentedFilterTransform(mvnmodel)
         res = uft.initialize(3000)
         p = uft.predict(res)

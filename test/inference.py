@@ -13,7 +13,7 @@ from pyfilter.inference.batch.mcmc import PMMH
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -29,8 +29,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x[..., 0]
-    x2 = x[..., 1]
+    x1 = alpha * x.state[..., 0]
+    x2 = x.state[..., 1]
     return concater(x1, x2)
 
 
@@ -123,6 +123,20 @@ class InferenceAlgorithmTests(unittest.TestCase):
         state = pmmh.fit(y)
 
         # TODO: Add check for posterior
+
+    def test_PMMHCuda(self):
+        if not torch.cuda.is_available():
+            self.assertFalse(True)
+
+        static_model = make_model(False)
+        x, y = static_model.sample_path(100)
+
+        model = make_model(True)
+
+        filt = APF(model, 500)
+        pmmh = PMMH(filt, 100, num_chains=6).to("cuda:0")
+
+        state = pmmh.fit(y)
 
 
 if __name__ == "__main__":

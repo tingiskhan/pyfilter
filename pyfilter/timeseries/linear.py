@@ -4,11 +4,10 @@ import torch
 from torch.distributions import Distribution, Normal, Independent
 from typing import Union
 from ..distributions import DistributionWrapper
-from ..distributions import Prior
 
 
 def f_0d(x, a, scale):
-    return a * x
+    return a * x.state
 
 
 def f_1d(x, a, scale):
@@ -16,7 +15,7 @@ def f_1d(x, a, scale):
 
 
 def f_2d(x, a, scale):
-    return torch.matmul(a, x.unsqueeze(-1))[..., 0]
+    return torch.matmul(a, x.state.unsqueeze(-1))[..., 0]
 
 
 def g(x, a, *scale):
@@ -50,6 +49,7 @@ class LinearObservations(StateSpaceModel):
     ):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.
+
         :param hidden: The hidden dynamics
         :param a: The A-matrix
         :param scale: The variance of the observations
@@ -66,7 +66,7 @@ class LinearObservations(StateSpaceModel):
         # ===== Determine propagator function ===== #
         if not is_1d:
             f = f_2d
-        elif is_1d and hidden.ndim > 0:
+        elif is_1d and hidden.n_dim > 0:
             f = f_1d
         else:
             f = f_0d
@@ -81,6 +81,7 @@ class LinearGaussianObservations(LinearObservations):
         """
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
+
         :param hidden: The hidden dynamics
         :param a: The A-matrix
         :param scale: The variance of the observations

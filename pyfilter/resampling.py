@@ -6,10 +6,10 @@ from typing import Union
 def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None):
     """
     Performs systematic resampling on either a 1D or 2D array.
+
     :param w: The weights to use for resampling
-    :param normalized: Whether the data is normalized
+    :param normalized: Whether the weights are normalized
     :param u: Parameter for overriding the sampled index, for testing
-    :return: Resampled indices
     """
     is_1d = w.dim() == 1
 
@@ -35,9 +35,9 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
 def multinomial(w: torch.Tensor, normalized=False):
     """
     Performs multinomial sampling.
+
     :param w: The weights to use for resampling
-    :param normalized: Whether the data is normalized
-    :return: Resampled indices
+    :param normalized: Whether the weights are normalized
     """
 
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
@@ -47,9 +47,9 @@ def residual(w: torch.Tensor, normalized=False):
     """
     Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
+
     :param w: The weights to use for resampling
-    :param normalized: Whether the data is normalized
-    :return: Resampled indices
+    :param normalized: Whether the weights are normalized
     """
 
     if w.dim() > 1:

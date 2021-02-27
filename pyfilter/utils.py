@@ -1,15 +1,8 @@
 import torch
-from torch.distributions import Distribution
-import numpy as np
-from typing import Union, Tuple, Iterable
+from typing import Union, Iterable
 from torch.nn import Module
 from .constants import INFTY
-from .distributions import Prior
-
-
-TensorOrDist = Union[Distribution, torch.Tensor, Prior]
-ArrayType = Union[float, int, np.ndarray, TensorOrDist]
-ShapeLike = Union[int, Tuple[int, ...], torch.Size]
+from .typing import ShapeLike
 
 
 def size_getter(shape: ShapeLike) -> torch.Size:
@@ -75,9 +68,10 @@ class TensorTuple(Module):
         return
 
 
-def get_ess(w: torch.Tensor, normalized=False):
+def get_ess(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Calculates the ESS from an array of log weights.
+
     :param w: The log weights
     :param normalized: Whether input is normalized
     :return: The effective sample size
@@ -89,14 +83,14 @@ def get_ess(w: torch.Tensor, normalized=False):
     return w.sum(-1) ** 2 / (w ** 2).sum(-1)
 
 
-def choose(array: torch.Tensor, indices: torch.Tensor):
+def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
     if indices.dim() < 2:
         return array[indices]
 
     return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
 
 
-def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None):
+def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
     maxw, _ = w.max(-1)
 
     if weights is None:
@@ -114,26 +108,25 @@ def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
     return torch.stack(torch.broadcast_tensors(*x), dim=-1)
 
 
-def construct_diag(x: torch.Tensor):
+def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     """
     Constructs a diagonal matrix based on batched data. Solution found here:
     https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
-    Do note that it only considers the last axis.
     """
 
-    if x.dim() < 1:
-        return x
-    elif x.shape[-1] < 2:
+    if base_dim == 0:
+        return x.unsqueeze(-1).unsqueeze(-1)
+
+    if base_dim == 1 and x.shape[-1] < 2:
         return x.unsqueeze(-1)
-    elif x.dim() < 2:
-        return torch.diag(x)
 
     return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 
 
-def normalize(w: torch.Tensor):
+def normalize(w: torch.Tensor) -> torch.Tensor:
     """
     Normalizes a 1D or 2D array of log weights.
+
     :param w: The weights
     :return: Normalized weights
     """

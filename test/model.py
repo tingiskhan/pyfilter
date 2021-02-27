@@ -11,7 +11,7 @@ import torch
 
 
 def f(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def g(x, alpha, sigma):
@@ -27,7 +27,7 @@ def g0(alpha, sigma):
 
 
 def fo(x, alpha, sigma):
-    return alpha * x
+    return alpha * x.state
 
 
 def go(x, alpha, sigma):
@@ -84,37 +84,6 @@ class Tests(unittest.TestCase):
         diff = ((x - y) ** 2).mean().sqrt()
 
         assert x.shape == y.shape and x.shape[0] == 100 and diff < 1e-3
-
-    def test_CovariateSequential(self):
-        latent = models.AR(0.0, 0.99, 0.08)
-
-        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.0)), (), norm)
-        obs.add_covariate(lambda v: v)
-
-        x = torch.empty(101)
-        y = torch.empty(x.shape[0] - 1)
-
-        x[0] = latent.i_sample()
-        for t in range(y.shape[0]):
-            x[t + 1] = latent.propagate(x[t])
-            y[t] = obs.propagate(x[t + 1], u=t)
-
-        assert (((y - torch.arange(y.shape[0])) - x[1:]) < 1e-3).all()
-
-    def test_CovariateModel(self):
-        latent = models.AR(0.0, 0.99, 0.08)
-
-        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        obs = AffineObservations((lambda u: u, lambda u: torch.tensor(0.0)), (), norm)
-        obs.add_covariate(lambda v: v)
-
-        mod = StateSpaceModel(latent, obs)
-
-        covariate = torch.arange(100)
-        x, y = mod.sample_path(covariate.shape[0], u=covariate)
-
-        assert (((y - torch.arange(y.shape[0])) - x) < 1e-3).all()
 
     def test_ParametersToFromArray(self):
         priors = Prior(Exponential, rate=10.0), Prior(Normal, loc=0.0, scale=1.0), Prior(Exponential, rate=5.0)

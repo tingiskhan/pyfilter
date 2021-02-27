@@ -1,14 +1,14 @@
-from .base import BaseFilter
 from abc import ABC
-from ..resampling import systematic
-from ..timeseries import LinearGaussianObservations as LGO
-from .proposals import Bootstrap, Proposal, LinearGaussianObservations
+from typing import Tuple, Union, Iterable, Callable
 import torch
-from ..utils import get_ess, normalize, choose
-from .utils import _construct_empty
-from typing import Tuple, Union, Iterable
-from .state import ParticleState
 from torch.distributions import Categorical
+from ..base import BaseFilter
+from ...resampling import systematic
+from ...timeseries import LinearGaussianObservations as LGO
+from .proposals import Bootstrap, Proposal, LinearGaussianObservations
+from ...utils import get_ess, normalize, choose
+from ..utils import _construct_empty
+from .state import ParticleState
 
 
 _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
@@ -19,19 +19,18 @@ class ParticleFilter(BaseFilter, ABC):
         self,
         model,
         particles: int,
-        resampling=systematic,
+        resampling: Callable[[torch.Tensor], torch.Tensor] = systematic,
         proposal: Union[str, Proposal] = "auto",
         ess=0.9,
-        need_grad=False,
         **kwargs
     ):
         """
         Implements the base functionality of a particle filter.
+
         :param particles: How many particles to use
         :param resampling: Which resampling method to use
         :param proposal: Which proposal to use, set to `auto` to let algorithm decide
         :param ess: At which level to resample
-        :param need_grad: Whether we need the gradient'
         :param kwargs: Any key-worded arguments passed to `BaseFilter`
         """
 
@@ -41,7 +40,6 @@ class ParticleFilter(BaseFilter, ABC):
         self._th = ess
 
         self._sumaxis = -(1 + self.ssm.hidden_ndim)
-        self._rsample = need_grad
 
         self._resampler = resampling
 
@@ -85,7 +83,7 @@ class ParticleFilter(BaseFilter, ABC):
         return self
 
     def initialize(self) -> ParticleState:
-        x = self._model.hidden.i_sample(self.particles)
+        x = self._model.hidden.initial_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
         prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1], device=x.device)
 

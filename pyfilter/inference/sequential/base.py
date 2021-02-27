@@ -14,6 +14,7 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     def update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         """
         Performs an update using a single observation `y`.
+
         :param y: The observation
         :param state: The previous state
         :return: Self
@@ -80,6 +81,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def __init__(self, filter_, particles, switch: int, first_kw, second_kw):
         """
         Algorithm combining two other algorithms.
+
         :param switch: After how many observations to perform switch
         """
 

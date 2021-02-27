@@ -8,7 +8,7 @@ from ..utils import TensorTuple
 class FilterResult(Module):
     def __init__(self, init_state: BaseState):
         """
-        Implements a basic object for storing log likelihoods and the filtered means of a filter.
+        Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
         """
         super().__init__()
 
@@ -16,11 +16,11 @@ class FilterResult(Module):
 
         self._filter_means = TensorTuple()
         self._latest_state = init_state
-        self._states = list()   # TODO: Can't really seem to be able to serialize these
+        self._states = list()
 
     @property
     def loglikelihood(self) -> torch.Tensor:
-        return self._loglikelihood
+        return self._buffers["_loglikelihood"]
 
     @property
     def filter_means(self) -> torch.Tensor:
@@ -61,7 +61,7 @@ class FilterResult(Module):
         Resamples the specified indices of self with res.
         """
 
-        self._loglikelihood = self.loglikelihood[inds]
+        self._buffers["_loglikelihood"][:] = self.loglikelihood[inds]
 
         if entire_history:
             for mean in self._filter_means:

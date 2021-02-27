@@ -1,8 +1,8 @@
-from pyfilter.resampling import systematic, residual
-from pyfilter.utils import normalize
 from unittest import TestCase
 import numpy as np
 import torch
+from pyfilter.resampling import systematic
+from pyfilter.utils import normalize
 
 
 def filterpy_systematic_resample(weights, u):

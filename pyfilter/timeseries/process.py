@@ -4,9 +4,11 @@ import torch
 from torch.nn import Parameter
 from functools import lru_cache
 from typing import Tuple, Union, Callable, Optional
-from ..utils import ShapeLike, ArrayType, size_getter, TensorOrDist
 from .base import Base
 from ..distributions import DistributionWrapper, Prior
+from ..typing import ShapeLike, ArrayType
+from .state import TimeseriesState
+from ..utils import size_getter
 
 
 DistOrBuilder = DistributionWrapper
@@ -22,6 +24,7 @@ class StochasticProcess(Base, ABC):
     ):
         """
         The base class for time series.
+
         :param parameters: The parameters governing the dynamics
         :param initial_dist: The initial distribution
         :param increment_dist: The distribution of the increments
@@ -33,7 +36,7 @@ class StochasticProcess(Base, ABC):
         self.init_transform = initial_transform
         self.increment_dist = increment_dist
 
-        self._input_dim = self.ndim
+        self._input_dim = self.n_dim
 
         for i, p in enumerate(parameters):
             name = f"parameter_{i}"
@@ -54,7 +57,7 @@ class StochasticProcess(Base, ABC):
 
     @property
     @lru_cache()
-    def ndim(self):
+    def n_dim(self):
         """
         Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
         """
@@ -63,10 +66,10 @@ class StochasticProcess(Base, ABC):
 
     @property
     @lru_cache()
-    def num_vars(self):
+    def num_vars(self) -> int:
         """
-        Returns the number of variables of the stochastic process. E.g. if it's a univariate process, it returns 1, and
-        the number of elements in the vector/matrix.
+        Returns the number of variables of the stochastic process. E.g. if it's a univariate process it returns 1, and
+        if it's a multivariate process it return the number of elements in the vector or matrix.
         """
 
         dist = self.initial_dist or self.increment_dist
@@ -98,12 +101,9 @@ class StochasticProcess(Base, ABC):
 
         return self
 
-    def i_sample(self, shape: ShapeLike = None, as_dist=False) -> TensorOrDist:
+    def define_initial_density(self, shape: ShapeLike = None) -> Distribution:
         """
-        Samples from the initial distribution.
-        :param shape: The number of samples
-        :param as_dist: Whether to return the new value as a distribution
-        :return: Samples from the initial distribution
+        Defines and returns the initial density.
         """
 
         dist = self.initial_dist().expand(size_getter(shape))
@@ -111,37 +111,42 @@ class StochasticProcess(Base, ABC):
         if self.init_transform is not None:
             dist = self.init_transform(dist, *self.functional_parameters())
 
-        if as_dist:
-            return dist
+        return dist
 
-        return dist.sample()
+    def initial_sample(self, shape: ShapeLike = None) -> TimeseriesState:
+        """
+        Samples a state from the initial distribution.
+        """
 
-    def sample_path(self, steps, samples=None, x_s=None, u=None) -> torch.Tensor:
-        x_s = self.i_sample(samples) if x_s is None else x_s
-        out = torch.zeros(steps, *x_s.shape, device=x_s.device, dtype=x_s.dtype)
-        out[0] = x_s
+        return TimeseriesState(0.0, self.define_initial_density(shape).sample())
 
+    def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
+        x_s = self.initial_sample(samples) if x_s is None else x_s
+
+        res = (x_s,)
         for i in range(1, steps):
-            out[i] = self.propagate(out[i - 1])
+            res += (self.propagate(res[-1]),)
 
-        return out
+        return torch.stack(tuple(r.state for r in res), dim=0)
 
-    def propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None):
+    def propagate_conditional(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> TimeseriesState:
         """
         Propagate the process conditional on both state and draws from incremental distribution.
-        :param x: The previous state
+
+        :param x: The current or previous state, depending on whether it's a hidden or observable process
         :param u: The current draws from the incremental distribution
         :param parameters: Whether to override the parameters that go into the functions with some other values
         """
 
-        return self._propagate_u(x, u, parameters=parameters)
+        return self.propagate_state(self._propagate_conditional(x, u, parameters=parameters), x)
 
-    def _propagate_u(self, x: torch.Tensor, u: torch.Tensor, parameters=None) -> torch.Tensor:
+    def _propagate_conditional(self, x: TimeseriesState, u: torch.Tensor, parameters=None) -> torch.Tensor:
         raise NotImplementedError()
 
-    def prop_apf(self, x: torch.Tensor) -> torch.Tensor:
+    def prop_apf(self, x: TimeseriesState) -> TimeseriesState:
         """
         Method used by APF. Propagates the state one step forward.
+
         :param x: The previous state
         :return: The new state
         """

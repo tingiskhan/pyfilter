@@ -2,7 +2,7 @@ from ..base import BaseBatchAlgorithm
 import torch
 from torch.optim import Adadelta as Adam, Optimizer
 from .approximation import StateMeanField, ParameterMeanField
-from ....timeseries import StateSpaceModel, StochasticProcess
+from ....timeseries import StateSpaceModel, StochasticProcess, BatchedState
 from ....filters import UKF
 from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
@@ -22,10 +22,9 @@ class VariationalBayes(BaseBatchAlgorithm):
         """
         Implements Variational Bayes for stochastic processes implementing either `StateSpaceModel` or
         `StochasticProcess`.
-        :param model: The model
-        :param samples: The number of samples
-        :param optimizer: The optimizer
-        :param max_iter: The maximum number of iterations
+
+        :param samples: The number of samples to use when approximating the mean
+        :param max_iter: The maximum number of iterations for optimizer
         :param optkwargs: Any optimizer specific kwargs
         :param use_filter: Whether to initialize VB with using filtered estimates
         """
@@ -91,9 +90,12 @@ class VariationalBayes(BaseBatchAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            init_dist = self._model.hidden.i_sample(as_dist=True)
+            init_dist = self._model.hidden.define_initial_density()
 
-            logl = (self._model.log_prob(y, x_t) + self._model.hidden.log_prob(x_t, x_tm1)).sum(1)
+            state_t = BatchedState(torch.arange(1, x_t.shape[0]), x_t)
+            state_tm1 = BatchedState(torch.arange(x_t.shape[0] - 1), x_tm1)
+
+            logl = (self._model.log_prob(y, state_t) + self._model.hidden.log_prob(x_t, state_tm1)).sum(1)
             logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
 
             entropy += state.state_approx.entropy()
