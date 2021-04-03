@@ -10,7 +10,7 @@ class PriorModule(Module):
     def register_prior(self, name, prior):
         prior_name = f"{PRIOR_PREFIX}{name}"
         self.add_module(prior_name, prior)
-        self.register_parameter(name, ExtendedParameter(torch.empty(prior.shape), requires_grad=False))
+        self.register_parameter(name, ExtendedParameter(prior().sample(), requires_grad=False))
 
     def parameters_and_priors(self):
         for n, p in self.named_parameters():
