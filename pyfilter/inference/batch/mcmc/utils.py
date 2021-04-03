@@ -4,7 +4,6 @@ from ....constants import INFTY
 
 
 def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> BaseFilter:
-    # ===== Construct and run filter ===== #
     seed_filter = filter_.copy()
 
     num_samples = num_chains * num_seeds
@@ -13,7 +12,6 @@ def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> Ba
 
     res = seed_filter.longfilter(y, bar=False)
 
-    # ===== Find best parameters ===== #
     params = seed_filter.ssm.parameters_to_array()
     log_likelihood = res.loglikelihood
 
@@ -25,7 +23,6 @@ def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> Ba
     num_params = sum(p.get_numel(constrained=True) for p in filter_.ssm.priors())
     best_params = params[best_ll]
 
-    # ===== Set filter parameters ===== #
     filter_.set_nparallel(num_chains)
     filter_.ssm.sample_params((num_chains, 1))
     filter_.ssm.parameters_from_array(best_params.expand(num_chains, num_params))

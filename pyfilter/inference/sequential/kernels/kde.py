@@ -2,11 +2,9 @@ import torch
 from ....utils import get_ess
 from math import sqrt
 from typing import Union
-from ....inference.utils import _construct_mvn
-from torch.distributions import Normal, Independent
 
 
-def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]):
+def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
     """
     Jitters the parameters.
     :param values: The values
@@ -47,7 +45,6 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     :param mean: The mean
     """
 
-    # ===== IQR ===== #
     sort, inds = x.sort(0)
     cumw = w[inds].cumsum(0)
 
@@ -57,7 +54,6 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     iqr = (sort[highind].diag() - sort[lowind].diag()) / 1.349
     iqr2 = iqr ** 2
 
-    # ===== Calculate std regularly ===== #
     w = w.unsqueeze(-1)
 
     if mean is None:
@@ -65,7 +61,6 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
 
     var = (w * (x - mean) ** 2).sum(0)
 
-    # ===== Check which to use ===== #
     mask = iqr2 <= var
 
     if mask.any():
@@ -84,21 +79,19 @@ class KernelDensityEstimate(object):
         self._bw_fac = None
         self._means = None
 
-    def fit(self, x: torch.Tensor, w: torch.Tensor):
+    def fit(self, x: torch.Tensor, w: torch.Tensor) -> "KernelDensityEstimate":
         """
         Fits the KDE.
         :param x: The samples
         :param w: The weights
-        :return: Self
         """
 
         raise NotImplementedError()
 
-    def sample(self, inds: torch.Tensor = None):
+    def sample(self, inds: torch.Tensor = None) -> torch.Tensor:
         """
         Samples from the KDE.
         :param inds: Whether to manually specify the samples chosen
-        :return: New samples
         """
 
         raise NotImplementedError()
@@ -109,15 +102,12 @@ class KernelDensityEstimate(object):
 
 class ShrinkingKernel(KernelDensityEstimate):
     def fit(self, x, w):
-        # ===== Calculate bandwidth ===== #
         ess = self.get_ess(w)
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
-        # ===== Calculate variance ===== #
         mean = (w.unsqueeze(-1) * x).sum(0)
         self._cov = robust_var(x, w, mean)
 
-        # ===== Calculate shrinkage and shrink ===== #
         beta = sqrt(1.0 - self._bw_fac ** 2)
         self._means = mean + beta * (x - mean)
 
@@ -130,14 +120,10 @@ class ShrinkingKernel(KernelDensityEstimate):
 
 class NonShrinkingKernel(ShrinkingKernel):
     def fit(self, x, w):
-        # ===== Calculate bandwidth ===== #
         ess = self.get_ess(w)
         self._bw_fac = 1.59 * ess ** (-1 / 3)
 
-        # ===== Calculate variance ===== #
         self._cov = robust_var(x, w)
-
-        # ===== Calculate shrinkage and shrink ===== #
         self._means = x
 
         return self
@@ -169,11 +155,9 @@ class IndependentGaussian(ShrinkingKernel):
         self._w = None
 
     def fit(self, x, w):
-        # ===== Calculate bandwidth ===== #
         ess = self.get_ess(w)
         self._bw_fac = self._fac(x.shape[-1], ess)
 
-        # ===== Calculate covariance ===== #
         self._cov = robust_var(x, w)
         self._w = w
         self._means = x
@@ -197,29 +181,3 @@ class ConstantKernel(ShrinkingKernel):
         self._cov = torch.ones(self._means.shape[-1], device=self._means.device)
 
         return self
-
-
-# TODO: Not really a KDE...
-class NormalApproximation(KernelDensityEstimate):
-    def __init__(self, independent=True):
-        super().__init__()
-        self._dist = None  # type: torch.distributions.Distribution
-        self._indep = independent
-        self._shape = None
-
-    def fit(self, x, w):
-        self._shape = (x.shape[0],)
-
-        if not self._indep:
-            self._dist = _construct_mvn(x, w)
-            return self
-
-        mean = (w.unsqueeze(-1) * x).sum(0)
-        var = robust_var(x, w, mean)
-
-        self._dist = Independent(Normal(mean, var.sqrt()), 1)
-
-        return self
-
-    def sample(self, inds=None):
-        return self._dist.sample(self._shape)

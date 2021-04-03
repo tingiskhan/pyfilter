@@ -56,14 +56,11 @@ class LinearObservations(StateSpaceModel):
         :param base_dist: The base distribution
         """
 
-        # ===== Convoluted way to decide number of dimensions ===== #
         dim, is_1d = _get_shape(a)
 
-        # ===== Assert distributions make sense ===== #
         if base_dist().event_shape != dim:
             raise ValueError("The distribution is not of correct shape!")
 
-        # ===== Determine propagator function ===== #
         if not is_1d:
             f = f_2d
         elif is_1d and hidden.n_dim > 0:
@@ -87,10 +84,8 @@ class LinearGaussianObservations(LinearObservations):
         :param scale: The variance of the observations
         """
 
-        # ===== Convoluted way to decide number of dimensions ===== #
         dim, is_1d = _get_shape(a)
 
-        # ====== Define distributions ===== #
         if is_1d:
             n = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
