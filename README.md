@@ -3,6 +3,52 @@
 Sequential Monte Carlo and variational inference. It is similar to `pomp`, but implemented in `Python` leveraging
 [`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
 
+## Example
+```python
+from pyfilter.timeseries import AffineEulerMaruyama, LinearGaussianObservations
+import torch
+from pyfilter.distributions import DistributionWrapper
+from torch.distributions import Normal
+import matplotlib.pyplot as plt
+from pyfilter.filters.particle import APF, proposals as p
+
+
+def mean_hidden(x, gamma, sigma):
+    return torch.sin(x.state - gamma)
+
+
+def scale_hidden(x, gamma, sigma):
+    return sigma
+
+
+parameters = 0.0, 0.15
+inc_dist = init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+
+sinus_diffusion = AffineEulerMaruyama(
+    (mean_hidden, scale_hidden),
+    parameters,
+    init_dist,
+    inc_dist,
+    dt=0.1,
+    num_steps=10
+)
+ssm = LinearGaussianObservations(sinus_diffusion, scale=0.1)
+
+x, y = ssm.sample_path(1000)
+
+fig, ax = plt.subplots(2)
+ax[0].plot(x.numpy(), label="True")
+ax[1].plot(y.numpy())
+
+filt = APF(ssm, 1000, proposal=p.Bootstrap())
+filter_result = filt.longfilter(y)
+
+ax[0].plot(filter_result.filter_means.numpy(), label="Filtered")
+ax[0].legend()
+
+plt.show()
+```
+
 ## Installation
 Install the package by typing the following in a `git shell` or similar
 ```
