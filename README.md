@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 from pyfilter.filters.particle import APF, proposals as p
 
 
-def mean_hidden(x, gamma, sigma):
+def drift(x, gamma, sigma):
     return torch.sin(x.state - gamma)
 
 
-def scale_hidden(x, gamma, sigma):
+def diffusion(x, gamma, sigma):
     return sigma
 
 
@@ -25,7 +25,7 @@ parameters = 0.0, 0.15
 inc_dist = init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
 sinus_diffusion = AffineEulerMaruyama(
-    (mean_hidden, scale_hidden),
+    (drift, diffusion),
     parameters,
     init_dist,
     inc_dist,
