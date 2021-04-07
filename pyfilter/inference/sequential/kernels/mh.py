@@ -14,6 +14,7 @@ class ParticleMetropolisHastings(BaseKernel):
     def __init__(self, n_steps=1, proposal: PropConstructor = None, **kwargs):
         """
         Implements a base class for the particle Metropolis Hastings class.
+
         :param n_steps: The number of steps to perform
         """
 
