@@ -11,6 +11,7 @@ from pyfilter.distributions import DistributionWrapper
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
 from pyfilter.filters.particle import APF, proposals as p
+from math import sqrt
 
 
 def drift(x, gamma, sigma):
@@ -21,16 +22,18 @@ def diffusion(x, gamma, sigma):
     return sigma
 
 
-parameters = 0.0, 0.15
-inc_dist = init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+dt = 0.1
+parameters = 0.0, 1.0
+inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+init_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
 sinus_diffusion = AffineEulerMaruyama(
     (drift, diffusion),
     parameters,
     init_dist,
     inc_dist,
-    dt=0.1,
-    num_steps=10
+    dt=dt,
+    num_steps=int(1 / dt)
 )
 ssm = LinearGaussianObservations(sinus_diffusion, scale=0.1)
 
