@@ -7,6 +7,10 @@ from .typing import DistributionOrBuilder, Parameters
 
 
 class Prior(BuilderMixin, Module):
+    """
+    Class representing a Bayesian prior on a parameter.
+    """
+
     def __init__(self, base_dist: DistributionOrBuilder, **parameters: Parameters):
         super().__init__()
 

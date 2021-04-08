@@ -34,18 +34,15 @@ class FilterResult(Module):
     def latest_state(self) -> BaseState:
         return self._latest_state
 
-    def exchange(self, res, inds: torch.Tensor):
+    def exchange(self, res: "FilterResult", inds: torch.Tensor):
         """
         Exchanges the specified indices of self with res.
         :param res: The other filter result
-        :type res: FilterResult
         :param inds: The indices
         """
 
-        # ===== Loglikelihood ===== #
         self._loglikelihood[inds] = res.loglikelihood[inds]
 
-        # ===== Filter means ====== #
         # TODO: Not the best...
         for old_fm, new_fm in zip(self._filter_means, res._filter_means):
             old_fm[inds] = new_fm[inds]

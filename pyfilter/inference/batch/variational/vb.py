@@ -76,7 +76,6 @@ class VariationalBayes(BaseBatchAlgorithm):
         return self
 
     def loss(self, y, state):
-        # ===== Sample parameters ===== #
         self.sample_parameter_approximation(state.param_approx)
         entropy = state.param_approx.entropy()
 

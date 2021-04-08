@@ -3,6 +3,8 @@ from torch.distributions import Distribution
 
 
 class Empirical(Distribution):
+    arg_constraints = {}
+
     def __init__(self, samples: torch.Tensor):
         """
         Helper class for timeseries without an analytical expression.

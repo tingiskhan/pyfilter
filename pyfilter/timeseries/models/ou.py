@@ -13,6 +13,7 @@ class OrnsteinUhlenbeck(AffineProcess):
     def __init__(self, kappa, gamma, sigma, ndim: int, dt: float):
         """
         Implements the Ornstein-Uhlenbeck process.
+
         :param kappa: The reversion parameter
         :param gamma: The mean parameter
         :param sigma: The standard deviation

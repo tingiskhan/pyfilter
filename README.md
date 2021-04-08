@@ -3,6 +3,55 @@
 Sequential Monte Carlo and variational inference. It is similar to `pomp`, but implemented in `Python` leveraging
 [`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
 
+## Example
+```python
+from pyfilter.timeseries import AffineEulerMaruyama, LinearGaussianObservations
+import torch
+from pyfilter.distributions import DistributionWrapper
+from torch.distributions import Normal
+import matplotlib.pyplot as plt
+from pyfilter.filters.particle import APF, proposals as p
+from math import sqrt
+
+
+def drift(x, gamma, sigma):
+    return torch.sin(x.state - gamma)
+
+
+def diffusion(x, gamma, sigma):
+    return sigma
+
+
+dt = 0.1
+parameters = 0.0, 1.0
+inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+init_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
+
+sinus_diffusion = AffineEulerMaruyama(
+    (drift, diffusion),
+    parameters,
+    init_dist,
+    inc_dist,
+    dt=dt,
+    num_steps=int(1 / dt)
+)
+ssm = LinearGaussianObservations(sinus_diffusion, scale=0.1)
+
+x, y = ssm.sample_path(1000)
+
+fig, ax = plt.subplots(2)
+ax[0].plot(x.numpy(), label="True")
+ax[1].plot(y.numpy())
+
+filt = APF(ssm, 1000, proposal=p.Bootstrap())
+filter_result = filt.longfilter(y)
+
+ax[0].plot(filter_result.filter_means.numpy(), label="Filtered")
+ax[0].legend()
+
+plt.show()
+```
+
 ## Installation
 Install the package by typing the following in a `git shell` or similar
 ```

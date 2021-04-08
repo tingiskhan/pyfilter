@@ -23,6 +23,7 @@ class Verhulst(AffineEulerMaruyama):
     def __init__(self, kappa, gamma, sigma, dt, num_steps, **kwargs):
         """
         Defines a Verhulst process.
+
         :param kappa: The reversion parameter
         :param gamma: The mean parameter
         :param sigma: The standard deviation

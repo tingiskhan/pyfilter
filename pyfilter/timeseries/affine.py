@@ -26,8 +26,6 @@ class AffineProcess(StochasticProcess):
         """
 
         super().__init__(parameters, initial_dist, increment_dist, **kwargs)
-
-        # ===== Dynamics ===== #
         self.f, self.g = funcs
 
     def define_density(self, x):
