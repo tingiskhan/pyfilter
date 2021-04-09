@@ -1,7 +1,5 @@
 import torch
 from torch.distributions import Distribution
-
-from . import TimeseriesState
 from .base import Base
 from .process import StochasticProcess
 from typing import Tuple
@@ -32,7 +30,7 @@ class StateSpaceModel(Base):
     def propagate(self, x):
         return self.hidden.propagate(x)
 
-    def define_density(self, x: TimeseriesState) -> Distribution:
+    def define_density(self, x) -> Distribution:
         return self.observable.define_density(x)
 
     def parameters_and_priors(self):
