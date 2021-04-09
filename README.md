@@ -24,8 +24,8 @@ def diffusion(x, gamma, sigma):
 
 dt = 0.1
 parameters = 0.0, 1.0
-inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-init_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
+init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+inc_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
 sinus_diffusion = AffineEulerMaruyama(
     (drift, diffusion),
