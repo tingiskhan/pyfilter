@@ -11,6 +11,10 @@ T = TypeVar("T")
 
 
 class Base(PriorModule):
+    """
+    Defines the base class for the timeseries suite.
+    """
+
     def __init__(self):
         super().__init__()
         self._post_process_state: Callable[[TimeseriesState, TimeseriesState], None] = None
