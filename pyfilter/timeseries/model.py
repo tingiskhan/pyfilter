@@ -1,18 +1,16 @@
 import torch
+from torch.distributions import Distribution
 from .base import Base
 from .process import StochasticProcess
 from typing import Tuple
 
 
 class StateSpaceModel(Base):
+    """
+    Combines a hidden and observable processes to constitute a state-space model.
+    """
+
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
-        """
-        Combines a hidden and observable processes to constitute a state-space model.
-
-        :param hidden: The hidden process(es) constituting the SSM
-        :param observable: The observable process(es) constituting the SSM
-        """
-
         super().__init__()
         self.hidden = hidden
         self.observable = observable
@@ -32,8 +30,8 @@ class StateSpaceModel(Base):
     def propagate(self, x):
         return self.hidden.propagate(x)
 
-    def log_prob(self, y, x):
-        return self.observable.log_prob(y, x)
+    def define_density(self, x) -> Distribution:
+        return self.observable.define_density(x)
 
     def parameters_and_priors(self):
         return tuple(self.hidden.parameters_and_priors()) + tuple(self.observable.parameters_and_priors())
