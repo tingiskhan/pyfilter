@@ -1,7 +1,7 @@
 import torch
 from typing import Union
 from torch.nn import Module, Parameter
-from ..prior_mixin import PriorMixin
+from .prior_mixin import PriorMixin
 from .mixin import BuilderMixin
 from .prior import Prior
 from .typing import DistributionOrBuilder, Parameters

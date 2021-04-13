@@ -3,13 +3,15 @@ import torch
 from copy import deepcopy
 from typing import Tuple, Union, TypeVar, Callable
 from torch.nn import Module
-from ..prior_mixin import PriorMixin
+from ..distributions import PriorMixin
 from .state import TimeseriesState
+from ..typing import ShapeLike
 
 
 T = TypeVar("T")
 
-
+# TODO: Move functionality from process.py to here
+# TODO: Rename this to process and remove process.py
 class Base(PriorMixin, Module):
     """
     Defines the base class for the timeseries suite.
@@ -27,7 +29,8 @@ class Base(PriorMixin, Module):
 
     def log_prob(self, y: torch.Tensor, x: TimeseriesState) -> torch.Tensor:
         """
-        Depending on whether the process is an observable or not, `x` and `y` take on different meanings.
+        Evaluate the log likelihood for y | x. Depending on whether the process is an observable or not, `x` and `y`
+        take on different meanings.
 
         :param y: If observable corresponds to observed data, else the process value at x_t
         :param x: If observable corresponds to process value at x_t, else timeseries value at x_{t-1}
@@ -72,9 +75,7 @@ class Base(PriorMixin, Module):
 
         return self.propagate_state(dist.sample(), x)
 
-    def sample_path(
-        self, steps: int, samples: Union[int, Tuple[int, ...]] = None, x_s: TimeseriesState = None
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, ...]]:
+    def sample_path(self, steps: int, samples: ShapeLike = None, x_s: TimeseriesState = None) -> torch.Tensor:
         """
         Samples a trajectory from the model.
 
@@ -85,15 +86,6 @@ class Base(PriorMixin, Module):
         """
 
         raise NotImplementedError()
-
-    def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
-        """
-        Calculates the prior log-likelihood of the current values of the parameters.
-
-        :param constrained: If you use an unconstrained proposal you need to use `transformed=True`
-        """
-
-        return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
     def copy(self):
         """

@@ -21,7 +21,8 @@ class Proposal(object):
     def _weight_with_kernel(
         self, y: torch.Tensor, x_new: TimeseriesState, hidden_dist: Distribution, kernel: Distribution
     ) -> torch.Tensor:
-        return self._model.log_prob(y, x_new) + hidden_dist.log_prob(x_new.state) - kernel.log_prob(x_new.state)
+        obs_likelihood = self._model.observable.log_prob(y, x_new)
+        return obs_likelihood + hidden_dist.log_prob(x_new.state) - kernel.log_prob(x_new.state)
 
     def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
         raise NotImplementedError()
@@ -34,4 +35,4 @@ class Proposal(object):
         :return: The pre-weights
         """
 
-        return self._model.log_prob(y, self._model.hidden.prop_apf(x))
+        return self._model.observable.log_prob(y, self._model.hidden.prop_apf(x))

@@ -1,13 +1,12 @@
 import torch
-from torch.distributions import Distribution
-from .base import Base
+from torch.nn import Module
 from .process import StochasticProcess
 from typing import Tuple
 
 
-class StateSpaceModel(Base):
+class StateSpaceModel(Module):
     """
-    Combines a hidden and observable processes to constitute a state-space model.
+    Combines a hidden and observable processes to constitute a state space model.
     """
 
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
@@ -16,9 +15,6 @@ class StateSpaceModel(Base):
         self.observable = observable
         self.observable._input_dim = self.hidden_ndim
 
-    def functional_parameters(self):
-        return self.hidden.functional_parameters(), self.observable.functional_parameters()
-
     @property
     def hidden_ndim(self) -> int:
         return self.hidden.n_dim
@@ -26,18 +22,6 @@ class StateSpaceModel(Base):
     @property
     def obs_ndim(self) -> int:
         return self.observable.n_dim
-
-    def propagate(self, x):
-        return self.hidden.propagate(x)
-
-    def define_density(self, x) -> Distribution:
-        return self.observable.define_density(x)
-
-    def parameters_and_priors(self):
-        return tuple(self.hidden.parameters_and_priors()) + tuple(self.observable.parameters_and_priors())
-
-    def priors(self):
-        return tuple(self.hidden.priors()) + tuple(self.observable.priors())
 
     def parameters_to_array(self, constrained=False, as_tuple=False):
         hidden = self.hidden.parameters_to_array(constrained, True)
@@ -80,7 +64,8 @@ class StateSpaceModel(Base):
         :param new_model: The model which to exchange with
         """
 
-        for new_param, self_param in zip(new_model.parameters(), self.parameters()):
-            self_param[indices] = new_param[indices]
+        for self_proc, new_proc in [(self.hidden, new_model.hidden), (self.observable, new_model.observable)]:
+            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
+                self_param[indices] = new_param[indices]
 
         return self

@@ -1,4 +1,6 @@
-from .parameter import ExtendedParameter
+import torch
+from typing import Iterable, Tuple
+from ..parameter import ExtendedParameter
 
 
 PRIOR_PREFIX = "prior__"
@@ -10,7 +12,7 @@ class PriorMixin(object):
         self.add_module(prior_name, prior)
         self.register_parameter(name, ExtendedParameter(prior().sample(), requires_grad=False))
 
-    def parameters_and_priors(self):
+    def parameters_and_priors(self) -> Iterable[Tuple[ExtendedParameter, "DistributionWrapper"]]:
         for n, p in self.named_parameters():
             if "." not in n:
                 yield p, self._modules[f"{PRIOR_PREFIX}{n}"]
@@ -33,3 +35,12 @@ class PriorMixin(object):
             param.sample_(prior, shape)
 
         return self
+
+    def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
+        """
+        Calculates the prior log-likelihood of the current values of the parameters.
+
+        :param constrained: If you use an unconstrained proposal you need to use `transformed=True`
+        """
+
+        return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
