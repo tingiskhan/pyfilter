@@ -1,6 +1,6 @@
 import torch
 from typing import Union
-from torch.nn import Module
+from torch.nn import Module, Parameter
 from ..prior_mixin import PriorMixin
 from .mixin import BuilderMixin
 from .prior import Prior
@@ -21,5 +21,7 @@ class DistributionWrapper(BuilderMixin, PriorMixin, Module):
         for k, v in parameters.items():
             if isinstance(v, Prior):
                 self.register_prior(k, v)
+            elif isinstance(v, Parameter):
+                self.register_parameter(k, v)
             else:
                 self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))

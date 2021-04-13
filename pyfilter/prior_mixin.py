@@ -22,3 +22,14 @@ class PriorMixin(object):
     def priors(self):
         for _, m in self.parameters_and_priors():
             yield m
+
+    # TODO: Fix static type checking
+    def sample_params(self, shape):
+        """
+        Samples the parameters of the model in place.
+        """
+
+        for param, prior in self.parameters_and_priors():
+            param.sample_(prior, shape)
+
+        return self
