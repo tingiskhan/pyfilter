@@ -1,12 +1,10 @@
-from torch.nn import Module
-import torch
 from .parameter import ExtendedParameter
 
 
 PRIOR_PREFIX = "prior__"
 
 
-class PriorModule(Module):
+class PriorMixin(object):
     def register_prior(self, name, prior):
         prior_name = f"{PRIOR_PREFIX}{name}"
         self.add_module(prior_name, prior)

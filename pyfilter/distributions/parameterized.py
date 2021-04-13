@@ -1,12 +1,13 @@
 import torch
 from typing import Union
-from ..prior_module import PriorModule
+from torch.nn import Module
+from ..prior_mixin import PriorMixin
 from .mixin import BuilderMixin
 from .prior import Prior
 from .typing import DistributionOrBuilder, Parameters
 
 
-class DistributionWrapper(BuilderMixin, PriorModule):
+class DistributionWrapper(BuilderMixin, PriorMixin, Module):
     """
     Implements a wrapper around pytorch distributions in order to enable moving distributions between devices.
     """

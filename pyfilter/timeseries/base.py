@@ -2,7 +2,8 @@ from torch.distributions import Distribution
 import torch
 from copy import deepcopy
 from typing import Tuple, Union, TypeVar, Callable
-from ..prior_module import PriorModule
+from torch.nn import Module
+from ..prior_mixin import PriorMixin
 from .state import TimeseriesState
 from ..typing import ShapeLike
 
@@ -10,7 +11,7 @@ from ..typing import ShapeLike
 T = TypeVar("T")
 
 
-class Base(PriorModule):
+class Base(PriorMixin, Module):
     def __init__(self):
         super().__init__()
         self._post_process_state: Callable[[TimeseriesState, TimeseriesState], None] = None
