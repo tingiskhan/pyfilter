@@ -101,7 +101,7 @@ class StochasticProcess(Base, ABC):
 
         return self
 
-    def define_initial_density(self, shape: ShapeLike = None) -> Distribution:
+    def build_initial_density(self, shape: ShapeLike = None) -> Distribution:
         """
         Defines and returns the initial density.
         """
@@ -118,7 +118,7 @@ class StochasticProcess(Base, ABC):
         Samples a state from the initial distribution.
         """
 
-        return TimeseriesState(0.0, self.define_initial_density(shape).sample())
+        return TimeseriesState(0.0, self.build_initial_density(shape).sample())
 
     def sample_path(self, steps, samples=None, x_s=None) -> torch.Tensor:
         x_s = self.initial_sample(samples) if x_s is None else x_s
