@@ -5,7 +5,6 @@ from typing import Tuple, Union, TypeVar, Callable
 from torch.nn import Module
 from ..prior_mixin import PriorMixin
 from .state import TimeseriesState
-from ..typing import ShapeLike
 
 
 T = TypeVar("T")
@@ -21,16 +20,6 @@ class Base(PriorMixin, Module):
 
     def parameters_from_array(self, array: torch.Tensor, transformed=False):
         raise NotImplementedError()
-
-    def sample_params(self, shape: ShapeLike):
-        """
-        Samples the parameters of the model in place.
-        """
-
-        for param, prior in self.parameters_and_priors():
-            param.sample_(prior, shape)
-
-        return self
 
     def log_prob(self, y: torch.Tensor, x: TimeseriesState) -> torch.Tensor:
         """
