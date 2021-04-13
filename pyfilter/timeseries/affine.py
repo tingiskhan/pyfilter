@@ -28,7 +28,7 @@ class AffineProcess(StochasticProcess):
         super().__init__(parameters, initial_dist, increment_dist, **kwargs)
         self.f, self.g = funcs
 
-    def define_density(self, x):
+    def build_density(self, x):
         loc, scale = self._mean_scale(x)
 
         return self._define_transdist(loc, scale)

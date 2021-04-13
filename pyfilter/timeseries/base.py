@@ -36,11 +36,11 @@ class Base(PriorMixin, Module):
         :param x: If observable corresponds to process value at x_t, else timeseries value at x_{t-1}
         """
 
-        dist = self.define_density(x)
+        dist = self.build_density(x)
 
         return dist.log_prob(y)
 
-    def define_density(self, x: TimeseriesState) -> Distribution:
+    def build_density(self, x: TimeseriesState) -> Distribution:
         """
         Method for defining the density used in `propagate`. Differs whether it's an observable or hidden process. If
         it's an observable process this method corresponds to the observation density, whereas for a hidden process it
@@ -71,7 +71,7 @@ class Base(PriorMixin, Module):
         :return: Samples from the model
         """
 
-        dist = self.define_density(x)
+        dist = self.build_density(x)
 
         return self.propagate_state(dist.sample(), x)
 

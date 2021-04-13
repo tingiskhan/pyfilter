@@ -58,7 +58,7 @@ class LinearGaussianObservations(Proposal):
         return params[0], None
 
     def sample_and_weight(self, y, x):
-        hidden_dist: TransformedDistribution = self._model.hidden.define_density(x)
+        hidden_dist: TransformedDistribution = self._model.hidden.build_density(x)
         affine_transform = next(trans for trans in hidden_dist.transforms if isinstance(trans, AffineTransform))
 
         loc, scale = affine_transform.loc, affine_transform.scale

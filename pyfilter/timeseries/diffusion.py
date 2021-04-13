@@ -58,7 +58,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
         super().__init__(parameters, initial_dist, kwargs.pop("increment_dist", None), dt, num_steps, **kwargs)
         self._propagator = prop_state
 
-    def define_density(self, x):
+    def build_density(self, x):
         for i in range(self._ns):
             dist = self._propagator(x, self._dt, *self.functional_parameters())
             x = self.propagate_state(dist.sample(), x, self._dt)
