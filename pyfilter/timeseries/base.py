@@ -2,14 +2,15 @@ from torch.distributions import Distribution
 import torch
 from copy import deepcopy
 from typing import Tuple, Union, TypeVar, Callable
-from ..prior_module import PriorModule
+from torch.nn import Module
+from ..prior_mixin import PriorMixin
 from .state import TimeseriesState
 
 
 T = TypeVar("T")
 
 
-class Base(PriorModule):
+class Base(PriorMixin, Module):
     """
     Defines the base class for the timeseries suite.
     """
