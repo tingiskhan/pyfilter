@@ -45,9 +45,6 @@ class AffineProcess(ParameterizedBase):
 
         self.increment_dist = increment_dist
 
-    def build_initial_density(self):
-        return self._initial_dist
-
     def build_density(self, x):
         loc, scale = self.mean_scale(x)
 
