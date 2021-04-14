@@ -4,7 +4,9 @@ import torch
 from ...distributions import DistributionWrapper
 
 
-def init_trans(dist, kappa, gamma, sigma):
+def init_trans(module: "OrnsteinUhlenbeck", dist):
+    kappa, gamma, sigma = module.functional_parameters()
+
     return TransformedDistribution(dist, AffineTransform(gamma, sigma / (2 * kappa).sqrt()))
 
 
@@ -31,7 +33,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         self._dt = torch.tensor(dt)
 
     def _f(self, x, k, g, s):
-        return g + (x.state - g) * torch.exp(-k * self._dt)
+        return g + (x.values - g) * torch.exp(-k * self._dt)
 
     def _g(self, x, k, g, s):
         return s / (2 * k).sqrt() * (1 - torch.exp(-2 * k * self._dt)).sqrt()

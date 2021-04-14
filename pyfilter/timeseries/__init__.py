@@ -1,3 +1,4 @@
+from .base import Base
 from .affine import AffineProcess, RandomWalk
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
@@ -8,6 +9,7 @@ from .state import TimeseriesState, BatchedState
 
 
 __all__ = [
+    "Base",
     "AffineProcess",
     "RandomWalk",
     "StateSpaceModel",

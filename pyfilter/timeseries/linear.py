@@ -7,7 +7,7 @@ from ..distributions import DistributionWrapper
 
 
 def f_0d(x, a, scale):
-    return a * x.state
+    return a * x.values
 
 
 def f_1d(x, a, scale):
@@ -15,7 +15,7 @@ def f_1d(x, a, scale):
 
 
 def f_2d(x, a, scale):
-    return torch.matmul(a, x.state.unsqueeze(-1))[..., 0]
+    return torch.matmul(a, x.values.unsqueeze(-1))[..., 0]
 
 
 def g(x, a, *scale):

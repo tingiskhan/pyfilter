@@ -1,13 +1,18 @@
 import unittest
 from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, models as m
 import torch
-from torch.distributions import Normal, Exponential, Independent, Binomial, Poisson, Dirichlet
+from torch.distributions import (
+    Normal, Exponential, Independent, Poisson, Distribution, TransformedDistribution, AffineTransform
+)
 import math
 from pyfilter.distributions import DistributionWrapper, Prior
+from pyfilter.timeseries import Base
+from pyfilter.timeseries.state import NewState
+from pyfilter.typing import ShapeLike
 
 
 def f(x, alpha, sigma):
-    return alpha * x.state
+    return alpha * x.values
 
 
 def g(x, alpha, sigma):
@@ -15,44 +20,45 @@ def g(x, alpha, sigma):
 
 
 def f_sde(x, alpha, sigma):
-    return -alpha * x.state
+    return -alpha * x.values
 
 
 def g_sde(x, alpha, sigma):
     return sigma
 
 
-def build_model():
+class CustomModel(Base):
+    def build_density(self, x: NewState) -> Distribution:
+        return Normal(loc=x.values, scale=torch.ones_like(x.values))
+
+
+def build_model(initial_transform=None):
     norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-    return AffineProcess((f, g), (1.0, 1.0), norm, norm)
+    return AffineProcess((f, g), (1.0, 1.0), norm, norm, initial_transform=initial_transform)
 
 
-class Tests(unittest.TestCase):
+class TimeseriesTests(unittest.TestCase):
     def assert_timeseries_sampling(self, steps, model, initial, shape, expected_shape=None):
         samps = [initial]
         for t in range(steps):
             samps.append(model.propagate(samps[-1]))
 
-        samps = torch.stack(tuple(s.state for s in samps))
+        samps = torch.stack(tuple(s.values for s in samps))
         self.assertEqual(samps.size(), torch.Size([steps + 1, *(expected_shape or shape)]))
 
-        # ===== Sample path ===== #
         path = model.sample_path(steps + 1, shape)
         self.assertEqual(samps.shape, path.shape)
 
     def test_LinearNoBatch(self):
-        linear = build_model()
+        custom_model = CustomModel(initial_dist=DistributionWrapper(Normal, loc=0.0, scale=1.0))
 
-        # ===== Initialize ===== #
-        x = linear.initial_sample()
+        x = custom_model.initial_sample()
 
-        # ===== Propagate ===== #
-        self.assert_timeseries_sampling(100, linear, x, ())
+        self.assert_timeseries_sampling(100, custom_model, x, ())
 
     def test_LinearBatch(self):
         linear = build_model()
 
-        # ===== Initialize ===== #
         shape = 1000, 100
         x = linear.initial_sample(shape)
 
@@ -67,9 +73,7 @@ class Tests(unittest.TestCase):
         init = DistributionWrapper(Normal, loc=a, scale=1.0)
         linear = AffineProcess((f, g), (a, 1.0), init, norm)
 
-        # ===== Initialize ===== #
         x = linear.initial_sample(shape)
-
         self.assert_timeseries_sampling(100, linear, x, shape)
 
     def test_MultiDimensional(self):
@@ -81,11 +85,24 @@ class Tests(unittest.TestCase):
         mvn = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=mu, scale=scale)
         mvn = AffineProcess((f, g), (1.0, 1.0), mvn, mvn)
 
-        # ===== Initialize ===== #
         x = mvn.initial_sample(shape)
-
-        # ===== Propagate ===== #
         self.assert_timeseries_sampling(100, mvn, x, shape, (*shape, 2))
+
+    def test_PriorWithDistribution(self):
+        mu = Prior(Normal, loc=0.0, scale=1.0)
+        shape = ()
+
+        def initial_transform(module: AffineProcess, dist):
+            params = module.functional_parameters()
+            return TransformedDistribution(dist, AffineTransform(*params))
+
+        norm = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        model = AffineProcess((f, g), (mu, 1.0), norm, norm, initial_transform=initial_transform)
+
+        x = model.initial_sample(shape)
+
+        self.assertTrue(isinstance(x.dist, TransformedDistribution))
+        self.assert_timeseries_sampling(100, model, x, shape)
 
     def test_OneStepEuler(self):
         shape = 1000, 100
@@ -99,9 +116,7 @@ class Tests(unittest.TestCase):
 
         sde = OneStepEulerMaruyma((f_sde, g_sde), (a, 0.15), init, norm, dt)
 
-        # ===== Initialize ===== #
         x = sde.initial_sample(shape)
-
         self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_OrnsteinUhlenbeck(self):
@@ -110,9 +125,7 @@ class Tests(unittest.TestCase):
         a = 1e-2 * torch.ones((shape[0], 1))
         sde = m.OrnsteinUhlenbeck(a, 0.0, 0.15, 1, dt=1.0)
 
-        # ===== Initialize ===== #
         x = sde.initial_sample(shape)
-
         self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_SDE(self):
@@ -124,58 +137,25 @@ class Tests(unittest.TestCase):
         init = norm = DistributionWrapper(Normal, loc=a, scale=math.sqrt(dt))
         sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
 
-        # ===== Initialize ===== #
         x = sde.initial_sample(shape)
-
-        self.assert_timeseries_sampling(100, sde, x, shape)
-
-    def test_Poisson(self):
-        shape = 10, 100
-
-        a = 1e-2 * torch.ones((shape[0], 1))
-        dt = 1e-2
-        dist = DistributionWrapper(Poisson, rate=dt * 0.1)
-
-        init = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt))
-        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
-
-        # ===== Initialize ===== #
-        x = sde.initial_sample(shape)
-
         self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_ParameterInDistribution(self):
         shape = 10, 100
 
-        a = 1e-2 * torch.ones((shape[0], 1))
         dt = 1e-2
         dist = DistributionWrapper(Normal, loc=0.0, scale=Prior(Exponential, rate=10.0))
 
-        init = DistributionWrapper(Normal, loc=a, scale=1.0)
-        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, dist, dt=dt, num_steps=10)
+        init = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (1.0, 0.15), init, dist, dt=dt, num_steps=10)
 
         sde.sample_params(shape)
 
-        # ===== Initialize ===== #
         x = sde.initial_sample(shape)
-
         self.assert_timeseries_sampling(100, sde, x, shape)
 
     def test_AR(self):
         ar = m.AR(0.0, 0.99, 0.08)
 
         x = ar.sample_path(100)
-
         self.assertEqual(x.shape, torch.Size([100]))
-
-    def test_RegisterPostProcess(self):
-        ar = m.AR(0.0, 0.99, 0.08)
-
-        def post_proc(current, previous):
-            current.register_buffer("previous_state", previous.state)
-
-        ar.register_state_post_process(post_proc)
-        initial = ar.initial_sample()
-        x = ar.propagate(initial)
-
-        self.assertTrue("previous_state" in x._buffers)
