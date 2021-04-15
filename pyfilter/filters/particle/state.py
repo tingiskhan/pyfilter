@@ -1,11 +1,11 @@
 from torch import Tensor
 from ..state import BaseState
 from ...utils import choose, normalize
-from ...timeseries import TimeseriesState
+from ...timeseries import NewState
 
 
 class ParticleState(BaseState):
-    def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_inds: Tensor):
+    def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_inds: Tensor):
         super().__init__()
         self.x = x
         self.register_buffer("w", w)
@@ -14,10 +14,10 @@ class ParticleState(BaseState):
 
     def get_mean(self):
         normw = self.normalized_weights()
-        if self.x.state.dim() == normw.dim() + 1:
-            return (self.x.state * normw.unsqueeze(-1)).sum(-2)
-        elif self.x.state.dim() == normw.dim():
-            return (self.x.state * normw).sum(-1)
+        if self.x.values.dim() == normw.dim() + 1:
+            return (self.x.values * normw.unsqueeze(-1)).sum(-2)
+        elif self.x.values.dim() == normw.dim():
+            return (self.x.values * normw).sum(-1)
 
         raise NotImplementedError()
 
@@ -25,7 +25,7 @@ class ParticleState(BaseState):
         return normalize(self.w)
 
     def resample(self, inds):
-        self.x.state[:] = choose(self.x.state, inds)
+        self.x.values[:] = choose(self.x.values, inds)
         self.w[:] = choose(self.w, inds)
         self.ll[:] = choose(self.ll, inds)
         self.prev_inds[:] = choose(self.prev_inds, inds)
@@ -34,7 +34,7 @@ class ParticleState(BaseState):
         return self.ll
 
     def exchange(self, state, inds):
-        self.x.state[inds] = state.x.state[inds]
+        self.x.values[inds] = state.x.state[inds]
         self.w[inds] = state.w[inds]
         self.ll[inds] = state.ll[inds]
         self.prev_inds[inds] = state.prev_inds[inds]

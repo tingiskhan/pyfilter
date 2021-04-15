@@ -14,7 +14,7 @@ class SISR(ParticleFilter):
         old_normw = state.normalized_weights()
 
         inds, mask = self._resample_state(state.w)
-        state.x.state[:] = choose(state.x.state, inds)
+        state.x.values[:] = choose(state.x.values, inds)
 
         x, weights = self.proposal.sample_and_weight(y, state.x)
 

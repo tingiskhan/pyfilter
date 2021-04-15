@@ -51,11 +51,11 @@ class NewState(object):
     The state object for timeseries.
     """
 
-    def __init__(self, time_index: Union[float, torch.Tensor], distribution: Distribution):
+    def __init__(self, time_index: Union[float, torch.Tensor], distribution: Distribution, values: torch.Tensor = None):
         super().__init__()
         self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
         self.dist = distribution
-        self._values = None
+        self._values = values
 
     @property
     def values(self) -> torch.Tensor:
@@ -77,8 +77,8 @@ class NewState(object):
     def device(self):
         return self.values.device
 
-    def copy(self, dist: Distribution):
-        return NewState(self.time_index, dist)
+    def copy(self, dist: Distribution, values: torch.Tensor = None):
+        return NewState(self.time_index, dist, values=values)
 
     def state_dict(self):
         return {"time_index": self.time_index, "_values": self._values}

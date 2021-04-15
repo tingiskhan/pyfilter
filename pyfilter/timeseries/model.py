@@ -13,7 +13,6 @@ class StateSpaceModel(Module):
         super().__init__()
         self.hidden = hidden
         self.observable = observable
-        self.observable._input_dim = self.hidden_ndim
 
     @property
     def hidden_ndim(self) -> int:
@@ -54,7 +53,7 @@ class StateSpaceModel(Module):
 
             x = self.hidden.propagate(x)
 
-        return torch.stack([t.state for t in hidden]), torch.stack([t.state for t in obs])
+        return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
 
     def exchange(self, indices: torch.Tensor, new_model: "StateSpaceModel"):
         """
