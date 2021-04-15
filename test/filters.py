@@ -72,7 +72,6 @@ class Tests(unittest.TestCase):
 
                 filtmeans = result.filter_means.numpy()
 
-                # ===== Run Kalman ===== #
                 if model is self.model:
                     kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
                 else:
@@ -82,7 +81,7 @@ class Tests(unittest.TestCase):
 
                 f_mean, _ = kf.filter(y.numpy())
 
-                if model.hidden_ndim < 1 and not isinstance(filt, UKF):
+                if model.hidden.n_dim < 1 and not isinstance(filt, UKF):
                     f_mean = f_mean[:, 0]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))

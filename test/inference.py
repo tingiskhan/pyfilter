@@ -10,10 +10,11 @@ from pyfilter.distributions import DistributionWrapper
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
 from pyfilter.inference.batch.mcmc import PMMH
+from pyfilter.inference.utils import parameters_and_priors_from_model
 
 
 def f(x, alpha, sigma):
-    return alpha * x.state
+    return alpha * x.values
 
 
 def g(x, alpha, sigma):
@@ -29,8 +30,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x.state[..., 0]
-    x2 = x.state[..., 1]
+    x1 = alpha * x.values[..., 0]
+    x2 = x.values[..., 1]
     return concater(x1, x2)
 
 
@@ -86,7 +87,9 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
                 w = state.normalized_weights()
 
-                zipped = zip(true_model.hidden.functional_parameters(), alg.filter.ssm.parameters_and_priors())
+                zipped = zip(
+                    true_model.hidden.functional_parameters(), parameters_and_priors_from_model(alg.filter.ssm)
+                )
 
                 for true_p, (p, prior) in zipped:
                     kde = gaussian_kde(prior.get_unconstrained(p).squeeze().numpy(), weights=w.numpy())

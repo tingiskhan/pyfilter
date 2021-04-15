@@ -1,7 +1,8 @@
 import torch
 from torch.nn import Module
-from .process import StochasticProcess
 from typing import Tuple
+from copy import deepcopy
+from .base import Base
 
 
 class StateSpaceModel(Module):
@@ -9,37 +10,10 @@ class StateSpaceModel(Module):
     Combines a hidden and observable processes to constitute a state space model.
     """
 
-    def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
+    def __init__(self, hidden: Base, observable: Base):
         super().__init__()
         self.hidden = hidden
         self.observable = observable
-
-    @property
-    def hidden_ndim(self) -> int:
-        return self.hidden.n_dim
-
-    @property
-    def obs_ndim(self) -> int:
-        return self.observable.n_dim
-
-    def parameters_to_array(self, constrained=False, as_tuple=False):
-        hidden = self.hidden.parameters_to_array(constrained, True)
-        obs = self.observable.parameters_to_array(constrained, True)
-
-        tot = hidden + obs
-
-        if not tot or as_tuple:
-            return tot
-
-        return torch.cat(tot, dim=-1)
-
-    def parameters_from_array(self, array, constrained=False):
-        hid_shape = sum(p.get_numel(constrained) for p in self.hidden.priors())
-
-        self.hidden.parameters_from_array(array[..., :hid_shape], constrained=constrained)
-        self.observable.parameters_from_array(array[..., hid_shape:], constrained=constrained)
-
-        return self
 
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
@@ -68,3 +42,6 @@ class StateSpaceModel(Module):
                 self_param[indices] = new_param[indices]
 
         return self
+
+    def copy(self):
+        return deepcopy(self)

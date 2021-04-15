@@ -52,7 +52,8 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     def sample_params(self):
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.ssm.sample_params(shape)
+        self.filter.ssm.observable.sample_params(shape)
+        self.filter.ssm.hidden.sample_params(shape)
 
     def initialize(self) -> FilteringAlgorithmState:
         self.sample_params()

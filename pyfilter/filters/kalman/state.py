@@ -14,7 +14,7 @@ class KalmanState(BaseState):
         return self.utf.xm
 
     def resample(self, inds):
-        self.utf.mean.state[:] = choose(self.utf.mean.state, inds)
+        self.utf.mean.values[:] = choose(self.utf.mean.values, inds)
         self.utf.cov[:] = choose(self.utf.cov, inds)
 
         self.utf.ym[:] = choose(self.utf.ym, inds)
@@ -26,7 +26,7 @@ class KalmanState(BaseState):
         return self.ll
 
     def exchange(self, state, inds):
-        self.utf.mean.state[inds] = state.utf.mean.state[inds]
+        self.utf.mean.values[inds] = state.utf.mean.values[inds]
         self.utf.cov[inds] = state.utf.cov[inds]
 
         self.utf.ym[inds] = state.utf.ym[inds]

@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import TypeVar, Callable, Union, Tuple
 from torch.nn import Module, Parameter
 from abc import ABC
+from functools import lru_cache
 from ..distributions import DistributionWrapper, Prior, PriorMixin
 from .state import NewState
 from ..typing import ShapeLike
@@ -29,6 +30,7 @@ class Base(Module, ABC):
         self._init_transform = initial_transform
 
     @property
+    @lru_cache(maxsize=None)
     def n_dim(self) -> int:
         """
         Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
@@ -37,6 +39,7 @@ class Base(Module, ABC):
         return len(self._initial_dist().event_shape)
 
     @property
+    @lru_cache(maxsize=None)
     def num_vars(self) -> int:
         """
         Returns the number of variables of the stochastic process. E.g. if it's a univariate process it returns 1, and
@@ -70,7 +73,7 @@ class Base(Module, ABC):
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
         density = self.build_density(x)
 
-        return NewState(x.time_index + time_increment, density)
+        return x.propagate_from(density, time_increment=time_increment)
 
     propagate = forward
 

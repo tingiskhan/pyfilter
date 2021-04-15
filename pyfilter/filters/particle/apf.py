@@ -16,7 +16,7 @@ class APF(ParticleFilter):
         normalized = state.normalized_weights()
 
         resampled_indices = self._resampler(resamp_w)
-        state.x.state[:] = choose(state.x.state, resampled_indices)
+        state.x.values[:] = choose(state.x.values, resampled_indices)
 
         x, weights = self._proposal.sample_and_weight(y, state.x)
 

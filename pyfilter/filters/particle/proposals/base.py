@@ -1,17 +1,18 @@
 import torch
 from torch.distributions import Distribution
-from ....timeseries import StateSpaceModel, NewState
+from typing import Callable
+from ....timeseries import Base, StateSpaceModel, NewState
 
 
 class Proposal(object):
-    def __init__(self):
+    def __init__(self, pre_weight_func: Callable[[Base, NewState], NewState] = None):
         """
         Defines a proposal object for how to draw the particles.
         """
 
         super().__init__()
-
         self._model = None  # type: StateSpaceModel
+        self._pre_weight_func = pre_weight_func
 
     def set_model(self, model: StateSpaceModel):
         self._model = model
@@ -32,5 +33,7 @@ class Proposal(object):
         :param x: The previous state
         :return: The pre-weights
         """
+        new_state = self._pre_weight_func(self._model.hidden, x)
+        y_dist = self._model.observable.build_density(new_state)
 
-        return self._model.observable.log_prob(y, self._model.hidden.prop_apf(x))
+        return y_dist.log_prob(y)

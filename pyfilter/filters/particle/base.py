@@ -39,7 +39,7 @@ class ParticleFilter(BaseFilter, ABC):
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self._th = ess
 
-        self._sumaxis = -(1 + self.ssm.hidden_ndim)
+        self._sumaxis = -(1 + self.ssm.hidden.n_dim)
 
         self._resampler = resampling
 

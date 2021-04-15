@@ -46,7 +46,7 @@ class BatchedState(TimeseriesState):
 
 
 # TODO: Rename to TimeseriesState/ProcessState
-class NewState(object):
+class NewState(Module):
     """
     The state object for timeseries.
     """
@@ -80,13 +80,5 @@ class NewState(object):
     def copy(self, dist: Distribution, values: torch.Tensor = None):
         return NewState(self.time_index, dist, values=values)
 
-    def state_dict(self):
-        return {"time_index": self.time_index, "_values": self._values}
-
-    def to(self, device: str):
-        self.time_index = self.time_index.to(device)
-
-        if self._values is None:
-            return
-
-        self._values = self._values.to(device)
+    def propagate_from(self, dist: Distribution, values: torch.Tensor = None, time_increment=1.0):
+        return NewState(self.time_index + time_increment, dist, values)

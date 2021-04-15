@@ -59,8 +59,9 @@ class AffineProcess(ParameterizedBase):
         params = parameters or self.functional_parameters()
         return self.f(x, *params), self.g(x, *params)
 
-    def prop_apf(self, x):
-        return self.propagate_state(self.f(x, *self.functional_parameters()), x)
+    def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None) -> NewState:
+        loc, scale = self.mean_scale(x, parameters=parameters)
+        return x.propagate_from(None, loc + scale * u)
 
 
 def _f(x, s):

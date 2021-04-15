@@ -1,21 +1,21 @@
 import torch
 from typing import Tuple
-from ....timeseries import StochasticProcess, TimeseriesState
+from ....timeseries import Base, NewState
 
 
 def propagate_sps(
-    spx: TimeseriesState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
+    spx: NewState, spn: torch.Tensor, process: Base, temp_params: Tuple[torch.Tensor, ...]
 ):
     is_multidimensional = process.n_dim > 0
 
     if not is_multidimensional:
-        spx = spx.copy(spx.state.squeeze(-1))
+        spx = spx.copy(None, spx.values.squeeze(-1))
         spn = spn.squeeze(-1)
 
     res = process.propagate_conditional(spx, u=spn, parameters=temp_params)
 
     if not is_multidimensional:
-        res.state.unsqueeze_(-1)
+        res.values.unsqueeze_(-1)
 
     return res
 

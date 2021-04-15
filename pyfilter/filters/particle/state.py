@@ -34,7 +34,7 @@ class ParticleState(BaseState):
         return self.ll
 
     def exchange(self, state, inds):
-        self.x.values[inds] = state.x.state[inds]
+        self.x.values[inds] = state.x.values[inds]
         self.w[inds] = state.w[inds]
         self.ll[inds] = state.ll[inds]
         self.prev_inds[inds] = state.prev_inds[inds]

@@ -25,8 +25,7 @@ class OneStepEulerMaruyma(AffineProcess):
 
 class StochasticDifferentialEquation(ParameterizedBase, ABC):
     """
-    Base class for stochastic differential equations. Note that the incremental distribution should include the `dt`
-    term as this is not done automatically.
+    Base class for stochastic differential equations.
     """
 
     def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, num_steps=1, **kwargs):
@@ -68,7 +67,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
 class AffineEulerMaruyama(EulerMaruyama):
     """
     Euler-Maruyama method for SDEs of affine nature. A generalization of `OneStepMaruyama` that allows multiple
-    recursions.
+    recursions. Note that the incremental distribution should include the `dt` term as this is not done automatically.
     """
 
     def __init__(
@@ -90,7 +89,7 @@ class AffineEulerMaruyama(EulerMaruyama):
 
         return _define_transdist(x.values + f, g, self.n_dim, self.increment_dist())
 
-    def _propagate_conditional(self, x, u, parameters=None):
+    def propagate_conditional(self, x, u, parameters=None):
         params = parameters or self.functional_parameters()
         for i in range(self._ns):
             f = self.f(x, *params) * self._dt

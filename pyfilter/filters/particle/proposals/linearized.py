@@ -18,26 +18,30 @@ class Linearized(Proposal):
         super().__init__()
         self._alpha = alpha
         self._n_steps = n_steps
+        self._is1d = None
 
     def set_model(self, model):
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
             raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
 
         self._model = model
+        self._is1d = self._model.hidden.n_dim == 0
 
         return self
 
     def sample_and_weight(self, y, x):
-        hidden_dist: TransformedDistribution = self._model.hidden.build_density(x)
-        affine_transform = next(trans for trans in hidden_dist.transforms if isinstance(trans, AffineTransform))
+        new_x = self._model.hidden.propagate(x)
+        affine_transform = next(trans for trans in new_x.dist.transforms if isinstance(trans, AffineTransform))
 
         h_loc, h_scale = affine_transform.loc[:], affine_transform.scale[:]
-        state = self._model.hidden.propagate_state(h_loc, x)
+        new_x.values = h_loc
 
         for _ in range(self._n_steps):
             h_loc.requires_grad_(True)
 
-            logl = self._model.observable.log_prob(y, state) + hidden_dist.log_prob(h_loc)
+            y_dist = self._model.observable.build_density(new_x)
+
+            logl = y_dist.log_prob(y) + new_x.dist.log_prob(h_loc)
             g = grad(logl, h_loc, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
 
             if self._alpha is None:
@@ -48,15 +52,15 @@ class Linearized(Proposal):
                 step = self._alpha
 
             h_loc = h_loc.detach() + step * g.detach()
-            state = state.copy(h_loc)
+            new_x = new_x.copy(new_x.dist, h_loc)
 
         mean = h_loc.detach()
 
-        if self._model.hidden_ndim == 0:
+        if self._is1d:
             kernel = Normal(mean, std)
         else:
-            kernel = Independent(Normal(mean, std), self._model.hidden_ndim)
+            kernel = Independent(Normal(mean, std), self._model.hidden.n_dim)
 
-        new_x = self._model.hidden.propagate_state(kernel.sample(), x)
+        new_x = new_x.copy(new_x.dist, kernel.sample())
 
-        return new_x, self._weight_with_kernel(y, new_x, hidden_dist, kernel)
+        return new_x, self._weight_with_kernel(y, new_x, kernel)

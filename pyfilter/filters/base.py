@@ -107,8 +107,9 @@ class BaseFilter(Module, ABC):
         :return: Self
         """
 
-        for p, prior in self.ssm.parameters_and_priors():
-            p.update_values(choose(p, inds), prior, constrained=True)
+        for m in [self.ssm.hidden, self.ssm.observable]:
+            for p in m.parameters():
+                p[:] = choose(p, inds)
 
         return self
 

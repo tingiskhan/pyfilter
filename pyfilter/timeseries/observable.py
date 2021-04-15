@@ -1,3 +1,4 @@
+from functools import lru_cache
 from .affine import AffineProcess
 
 
@@ -15,10 +16,12 @@ class AffineObservations(AffineProcess):
         raise NotImplementedError("Cannot sample from Observable only!")
 
     @property
+    @lru_cache(maxsize=None)
     def n_dim(self) -> int:
         return len(self.increment_dist().event_shape)
 
     @property
+    @lru_cache(maxsize=None)
     def num_vars(self) -> int:
         return self.increment_dist().event_shape.numel()
 

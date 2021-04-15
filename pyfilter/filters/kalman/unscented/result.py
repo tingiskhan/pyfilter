@@ -1,13 +1,13 @@
 import torch
 from torch.distributions import Normal, MultivariateNormal
 from torch.nn import Module
-from ....timeseries import TimeseriesState
+from ....timeseries import NewState
 from .utils import get_meancov
 
 
 class UFTCorrectionResult(Module):
     def __init__(
-        self, mean: TimeseriesState, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor
+        self, mean: NewState, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor
     ):
         super().__init__()
         self.register_buffer("ym", ym)
@@ -19,7 +19,7 @@ class UFTCorrectionResult(Module):
 
     @property
     def xm(self):
-        return self._modules["mean"].state[..., self._state_slice]
+        return self._modules["mean"].values[..., self._state_slice]
 
     @property
     def xc(self):
@@ -41,9 +41,9 @@ class UFTCorrectionResult(Module):
     def calculate_sigma_points(self, cov_scale: float):
         cholcov = cov_scale * torch.cholesky(self._buffers["cov"])
 
-        spx = self._modules["mean"].state.unsqueeze(-2)
-        sph = self._modules["mean"].state[..., None, :] + cholcov
-        spy = self._modules["mean"].state[..., None, :] - cholcov
+        spx = self._modules["mean"].values.unsqueeze(-2)
+        sph = self._modules["mean"].values[..., None, :] + cholcov
+        spy = self._modules["mean"].values[..., None, :] - cholcov
 
         return torch.cat((spx, sph, spy), -2)
 
@@ -58,13 +58,13 @@ class AggregatedResult(Module):
 
 
 class UFTPredictionResult(Module):
-    def __init__(self, spx: TimeseriesState, spy: TimeseriesState):
+    def __init__(self, spx: NewState, spy: NewState):
         super().__init__()
         self.spx = spx
         self.spy = spy
 
     def get_mean_and_covariance(self, wm: torch.Tensor, wc: torch.Tensor) -> AggregatedResult:
-        x_m, x_c = get_meancov(self.spx.state, wm, wc)
-        y_m, y_c = get_meancov(self.spy.state, wm, wc)
+        x_m, x_c = get_meancov(self.spx.values, wm, wc)
+        y_m, y_c = get_meancov(self.spy.values, wm, wc)
 
         return AggregatedResult(x_m, x_c, y_m, y_c)
