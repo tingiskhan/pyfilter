@@ -48,6 +48,10 @@ class Base(Module, ABC):
 
         return self._initial_dist().event_shape.numel()
 
+    @property
+    def initial_dist(self) -> Distribution:
+        return self._initial_dist()
+
     def initial_sample(self, shape: ShapeLike = None) -> NewState:
         """
         Samples a state from the initial distribution.

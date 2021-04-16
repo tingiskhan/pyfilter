@@ -4,55 +4,23 @@ from typing import Union
 from torch.distributions import Distribution
 
 
-# TODO: Deprecate when done with NewState
-class TimeseriesState(Module):
-    def __init__(self, time_index: Union[float, torch.Tensor], state: torch.Tensor):
-        super(TimeseriesState, self).__init__()
-        self.register_buffer(
-            "_time_index", time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
-        )
-        self.register_buffer("_state", state)
-
-    @property
-    def time_index(self) -> torch.Tensor:
-        return self._buffers["_time_index"]
-
-    @time_index.setter
-    def time_index(self, x):
-        self._buffers["_time_index"] = x
-
-    @property
-    def state(self) -> torch.Tensor:
-        return self._buffers["_state"]
-
-    @state.setter
-    def state(self, x):
-        self._buffers["_state"] = x
-
-    @property
-    def shape(self):
-        return self.state.shape
-
-    @property
-    def device(self):
-        return self.state.device
-
-    def copy(self, new_values: torch.Tensor):
-        return TimeseriesState(self.time_index, new_values)
-
-
-class BatchedState(TimeseriesState):
-    pass
-
-
 # TODO: Rename to TimeseriesState/ProcessState
 class NewState(Module):
     """
     The state object for timeseries.
     """
 
-    def __init__(self, time_index: Union[float, torch.Tensor], distribution: Distribution, values: torch.Tensor = None):
+    def __init__(
+            self,
+            time_index: Union[float, torch.Tensor],
+            distribution: Distribution = None,
+            values: torch.Tensor = None
+    ):
         super().__init__()
+
+        if distribution is None and values is None:
+            raise Exception("Both `distribution` and `values` cannot be `None`!")
+
         self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
         self.dist = distribution
         self._values = values

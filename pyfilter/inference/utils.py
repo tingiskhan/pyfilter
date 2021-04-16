@@ -53,6 +53,10 @@ def parameters_and_priors_from_model(model: StateSpaceModel) -> Iterable[Tuple[E
     return tuple(model.hidden.parameters_and_priors()) + tuple(model.observable.parameters_and_priors())
 
 
+def priors_from_model(model: StateSpaceModel):
+    return tuple(prior for (p, prior) in parameters_and_priors_from_model(model))
+
+
 def params_to_tensor(model: StateSpaceModel, constrained=False) -> torch.Tensor:
     parameters_and_priors = parameters_and_priors_from_model(model)
 

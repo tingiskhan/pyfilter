@@ -1,7 +1,7 @@
 from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
-from .....timeseries import StochasticProcess
+from .....timeseries import Base
 from .....distributions import Prior
 from typing import Tuple
 
@@ -13,7 +13,7 @@ class StateMeanField(BaseApproximation):
         self._log_std = None
         self._dim = None
 
-    def initialize(self, data, model: StochasticProcess, *args):
+    def initialize(self, data, model: Base, *args):
         self._mean = torch.zeros((data.shape[0] + 1, *model.increment_dist().event_shape), requires_grad=True)
         self._log_std = torch.zeros_like(self._mean, requires_grad=True)
         self._dim = model.n_dim

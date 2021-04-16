@@ -1,22 +1,23 @@
-from ..base import BaseBatchAlgorithm
 import torch
+from typing import Type, Union, Optional, Any, Dict
 from torch.optim import Adadelta as Adam, Optimizer
 from .approximation import StateMeanField, ParameterMeanField
-from ....timeseries import StateSpaceModel, StochasticProcess, BatchedState
-from ....filters import UKF
-from typing import Type, Union, Optional, Any, Dict
 from .state import VariationalState
+from ..base import BaseBatchAlgorithm
+from ...utils import priors_from_model, params_to_tensor, params_from_tensor, eval_prior_log_prob
+from ....timeseries import StateSpaceModel, Base, NewState
+from ....filters import UKF
 from ....constants import EPS
 
 
 class VariationalBayes(BaseBatchAlgorithm):
     def __init__(
         self,
-        model: Union[StateSpaceModel, StochasticProcess],
+        model: Union[StateSpaceModel, Base],
         samples=4,
         optimizer: Type[Optimizer] = Adam,
         max_iter=30e3,
-        optkwargs: Optional[Dict[str, Any]] = None,
+        opt_kwargs: Optional[Dict[str, Any]] = None,
         use_filter=True,
     ):
         """
@@ -25,7 +26,7 @@ class VariationalBayes(BaseBatchAlgorithm):
 
         :param samples: The number of samples to use when approximating the mean
         :param max_iter: The maximum number of iterations for optimizer
-        :param optkwargs: Any optimizer specific kwargs
+        :param opt_kwargs: Any optimizer specific kwargs
         :param use_filter: Whether to initialize VB with using filtered estimates
         """
 
@@ -36,8 +37,7 @@ class VariationalBayes(BaseBatchAlgorithm):
         self._use_filter = use_filter
 
         self._opt_type = optimizer
-        self._optimizer = None
-        self.optkwargs = optkwargs or dict()
+        self.opt_kwargs = opt_kwargs or dict()
 
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss) ** 2) ** 0.5 < EPS
@@ -71,7 +71,7 @@ class VariationalBayes(BaseBatchAlgorithm):
         for p in self._model.parameters():
             p.detach_()
 
-        self._model.parameters_from_array(params, constrained=False)
+        params_from_tensor(self._model, params, constrained=False)
 
         return self
 
@@ -85,24 +85,25 @@ class VariationalBayes(BaseBatchAlgorithm):
             x_t = transformed[:, 1:]
             x_tm1 = transformed[:, :-1]
 
-            if self._model.hidden_ndim < 1:
+            if self._model.hidden.n_dim < 1:
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            init_dist = self._model.hidden.build_initial_density()
+            state_t = NewState(torch.arange(1, x_t.shape[0]), values=x_t)
+            state_tm1 = NewState(torch.arange(x_t.shape[0] - 1), values=x_tm1)
 
-            state_t = BatchedState(torch.arange(1, x_t.shape[0]), x_t)
-            state_tm1 = BatchedState(torch.arange(x_t.shape[0] - 1), x_tm1)
+            x_dist = self._model.hidden.build_density(state_tm1)
+            y_dist = self._model.observable.build_density(state_t)
 
-            logl = (self._model.log_prob(y, state_t) + self._model.hidden.log_prob(x_t, state_tm1)).sum(1)
-            logl += init_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
+            log_likelihood = (y_dist.log_prob(y) + x_dist.log_prob(x_t)).sum(1)
+            log_likelihood += self._model.hidden.initial_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
 
             entropy += state.state_approx.entropy()
 
         else:
-            logl = self._model.log_prob(y[1:], y[:-1]).sum(1)
+            log_likelihood = self._model.log_prob(y[1:], y[:-1]).sum(1)
 
-        return -(logl.mean(0) + self._model.eval_prior_log_prob(constrained=False).mean() + entropy)
+        return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).mean() + entropy)
 
     def _seed_init_path(self, y) -> [int, torch.Tensor]:
         filt = UKF(self._model.copy()).set_nparallel(self._ns)
@@ -115,9 +116,10 @@ class VariationalBayes(BaseBatchAlgorithm):
         return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
-        self._model.sample_params((self._ns, 1))
+        self._model.hidden.sample_params((self._ns, 1))
+        self._model.observable.sample_params((self._ns, 1))
 
-        param_approx.initialize(self._model.priors())
+        param_approx.initialize(priors_from_model(self._model))
         opt_params = param_approx.get_parameters()
 
         if isinstance(self._model, StateSpaceModel):
@@ -127,11 +129,11 @@ class VariationalBayes(BaseBatchAlgorithm):
                 maxind, means = self._seed_init_path(y)
 
                 state_approx._mean.data[:] = means
-                param_approx._mean.data[:] = self._model.parameters_to_array(constrained=False)[maxind]
+                param_approx._mean.data[:] = params_to_tensor(self._model, constrained=False)[maxind]
 
             opt_params += state_approx.get_parameters()
 
-        optimizer = self._opt_type(opt_params, **self.optkwargs)
+        optimizer = self._opt_type(opt_params, **self.opt_kwargs)
 
         return VariationalState(False, float("inf"), 0, param_approx, optimizer, state_approx)
 
