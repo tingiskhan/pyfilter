@@ -9,8 +9,8 @@ class Empirical(Distribution):
 
     arg_constraints = {}
 
-    def __init__(self, samples: torch.Tensor):
-        super().__init__()
+    def __init__(self, samples: torch.Tensor, **kwargs):
+        super().__init__(**kwargs)
         self._samples = samples
 
     def sample(self, sample_shape=torch.Size()):

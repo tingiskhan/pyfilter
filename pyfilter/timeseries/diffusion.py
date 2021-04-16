@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Tuple
 from .affine import AffineProcess, MeanOrScaleFun
 from .stochasticprocess import ParameterizedStochasticProcess
-from ..distributions import DistributionWrapper
+from ..distributions import DistributionWrapper, Empirical
 from .typing import DiffusionFunction
 
 
@@ -101,3 +101,13 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
             x = super(AffineEulerMaruyama, self).propagate_conditional(x, u, parameters, time_increment)
 
         return x
+
+
+class Euler(AffineEulerMaruyama):
+    """
+    Implements the standard Euler scheme for an ODE.
+    """
+
+    def __init__(self, dynamics: MeanOrScaleFun, parameters, initial_dist, dt, **kwargs):
+        emp = DistributionWrapper(Empirical, samples=torch.empty(initial_dist().event_shape))
+        super().__init__((dynamics, lambda *args: 0.0), parameters, initial_dist, emp, dt, **kwargs)
