@@ -15,7 +15,7 @@ T = TypeVar("T")
 
 # TODO: Move functionality from process.py to here
 # TODO: Rename this to process and remove process.py
-class Base(Module, ABC):
+class StochasticProcess(Module, ABC):
     """
     Defines the base class for stochastic processes
     """
@@ -23,7 +23,7 @@ class Base(Module, ABC):
     def __init__(
             self,
             initial_dist: DistributionWrapper,
-            initial_transform: Union[Callable[["Base", Distribution], Distribution], None] = None
+            initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None
     ):
         super().__init__()
         self._initial_dist = initial_dist
@@ -106,7 +106,7 @@ class Base(Module, ABC):
 
         return deepcopy(self)
 
-    def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None) -> NewState:
+    def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None, time_increment=1.0) -> NewState:
         """
         Propagate the process conditional on both state and draws from incremental distribution.
 
@@ -118,7 +118,7 @@ class Base(Module, ABC):
         raise NotImplementedError()
 
 
-class ParameterizedBase(PriorMixin, Base, ABC):
+class ParameterizedStochasticProcess(PriorMixin, StochasticProcess, ABC):
     """
     Implements a stochastic process that has functional parameters, i.e. dynamics where the parameters directly
     influence the distribution.

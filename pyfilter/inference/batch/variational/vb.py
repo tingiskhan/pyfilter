@@ -5,7 +5,7 @@ from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import BaseBatchAlgorithm
 from ...utils import priors_from_model, params_to_tensor, params_from_tensor, eval_prior_log_prob
-from ....timeseries import StateSpaceModel, Base, NewState
+from ....timeseries import StateSpaceModel, StochasticProcess, NewState
 from ....filters import UKF
 from ....constants import EPS
 
@@ -13,7 +13,7 @@ from ....constants import EPS
 class VariationalBayes(BaseBatchAlgorithm):
     def __init__(
         self,
-        model: Union[StateSpaceModel, Base],
+        model: Union[StateSpaceModel, StochasticProcess],
         samples=4,
         optimizer: Type[Optimizer] = Adam,
         max_iter=30e3,
@@ -128,8 +128,8 @@ class VariationalBayes(BaseBatchAlgorithm):
             if self._use_filter:
                 maxind, means = self._seed_init_path(y)
 
-                state_approx._mean.data[:] = means
-                param_approx._mean.data[:] = params_to_tensor(self._model, constrained=False)[maxind]
+                state_approx.mean.data[:] = means
+                param_approx.mean.data[:] = params_to_tensor(self._model, constrained=False)[maxind]
 
             opt_params += state_approx.get_parameters()
 

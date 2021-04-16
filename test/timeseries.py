@@ -6,7 +6,7 @@ from torch.distributions import (
 )
 import math
 from pyfilter.distributions import DistributionWrapper, Prior
-from pyfilter.timeseries import Base
+from pyfilter.timeseries import StochasticProcess
 from pyfilter.timeseries.state import NewState
 from pyfilter.typing import ShapeLike
 
@@ -27,7 +27,7 @@ def g_sde(x, alpha, sigma):
     return sigma
 
 
-class CustomModel(Base):
+class CustomModel(StochasticProcess):
     def build_density(self, x: NewState) -> Distribution:
         return Normal(loc=x.values, scale=torch.ones_like(x.values))
 

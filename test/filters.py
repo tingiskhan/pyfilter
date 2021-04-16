@@ -111,7 +111,7 @@ class Tests(unittest.TestCase):
 
     def test_SDE(self):
         def f(x, a, s):
-            return -a * x.state
+            return -a * x.values
 
         def g(x, a, s):
             return s

@@ -1,8 +1,7 @@
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Union
-from torch.nn import Parameter
-from .base import ParameterizedBase
+from .stochasticprocess import ParameterizedStochasticProcess
 from ..distributions import DistributionWrapper
 from .typing import MeanOrScaleFun
 from .state import NewState
@@ -23,7 +22,7 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
     return TransformedDistribution(dist.expand(shape), AffineTransform(loc, scale, event_dim=n_dim))
 
 
-class AffineProcess(ParameterizedBase):
+class AffineProcess(ParameterizedStochasticProcess):
     def __init__(
             self,
             funcs: Tuple[MeanOrScaleFun, ...],
@@ -59,9 +58,9 @@ class AffineProcess(ParameterizedBase):
         params = parameters or self.functional_parameters()
         return self.f(x, *params), self.g(x, *params)
 
-    def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None) -> NewState:
+    def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None, time_increment=1.0) -> NewState:
         loc, scale = self.mean_scale(x, parameters=parameters)
-        return x.propagate_from(None, loc + scale * u)
+        return x.propagate_from(None, loc + scale * u, time_increment=time_increment)
 
 
 def _f(x, s):

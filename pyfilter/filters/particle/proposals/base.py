@@ -1,11 +1,12 @@
 import torch
 from torch.distributions import Distribution
 from typing import Callable
-from ....timeseries import Base, StateSpaceModel, NewState
+from .pre_weight_funcs import get_pre_weight_func
+from ....timeseries import StochasticProcess, StateSpaceModel, NewState
 
 
 class Proposal(object):
-    def __init__(self, pre_weight_func: Callable[[Base, NewState], NewState] = None):
+    def __init__(self, pre_weight_func: Callable[[StochasticProcess, NewState], NewState] = None):
         """
         Defines a proposal object for how to draw the particles.
         """
@@ -16,6 +17,7 @@ class Proposal(object):
 
     def set_model(self, model: StateSpaceModel):
         self._model = model
+        self._pre_weight_func = get_pre_weight_func(self._pre_weight_func, model.hidden)
 
         return self
 
@@ -29,10 +31,12 @@ class Proposal(object):
     def pre_weight(self, y: torch.Tensor, x: NewState):
         """
         Pre-weights the sample, used in APF.
+
         :param y: The next observed value
         :param x: The previous state
         :return: The pre-weights
         """
+
         new_state = self._pre_weight_func(self._model.hidden, x)
         y_dist = self._model.observable.build_density(new_state)
 

@@ -16,7 +16,7 @@ PropConstructor = Callable[[AlgorithmState, BaseFilter, torch.Tensor], Distribut
 
 def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     """
-    Constructs a multivariate normal distribution of weighted samples.
+    Constructs a multivariate normal distribution from weighted samples.
     """
 
     mean = (x * w.unsqueeze(-1)).sum(0)
@@ -49,11 +49,11 @@ def preliminary(func):
     return wrapper
 
 
-def parameters_and_priors_from_model(model: StateSpaceModel) -> Iterable[Tuple[ExtendedParameter, Prior]]:
+def parameters_and_priors_from_model(model: StateSpaceModel) -> Tuple[Tuple[ExtendedParameter, Prior], ...]:
     return tuple(model.hidden.parameters_and_priors()) + tuple(model.observable.parameters_and_priors())
 
 
-def priors_from_model(model: StateSpaceModel):
+def priors_from_model(model: StateSpaceModel) -> Tuple[Prior, ...]:
     return tuple(prior for (p, prior) in parameters_and_priors_from_model(model))
 
 

@@ -9,8 +9,7 @@ from ....utils import construct_diag_from_flat
 class LinearGaussianObservations(Proposal):
     """
     Proposal designed for cases when the observation density is a linear combination of the states, and has a Gaussian
-    density. Note that in order for this to work for multi-dimensional models you must use matrices to form the
-    combination.
+    density. Note that your state space model must of type `LinearGaussianObservations` in order to use this proposal.
     """
 
     def __init__(self):

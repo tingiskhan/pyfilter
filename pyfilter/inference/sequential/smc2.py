@@ -68,7 +68,7 @@ class SMC2(SequentialParticleAlgorithm):
         if self._increases >= self._max_increases:
             raise Exception(f"Configuration only allows {self._max_increases}!")
 
-        self.filter._particles[-1] *= 2
+        self.filter.particles[-1] *= 2
         self.filter.set_nparallel(*self.particles)
 
         fstate = self.filter.longfilter(state.parsed_data, bar=False)

@@ -1,10 +1,10 @@
 import torch
 from typing import Tuple
-from ....timeseries import Base, NewState
+from ....timeseries import StochasticProcess, NewState
 
 
 def propagate_sps(
-    spx: NewState, spn: torch.Tensor, process: Base, temp_params: Tuple[torch.Tensor, ...]
+    spx: NewState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
 ):
     is_multidimensional = process.n_dim > 0
 

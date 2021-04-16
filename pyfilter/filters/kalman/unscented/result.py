@@ -39,11 +39,11 @@ class UFTCorrectionResult(Module):
         return self._helper(self.ym, self.yc)
 
     def calculate_sigma_points(self, cov_scale: float):
-        cholcov = cov_scale * torch.cholesky(self._buffers["cov"])
+        choleskied_cov = cov_scale * torch.cholesky(self._buffers["cov"])
 
         spx = self._modules["mean"].values.unsqueeze(-2)
-        sph = self._modules["mean"].values[..., None, :] + cholcov
-        spy = self._modules["mean"].values[..., None, :] - cholcov
+        sph = self._modules["mean"].values[..., None, :] + choleskied_cov
+        spy = self._modules["mean"].values[..., None, :] - choleskied_cov
 
         return torch.cat((spx, sph, spy), -2)
 

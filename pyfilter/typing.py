@@ -4,5 +4,5 @@ import torch
 from .distributions import Prior
 
 
-ArrayType = Union[float, int, np.ndarray, Prior]
+ArrayType = Union[float, int, np.ndarray, Prior, torch.Tensor]
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]

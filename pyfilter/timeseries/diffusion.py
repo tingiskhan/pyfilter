@@ -1,8 +1,8 @@
 import torch
 from abc import ABC
 from typing import Tuple
-from .affine import AffineProcess, MeanOrScaleFun, _define_transdist
-from .base import ParameterizedBase
+from .affine import AffineProcess, MeanOrScaleFun
+from .stochasticprocess import ParameterizedStochasticProcess
 from ..distributions import DistributionWrapper
 from .typing import DiffusionFunction
 
@@ -23,7 +23,7 @@ class OneStepEulerMaruyma(AffineProcess):
         return x.values + drift * self._dt, diffusion
 
 
-class StochasticDifferentialEquation(ParameterizedBase, ABC):
+class StochasticDifferentialEquation(ParameterizedStochasticProcess, ABC):
     """
     Base class for stochastic differential equations.
     """
@@ -32,7 +32,7 @@ class StochasticDifferentialEquation(ParameterizedBase, ABC):
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
 
         self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
-        self._ns = num_steps
+        self._num_steps = num_steps
 
 
 class EulerMaruyama(StochasticDifferentialEquation):
@@ -53,7 +53,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
         self._propagator = prop_state
 
     def forward(self, x, time_increment=1.0):
-        for i in range(self._ns):
+        for i in range(self._num_steps):
             x = super(EulerMaruyama, self).forward(x, time_increment=self._dt)
 
         return x
@@ -64,7 +64,8 @@ class EulerMaruyama(StochasticDifferentialEquation):
         return self._propagator(x, self._dt, *self.functional_parameters())
 
 
-class AffineEulerMaruyama(EulerMaruyama):
+# TODO: Make subclass of AffineProcess as well?
+class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     """
     Euler-Maruyama method for SDEs of affine nature. A generalization of `OneStepMaruyama` that allows multiple
     recursions. Note that the incremental distribution should include the `dt` term as this is not done automatically.
@@ -79,30 +80,24 @@ class AffineEulerMaruyama(EulerMaruyama):
             dt,
             **kwargs
     ):
-        super().__init__(self._prop, parameters, initial_dist, dt=dt, **kwargs)
-        self.f, self.g = dynamics
-        self.increment_dist = increment_dist
+        super(AffineEulerMaruyama, self).__init__(
+            dynamics, parameters, initial_dist, dt=dt, increment_dist=increment_dist, **kwargs
+        )
 
-    def _prop(self, x, dt, *params):
-        f = self.f(x, *params) * dt
-        g = self.g(x, *params)
-
-        return _define_transdist(x.values + f, g, self.n_dim, self.increment_dist())
-
-    def propagate_conditional(self, x, u, parameters=None):
+    def mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
-        for i in range(self._ns):
-            f = self.f(x, *params) * self._dt
-            g = self.g(x, *params)
+        return x.values + self.f(x, *params) * self._dt, self.g(x, *params)
 
-            x = self.propagate_state(x.values + f + g * u, x, self._dt)
+    def forward(self, x, time_increment=1.0):
+        for i in range(self._num_steps):
+            x = super(AffineEulerMaruyama, self).forward(x, time_increment=self._dt)
 
-        return x.state
+        return x
 
-    def prop_apf(self, x):
-        x_t = x
-        for i in range(self._ns):
-            f = self.f(x_t, *self.functional_parameters()) * self._dt
-            x_t = self.propagate_state(x_t.state + f, x_t, self._dt)
+    propagate = forward
 
-        return self.propagate_state(x_t.state, x, self._ns * self._dt)
+    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
+        for i in range(self._num_steps):
+            x = super(AffineEulerMaruyama, self).propagate_conditional(x, u, parameters, time_increment)
+
+        return x

@@ -8,11 +8,11 @@ from .proposal import IndependentProposal
 
 
 class PMMH(BatchFilterAlgorithm):
-    def __init__(self, filter_, iterations: int, num_chains: int = 4, proposal_builder: PropConstructor = None):
-        """
-        Implements the Particle Marginal Metropolis Hastings algorithm.
-        """
+    """
+    Implements the Particle Marginal Metropolis Hastings algorithm.
+    """
 
+    def __init__(self, filter_, iterations: int, num_chains: int = 4, proposal_builder: PropConstructor = None):
         super().__init__(filter_, iterations)
         self._num_chains = num_chains
         self._proposal_builder = proposal_builder or IndependentProposal()

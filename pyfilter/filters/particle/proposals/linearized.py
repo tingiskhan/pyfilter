@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import Normal, Independent, TransformedDistribution, AffineTransform
+from torch.distributions import Normal, Independent, AffineTransform
 from torch.autograd import grad
 from typing import Optional
 from ....timeseries import AffineProcess

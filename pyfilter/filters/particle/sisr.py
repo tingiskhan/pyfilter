@@ -11,7 +11,7 @@ class SISR(ParticleFilter):
 
     def _filter(self, y, state: ParticleState):
         # TODO: Not optimal as we normalize in several other functions, fix this
-        old_normw = state.normalized_weights()
+        old_normalized_w = state.normalized_weights()
 
         inds, mask = self._resample_state(state.w)
         state.x.values[:] = choose(state.x.values, inds)
@@ -23,4 +23,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleState(x, w, loglikelihood(weights, old_normw), inds)
+        return ParticleState(x, w, loglikelihood(weights, old_normalized_w), inds)

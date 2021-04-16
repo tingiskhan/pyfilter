@@ -1,4 +1,4 @@
-from .base import Base
+from .stochasticprocess import StochasticProcess
 from .affine import AffineProcess, RandomWalk
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
@@ -9,7 +9,7 @@ from .state import NewState
 
 # TODO: Remove TimeseriesState and BatchedState
 __all__ = [
-    "Base",
+    "StochasticProcess",
     "AffineProcess",
     "RandomWalk",
     "StateSpaceModel",

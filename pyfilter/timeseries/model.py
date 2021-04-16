@@ -2,7 +2,7 @@ import torch
 from torch.nn import Module
 from typing import Tuple
 from copy import deepcopy
-from .base import Base
+from .stochasticprocess import StochasticProcess
 
 
 class StateSpaceModel(Module):
@@ -10,7 +10,7 @@ class StateSpaceModel(Module):
     Combines a hidden and observable processes to constitute a state space model.
     """
 
-    def __init__(self, hidden: Base, observable: Base):
+    def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         super().__init__()
         self.hidden = hidden
         self.observable = observable

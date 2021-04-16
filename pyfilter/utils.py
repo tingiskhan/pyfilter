@@ -16,10 +16,13 @@ def size_getter(shape: ShapeLike) -> torch.Size:
     return torch.Size(shape)
 
 
-KEY_PREFIX = "item"
-
-
 class TensorTuple(Module):
+    """
+    Implements a tuple-like data type for storing tensors with methods of `torch.nn.Module`.
+    """
+
+    KEY_PREFIX = "item"
+
     def __init__(self, *args):
         super().__init__()
         self._i = -1
@@ -29,9 +32,9 @@ class TensorTuple(Module):
 
         self._register_load_state_dict_pre_hook(self._hook)
 
-    @staticmethod
-    def _make_key(i: int):
-        return f"{KEY_PREFIX}_{i}"
+    @classmethod
+    def _make_key(cls, i: int):
+        return f"{cls.KEY_PREFIX}_{i}"
 
     def append(self, x: torch.Tensor):
         self._i += 1
@@ -60,7 +63,7 @@ class TensorTuple(Module):
             if prefix:
                 k = k.replace(prefix, "")
 
-            if not k.startswith(KEY_PREFIX):
+            if not k.startswith(self.KEY_PREFIX):
                 continue
 
             self.register_buffer(k, v)
@@ -68,19 +71,15 @@ class TensorTuple(Module):
         return
 
 
-def get_ess(w: torch.Tensor, normalized=False) -> torch.Tensor:
+def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Calculates the ESS from an array of log weights.
-
-    :param w: The log weights
-    :param normalized: Whether input is normalized
-    :return: The effective sample size
     """
 
     if not normalized:
-        w = normalize(w)
+        weights = normalize(weights)
 
-    return w.sum(-1) ** 2 / (w ** 2).sum(-1)
+    return weights.sum(-1) ** 2 / (weights ** 2).sum(-1)
 
 
 def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
@@ -123,23 +122,20 @@ def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
 
 
-def normalize(w: torch.Tensor) -> torch.Tensor:
+def normalize(weights: torch.Tensor) -> torch.Tensor:
     """
     Normalizes a 1D or 2D array of log weights.
-
-    :param w: The weights
-    :return: Normalized weights
     """
 
-    is_1d = w.dim() == 1
+    is_1d = weights.dim() == 1
 
     if is_1d:
-        w = w.unsqueeze(0)
+        weights = weights.unsqueeze(0)
 
-    mask = torch.isfinite(w)
-    w[~mask] = -INFTY
+    mask = torch.isfinite(weights)
+    weights[~mask] = -INFTY
 
-    reweighed = torch.exp(w - w.max(-1)[0][..., None])
+    reweighed = torch.exp(weights - weights.max(-1)[0][..., None])
     normalized = reweighed / reweighed.sum(-1)[..., None]
 
     ax_sum = normalized.sum(1)

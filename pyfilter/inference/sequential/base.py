@@ -7,6 +7,10 @@ from .state import FilteringAlgorithmState
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
+    """
+    Base class for sequential algorithms using filters in order to approximate the log likelihood.
+    """
+
     def _update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         raise NotImplementedError()
 
@@ -14,10 +18,6 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     def update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         """
         Performs an update using a single observation `y`.
-
-        :param y: The observation
-        :param state: The previous state
-        :return: Self
         """
 
         return self._update(y, state)
@@ -40,6 +40,10 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
+    """
+    Base class for sequential algorithms using particles to approximate the distribution of the parameters.
+    """
+
     def __init__(self, filter_, particles: int):
         super().__init__(filter_)
 
@@ -81,7 +85,8 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def __init__(self, filter_, particles, switch: int, first_kw, second_kw):
         """
-        Algorithm combining two other algorithms.
+        Algorithm combining two instances of `SequentialParticleAlgorithm`. One such example is the `NESSMC2`, where we
+        utilize the `SMC2` for an arbitrary chunk of the data first, and then switch to the `NESS` algorithm.
 
         :param switch: After how many observations to perform switch
         """

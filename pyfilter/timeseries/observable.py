@@ -32,3 +32,6 @@ class AffineObservations(AffineProcess):
         return super(AffineObservations, self).forward(x, 0.0)
 
     propagate = forward
+
+    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
+        return super(AffineObservations, self).propagate_conditional(x, u, parameters, 0.0)

@@ -43,7 +43,7 @@ class UnscentedFilterTransform(Module):
         self._set_slices(trans_dim)
 
         self._view_shape = None
-        self._diaginds = range(model.hidden.n_dim)
+        self._diag_inds = range(model.hidden.n_dim)
 
     def _set_slices(self, trans_dim):
         hidden_dim = self._model.hidden.num_vars

@@ -21,7 +21,7 @@ class UtilTests(unittest.TestCase):
 
     def test_LoadModule(self):
         def f(x_, alpha, sigma):
-            return alpha * x_.state
+            return alpha * x_.values
 
         def g(x_, alpha, sigma):
             return sigma
