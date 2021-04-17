@@ -15,7 +15,7 @@ from math import sqrt
 
 
 def drift(x, gamma, sigma):
-    return torch.sin(x.state - gamma)
+    return torch.sin(x.values - gamma)
 
 
 def diffusion(x, gamma, sigma):
