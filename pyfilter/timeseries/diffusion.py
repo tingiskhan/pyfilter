@@ -115,4 +115,4 @@ class Euler(AffineEulerMaruyama):
             samples=torch.ones(initial_dist().event_shape).unsqueeze(0),
             log_weights=torch.tensor([0.0])
         )
-        super().__init__((dynamics, lambda *args: 1.0), parameters, initial_dist, emp, dt, **kwargs)
+        super().__init__((dynamics, lambda *args: 0.0), parameters, initial_dist, emp, dt, **kwargs)
