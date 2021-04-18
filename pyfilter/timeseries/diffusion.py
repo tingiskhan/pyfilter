@@ -106,7 +106,6 @@ class Euler(AffineEulerMaruyama):
 
     def __init__(self, dynamics: MeanOrScaleFun, parameters, initial_values: torch.Tensor, dt, **kwargs):
         iv = DistributionWrapper(Empirical, samples=initial_values, log_weights=torch.tensor([0.0]))
-
         emp = DistributionWrapper(Empirical, samples=torch.zeros_like(initial_values), log_weights=torch.tensor([0.0]))
 
         super().__init__((dynamics, lambda *args: 0.0), parameters, iv, emp, dt, **kwargs)
