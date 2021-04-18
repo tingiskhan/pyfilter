@@ -38,8 +38,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self._resample_threshold = ess
-
-        self._sum_axis = -(1 + self.ssm.hidden.n_dim)
         self._resampler = resampling
 
         if proposal == "auto":
@@ -97,7 +95,9 @@ class ParticleFilter(BaseFilter, ABC):
         w = normalize(state.w)
         squeezed_w = w.unsqueeze(-1)
 
-        xm = (x * (squeezed_w if self.ssm.hidden_ndim > 1 else w)).sum(self._sum_axis)
+        sum_axis = -(1 + self.ssm.hidden.n_dim)
+
+        xm = (x * (squeezed_w if self.ssm.hidden_ndim > 1 else w)).sum(sum_axis)
         ym = (y * (squeezed_w if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
 
         return xm[1:], ym[1:]
