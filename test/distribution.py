@@ -11,5 +11,5 @@ class DistributionTests(unittest.TestCase):
         samples = dist()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

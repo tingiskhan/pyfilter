@@ -39,11 +39,7 @@ def _get_shape(a):
 
 class LinearObservations(StateSpaceModel):
     def __init__(
-        self,
-        hidden,
-        a: ArrayType,
-        scale: ArrayType,
-        base_dist,
+        self, hidden, a: ArrayType, scale: ArrayType, base_dist,
     ):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.

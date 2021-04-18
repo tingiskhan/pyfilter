@@ -3,9 +3,7 @@ from typing import Tuple
 from ....timeseries import StochasticProcess, NewState
 
 
-def propagate_sps(
-    spx: NewState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
-):
+def propagate_sps(spx: NewState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]):
     is_multidimensional = process.n_dim > 0
 
     if not is_multidimensional:

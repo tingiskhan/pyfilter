@@ -2,7 +2,13 @@ import unittest
 from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, models as m
 import torch
 from torch.distributions import (
-    Normal, Exponential, Independent, Poisson, Distribution, TransformedDistribution, AffineTransform
+    Normal,
+    Exponential,
+    Independent,
+    Poisson,
+    Distribution,
+    TransformedDistribution,
+    AffineTransform,
 )
 import math
 from pyfilter.distributions import DistributionWrapper, Prior

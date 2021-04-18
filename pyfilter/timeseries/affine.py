@@ -30,12 +30,12 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
 
 class AffineProcess(ParameterizedStochasticProcess):
     def __init__(
-            self,
-            funcs: Tuple[MeanOrScaleFun, ...],
-            parameters: Tuple[ArrayType, ...],
-            initial_dist: DistributionWrapper,
-            increment_dist: DistributionWrapper,
-            **kwargs
+        self,
+        funcs: Tuple[MeanOrScaleFun, ...],
+        parameters: Tuple[ArrayType, ...],
+        initial_dist: DistributionWrapper,
+        increment_dist: DistributionWrapper,
+        **kwargs
     ):
         """
         Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,

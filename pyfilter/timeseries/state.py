@@ -11,10 +11,7 @@ class NewState(Module):
     """
 
     def __init__(
-            self,
-            time_index: Union[float, torch.Tensor],
-            distribution: Distribution = None,
-            values: torch.Tensor = None
+        self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None
     ):
         super().__init__()
 

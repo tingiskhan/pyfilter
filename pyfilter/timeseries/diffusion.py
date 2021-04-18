@@ -43,13 +43,7 @@ class EulerMaruyama(StochasticDifferentialEquation):
     """
 
     def __init__(
-            self,
-            prop_state: DiffusionFunction,
-            parameters,
-            initial_dist: DistributionWrapper,
-            dt,
-            num_steps,
-            **kwargs
+        self, prop_state: DiffusionFunction, parameters, initial_dist: DistributionWrapper, dt, num_steps, **kwargs
     ):
         super().__init__(parameters, initial_dist, dt, num_steps, **kwargs)
         self._propagator = prop_state
@@ -74,13 +68,13 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     """
 
     def __init__(
-            self,
-            dynamics: Tuple[MeanOrScaleFun, ...],
-            parameters,
-            initial_dist,
-            increment_dist: DistributionWrapper,
-            dt,
-            **kwargs
+        self,
+        dynamics: Tuple[MeanOrScaleFun, ...],
+        parameters,
+        initial_dist,
+        increment_dist: DistributionWrapper,
+        dt,
+        **kwargs
     ):
         super(AffineEulerMaruyama, self).__init__(
             dynamics, parameters, initial_dist, dt=dt, increment_dist=increment_dist, **kwargs
@@ -111,16 +105,8 @@ class Euler(AffineEulerMaruyama):
     """
 
     def __init__(self, dynamics: MeanOrScaleFun, parameters, initial_values: torch.Tensor, dt, **kwargs):
-        iv = DistributionWrapper(
-            Empirical,
-            samples=initial_values,
-            log_weights=torch.tensor([0.0])
-        )
+        iv = DistributionWrapper(Empirical, samples=initial_values, log_weights=torch.tensor([0.0]))
 
-        emp = DistributionWrapper(
-            Empirical,
-            samples=torch.zeros_like(initial_values),
-            log_weights=torch.tensor([0.0])
-        )
+        emp = DistributionWrapper(Empirical, samples=torch.zeros_like(initial_values), log_weights=torch.tensor([0.0]))
 
         super().__init__((dynamics, lambda *args: 0.0), parameters, iv, emp, dt, **kwargs)

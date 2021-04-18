@@ -21,5 +21,5 @@ __all__ = [
     "models",
     "NewState",
     "Euler",
-    "EulerMaruyama"
+    "EulerMaruyama",
 ]

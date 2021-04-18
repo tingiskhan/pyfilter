@@ -6,9 +6,7 @@ from .utils import get_meancov
 
 
 class UFTCorrectionResult(Module):
-    def __init__(
-        self, mean: NewState, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor
-    ):
+    def __init__(self, mean: NewState, cov: torch.Tensor, state_slice: slice, ym: torch.Tensor, yc: torch.Tensor):
         super().__init__()
         self.register_buffer("ym", ym)
         self.register_buffer("yc", yc)

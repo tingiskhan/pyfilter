@@ -21,9 +21,9 @@ class StochasticProcess(Module, ABC):
     """
 
     def __init__(
-            self,
-            initial_dist: DistributionWrapper,
-            initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None
+        self,
+        initial_dist: DistributionWrapper,
+        initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
     ):
         super().__init__()
         self._initial_dist = initial_dist
