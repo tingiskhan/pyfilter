@@ -43,7 +43,8 @@ class EulerMaruyama(StochasticDifferentialEquation):
     """
 
     def __init__(
-            self, prop_state: DiffusionFunction,
+            self,
+            prop_state: DiffusionFunction,
             parameters,
             initial_dist: DistributionWrapper,
             dt,
