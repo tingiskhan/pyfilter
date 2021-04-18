@@ -8,6 +8,10 @@ from .state import NewState
 from ..typing import ArrayType
 
 
+def _all_are_tensors(x, y) -> bool:
+    return isinstance(x, torch.Tensor) and isinstance(y, torch.Tensor)
+
+
 def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: Distribution):
     """
     Helper method for defining the transition density
@@ -16,7 +20,9 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
     :param scale: The scale
     """
 
-    loc, scale = torch.broadcast_tensors(loc, scale)
+    if _all_are_tensors(loc, scale):
+        loc, scale = torch.broadcast_tensors(loc, scale)
+
     shape = loc.shape[:-n_dim] if n_dim > 0 else loc.shape
 
     return TransformedDistribution(dist.expand(shape), AffineTransform(loc, scale, event_dim=n_dim))
