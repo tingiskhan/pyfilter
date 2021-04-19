@@ -3,12 +3,13 @@ import warnings
 from typing import Callable
 from torch.distributions import Distribution, Independent
 import torch
-from typing import Tuple, Iterable
+from typing import Tuple
 from ..filters import BaseFilter, FilterResult
 from .state import AlgorithmState
 from ..timeseries import StateSpaceModel
 from ..distributions import Prior
 from ..parameter import ExtendedParameter
+from ..constants import EPS
 
 
 PropConstructor = Callable[[AlgorithmState, BaseFilter, torch.Tensor], Distribution]
@@ -24,7 +25,7 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     cov = torch.matmul(w * centralized.t(), centralized)
 
     if cov.det() == 0.0:
-        chol = cov.diag().sqrt().diag()
+        chol = (EPS + cov.diag()).sqrt().diag()
     else:
         chol = cov.cholesky()
 
