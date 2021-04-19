@@ -1,11 +1,13 @@
 import torch
 from abc import ABC
 from typing import Tuple
-from pyro.distributions import Empirical
+from torch.distributions import Normal, Independent
+import math
 from .affine import AffineProcess, MeanOrScaleFun
 from .stochasticprocess import ParameterizedStochasticProcess
 from .typing import DiffusionFunction
 from ..distributions import DistributionWrapper
+from ..constants import EPS
 
 
 class OneStepEulerMaruyma(AffineProcess):
@@ -101,11 +103,43 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
 
 class Euler(AffineEulerMaruyama):
     """
-    Implements the standard Euler scheme for an ODE.
+    Implements the standard Euler scheme for an ODE by reframing the model into a stochastic process using low variance
+    Normal distributed noise in the state process.
+
+    See: https://arxiv.org/abs/2011.09718?context=stat
     """
 
     def __init__(self, dynamics: MeanOrScaleFun, parameters, initial_values: torch.Tensor, dt, **kwargs):
-        iv = DistributionWrapper(Empirical, samples=initial_values, log_weights=torch.tensor([0.0]))
-        emp = DistributionWrapper(Empirical, samples=torch.zeros_like(initial_values), log_weights=torch.tensor([0.0]))
+        iv = DistributionWrapper(
+            lambda **u: Independent(Normal(**u), 1),
+            loc=initial_values,
+            scale=EPS * torch.ones_like(initial_values)
+        )
 
-        super().__init__((dynamics, lambda *args: 0.0), parameters, iv, emp, dt, **kwargs)
+        event_shape = iv().event_shape
+        if len(event_shape) == 0:
+            dist = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt))
+        else:
+            dist = DistributionWrapper(
+                lambda **u: Independent(Normal(**u), 1),
+                loc=torch.zeros(event_shape),
+                scale=math.sqrt(dt) * torch.ones(event_shape)
+            )
+
+        super().__init__((dynamics, lambda *args: EPS), parameters, iv, dist, dt, **kwargs)
+
+
+class RungeKutta(Euler):
+    """
+    Implements the RK4 method in a similar way as `Euler`.
+    """
+
+    def mean_scale(self, x, parameters=None):
+        params = parameters or self.functional_parameters()
+
+        k1 = self.f(x, *params)
+        k2 = self.f(x.propagate_from(time_increment=self._dt / 2, values=x.values + self._dt * k1 / 2), *params)
+        k3 = self.f(x.propagate_from(time_increment=self._dt / 2, values=x.values + self._dt * k2 / 2), *params)
+        k4 = self.f(x.propagate_from(time_increment=self._dt, values=x.values + self._dt * k3), *params)
+
+        return x.values + self._dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4), self.g(x, *params)

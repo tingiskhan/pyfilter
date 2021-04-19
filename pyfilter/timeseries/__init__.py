@@ -3,7 +3,7 @@ from .affine import AffineProcess, RandomWalk
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
-from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma, Euler, EulerMaruyama
+from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma, Euler, EulerMaruyama, RungeKutta
 from .state import NewState
 
 
@@ -22,4 +22,5 @@ __all__ = [
     "NewState",
     "Euler",
     "EulerMaruyama",
+    "RungeKutta"
 ]
