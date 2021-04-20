@@ -1,9 +1,10 @@
 from abc import ABC
-from ...filters import ParticleFilter, utils as u, FilterResult
 import torch
-from ...utils import normalize
-from ..base import BaseFilterAlgorithm
 from .state import FilteringAlgorithmState
+from ..base import BaseFilterAlgorithm
+from ..utils import sample_model
+from ...utils import normalize
+from ...filters import ParticleFilter, utils as u, FilterResult
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
@@ -56,8 +57,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
     def sample_params(self):
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.ssm.observable.sample_params(shape)
-        self.filter.ssm.hidden.sample_params(shape)
+        sample_model(self.filter.ssm, shape)
 
     def initialize(self) -> FilteringAlgorithmState:
         self.sample_params()

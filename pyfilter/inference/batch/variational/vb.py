@@ -4,7 +4,7 @@ from torch.optim import Adadelta as Adam, Optimizer
 from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import BaseBatchAlgorithm
-from ...utils import priors_from_model, params_to_tensor, params_from_tensor, eval_prior_log_prob
+from ...utils import priors_from_model, params_to_tensor, params_from_tensor, eval_prior_log_prob, sample_model
 from ....timeseries import StateSpaceModel, StochasticProcess, NewState
 from ....filters import UKF
 from ....constants import EPS
@@ -40,7 +40,7 @@ class VariationalBayes(BaseBatchAlgorithm):
         self.opt_kwargs = opt_kwargs or dict()
 
     def is_converged(self, old_loss, new_loss):
-        return ((new_loss - old_loss) ** 2) ** 0.5 < EPS
+        return (new_loss - old_loss).abs() < EPS
 
     def _fit(self, y: torch.Tensor, logging_wrapper, **kwargs) -> VariationalState:
         state = self.initialize(y, **kwargs)
@@ -96,12 +96,16 @@ class VariationalBayes(BaseBatchAlgorithm):
             y_dist = self._model.observable.build_density(state_t)
 
             log_likelihood = (y_dist.log_prob(y) + x_dist.log_prob(x_t)).sum(1)
-            log_likelihood += self._model.hidden.initial_dist.log_prob(x_tm1[..., :1]).squeeze(-1)
+            log_likelihood += self._model.hidden.initial_dist.log_prob(x_tm1[:, 0])
 
             entropy += state.state_approx.entropy()
 
         else:
-            log_likelihood = self._model.log_prob(y[1:], y[:-1]).sum(1)
+            state = NewState(torch.arange(1, y.shape[0]), values=y[:-1])
+            dist = self._model.build_density(state)
+
+            log_likelihood = dist.log_prob(y[1:]).sum(1)
+            log_likelihood += self._model.initial_dist.log_prob(y[0])
 
         return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).mean() + entropy)
 
@@ -116,13 +120,13 @@ class VariationalBayes(BaseBatchAlgorithm):
         return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
-        self._model.hidden.sample_params((self._ns, 1))
-        self._model.observable.sample_params((self._ns, 1))
+        is_ssm = isinstance(self._model, StateSpaceModel)
 
+        sample_model(self._model, (self._ns, 1))
         param_approx.initialize(priors_from_model(self._model))
         opt_params = param_approx.get_parameters()
 
-        if isinstance(self._model, StateSpaceModel):
+        if is_ssm:
             state_approx.initialize(y, self._model.hidden)
 
             if self._use_filter:

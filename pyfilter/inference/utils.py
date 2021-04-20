@@ -3,16 +3,17 @@ import warnings
 from typing import Callable
 from torch.distributions import Distribution, Independent
 import torch
-from typing import Tuple
+from typing import Tuple, Union
 from ..filters import BaseFilter, FilterResult
 from .state import AlgorithmState
-from ..timeseries import StateSpaceModel
+from ..timeseries import StateSpaceModel, StochasticProcess
 from ..distributions import Prior
 from ..parameter import ExtendedParameter
 from ..constants import EPS
 
 
 PropConstructor = Callable[[AlgorithmState, BaseFilter, torch.Tensor], Distribution]
+Process = Union[StochasticProcess, StateSpaceModel]
 
 
 def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
@@ -24,7 +25,7 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    if cov.det() == 0.0:
+    if cov.det() < EPS ** 2:
         chol = (EPS + cov.diag()).sqrt().diag()
     else:
         chol = cov.cholesky()
@@ -50,8 +51,11 @@ def preliminary(func):
     return wrapper
 
 
-def parameters_and_priors_from_model(model: StateSpaceModel) -> Tuple[Tuple[ExtendedParameter, Prior], ...]:
-    return tuple(model.hidden.parameters_and_priors()) + tuple(model.observable.parameters_and_priors())
+def parameters_and_priors_from_model(model: Process) -> Tuple[Tuple[ExtendedParameter, Prior], ...]:
+    if isinstance(model, StateSpaceModel):
+        return tuple(model.hidden.parameters_and_priors()) + tuple(model.observable.parameters_and_priors())
+
+    return tuple(model.parameters_and_priors())
 
 
 def priors_from_model(model: StateSpaceModel) -> Tuple[Prior, ...]:
@@ -69,7 +73,7 @@ def params_to_tensor(model: StateSpaceModel, constrained=False) -> torch.Tensor:
     return torch.cat(res, dim=-1)
 
 
-def params_from_tensor(model: StateSpaceModel, x: torch.Tensor, constrained=False):
+def params_from_tensor(model: Process, x: torch.Tensor, constrained=False):
     left = 0
     for p, prior in parameters_and_priors_from_model(model):
         slc, numel = prior.get_slice_for_parameter(left, constrained)
@@ -80,8 +84,19 @@ def params_from_tensor(model: StateSpaceModel, x: torch.Tensor, constrained=Fals
     return
 
 
-def eval_prior_log_prob(model: StateSpaceModel, constrained=False):
-    return model.hidden.eval_prior_log_prob(constrained) + model.observable.eval_prior_log_prob(constrained)
+def sample_model(model: Process, shape):
+    if isinstance(model, StateSpaceModel):
+        model.hidden.sample_params(shape)
+        model.observable.sample_params(shape)
+    else:
+        model.sample_params(shape)
+
+
+def eval_prior_log_prob(model: Process, constrained=False):
+    if isinstance(model, StateSpaceModel):
+        return model.hidden.eval_prior_log_prob(constrained) + model.observable.eval_prior_log_prob(constrained)
+
+    return model.eval_prior_log_prob(constrained)
 
 
 def run_pmmh(
