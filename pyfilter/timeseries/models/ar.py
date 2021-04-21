@@ -1,19 +1,19 @@
 from ..affine import AffineProcess
-from torch.distributions import Distribution, Normal
-from .ou import init_trans
+from torch.distributions import Distribution, Normal, TransformedDistribution, AffineTransform
 from ...distributions import DistributionWrapper
 
 
 def _f(x, alpha, beta, sigma):
-    return alpha + beta * x.state
+    return alpha + beta * x.values
 
 
 def _g(x, alpha, beta, sigma):
     return sigma
 
 
-def _init_trans(dist, alpha, beta, sigma):
-    return init_trans(dist, 1 - beta, alpha, sigma)
+def _init_trans(module: "AR", dist):
+    alpha, beta, sigma = module.functional_parameters()
+    return TransformedDistribution(dist, AffineTransform(alpha, sigma / (2 * (1 - beta)).sqrt()))
 
 
 # TODO: Implement lags

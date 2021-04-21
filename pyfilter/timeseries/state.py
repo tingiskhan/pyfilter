@@ -1,43 +1,49 @@
 from torch.nn import Module
 import torch
 from typing import Union
+from torch.distributions import Distribution
 
 
-class TimeseriesState(Module):
-    def __init__(self, time_index: Union[float, torch.Tensor], state: torch.Tensor):
-        super(TimeseriesState, self).__init__()
-        self.register_buffer(
-            "_time_index", time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
-        )
-        self.register_buffer("_state", state)
+# TODO: Rename to TimeseriesState/ProcessState
+class NewState(Module):
+    """
+    The state object for timeseries.
+    """
+
+    def __init__(
+        self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None
+    ):
+        super().__init__()
+
+        if distribution is None and values is None:
+            raise Exception("Both `distribution` and `values` cannot be `None`!")
+
+        self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
+        self.dist = distribution
+        self._values = values
 
     @property
-    def time_index(self) -> torch.Tensor:
-        return self._buffers["_time_index"]
+    def values(self) -> torch.Tensor:
+        if self._values is not None:
+            return self._values
 
-    @time_index.setter
-    def time_index(self, x):
-        self._buffers["_time_index"] = x
+        self._values = self.dist.sample()
+        return self._values
 
-    @property
-    def state(self) -> torch.Tensor:
-        return self._buffers["_state"]
-
-    @state.setter
-    def state(self, x):
-        self._buffers["_state"] = x
+    @values.setter
+    def values(self, x):
+        self._values = x
 
     @property
     def shape(self):
-        return self.state.shape
+        return self.values.shape
 
     @property
     def device(self):
-        return self.state.device
+        return self.values.device
 
-    def copy(self, new_values: torch.Tensor):
-        return TimeseriesState(self.time_index, new_values)
+    def copy(self, dist: Distribution = None, values: torch.Tensor = None):
+        return NewState(self.time_index, dist, values=values)
 
-
-class BatchedState(TimeseriesState):
-    pass
+    def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
+        return NewState(self.time_index + time_increment, dist, values)

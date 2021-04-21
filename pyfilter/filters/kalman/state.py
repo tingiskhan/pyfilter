@@ -13,23 +13,23 @@ class KalmanState(BaseState):
     def get_mean(self):
         return self.utf.xm
 
-    def resample(self, inds):
-        self.utf.mean.state[:] = choose(self.utf.mean.state, inds)
-        self.utf.cov[:] = choose(self.utf.cov, inds)
+    def resample(self, indices):
+        self.utf.mean.values[:] = choose(self.utf.mean.values, indices)
+        self.utf.cov[:] = choose(self.utf.cov, indices)
 
-        self.utf.ym[:] = choose(self.utf.ym, inds)
-        self.utf.yc[:] = choose(self.utf.yc, inds)
+        self.utf.ym[:] = choose(self.utf.ym, indices)
+        self.utf.yc[:] = choose(self.utf.yc, indices)
 
-        self.ll[:] = choose(self.ll, inds)
+        self.ll[:] = choose(self.ll, indices)
 
     def get_loglikelihood(self):
         return self.ll
 
-    def exchange(self, state, inds):
-        self.utf.mean.state[inds] = state.utf.mean.state[inds]
-        self.utf.cov[inds] = state.utf.cov[inds]
+    def exchange(self, state, indices):
+        self.utf.mean.values[indices] = state.utf.mean.values[indices]
+        self.utf.cov[indices] = state.utf.cov[indices]
 
-        self.utf.ym[inds] = state.utf.ym[inds]
-        self.utf.yc[inds] = state.utf.yc[inds]
+        self.utf.ym[indices] = state.utf.ym[indices]
+        self.utf.yc[indices] = state.utf.yc[indices]
 
-        self.ll[inds] = state.ll[inds]
+        self.ll[indices] = state.ll[indices]

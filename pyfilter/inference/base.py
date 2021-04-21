@@ -8,6 +8,10 @@ from .state import AlgorithmState
 
 
 class BaseAlgorithm(Module, ABC):
+    """
+    Base class for all algorithms.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -29,13 +33,11 @@ class BaseAlgorithm(Module, ABC):
 
 
 class BaseFilterAlgorithm(BaseAlgorithm, ABC):
+    """
+    Base class for algorithms utilizing filters for building an approximation of the log likelihood.
+    """
+
     def __init__(self, filter_: BaseFilter):
-        """
-        Base class for algorithms utilizing filters for inference.
-
-        :param filter_: The filter
-        """
-
         super().__init__()
         self._filter = filter_
 

@@ -4,7 +4,7 @@ from torch.nn import Module
 from typing import Tuple
 from ....utils import construct_diag_from_flat, size_getter
 from ....typing import ShapeLike
-from ....timeseries import StateSpaceModel, TimeseriesState
+from ....timeseries import StateSpaceModel, NewState
 from ....parameter import ExtendedParameter
 from .utils import propagate_sps, covariance
 from .result import UFTCorrectionResult, UFTPredictionResult
@@ -23,7 +23,7 @@ class UnscentedFilterTransform(Module):
         """
 
         super().__init__()
-        if len(model.hidden.increment_dist().event_shape) > 1:
+        if model.hidden.n_dim > 1:
             raise ValueError("Can at most handle vector valued processes!")
 
         if any(model.hidden.increment_dist.named_parameters()) or any(
@@ -31,9 +31,7 @@ class UnscentedFilterTransform(Module):
         ):
             raise ValueError("Cannot currently handle case when distribution is parameterized!")
 
-        trans_dim = (
-            1 if len(model.hidden.increment_dist().event_shape) == 0 else model.hidden.increment_dist().event_shape[0]
-        )
+        trans_dim = 1 if model.hidden.n_dim == 0 else model.hidden.increment_dist().event_shape[0]
 
         self._model = model
         self._n_dim = model.hidden.num_vars + trans_dim + model.observable.num_vars
@@ -45,7 +43,7 @@ class UnscentedFilterTransform(Module):
         self._set_slices(trans_dim)
 
         self._view_shape = None
-        self._diaginds = range(model.hidden_ndim)
+        self._diag_inds = range(model.hidden.n_dim)
 
     def _set_slices(self, trans_dim):
         hidden_dim = self._model.hidden.num_vars
@@ -72,25 +70,25 @@ class UnscentedFilterTransform(Module):
         cov = torch.zeros((*shape, self._n_dim, self._n_dim), device=self._wm.device)
 
         initial_state = self._model.hidden.initial_sample((self.MONTE_CARLO_ESTIMATES, *shape))
-        initial_state_mean = initial_state.state.mean(0)
-        initial_state_var = initial_state.state.var(0)
+        initial_state_mean = initial_state.values.mean(0)
+        initial_state_var = initial_state.values.var(0)
 
-        if self._model.hidden_ndim < 1:
+        if self._model.hidden.n_dim < 1:
             initial_state_mean.unsqueeze_(-1)
 
         mean[..., self._state_slc] = initial_state_mean
 
-        initial_state.state = mean
+        initial_state.values = mean
         cov[..., self._state_slc, self._state_slc] = construct_diag_from_flat(
-            initial_state_var, self._model.hidden_ndim
+            initial_state_var, self._model.hidden.n_dim
         )
 
         cov[..., self._hidden_slc, self._hidden_slc] = construct_diag_from_flat(
-            self._model.hidden.increment_dist().variance, self._model.hidden_ndim
+            self._model.hidden.increment_dist().variance, self._model.hidden.n_dim
         )
 
         cov[..., self._obs_slc, self._obs_slc] = construct_diag_from_flat(
-            self._model.observable.increment_dist().variance, self._model.obs_ndim
+            self._model.observable.increment_dist().variance, self._model.observable.n_dim
         )
 
         return UFTCorrectionResult(initial_state, cov, self._state_slc, None, None)
@@ -112,23 +110,23 @@ class UnscentedFilterTransform(Module):
         self,
         xm: torch.Tensor,
         xc: torch.Tensor,
-        state: TimeseriesState,
+        state: NewState,
         prev_corr: UFTCorrectionResult,
         ym: torch.Tensor = None,
         yc: torch.Tensor = None,
     ):
-        mean = prev_corr.mean.state.clone()
+        mean = prev_corr.mean.values.clone()
         cov = prev_corr.cov.clone()
 
         mean[..., self._state_slc] = xm
         cov[..., self._state_slc, self._state_slc] = xc
 
-        return UFTCorrectionResult(state.copy(mean), cov, self._state_slc, ym, yc)
+        return UFTCorrectionResult(state.copy(None, mean), cov, self._state_slc, ym, yc)
 
     def predict(self, utf_corr: UFTCorrectionResult):
         sps = utf_corr.calculate_sigma_points(self._cov_scale)
 
-        hidden_state = utf_corr.mean.copy(sps[..., self._state_slc])
+        hidden_state = utf_corr.mean.copy(None, sps[..., self._state_slc])
         spx = propagate_sps(hidden_state, sps[..., self._hidden_slc], self._model.hidden, self._hidden_views)
 
         spy = propagate_sps(spx, sps[..., self._obs_slc], self._model.observable, self._obs_views)
@@ -140,14 +138,14 @@ class UnscentedFilterTransform(Module):
         xmean, xcov, ymean, ycov = correction.xm, correction.xc, correction.ym, correction.yc
 
         if xmean.dim() > 1:
-            tx = uft_pred.spx.state - xmean.unsqueeze(-2)
+            tx = uft_pred.spx.values - xmean.unsqueeze(-2)
         else:
-            tx = uft_pred.spx.state - xmean
+            tx = uft_pred.spx.values - xmean
 
         if ymean.dim() > 1:
-            ty = uft_pred.spy.state - ymean.unsqueeze(-2)
+            ty = uft_pred.spy.values - ymean.unsqueeze(-2)
         else:
-            ty = uft_pred.spy.state - ymean
+            ty = uft_pred.spy.values - ymean
 
         xy_cov = covariance(tx, ty, self._wc)
 

@@ -12,7 +12,7 @@ from pyfilter.distributions import DistributionWrapper
 
 
 def f(x, alpha, sigma):
-    return alpha * x.state
+    return alpha * x.values
 
 
 def g(x, alpha, sigma):
@@ -20,7 +20,7 @@ def g(x, alpha, sigma):
 
 
 def fo(x, alpha, sigma):
-    return alpha * x.state
+    return alpha * x.values
 
 
 def go(x, alpha, sigma):
@@ -28,8 +28,8 @@ def go(x, alpha, sigma):
 
 
 def fmvn(x, alpha, sigma):
-    x1 = alpha * x.state[..., 0] + x.state[..., 1] / 3
-    x2 = x.state[..., 1]
+    x1 = alpha * x.values[..., 0] + x.values[..., 1] / 3
+    x2 = x.values[..., 1]
     return concater(x1, x2)
 
 
@@ -65,14 +65,13 @@ class Tests(unittest.TestCase):
                 (UKF, {}),
                 (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
                 (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
-                (SISR, {"particles": 500, "proposal": prop.LocalLinearization()})
+                (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
             ]:
                 filt = filter_type(model, **props)
                 result = filt.longfilter(y, record_states=True)
 
                 filtmeans = result.filter_means.numpy()
 
-                # ===== Run Kalman ===== #
                 if model is self.model:
                     kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
                 else:
@@ -82,7 +81,7 @@ class Tests(unittest.TestCase):
 
                 f_mean, _ = kf.filter(y.numpy())
 
-                if model.hidden_ndim < 1 and not isinstance(filt, UKF):
+                if model.hidden.n_dim < 1 and not isinstance(filt, UKF):
                     f_mean = f_mean[:, 0]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
@@ -112,7 +111,7 @@ class Tests(unittest.TestCase):
 
     def test_SDE(self):
         def f(x, a, s):
-            return -a * x.state
+            return -a * x.values
 
         def g(x, a, s):
             return s

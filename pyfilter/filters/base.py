@@ -12,13 +12,11 @@ from .state import BaseState
 
 
 class BaseFilter(Module, ABC):
+    """
+    Base class for filters.
+    """
+
     def __init__(self, model: StateSpaceModel):
-        """
-        Base class for filters.
-
-        :param model: The state space model for which to perform filtering.
-        """
-
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -26,6 +24,7 @@ class BaseFilter(Module, ABC):
 
         self._model = model
         self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
+        self._n_parallel = None
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -33,16 +32,14 @@ class BaseFilter(Module, ABC):
 
     @property
     def n_parallel(self) -> torch.Size:
-        if self._n_parallel == 0:
+        if self._n_parallel is None or self._n_parallel == 0:
             return torch.Size([])
 
         return torch.Size([self._n_parallel])
 
-    def set_nparallel(self, n: int):
+    def set_nparallel(self, num_filters: int):
         """
         Sets the number of parallel filters to use
-
-        :param n: The number of parallel filters
         """
 
         raise NotImplementedError()
@@ -53,11 +50,7 @@ class BaseFilter(Module, ABC):
     @enforce_tensor
     def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
         """
-        Performs a filtering move given the observation `y`.
-
-        :param y: The observation
-        :param state: The previous state
-        :return: Self and log-likelihood
+        Performs a filtering move given observation `y` and previous state of the filter.
         """
 
         return self._filter(y, state)
@@ -75,9 +68,9 @@ class BaseFilter(Module, ABC):
         """
         Filters the entire data set `y`.
 
-        :param y: An array of data. Could either be 1D or 2D.
-        :param bar: Whether to print a progressbar
-        :param record_states: Whether to record states on a tuple
+        :param y: Data, expected shape: (# time steps, [# dimensions])
+        :param bar: Whether to print a progress bar
+        :param record_states: Whether to record states. E.g. required when smoothing
         :param init_state: The initial state to use
         """
 
@@ -99,30 +92,23 @@ class BaseFilter(Module, ABC):
     def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError()
 
-    def resample(self, inds: torch.Tensor):
+    def resample(self, indices: torch.Tensor) -> "BaseFilter":
         """
-        Resamples the filter, used in cases where we use nested filters.
-
-        :param inds: The indices
-        :return: Self
+        Resamples the filter, used in when we have nested filters.
         """
 
-        for p, prior in self.ssm.parameters_and_priors():
-            p.update_values(choose(p, inds), prior, constrained=True)
+        for m in [self.ssm.hidden, self.ssm.observable]:
+            for p in m.parameters():
+                p[:] = choose(p, indices)
 
         return self
 
-    def exchange(self, filter_, inds: torch.Tensor):
+    def exchange(self, filter_: "BaseFilter", indices: torch.Tensor):
         """
-        Exchanges the filters.
-
-        :param filter_: The new filter
-        :type filter_: BaseFilter
-        :param inds: The indices
-        :return: Self
+        Exchanges the filters, used when we have have nested filters.
         """
 
-        self._model.exchange(inds, filter_.ssm)
+        self._model.exchange(indices, filter_.ssm)
 
         return self
 

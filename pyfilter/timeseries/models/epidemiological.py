@@ -7,9 +7,9 @@ from ...distributions import DistributionWrapper
 
 
 def f(x, beta, gamma, sigma):
-    s = beta * x.state[..., 0] * x.state[..., 1]
+    s = beta * x.values[..., 0] * x.values[..., 1]
 
-    r = x.state[..., 1] * gamma
+    r = x.values[..., 1] * gamma
     i = s - r
 
     return concater(-s, i, r)

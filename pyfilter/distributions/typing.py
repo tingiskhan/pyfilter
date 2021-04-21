@@ -4,8 +4,7 @@ from typing import Type, Callable, Sequence, Union
 
 
 DistributionOrBuilder = Union[
-    Type[Distribution],
-    Callable[[Type[Distribution], Sequence[Union[torch.Tensor, float]]], Distribution]
+    Type[Distribution], Callable[[Type[Distribution], Sequence[Union[torch.Tensor, float]]], Distribution]
 ]
 
 Parameters = Union[torch.Tensor, float, int]

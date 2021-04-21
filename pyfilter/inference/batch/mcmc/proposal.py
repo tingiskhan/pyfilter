@@ -1,7 +1,8 @@
 from torch.distributions import Independent, Normal
+import torch
 from .state import PMMHState
 from ....filters import BaseFilter
-import torch
+from ...utils import params_to_tensor
 
 
 class IndependentProposal(object):
@@ -9,7 +10,7 @@ class IndependentProposal(object):
         self._scale = scale
 
     def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
-        return Independent(Normal(filter_.ssm.parameters_to_array(constrained=False), self._scale), 1)
+        return Independent(Normal(params_to_tensor(filter_.ssm, constrained=False), self._scale), 1)
 
 
 class GradientBasedProposal(IndependentProposal):

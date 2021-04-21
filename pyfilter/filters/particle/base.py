@@ -37,10 +37,7 @@ class ParticleFilter(BaseFilter, ABC):
         super().__init__(model, **kwargs)
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
-        self._th = ess
-
-        self._sumaxis = -(1 + self.ssm.hidden_ndim)
-
+        self._resample_threshold = ess
         self._resampler = resampling
 
         if proposal == "auto":
@@ -61,7 +58,7 @@ class ParticleFilter(BaseFilter, ABC):
 
     def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
         ess = get_ess(w) / w.shape[-1]
-        mask = ess < self._th
+        mask = ess < self._resample_threshold
 
         out = _construct_empty(w)
 
@@ -74,8 +71,8 @@ class ParticleFilter(BaseFilter, ABC):
 
         return out, mask
 
-    def set_nparallel(self, n: int):
-        self._n_parallel = torch.tensor(n)
+    def set_nparallel(self, num_filters: int):
+        self._n_parallel = torch.tensor(num_filters)
         self._particles = torch.tensor(
             (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])), dtype=torch.int
         )
@@ -96,10 +93,12 @@ class ParticleFilter(BaseFilter, ABC):
             return x[1:], y[1:]
 
         w = normalize(state.w)
-        wsqd = w.unsqueeze(-1)
+        squeezed_w = w.unsqueeze(-1)
 
-        xm = (x * (wsqd if self.ssm.hidden_ndim > 1 else w)).sum(self._sumaxis)
-        ym = (y * (wsqd if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
+        sum_axis = -(1 + self.ssm.hidden.n_dim)
+
+        xm = (x * (squeezed_w if self.ssm.hidden_ndim > 1 else w)).sum(sum_axis)
+        ym = (y * (squeezed_w if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
 
         return xm[1:], ym[1:]
 

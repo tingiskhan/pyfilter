@@ -1,13 +1,15 @@
+from .stochasticprocess import StochasticProcess
 from .affine import AffineProcess, RandomWalk
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
-from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma
-from .process import StochasticProcess
-from .state import TimeseriesState, BatchedState
+from .diffusion import AffineEulerMaruyama, OneStepEulerMaruyma, Euler, EulerMaruyama, RungeKutta
+from .state import NewState
 
 
+# TODO: Remove TimeseriesState and BatchedState
 __all__ = [
+    "StochasticProcess",
     "AffineProcess",
     "RandomWalk",
     "StateSpaceModel",
@@ -16,8 +18,9 @@ __all__ = [
     "AffineObservations",
     "AffineEulerMaruyama",
     "OneStepEulerMaruyma",
-    "StochasticProcess",
     "models",
-    "TimeseriesState",
-    "BatchedState"
+    "NewState",
+    "Euler",
+    "EulerMaruyama",
+    "RungeKutta"
 ]

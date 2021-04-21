@@ -4,25 +4,23 @@ import torch
 from torch.distributions import Distribution, Normal, Independent
 from typing import Union
 from ..distributions import DistributionWrapper
+from ..typing import ArrayType
 
 
 def f_0d(x, a, scale):
-    return a * x.state
+    return a * x.values
 
 
 def f_1d(x, a, scale):
-    return f_2d(x, a.unsqueeze(-2), scale)[..., 0]
+    return f_2d(x, a.unsqueeze(-2), scale).squeeze(-1)
 
 
 def f_2d(x, a, scale):
-    return torch.matmul(a, x.state.unsqueeze(-1))[..., 0]
+    return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
 def g(x, a, *scale):
-    if len(scale) == 1:
-        return scale[-1]
-
-    return scale
+    return scale[-1] if len(scale) == 1 else scale
 
 
 def _get_shape(a):
@@ -41,11 +39,7 @@ def _get_shape(a):
 
 class LinearObservations(StateSpaceModel):
     def __init__(
-        self,
-        hidden,
-        a: Union[torch.Tensor, float, Distribution],
-        scale: Union[torch.Tensor, float, Distribution],
-        base_dist,
+        self, hidden, a: ArrayType, scale: ArrayType, base_dist,
     ):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.

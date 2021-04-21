@@ -10,8 +10,14 @@ class LocalLinearization(LinearGaussianObservations):
     `LinearGaussianObservations` as a proposal.
     """
 
+    def __init__(self):
+        super().__init__()
+
+        self._hidden_is1d = None
+        self._observable_is1d = None
+
     def set_model(self, model):
-        if model.obs_ndim > 0:
+        if model.observable.n_dim > 0:
             raise Exception("This proposal distribution does not work for models having more observable dimension > 0!")
 
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
@@ -19,21 +25,23 @@ class LocalLinearization(LinearGaussianObservations):
 
         self._model = model
 
+        self._hidden_is1d = self._model.hidden.n_dim == 0
+        self._observable_is1d = self._model.observable.n_dim == 0
+
         return self
 
     def get_constant_and_offset(self, params, x):
-        x.state.requires_grad_(True)
+        x.values.requires_grad_(True)
 
         loc, _ = self._model.observable.mean_scale(x)
         loc.backward(torch.ones_like(loc))
-        grad_eval = x.state.grad
+        grad_eval = x.values.grad
 
-        x.state.detach_()
+        x.values.detach_()
         loc = loc.detach()
 
-        if self._model.hidden_ndim == 0:
-            product = grad_eval * x.state
-        else:
-            product = (grad_eval * x.state).sum(-1)
+        product = grad_eval * x.values
+        if not self._hidden_is1d:
+            product = product.sum(-1)
 
         return grad_eval, loc - product

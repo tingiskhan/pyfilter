@@ -15,6 +15,7 @@ class Prior(BuilderMixin, Module):
         super().__init__()
 
         self.base_dist = base_dist
+        parameters["validate_args"] = parameters.pop("validate_args", False)
 
         for k, v in parameters.items():
             self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))
