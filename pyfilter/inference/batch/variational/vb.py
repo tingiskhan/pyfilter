@@ -50,6 +50,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
+            # TODO: Move to init
             time_inds = torch.arange(transformed.shape[1])
 
             state_t = NewState(time_inds[1:], values=x_t)
