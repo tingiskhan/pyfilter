@@ -107,7 +107,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         model = make_model(True)
 
-        vb = VariationalBayes(model, samples=12, max_iter=50_000)
+        vb = VariationalBayes(model, n_samples=12, max_iter=50_000)
         state = vb.fit(y, param_approx=apx.ParameterMeanField(), state_approx=apx.StateMeanField())
 
         assert state.converged

@@ -1,9 +1,9 @@
-from .base import BaseApproximation
 import torch
 from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
-from .....timeseries import StochasticProcess
-from .....distributions import Prior
+from torch.nn import Parameter
 from typing import Tuple
+from .base import BaseApproximation
+from ....utils import priors_from_model
 
 
 class StateMeanField(BaseApproximation):
@@ -13,28 +13,29 @@ class StateMeanField(BaseApproximation):
 
     def __init__(self):
         super().__init__()
-        self.mean = None
-        self.log_std = None
         self._dim = None
 
-    def initialize(self, data, model: StochasticProcess, *args):
-        self.mean = torch.zeros((data.shape[0] + 1, *model.increment_dist().event_shape), requires_grad=True)
-        self.log_std = torch.zeros_like(self.mean, requires_grad=True)
-        self._dim = model.n_dim
+        self.register_parameter("mean", None)
+        self.register_parameter("log_std", None)
+
+    def initialize(self, data, model):
+        mean = torch.zeros((data.shape[0] + 1, *model.hidden.increment_dist().event_shape), requires_grad=True)
+        log_std = torch.zeros_like(mean, requires_grad=True)
+
+        self.mean = Parameter(mean)
+        self.log_std = Parameter(log_std)
+
+        self._dim = model.hidden.n_dim
 
         return self
 
-    def dist(self):
+    def dist(self) -> Distribution:
         return Independent(Normal(self.mean, self.log_std.exp()), self._dim + 1)
-
-    def get_parameters(self):
-        return self.mean, self.log_std
 
     def get_inferred_states(self) -> torch.Tensor:
         return self.mean
 
 
-# TODO: Only supports 1D parameters currently
 class ParameterMeanField(BaseApproximation):
     """
     Mean field approximation for parameters.
@@ -42,38 +43,43 @@ class ParameterMeanField(BaseApproximation):
 
     def __init__(self):
         super().__init__()
-        self.mean = None
-        self.log_std = None
         self._bijections = None
         self._mask = None
+
+        self.register_parameter("mean", None)
+        self.register_parameter("log_std", None)
 
     def get_parameters(self):
         return self.mean, self.log_std
 
-    def initialize(self, priors: Tuple[Prior, ...], *args):
+    def initialize(self, data, model):
         self._bijections = tuple()
-
-        means = tuple()
         self._mask = tuple()
+        means = tuple()
 
         left = 0
-        for p in priors:
+        for p in priors_from_model(model):
             slc, numel = p.get_slice_for_parameter(left, False)
 
-            means += (p.bijection.inv(p().mean),)
+            val = p.bijection.inv(p().mean)
+            if val.dim() == 0:
+                val.unsqueeze_(-1)
+
+            means += (val,)
             self._bijections += (p.bijection,)
             self._mask += (slc,)
 
             left += numel
 
-        self.mean = torch.stack(means)
-        self.mean.requires_grad_(True)
+        mean = torch.cat(means)
+        log_std = torch.zeros_like(mean, requires_grad=True)
 
-        self.log_std = torch.zeros_like(self.mean, requires_grad=True)
+        self.mean = Parameter(mean)
+        self.log_std = Parameter(log_std)
 
         return self
 
-    def dist(self):
+    def dist(self) -> Distribution:
         return Independent(Normal(self.mean, self.log_std.exp()), 1)
 
     def get_transformed_dists(self) -> Tuple[Distribution, ...]:
