@@ -50,8 +50,10 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            state_t = NewState(torch.arange(1, transformed.shape[1]), values=x_t)
-            state_tm1 = NewState(torch.arange(transformed.shape[1] - 1), values=x_tm1)
+            time_inds = torch.arange(transformed.shape[1])
+
+            state_t = NewState(time_inds[1:], values=x_t)
+            state_tm1 = NewState(time_inds[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(state_tm1)
             y_dist = self._model.observable.build_density(state_t)
