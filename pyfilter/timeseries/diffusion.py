@@ -125,7 +125,7 @@ class Euler(AffineEulerMaruyama):
 
         event_shape = iv().event_shape
         if len(event_shape) == 0:
-            dist = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt))
+            dist = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt) * tuning_std)
         else:
             dist = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1),

@@ -68,7 +68,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood = dist.log_prob(y[1:]).sum(1)
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
-        return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).mean() + entropy)
+        return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy)
 
     def _seed_init_path(self, y) -> [int, torch.Tensor]:
         filt = UKF(self._model.copy()).set_nparallel(self._n_samples)
