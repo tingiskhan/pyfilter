@@ -16,9 +16,9 @@ class VariationalBayes(OptimizationBasedAlgorithm):
     `StochasticProcess`.
     """
 
-    def __init__(self, model, n_samples=4, max_iter=30e3, use_filter=True, **kwargs):
+    def __init__(self, model, n_samples=4, max_iter=30e3, use_filter=False, **kwargs):
         super().__init__(model, max_iter, **kwargs)
-        self._n_samples = n_samples
+        self._n_samples = int(n_samples)
         self._use_filter = use_filter
 
     def is_converged(self, old_loss, new_loss):
@@ -50,8 +50,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            state_t = NewState(torch.arange(1, x_t.shape[0]), values=x_t)
-            state_tm1 = NewState(torch.arange(x_t.shape[0] - 1), values=x_tm1)
+            state_t = NewState(torch.arange(1, transformed.shape[1]), values=x_t)
+            state_tm1 = NewState(torch.arange(transformed.shape[1] - 1), values=x_tm1)
 
             x_dist = self._model.hidden.build_density(state_tm1)
             y_dist = self._model.observable.build_density(state_t)
