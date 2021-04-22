@@ -19,11 +19,11 @@ class StateMeanField(BaseApproximation):
         self.register_parameter("log_std", None)
 
     def initialize(self, data, model):
-        mean = torch.zeros((data.shape[0] + 1, *model.hidden.increment_dist().event_shape), requires_grad=True)
-        log_std = torch.zeros_like(mean, requires_grad=True)
+        mean = torch.zeros((data.shape[0] + 1, *model.hidden.increment_dist().event_shape))
+        log_std = torch.zeros_like(mean)
 
-        self.mean = Parameter(mean)
-        self.log_std = Parameter(log_std)
+        self.mean = Parameter(mean, requires_grad=True)
+        self.log_std = Parameter(log_std, requires_grad=True)
 
         self._dim = model.hidden.n_dim
 
@@ -72,10 +72,10 @@ class ParameterMeanField(BaseApproximation):
             left += numel
 
         mean = torch.cat(means)
-        log_std = torch.zeros_like(mean, requires_grad=True)
+        log_std = torch.zeros_like(mean)
 
-        self.mean = Parameter(mean)
-        self.log_std = Parameter(log_std)
+        self.mean = Parameter(mean, requires_grad=True)
+        self.log_std = Parameter(log_std, requires_grad=True)
 
         return self
 
