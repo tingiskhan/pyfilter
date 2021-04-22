@@ -61,7 +61,6 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         try:
             logging_wrapper.set_num_iter(self._max_iter)
             while not state.converged and state.iterations < self._max_iter:
-                state.optimizer.zero_grad()
                 old_loss = state.loss
 
                 elbo = state.loss = self.loss(y, state)
@@ -73,6 +72,7 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
 
                 state.iterations += 1
                 state.converged = self.is_converged(old_loss, state.loss)
+                state.optimizer.zero_grad()
 
         except Exception as e:
             logging_wrapper.close()
