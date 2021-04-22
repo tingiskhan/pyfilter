@@ -7,6 +7,7 @@ from .affine import AffineProcess, MeanOrScaleFun
 from .stochasticprocess import ParameterizedStochasticProcess
 from .typing import DiffusionFunction
 from ..distributions import DistributionWrapper
+from ..typing import ArrayType
 from ..constants import EPS
 
 
@@ -109,11 +110,17 @@ class Euler(AffineEulerMaruyama):
     See: https://arxiv.org/abs/2011.09718?context=stat
     """
 
-    def __init__(self, dynamics: MeanOrScaleFun, parameters, initial_values: torch.Tensor, dt, **kwargs):
+    def __init__(
+        self, dynamics: MeanOrScaleFun, parameters, initial_values: ArrayType, dt, tuning_std: float = 1.0, **kwargs
+    ):
+        scale = torch.ones(
+            initial_values.shape if isinstance(initial_values, torch.Tensor) else initial_values().event_shape
+        )
+
         iv = DistributionWrapper(
             lambda **u: Independent(Normal(**u), 1),
             loc=initial_values,
-            scale=EPS * torch.ones_like(initial_values)
+            scale=EPS * scale,
         )
 
         event_shape = iv().event_shape
@@ -123,10 +130,10 @@ class Euler(AffineEulerMaruyama):
             dist = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1),
                 loc=torch.zeros(event_shape),
-                scale=math.sqrt(dt) * torch.ones(event_shape)
+                scale=tuning_std * math.sqrt(dt) * torch.ones(event_shape),
             )
 
-        super().__init__((dynamics, lambda *args: EPS), parameters, iv, dist, dt, **kwargs)
+        super().__init__((dynamics, lambda *args: 1.0), parameters, iv, dist, dt, **kwargs)
 
 
 class RungeKutta(Euler):

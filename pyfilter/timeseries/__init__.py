@@ -22,5 +22,5 @@ __all__ = [
     "NewState",
     "Euler",
     "EulerMaruyama",
-    "RungeKutta"
+    "RungeKutta",
 ]
