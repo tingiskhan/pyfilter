@@ -48,7 +48,7 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
     def is_converged(self, old_loss, new_loss):
         raise NotImplementedError()
 
-    def loss(self, y: torch.Tensor, state: AlgorithmState) -> AlgorithmState:
+    def loss(self, y: torch.Tensor, state: AlgorithmState) -> torch.Tensor:
         """
         Method for defining the loss used in determining gradients.
         """
