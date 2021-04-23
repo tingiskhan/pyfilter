@@ -22,7 +22,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._use_filter = use_filter
 
     def is_converged(self, old_loss, new_loss):
-        return (new_loss - old_loss).abs() < EPS
+        return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
 
     def sample_parameter_approximation(self, param_approximation: ParameterMeanField) -> Distribution:
         param_dist = param_approximation.dist()
