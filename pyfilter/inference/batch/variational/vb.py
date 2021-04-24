@@ -4,9 +4,8 @@ from torch.distributions import Distribution
 from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
-from ...utils import params_to_tensor, params_from_tensor, eval_prior_log_prob, sample_model
-from ....timeseries import StateSpaceModel, NewState
-from ....filters import UKF
+from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
+from ....timeseries import StateSpaceModel, NewState, StochasticDifferentialEquation
 from ....constants import EPS
 
 
@@ -16,10 +15,13 @@ class VariationalBayes(OptimizationBasedAlgorithm):
     `StochasticProcess`.
     """
 
-    def __init__(self, model, n_samples=4, max_iter=30e3, use_filter=False, **kwargs):
+    def __init__(self, model, n_samples=4, max_iter=30e3, **kwargs):
         super().__init__(model, max_iter, **kwargs)
         self._n_samples = int(n_samples)
-        self._use_filter = use_filter
+        self._time_inds: torch.Tensor = None
+
+        self._is_sde = isinstance(self._model.hidden, StochasticDifferentialEquation)
+        self._step_size = self._model.hidden.num_steps if self._is_sde else 1
 
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
@@ -50,38 +52,25 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            # TODO: Move to init
-            time_inds = torch.arange(transformed.shape[1])
+            y_state = NewState(self._time_inds[1:], values=x_t)
+            x_state = NewState(self._time_inds[:-1], values=x_tm1)
 
-            state_t = NewState(time_inds[1:], values=x_t)
-            state_tm1 = NewState(time_inds[:-1], values=x_tm1)
+            x_dist = self._model.hidden.build_density(x_state)
+            y_dist = self._model.observable.build_density(y_state)
 
-            x_dist = self._model.hidden.build_density(state_tm1)
-            y_dist = self._model.observable.build_density(state_t)
-
-            log_likelihood = (y_dist.log_prob(y) + x_dist.log_prob(x_t)).sum(1)
+            log_likelihood = y_dist.log_prob(y).sum(1) + x_dist.log_prob(x_t).sum(1)
             log_likelihood += self._model.hidden.initial_dist.log_prob(x_tm1[:, :1]).squeeze()
 
             entropy += state_dist.entropy()
 
         else:
-            state = NewState(torch.arange(1, y.shape[0]), values=y[:-1])
+            state = NewState(self._time_inds, values=y[:-1])
             dist = self._model.build_density(state)
 
             log_likelihood = dist.log_prob(y[1:]).sum(1)
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
         return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy)
-
-    def _seed_init_path(self, y) -> [int, torch.Tensor]:
-        filt = UKF(self._model.copy()).set_nparallel(self._n_samples)
-        state = filt.initialize()
-        result = filt.longfilter(y, bar=False, init_state=state)
-
-        maxind = result.loglikelihood.argmax()
-
-        to_cat = (state.get_mean().mean(axis=1).unsqueeze(0), result.filter_means.squeeze(-1))
-        return maxind, torch.cat(to_cat, axis=0)[:, maxind]
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         is_ssm = isinstance(self._model, StateSpaceModel)
@@ -90,16 +79,10 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         param_approx.initialize(y, self._model)
 
         opt_params = tuple(param_approx.parameters())
+        self._time_inds = torch.arange(0, y.shape[0])
 
         if is_ssm:
-            state_approx.initialize(y, self._model)
-
-            if self._use_filter:
-                maxind, means = self._seed_init_path(y)
-
-                state_approx.mean.data[:] = means
-                param_approx.mean.data[:] = params_to_tensor(self._model, constrained=False)[maxind]
-
+            state_approx.initialize(self._time_inds, self._model)
             opt_params += tuple(state_approx.parameters())
 
         optimizer = self._opt_type(opt_params, **self.opt_kwargs)
