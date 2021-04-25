@@ -5,7 +5,7 @@ from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
-from ....timeseries import StateSpaceModel, NewState, StochasticDifferentialEquation
+from ....timeseries import StateSpaceModel, NewState
 from ....constants import EPS
 
 
@@ -19,9 +19,6 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         super().__init__(model, max_iter, **kwargs)
         self._n_samples = int(n_samples)
         self._time_inds: torch.Tensor = None
-
-        self._is_sde = isinstance(self._model.hidden, StochasticDifferentialEquation)
-        self._step_size = self._model.hidden.num_steps if self._is_sde else 1
 
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
