@@ -3,12 +3,15 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Union, Iterable
+from typing import Tuple, Iterable, TypeVar, Optional
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .utils import enforce_tensor
 from .result import FilterResult
 from .state import BaseState
+
+
+TState = TypeVar("TState", bound=BaseState)
 
 
 class BaseFilter(Module, ABC):
@@ -44,23 +47,20 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def initialize(self) -> BaseState:
+    def initialize(self) -> TState:
         raise NotImplementedError()
 
-    @enforce_tensor
-    def filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
+    def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
         Performs a filtering move given observation `y` and previous state of the filter.
         """
 
-        return self._filter(y, state)
+        return self.predict_correct(y, state)
 
-    def _filter(self, y: Union[float, torch.Tensor], state: BaseState) -> BaseState:
-        raise NotImplementedError()
-
+    @enforce_tensor
     def longfilter(
         self,
-        y: Union[torch.Tensor, Tuple[torch.Tensor, ...]],
+        y: torch.Tensor,
         bar=True,
         record_states=False,
         init_state: BaseState = None,
@@ -74,22 +74,36 @@ class BaseFilter(Module, ABC):
         :param init_state: The initial state to use
         """
 
-        astuple = tuple(y) if not isinstance(y, tuple) else y
-        iterator = tqdm(astuple, desc=str(self.__class__.__name__)) if bar else astuple
+        iter_bar: tqdm = None
+        if bar:
+            iter_bar = tqdm(desc=str(self.__class__.__name__), total=y.shape[0])
 
-        state = init_state or self.initialize()
-        result = FilterResult(state)
+        try:
+            state = init_state or self.initialize()
+            result = FilterResult(state)
 
-        for yt in iterator:
-            state = self.filter(yt, state)
-            result.append(state, not record_states)
+            for yt in y:
+                state = self.filter(yt, state)
 
-        return result
+                if bar:
+                    iter_bar.update(1)
+
+                result.append(state, not record_states)
+
+            return result
+        except Exception as e:
+            raise e
+        finally:
+            if bar:
+                iter_bar.close()
 
     def copy(self) -> "BaseFilter":
         return copy.deepcopy(self)
 
-    def predict(self, state: BaseState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+        raise NotImplementedError()
+
+    def predict_correct(self, y: Optional[torch.Tensor], state: TState) -> TState:
         raise NotImplementedError()
 
     def resample(self, indices: torch.Tensor) -> "BaseFilter":

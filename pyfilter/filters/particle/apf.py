@@ -9,11 +9,18 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def _filter(self, y, state: ParticleState):
+    def predict_correct(self, y, state: ParticleState):
+        normalized = state.normalized_weights()
+
+        if torch.isnan(y).any():
+            x = self.ssm.hidden.forward(state.x)
+            inds = self._resampler(normalized)
+
+            return ParticleState(x, 0.0 * torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), inds)
+
         pre_weights = self.proposal.pre_weight(y, state.x)
 
         resample_weights = pre_weights + state.w
-        normalized = state.normalized_weights()
 
         resampled_indices = self._resampler(resample_weights)
         state.x.values[:] = choose(state.x.values, resampled_indices)

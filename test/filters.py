@@ -81,7 +81,7 @@ class Tests(unittest.TestCase):
 
                 f_mean, _ = kf.filter(y.numpy())
 
-                if model.hidden.n_dim < 1 and not isinstance(filt, UKF):
+                if model.hidden.n_dim < 1:
                     f_mean = f_mean[:, 0]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))

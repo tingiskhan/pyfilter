@@ -11,8 +11,9 @@ class KalmanState(BaseState):
         self.register_buffer("ll", ll)
 
     def get_mean(self):
-        return self.utf.xm
+        return self.utf.x_dist().mean
 
+    # TODO: Fix this
     def resample(self, indices):
         self.utf.mean.values[:] = choose(self.utf.mean.values, indices)
         self.utf.cov[:] = choose(self.utf.cov, indices)
@@ -25,6 +26,7 @@ class KalmanState(BaseState):
     def get_loglikelihood(self):
         return self.ll
 
+    # TODO: Fix this
     def exchange(self, state, indices):
         self.utf.mean.values[indices] = state.utf.mean.values[indices]
         self.utf.cov[indices] = state.utf.cov[indices]
@@ -33,3 +35,6 @@ class KalmanState(BaseState):
         self.utf.yc[indices] = state.utf.yc[indices]
 
         self.ll[indices] = state.ll[indices]
+
+    def get_timeseries_state(self):
+        return self.utf.x_dist()

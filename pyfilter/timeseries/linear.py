@@ -38,9 +38,7 @@ def _get_shape(a):
 
 
 class LinearObservations(StateSpaceModel):
-    def __init__(
-        self, hidden, a: ArrayType, scale: ArrayType, base_dist,
-    ):
+    def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist, **kwargs):
         """
         Defines a class of observation dynamics where the observed variable is a linear combination of the states.
 
@@ -64,11 +62,11 @@ class LinearObservations(StateSpaceModel):
 
         observable = AffineObservations((f, g), (a, scale), base_dist)
 
-        super().__init__(hidden, observable)
+        super().__init__(hidden, observable, **kwargs)
 
 
 class LinearGaussianObservations(LinearObservations):
-    def __init__(self, hidden, a=1.0, scale=1.0):
+    def __init__(self, hidden, a=1.0, scale=1.0, **kwargs):
         """
         Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
         state process.
@@ -87,4 +85,4 @@ class LinearGaussianObservations(LinearObservations):
                 lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(dim), scale=torch.ones(dim)
             )
 
-        super().__init__(hidden, a, scale, n)
+        super().__init__(hidden, a, scale, n, **kwargs)

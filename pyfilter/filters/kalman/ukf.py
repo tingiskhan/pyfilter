@@ -18,13 +18,20 @@ class UKF(BaseKalmanFilter):
 
     def initialize(self) -> KalmanState:
         res = self._ut.initialize(self.n_parallel)
-        return KalmanState(res, torch.zeros(self.n_parallel, device=res.xm.device))
+        return KalmanState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def _filter(self, y, state: KalmanState):
+    def predict_correct(self, y, state: KalmanState):
         p = self._ut.predict(state.utf)
+
+        if torch.isnan(y).any():
+            (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
+            res = self._ut.update_state(x_m, x_c, p.spx, state.utf, y_m, y_c, p.spy)
+
+            return KalmanState(res, torch.zeros_like(state.ll))
+
         res = self._ut.correct(y, p, state.utf)
 
-        return KalmanState(res, res.y_dist().log_prob(y))
+        return KalmanState(res, res.y.dist.log_prob(y))
 
     def predict(self, state: KalmanState, steps, *args, **kwargs):
         utf_state = state.utf
