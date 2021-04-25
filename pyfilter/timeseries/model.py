@@ -15,10 +15,10 @@ class StateSpaceModel(Module):
         super().__init__()
         self.hidden = hidden
         self.observable = observable
-        self._observe_every_nth_step = observe_every_nth_step
+        self.observe_every_nth_step = observe_every_nth_step
 
     def generate_observation(self, state: NewState) -> bool:
-        return state.time_index % self._observe_every_nth_step == 0
+        return state.time_index % self.observe_every_nth_step == 0
 
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
