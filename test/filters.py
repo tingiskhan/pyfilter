@@ -89,7 +89,8 @@ class Tests(unittest.TestCase):
                 ll = kf.loglikelihood(y.numpy())
                 rel_ll_error = np.abs((ll - result.loglikelihood.numpy()) / ll)
 
-                assert rel_error < 0.05 and rel_ll_error < 0.05
+                self.assertLess(rel_error, 0.05)
+                self.assertLess(rel_ll_error, 0.05)
 
     def test_ParallellFiltersAndStability(self):
         x, y = self.model.sample_path(50)
@@ -107,7 +108,7 @@ class Tests(unittest.TestCase):
         x = filtermeans[:, :1]
         mape = ((x - filtermeans[:, 1:]) / x).abs()
 
-        assert mape.median(0)[0].max() < 0.05
+        self.assertLess(mape.median(0)[0].max(), 0.05)
 
     def test_SDE(self):
         def f(x, a, s):
@@ -119,8 +120,8 @@ class Tests(unittest.TestCase):
         dt = 1e-2
         norm = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
-        em = AffineEulerMaruyama((f, g), (0.02, 0.15), norm, norm, dt=1e-2, num_steps=10)
-        model = LinearGaussianObservations(em, scale=1e-3)
+        em = AffineEulerMaruyama((f, g), (0.02, 0.15), norm, norm, dt=1e-2)
+        model = LinearGaussianObservations(em, scale=1e-3, observe_every_nth_step=10)
 
         x, y = model.sample_path(500)
 
@@ -129,7 +130,4 @@ class Tests(unittest.TestCase):
             result = filt.longfilter(y)
 
             means = result.filter_means
-            if isinstance(filt, UKF):
-                means = means[:, 0]
-
             self.assertLess(torch.std(x - means), 5e-2)
