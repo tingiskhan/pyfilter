@@ -32,11 +32,10 @@ class StochasticDifferentialEquation(ParameterizedStochasticProcess, ABC):
     Base class for stochastic differential equations.
     """
 
-    def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, num_steps=1, **kwargs):
+    def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, **kwargs):
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
 
         self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
-        self._num_steps = num_steps
 
 
 class EulerMaruyama(StochasticDifferentialEquation):
@@ -46,18 +45,10 @@ class EulerMaruyama(StochasticDifferentialEquation):
     """
 
     def __init__(
-        self, prop_state: DiffusionFunction, parameters, initial_dist: DistributionWrapper, dt, num_steps, **kwargs
+        self, prop_state: DiffusionFunction, parameters, initial_dist: DistributionWrapper, dt, **kwargs
     ):
-        super().__init__(parameters, initial_dist, dt, num_steps, **kwargs)
+        super().__init__(parameters, initial_dist, dt, **kwargs)
         self._propagator = prop_state
-
-    def forward(self, x, time_increment=1.0):
-        for i in range(self._num_steps):
-            x = super(EulerMaruyama, self).forward(x, time_increment=self._dt)
-
-        return x
-
-    propagate = forward
 
     def build_density(self, x):
         return self._propagator(x, self._dt, *self.functional_parameters())
@@ -86,20 +77,6 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     def mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
         return x.values + self.f(x, *params) * self._dt, self.g(x, *params)
-
-    def forward(self, x, time_increment=1.0):
-        for i in range(self._num_steps):
-            x = super(AffineEulerMaruyama, self).forward(x, time_increment=self._dt)
-
-        return x
-
-    propagate = forward
-
-    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
-        for i in range(self._num_steps):
-            x = super(AffineEulerMaruyama, self).propagate_conditional(x, u, parameters, time_increment)
-
-        return x
 
 
 class Euler(AffineEulerMaruyama):
