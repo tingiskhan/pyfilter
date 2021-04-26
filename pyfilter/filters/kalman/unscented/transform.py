@@ -123,19 +123,19 @@ class UnscentedFilterTransform(Module):
         mean[..., self._state_slc] = xm
         cov[..., self._state_slc, self._state_slc] = xc
 
-        x_state = x_state.copy(dist=MultivariateNormal(loc=mean, covariance_matrix=cov))
+        x_state = x_state.copy(dist=MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False))
 
         if self._model.observable.n_dim > 0:
-            y_state = y_state.copy(dist=MultivariateNormal(loc=ym, covariance_matrix=yc))
+            y_state = y_state.copy(dist=MultivariateNormal(loc=ym, covariance_matrix=yc, validate_args=False))
         else:
-            y_state = y_state.copy(dist=Normal(loc=ym[..., 0], scale=yc[..., 0, 0].sqrt()))
+            y_state = y_state.copy(dist=Normal(loc=ym[..., 0], scale=yc[..., 0, 0].sqrt(), validate_args=False))
 
         return UFTCorrectionResult(x_state, self._state_slc, y_state)
 
     def predict(self, utf_corr: UFTCorrectionResult):
         sps = utf_corr.calculate_sigma_points(self._cov_scale)
 
-        hidden_state = utf_corr.x.copy(None, sps[..., self._state_slc])
+        hidden_state = utf_corr.x.copy(values=sps[..., self._state_slc])
         spx = propagate_sps(hidden_state, sps[..., self._hidden_slc], self._model.hidden, self._hidden_views)
 
         spy = propagate_sps(spx, sps[..., self._obs_slc], self._model.observable, self._obs_views)
