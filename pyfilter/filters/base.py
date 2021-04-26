@@ -6,7 +6,6 @@ from torch.nn import Module
 from typing import Tuple, Iterable, TypeVar, Optional
 from ..timeseries import StateSpaceModel
 from ..utils import choose
-from .utils import enforce_tensor
 from .result import FilterResult
 from .state import BaseState
 
@@ -57,10 +56,9 @@ class BaseFilter(Module, ABC):
 
         return self.predict_correct(y, state)
 
-    @enforce_tensor
     def longfilter(
         self,
-        y: torch.Tensor,
+        y: Iterable[torch.Tensor],
         bar=True,
         record_states=False,
         init_state: BaseState = None,
