@@ -37,23 +37,23 @@ class UKF(BaseKalmanFilter):
         utf_state = state.utf
 
         p = self._ut.predict(state.utf)
-        c = self._ut.calc_mean_cov(p)
+        (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-        utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
+        utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
-        xres = torch.empty((steps, *c.xm.shape))
-        yres = torch.empty((steps, *c.ym.shape))
+        x_res = torch.empty((steps, *x_m.shape))
+        y_res = torch.empty((steps, *y_m.shape))
 
-        xres[0] = c.xm
-        yres[0] = c.ym
+        x_res[0] = x_m
+        y_res[0] = y_m
 
         for i in range(steps - 1):
             p = self._ut.predict(utf_state)
-            c = self._ut.calc_mean_cov(p)
+            (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-            utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
+            utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
-            xres[i + 1] = c.xm
-            yres[i + 1] = c.ym
+            x_res[i + 1] = x_m
+            y_res[i + 1] = y_m
 
-        return xres, yres
+        return x_res, y_res
