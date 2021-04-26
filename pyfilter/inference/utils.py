@@ -25,8 +25,8 @@ def _construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    if cov.det() < EPS ** 2:
-        chol = (EPS + cov.diag()).sqrt().diag()
+    if cov.det() == 0.0:
+        chol = cov.diag().sqrt().diag()
     else:
         chol = cov.cholesky()
 
