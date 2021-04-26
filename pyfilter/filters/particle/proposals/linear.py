@@ -31,7 +31,7 @@ class LinearGaussianObservations(Proposal):
         cov = 1 / (h_var_inv + c ** 2 * o_var_inv)
         m = cov * (h_var_inv * loc + c * o_var_inv * y)
 
-        kernel = Normal(m, cov.sqrt())
+        kernel = Normal(m, cov.sqrt(), validate_args=False)
 
         return kernel
 
@@ -55,7 +55,7 @@ class LinearGaussianObservations(Proposal):
 
         m = torch.matmul(cov, (t1 + t3).unsqueeze(-1))[..., 0]
 
-        return MultivariateNormal(m, scale_tril=torch.cholesky(cov))
+        return MultivariateNormal(m, scale_tril=torch.cholesky(cov), validate_args=False)
 
     def get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
         return params[0], None
@@ -85,7 +85,7 @@ class LinearGaussianObservations(Proposal):
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
-        new_state = x.propagate_from(None, h_loc)
+        new_state = x.propagate_from(values=h_loc)
         o_loc, o_scale = self._model.observable.mean_scale(new_state)
 
         o_var = o_scale ** 2
@@ -104,7 +104,7 @@ class LinearGaussianObservations(Proposal):
                 tc = c.unsqueeze(-2)
                 cov = (o_var + tc.matmul(tc.transpose(-2, -1)) * h_var)[..., 0, 0]
 
-            return Normal(o_loc, cov.sqrt()).log_prob(y)
+            return Normal(o_loc, cov.sqrt(), validate_args=False).log_prob(y)
 
         if self._hidden_is1d:
             tc = c.unsqueeze(-2)
@@ -114,4 +114,4 @@ class LinearGaussianObservations(Proposal):
             diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
             cov = diag_o_var + c.matmul(diag_h_var).matmul(c.transpose(-2, -1))
 
-        return MultivariateNormal(o_loc, cov).log_prob(y)
+        return MultivariateNormal(o_loc, cov, validate_args=False).log_prob(y)
