@@ -25,14 +25,15 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def _update(self, filter_, state, y, *args):
-        prop_filt = filter_.copy()
-
         for _ in range(self._n_steps):
-            inds = self._resampler(state.normalized_weights(), normalized=True)
+            prop_filt = filter_.copy()
             dist = self._proposal(state, filter_, y)
 
-            filter_.resample(inds)
-            state.filter_state.resample(inds)
+            if _ == 0:
+                inds = self._resampler(state.normalized_weights(), normalized=True)
+
+                filter_.resample(inds)
+                state.filter_state.resample(inds)
 
             to_accept, prop_state, prop_filt = run_pmmh(
                 filter_, state.filter_state, dist, prop_filt, y, filter_.n_parallel
