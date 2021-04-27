@@ -1,5 +1,7 @@
+import torch
 from .base import BaseKernel
 from ...utils import _construct_mvn, PropConstructor, run_pmmh, params_to_tensor
+from ...batch.mcmc.proposal import IndependentProposal
 
 
 class SymmetricMH(object):
@@ -25,24 +27,31 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def _update(self, filter_, state, y, *args):
-        for _ in range(self._n_steps):
-            prop_filt = filter_.copy()
+        prop_filt = filter_.copy()
+        indices = self._resampler(state.normalized_weights(), normalized=True)
+
+        if isinstance(self._proposal, IndependentProposal):
+            filter_.resample(indices)
+            state.filter_state.resample(indices)
+
+            dist = self._proposal(state, filter_, y)
+        else:
             dist = self._proposal(state, filter_, y)
 
-            if _ == 0:
-                inds = self._resampler(state.normalized_weights(), normalized=True)
+            filter_.resample(indices)
+            state.filter_state.resample(indices)
 
-                filter_.resample(inds)
-                state.filter_state.resample(inds)
+        accepted = torch.zeros_like(state.w, dtype=torch.bool)
+        shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
 
-            to_accept, prop_state, prop_filt = run_pmmh(
-                filter_, state.filter_state, dist, prop_filt, y, filter_.n_parallel
-            )
-
-            self.accepted = to_accept.sum().float() / float(to_accept.shape[0])
+        for _ in range(self._n_steps):
+            to_accept, prop_state, prop_filt = run_pmmh(filter_, state.filter_state, dist, prop_filt, y, shape)
+            accepted |= to_accept
 
             filter_.exchange(prop_filt, to_accept)
             state.filter_state.exchange(prop_state, to_accept)
-            state.w[:] = 0.0
+
+        self.accepted = accepted.float().mean()
+        state.w[:] = 0.0
 
         return self
