@@ -13,10 +13,12 @@ class APF(ParticleFilter):
         normalized = state.normalized_weights()
 
         if torch.isnan(y).any():
-            x = self.ssm.hidden.forward(state.x)
-            inds = self._resampler(normalized)
+            indices = self._resampler(normalized, normalized=True)
+            state.x.values[:] = choose(state.x.values, indices)
 
-            return ParticleState(x, 0.0 * torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), inds)
+            x = self.ssm.hidden.forward(state.x)
+
+            return ParticleState(x, torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), indices)
 
         pre_weights = self.proposal.pre_weight(y, state.x)
 
