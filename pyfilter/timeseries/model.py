@@ -18,17 +18,17 @@ class StateSpaceModel(Module):
         self.observe_every_nth_step = observe_every_nth_step
 
     def generate_observation(self, state: NewState) -> bool:
-        return state.time_index % self.observe_every_nth_step == 0
+        return (state.time_index - 1) % self.observe_every_nth_step == 0
 
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
 
-        hidden = tuple()
+        hidden = (x,)
         obs = tuple()
 
         nan = float("nan")
-        for t in range(steps):
-            hidden += (x,)
+        for t in range(1, steps + 1):
+            x = self.hidden.propagate(x)
 
             if self.generate_observation(x):
                 obs_state = self.observable.propagate(x)
@@ -36,8 +36,7 @@ class StateSpaceModel(Module):
                 obs_state = x.propagate_from(values=obs[-1].values * nan, time_increment=0.0)
 
             obs += (obs_state,)
-
-            x = self.hidden.propagate(x)
+            hidden += (x,)
 
         return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
 
