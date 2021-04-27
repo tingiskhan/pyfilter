@@ -11,7 +11,7 @@ class KalmanState(BaseState):
         self.register_buffer("ll", ll)
 
     def get_mean(self):
-        return self.utf.x_dist().mean
+        return self.utf.x_dist().mean.clone()
 
     # TODO: Fix this
     def resample(self, indices):

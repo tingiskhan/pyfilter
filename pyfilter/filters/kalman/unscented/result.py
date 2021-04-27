@@ -68,7 +68,7 @@ class UFTCorrectionResult(Module):
 
         if isinstance(self.y.dist, Normal):
             y_scale = self.y.dist.scale
-            y_scale[indices] = state.y.scale[indices]
+            y_scale[indices] = state.y.dist.scale[indices]
 
             y_dist = Normal(y_loc, y_scale, validate_args=False)
         else:
