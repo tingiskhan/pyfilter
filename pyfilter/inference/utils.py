@@ -9,7 +9,6 @@ from .state import AlgorithmState
 from ..timeseries import StateSpaceModel, StochasticProcess
 from ..distributions import Prior
 from ..parameter import ExtendedParameter
-from ..constants import EPS
 
 
 PropConstructor = Callable[[AlgorithmState, BaseFilter, torch.Tensor], Distribution]
