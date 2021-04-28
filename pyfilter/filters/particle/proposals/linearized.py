@@ -57,9 +57,9 @@ class Linearized(Proposal):
         mean = h_loc.detach()
 
         if self._is1d:
-            kernel = Normal(mean, std)
+            kernel = Normal(mean, std, validate_args=False)
         else:
-            kernel = Independent(Normal(mean, std), self._model.hidden.n_dim)
+            kernel = Independent(Normal(mean, std), self._model.hidden.n_dim, validate_args=False)
 
         new_x = new_x.copy(new_x.dist, kernel.sample())
 
