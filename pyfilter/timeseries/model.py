@@ -3,7 +3,6 @@ from torch.nn import Module
 from typing import Tuple
 from copy import deepcopy
 from .stochasticprocess import StochasticProcess
-from .state import NewState
 
 
 class StateSpaceModel(Module):
@@ -11,14 +10,10 @@ class StateSpaceModel(Module):
     Combines a hidden and observable processes to constitute a state space model.
     """
 
-    def __init__(self, hidden: StochasticProcess, observable: StochasticProcess, observe_every_nth_step=1):
+    def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
         super().__init__()
         self.hidden = hidden
         self.observable = observable
-        self.observe_every_nth_step = observe_every_nth_step
-
-    def generate_observation(self, state: NewState) -> bool:
-        return (state.time_index - 1) % self.observe_every_nth_step == 0
 
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
@@ -26,14 +21,10 @@ class StateSpaceModel(Module):
         hidden = (x,)
         obs = tuple()
 
-        nan = float("nan")
         for t in range(1, steps + 1):
             x = self.hidden.propagate(x)
 
-            if self.generate_observation(x):
-                obs_state = self.observable.propagate(x)
-            else:
-                obs_state = x.propagate_from(values=obs[-1].values * nan, time_increment=0.0)
+            obs_state = self.observable.propagate(x)
 
             obs += (obs_state,)
             hidden += (x,)

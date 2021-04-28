@@ -5,7 +5,7 @@ from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
-from ....timeseries import StateSpaceModel, NewState
+from ....timeseries import StateSpaceModel, NewState, StochasticDifferentialEquation
 from ....constants import EPS
 
 
@@ -21,6 +21,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._time_inds: torch.Tensor = None
 
         self._is_ssm = isinstance(self._model, StateSpaceModel)
+        self._is_sde = None
 
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
@@ -51,7 +52,9 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            y_state = NewState(self._time_inds[1:], values=x_t[:, ::self._model.observe_every_nth_step])
+            delta = 1 if not self._is_sde else self._model.hidden.num_steps
+
+            y_state = NewState(self._time_inds[1:], values=x_t[:, ::delta])
             x_state = NewState(self._time_inds[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)
@@ -84,6 +87,11 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._time_inds = torch.arange(0, t_end)
 
         if self._is_ssm:
+            self._is_sde = isinstance(self._model.hidden, StochasticDifferentialEquation)
+
+            if self._is_sde:
+                self._time_inds = torch.arange(0, t_end * self._model.hidden.num_steps)
+
             state_approx.initialize(self._time_inds, self._model)
             opt_params += tuple(state_approx.parameters())
 
