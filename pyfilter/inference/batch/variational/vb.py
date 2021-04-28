@@ -54,7 +54,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
 
             delta = 1 if not self._is_sde else self._model.hidden.num_steps
 
-            y_state = NewState(self._time_inds[1:], values=x_t[:, ::delta])
+            y_state = NewState(self._time_inds[1::delta], values=x_t[:, ::delta])
             x_state = NewState(self._time_inds[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)
@@ -82,16 +82,14 @@ class VariationalBayes(OptimizationBasedAlgorithm):
 
         t_end = y.shape[0]
         if self._is_ssm:
-            t_end *= self._model.observe_every_nth_step
-
-        self._time_inds = torch.arange(0, t_end)
-
-        if self._is_ssm:
             self._is_sde = isinstance(self._model.hidden, StochasticDifferentialEquation)
 
-            if self._is_sde:
-                self._time_inds = torch.arange(0, t_end * self._model.hidden.num_steps)
+        if self._is_sde:
+            self._time_inds = torch.arange(0, t_end * self._model.hidden.num_steps) * self._model.hidden.dt
+        else:
+            self._time_inds = torch.arange(0, t_end)
 
+        if self._is_ssm:
             state_approx.initialize(self._time_inds, self._model)
             opt_params += tuple(state_approx.parameters())
 

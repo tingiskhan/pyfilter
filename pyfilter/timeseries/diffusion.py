@@ -19,12 +19,12 @@ class OneStepEulerMaruyma(AffineProcess):
 
     def __init__(self, funcs, parameters, initial_dist, increment_dist, dt: float, **kwargs):
         super().__init__(funcs, parameters, initial_dist, increment_dist, **kwargs)
-        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
     def mean_scale(self, x, parameters=None):
         drift, diffusion = super(OneStepEulerMaruyma, self).mean_scale(x, parameters=parameters)
 
-        return x.values + drift * self._dt, diffusion
+        return x.values + drift * self.dt, diffusion
 
 
 class StochasticDifferentialEquation(ParameterizedStochasticProcess, ABC):
@@ -35,8 +35,16 @@ class StochasticDifferentialEquation(ParameterizedStochasticProcess, ABC):
     def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, num_steps=1, **kwargs):
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
 
-        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+        self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
         self.num_steps = num_steps
+
+    def forward(self, x, time_increment=1.0):
+        for i in range(self.num_steps):
+            x = super(StochasticDifferentialEquation, self).forward(x, time_increment=self.dt)
+
+        return x
+
+    propagate = forward
 
 
 class EulerMaruyama(StochasticDifferentialEquation):
@@ -51,16 +59,8 @@ class EulerMaruyama(StochasticDifferentialEquation):
         super().__init__(parameters, initial_dist, dt, num_steps, **kwargs)
         self._propagator = prop_state
 
-    def forward(self, x, time_increment=1.0):
-        for i in range(self.num_steps):
-            x = super(EulerMaruyama, self).forward(x, time_increment=self._dt)
-
-        return x
-
-    propagate = forward
-
     def build_density(self, x):
-        return self._propagator(x, self._dt, *self.functional_parameters())
+        return self._propagator(x, self.dt, *self.functional_parameters())
 
 
 # TODO: Make subclass of AffineProcess as well?
@@ -85,15 +85,7 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
 
     def mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
-        return x.values + self.f(x, *params) * self._dt, self.g(x, *params)
-
-    def forward(self, x, time_increment=1.0):
-        for i in range(self.num_steps):
-            x = super(AffineEulerMaruyama, self).forward(x, time_increment=self._dt)
-
-        return x
-
-    propagate = forward
+        return x.values + self.f(x, *params) * self.dt, self.g(x, *params)
 
     def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
         for i in range(self.num_steps):
@@ -145,8 +137,8 @@ class RungeKutta(Euler):
         params = parameters or self.functional_parameters()
 
         k1 = self.f(x, *params)
-        k2 = self.f(x.propagate_from(time_increment=self._dt / 2, values=x.values + self._dt * k1 / 2), *params)
-        k3 = self.f(x.propagate_from(time_increment=self._dt / 2, values=x.values + self._dt * k2 / 2), *params)
-        k4 = self.f(x.propagate_from(time_increment=self._dt, values=x.values + self._dt * k3), *params)
+        k2 = self.f(x.propagate_from(time_increment=self.dt / 2, values=x.values + self.dt * k1 / 2), *params)
+        k3 = self.f(x.propagate_from(time_increment=self.dt / 2, values=x.values + self.dt * k2 / 2), *params)
+        k4 = self.f(x.propagate_from(time_increment=self.dt, values=x.values + self.dt * k3), *params)
 
-        return x.values + self._dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4), self.g(x, *params)
+        return x.values + self.dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4), self.g(x, *params)

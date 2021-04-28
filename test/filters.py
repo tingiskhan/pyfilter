@@ -120,8 +120,8 @@ class Tests(unittest.TestCase):
         dt = 1e-2
         norm = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
-        em = AffineEulerMaruyama((f, g), (0.02, 0.15), norm, norm, dt=1e-2)
-        model = LinearGaussianObservations(em, scale=1e-3, observe_every_nth_step=10)
+        em = AffineEulerMaruyama((f, g), (0.02, 0.15), norm, norm, dt=1e-2, num_steps=10)
+        model = LinearGaussianObservations(em, scale=1e-3)
 
         x, y = model.sample_path(500)
 
@@ -130,4 +130,4 @@ class Tests(unittest.TestCase):
             result = filt.longfilter(y)
 
             means = result.filter_means
-            self.assertLess(torch.std(x - means), 5e-2)
+            self.assertLess(torch.std(x[1:] - means), 5e-2)
