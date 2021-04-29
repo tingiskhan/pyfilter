@@ -13,7 +13,7 @@ class SymmetricMH(object):
 
 
 class ParticleMetropolisHastings(BaseKernel):
-    def __init__(self, n_steps=1, proposal: PropConstructor = None, **kwargs):
+    def __init__(self, n_steps=1, proposal: PropConstructor = None, proposal_override_ess=0.01, **kwargs):
         """
         Implements a base class for the particle Metropolis Hastings class.
 
@@ -25,18 +25,22 @@ class ParticleMetropolisHastings(BaseKernel):
         self._n_steps = n_steps
         self._proposal = proposal or SymmetricMH()
         self.accepted = None
+        self._proposal_override_ess = proposal_override_ess
 
     def _update(self, filter_, state, y, *args):
         prop_filt = filter_.copy()
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
-        if isinstance(self._proposal, IndependentProposal):
+        override_proposal = (state.ess[-1] / indices.shape[0]) < self._proposal_override_ess
+        proposal = IndependentProposal(scale=1e-2) if override_proposal else self._proposal
+
+        if isinstance(proposal, IndependentProposal):
             filter_.resample(indices)
             state.filter_state.resample(indices)
 
-            dist = self._proposal(state, filter_, y)
+            dist = proposal(state, filter_, y)
         else:
-            dist = self._proposal(state, filter_, y)
+            dist = proposal(state, filter_, y)
 
             filter_.resample(indices)
             state.filter_state.resample(indices)
