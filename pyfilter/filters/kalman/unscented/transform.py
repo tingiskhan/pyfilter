@@ -3,7 +3,7 @@ from math import sqrt
 from torch.nn import Module
 from typing import Tuple
 from torch.distributions import MultivariateNormal, Normal
-from .utils import propagate_sps, covariance
+from .utils import propagate_sps, covariance, get_bad_inds, _EPS
 from .result import UFTCorrectionResult, UFTPredictionResult
 from ....utils import construct_diag_from_flat, size_getter
 from ....typing import ShapeLike
@@ -44,7 +44,6 @@ class UnscentedFilterTransform(Module):
         self._set_slices(trans_dim)
 
         self._view_shape = None
-        self._diag_inds = range(model.hidden.n_dim)
 
     def _set_slices(self, trans_dim):
         hidden_dim = self._model.hidden.num_vars
@@ -119,6 +118,19 @@ class UnscentedFilterTransform(Module):
     ):
         mean = prev_corr.x.dist.mean.clone()
         cov = prev_corr.x.dist.covariance_matrix.clone()
+
+        # We only allow fixing bad matrices when we're running batched mode
+        if cov.dim() > 2:
+            bad_matrix = get_bad_inds(xc, yc)
+
+            if bad_matrix.all():
+                raise Exception("All batches were singular or nan!")
+
+            xc[bad_matrix, self._state_slc, self._state_slc] = _EPS * torch.eye(xc.shape[-1], device=xc.device)
+            xm[bad_matrix, self._state_slc] = 0.0
+
+            yc[bad_matrix] = _EPS * torch.eye(yc.shape[-1], device=yc.device)
+            ym[bad_matrix] = 0.0
 
         mean[..., self._state_slc] = xm
         cov[..., self._state_slc, self._state_slc] = xc
