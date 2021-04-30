@@ -76,11 +76,12 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def _fit(self, y: torch.Tensor, logging_wrapper, **kwargs) -> AlgorithmState:
+    def fit(self, y: torch.Tensor, logging=None, **kwargs) -> AlgorithmState:
+        logging = logging or TQDMLossVisualiser()
         state = self.initialize(y, **kwargs)
 
         try:
-            logging_wrapper.initialize(self, self._max_iter)
+            logging.initialize(self, self._max_iter)
 
             while not state.converged and state.iterations < self._max_iter:
                 old_loss = state.loss
@@ -91,16 +92,16 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
                 state.optimizer.step()
 
                 state.loss = elbo.detach()
-                logging_wrapper.do_log(state.iterations, state)
+                logging.do_log(state.iterations, state)
 
                 state.iterations += 1
                 state.converged = self.is_converged(old_loss, state.loss)
                 state.optimizer.zero_grad()
 
         except Exception as e:
-            logging_wrapper.close()
+            logging.close()
             raise e
 
-        logging_wrapper.close()
+        logging.close()
 
         return state

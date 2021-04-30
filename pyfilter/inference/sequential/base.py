@@ -1,6 +1,7 @@
 from abc import ABC
 import torch
 from .state import FilteringAlgorithmState
+from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
 from ..utils import sample_model
 from ...utils import normalize
@@ -23,19 +24,21 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         return self._update(y, state)
 
-    def _fit(self, y, logging_wrapper=None, **kwargs) -> FilteringAlgorithmState:
-        logging_wrapper.initialize(self, y.shape[0])
+    def fit(self, y, logging=None, **kwargs) -> FilteringAlgorithmState:
+        logging = logging or TQDMWrapper()
+        logging.initialize(self, y.shape[0])
+
         try:
             state = self.initialize()
             for i, yt in enumerate(y):
                 state = self.update(yt, state)
-                logging_wrapper.do_log(i, state)
+                logging.do_log(i, state)
 
         except Exception as e:
-            logging_wrapper.close()
+            logging.close()
             raise e
 
-        logging_wrapper.close()
+        logging.close()
 
         return state
 
