@@ -19,7 +19,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
     def do_update(self, state: FilteringAlgorithmState) -> bool:
         raise NotImplementedError()
 
-    def _update(self, y, state):
+    def update(self, y, state):
         if self.do_update(state):
             self._kernel.update(self.filter, state)
 

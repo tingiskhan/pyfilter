@@ -5,7 +5,7 @@ from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
 from ..utils import sample_model
 from ...utils import normalize
-from ...filters import ParticleFilter, utils as u, FilterResult
+from ...filters import ParticleFilter, FilterResult
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
@@ -13,16 +13,12 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     Base class for sequential algorithms using filters in order to approximate the log likelihood.
     """
 
-    def _update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
-        raise NotImplementedError()
-
-    @u.enforce_tensor
     def update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
         """
         Performs an update using a single observation `y`.
         """
 
-        return self._update(y, state)
+        raise NotImplementedError()
 
     def fit(self, y, logging=None, **kwargs) -> FilteringAlgorithmState:
         logging = logging or TQDMWrapper()
@@ -115,7 +111,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def _update(self, y: torch.Tensor, state):
+    def update(self, y: torch.Tensor, state):
         self._num_iters += 1
 
         if not self._is_switched:
