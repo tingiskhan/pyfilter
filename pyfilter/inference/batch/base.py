@@ -1,10 +1,11 @@
 from abc import ABC
 import torch
 from typing import Type, Dict, Any
-from torch.optim import Optimizer, Adam
+from torch.optim import Optimizer, Adam, Adadelta
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from ..state import AlgorithmState
 from ..utils import Process
+from ..logging import TQDMWrapper
 
 
 class BaseBatchAlgorithm(BaseAlgorithm, ABC):
@@ -28,6 +29,26 @@ class BatchFilterAlgorithm(BaseFilterAlgorithm, ABC):
     def __init__(self, filter_, max_iter):
         super(BatchFilterAlgorithm, self).__init__(filter_)
         self._max_iter = max_iter
+
+
+class TQDMLossVisualiser(TQDMWrapper):
+    def __init__(self, smoothing: float = 0.98):
+        super().__init__()
+        self._run_avg_loss = 0.0
+        self._smoothing = smoothing
+
+        self._desc_format = "{alg} - Loss: {loss:,.2f}"
+        self._alg = None
+
+    def initialize(self, algorithm, num_iterations):
+        super(TQDMLossVisualiser, self).initialize(algorithm, num_iterations)
+        self._alg = str(algorithm)
+
+    def do_log(self, iteration, state):
+        self._run_avg_loss = self._smoothing * self._run_avg_loss + (1 - self._smoothing) * state.loss
+        self._tqdm.set_description(self._desc_format.format(alg=self._alg, loss=self._run_avg_loss))
+
+        self._tqdm.update(1)
 
 
 class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
@@ -59,16 +80,18 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         state = self.initialize(y, **kwargs)
 
         try:
-            logging_wrapper.set_num_iter(self._max_iter)
+            logging_wrapper.initialize(self, self._max_iter)
+
             while not state.converged and state.iterations < self._max_iter:
                 old_loss = state.loss
 
-                elbo = state.loss = self.loss(y, state)
+                elbo = self.loss(y, state)
 
                 elbo.backward()
                 state.optimizer.step()
 
-                logging_wrapper.do_log(state.iterations, self, y)
+                state.loss = elbo.detach()
+                logging_wrapper.do_log(state.iterations, state)
 
                 state.iterations += 1
                 state.converged = self.is_converged(old_loss, state.loss)

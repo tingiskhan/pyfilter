@@ -3,7 +3,7 @@ from torch.nn import Module
 import torch
 from typing import Tuple
 from ..filters import BaseFilter, utils as u
-from ..logging import LoggingWrapper, TqdmWrapper
+from .logging import DefaultLogger, TQDMWrapper
 from .state import AlgorithmState
 
 
@@ -16,10 +16,10 @@ class BaseAlgorithm(Module, ABC):
         super().__init__()
 
     @u.enforce_tensor
-    def fit(self, y: torch.Tensor, logging: LoggingWrapper = None, **kwargs) -> AlgorithmState:
-        return self._fit(y, logging_wrapper=logging or TqdmWrapper(), **kwargs)
+    def fit(self, y: torch.Tensor, logging: DefaultLogger = None, **kwargs) -> AlgorithmState:
+        return self._fit(y, logging_wrapper=logging or TQDMWrapper(), **kwargs)
 
-    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs) -> AlgorithmState:
+    def _fit(self, y: torch.Tensor, logging_wrapper: DefaultLogger, **kwargs) -> AlgorithmState:
         raise NotImplementedError()
 
     def initialize(self, *args, **kwargs) -> AlgorithmState:

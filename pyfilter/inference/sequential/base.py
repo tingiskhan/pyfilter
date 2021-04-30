@@ -24,12 +24,12 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
         return self._update(y, state)
 
     def _fit(self, y, logging_wrapper=None, **kwargs) -> FilteringAlgorithmState:
-        logging_wrapper.set_num_iter(y.shape[0])
+        logging_wrapper.initialize(self, y.shape[0])
         try:
             state = self.initialize()
             for i, yt in enumerate(y):
                 state = self.update(yt, state)
-                logging_wrapper.do_log(i, self, y)
+                logging_wrapper.do_log(i, state)
 
         except Exception as e:
             logging_wrapper.close()

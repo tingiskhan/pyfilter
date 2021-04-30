@@ -1,7 +1,7 @@
 from .utils import seed
 import torch
 from ..base import BatchFilterAlgorithm
-from ....logging import LoggingWrapper
+from pyfilter.inference.logging import LoggingWrapper
 from .state import PMMHState
 from ...utils import PropConstructor, run_pmmh, params_to_tensor
 from .proposal import IndependentProposal
@@ -29,7 +29,8 @@ class PMMH(BatchFilterAlgorithm):
 
         prop_filt = self._filter.copy()
 
-        logging_wrapper.set_num_iter(self._max_iter)
+        logging_wrapper.initialize(self, self._max_iter)
+
         for i in range(self._max_iter):
             prop_dist = self._proposal_builder(state, self._filter, y)
             accept, new_res, prop_filt = run_pmmh(
@@ -40,6 +41,6 @@ class PMMH(BatchFilterAlgorithm):
             self._filter.exchange(prop_filt, accept)
 
             state.update(params_to_tensor(self._filter.ssm, constrained=True))
-            logging_wrapper.do_log(i, self, y)
+            logging_wrapper.do_log(i, state)
 
         return state
