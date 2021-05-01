@@ -141,7 +141,7 @@ class TimeseriesTests(unittest.TestCase):
         dt = 0.1
 
         init = norm = DistributionWrapper(Normal, loc=a, scale=math.sqrt(dt))
-        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt, num_steps=10)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (a, 0.15), init, norm, dt=dt)
 
         x = sde.initial_sample(shape)
         self.assert_timeseries_sampling(100, sde, x, shape)
@@ -153,7 +153,7 @@ class TimeseriesTests(unittest.TestCase):
         dist = DistributionWrapper(Normal, loc=0.0, scale=Prior(Exponential, rate=10.0))
 
         init = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        sde = AffineEulerMaruyama((f_sde, g_sde), (1.0, 0.15), init, dist, dt=dt, num_steps=10)
+        sde = AffineEulerMaruyama((f_sde, g_sde), (1.0, 0.15), init, dist, dt=dt)
 
         sde.sample_params(shape)
 

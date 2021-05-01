@@ -3,13 +3,11 @@ from .affine import AffineProcess
 
 
 class AffineObservations(AffineProcess):
+    """
+    Class for defining model with affine dynamics in the observable process.
+    """
+
     def __init__(self, funcs, parameters, increment_dist):
-        """
-        Class for defining model with affine dynamics in the observable process.
-
-        :param funcs: The functions governing the dynamics of the process
-        """
-
         super().__init__(funcs, parameters, None, increment_dist)
 
     def initial_sample(self, shape=None):

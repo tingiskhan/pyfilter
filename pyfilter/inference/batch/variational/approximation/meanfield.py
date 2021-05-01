@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
+from torch.distributions import Independent, Normal, TransformedDistribution, Distribution, LogNormal
 from torch.nn import Parameter
 from typing import Tuple
 from .base import BaseApproximation
@@ -15,8 +15,8 @@ class StateMeanField(BaseApproximation):
         super().__init__()
         self._dim = None
 
-        self.register_parameter("mean", None)
-        self.register_parameter("log_std", None)
+        self.mean = None
+        self.log_std = None
 
     def initialize(self, data, model):
         mean = torch.zeros((data.shape[0] + 1, *model.hidden.increment_dist().event_shape))
@@ -46,8 +46,8 @@ class ParameterMeanField(BaseApproximation):
         self._bijections = None
         self._mask = None
 
-        self.register_parameter("mean", None)
-        self.register_parameter("log_std", None)
+        self.mean = None
+        self.log_std = None
 
     def get_parameters(self):
         return self.mean, self.log_std

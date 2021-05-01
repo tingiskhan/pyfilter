@@ -18,35 +18,42 @@ class UKF(BaseKalmanFilter):
 
     def initialize(self) -> KalmanState:
         res = self._ut.initialize(self.n_parallel)
-        return KalmanState(res, torch.zeros(self.n_parallel, device=res.xm.device))
+        return KalmanState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def _filter(self, y, state: KalmanState):
+    def predict_correct(self, y, state: KalmanState):
         p = self._ut.predict(state.utf)
+
+        if torch.isnan(y).any():
+            (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
+            res = self._ut.update_state(x_m, x_c, p.spx, state.utf, y_m, y_c, p.spy)
+
+            return KalmanState(res, torch.zeros_like(state.ll))
+
         res = self._ut.correct(y, p, state.utf)
 
-        return KalmanState(res, res.y_dist().log_prob(y))
+        return KalmanState(res, res.y.dist.log_prob(y))
 
     def predict(self, state: KalmanState, steps, *args, **kwargs):
         utf_state = state.utf
 
         p = self._ut.predict(state.utf)
-        c = self._ut.calc_mean_cov(p)
+        (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-        utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
+        utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
-        xres = torch.empty((steps, *c.xm.shape))
-        yres = torch.empty((steps, *c.ym.shape))
+        x_res = torch.empty((steps, *x_m.shape))
+        y_res = torch.empty((steps, *y_m.shape))
 
-        xres[0] = c.xm
-        yres[0] = c.ym
+        x_res[0] = x_m
+        y_res[0] = y_m
 
         for i in range(steps - 1):
             p = self._ut.predict(utf_state)
-            c = self._ut.calc_mean_cov(p)
+            (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-            utf_state = self._ut.update_state(c.xm, c.xc, p.spx, utf_state)
+            utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
-            xres[i + 1] = c.xm
-            yres[i + 1] = c.ym
+            x_res[i + 1] = x_m
+            y_res[i + 1] = y_m
 
-        return xres, yres
+        return x_res, y_res

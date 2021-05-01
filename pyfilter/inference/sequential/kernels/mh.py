@@ -1,5 +1,7 @@
+import torch
 from .base import BaseKernel
 from ...utils import _construct_mvn, PropConstructor, run_pmmh, params_to_tensor
+from ...batch.mcmc.proposal import IndependentProposal
 
 
 class SymmetricMH(object):
@@ -11,7 +13,7 @@ class SymmetricMH(object):
 
 
 class ParticleMetropolisHastings(BaseKernel):
-    def __init__(self, n_steps=1, proposal: PropConstructor = None, **kwargs):
+    def __init__(self, n_steps=1, proposal: PropConstructor = None, proposal_override_ess=0.01, **kwargs):
         """
         Implements a base class for the particle Metropolis Hastings class.
 
@@ -23,25 +25,37 @@ class ParticleMetropolisHastings(BaseKernel):
         self._n_steps = n_steps
         self._proposal = proposal or SymmetricMH()
         self.accepted = None
+        self._proposal_override_ess = proposal_override_ess
 
     def _update(self, filter_, state, y, *args):
         prop_filt = filter_.copy()
+        indices = self._resampler(state.normalized_weights(), normalized=True)
+
+        override_proposal = (state.ess[-1] / indices.shape[0]) < self._proposal_override_ess
+        proposal = IndependentProposal(scale=1e-2) if override_proposal else self._proposal
+
+        if isinstance(proposal, IndependentProposal):
+            filter_.resample(indices)
+            state.filter_state.resample(indices)
+
+            dist = proposal(state, filter_, y)
+        else:
+            dist = proposal(state, filter_, y)
+
+            filter_.resample(indices)
+            state.filter_state.resample(indices)
+
+        accepted = torch.zeros_like(state.w, dtype=torch.bool)
+        shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
 
         for _ in range(self._n_steps):
-            inds = self._resampler(state.normalized_weights(), normalized=True)
-            dist = self._proposal(state, filter_, y)
-
-            filter_.resample(inds)
-            state.filter_state.resample(inds)
-
-            to_accept, prop_state, prop_filt = run_pmmh(
-                filter_, state.filter_state, dist, prop_filt, y, filter_.n_parallel
-            )
-
-            self.accepted = to_accept.sum().float() / float(to_accept.shape[0])
+            to_accept, prop_state, prop_filt = run_pmmh(filter_, state.filter_state, dist, prop_filt, y, shape)
+            accepted |= to_accept
 
             filter_.exchange(prop_filt, to_accept)
             state.filter_state.exchange(prop_state, to_accept)
-            state.w[:] = 0.0
+
+        self.accepted = accepted.float().mean()
+        state.w[:] = 0.0
 
         return self

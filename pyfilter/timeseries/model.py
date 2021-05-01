@@ -18,14 +18,16 @@ class StateSpaceModel(Module):
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
 
-        hidden = tuple()
+        hidden = (x,)
         obs = tuple()
 
-        for t in range(steps):
-            hidden += (x,)
-            obs += (self.observable.propagate(x),)
-
+        for t in range(1, steps + 1):
             x = self.hidden.propagate(x)
+
+            obs_state = self.observable.propagate(x)
+
+            obs += (obs_state,)
+            hidden += (x,)
 
         return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
 

@@ -43,7 +43,7 @@ class NewState(Module):
         return self.values.device
 
     def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return NewState(self.time_index, dist, values=values)
+        return NewState(self.time_index, dist, values)
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
         return NewState(self.time_index + time_increment, dist, values)

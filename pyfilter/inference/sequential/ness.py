@@ -19,7 +19,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
     def do_update(self, state: FilteringAlgorithmState) -> bool:
         raise NotImplementedError()
 
-    def _update(self, y, state):
+    def update(self, y, state):
         if self.do_update(state):
             self._kernel.update(self.filter, state)
 
@@ -33,13 +33,11 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
 
 
 class NESS(BaseNESS):
+    """
+    Implements the NESS algorithm by Miguez and Crisan.
+    """
+
     def __init__(self, filter_, particles, threshold=0.95, **kwargs):
-        """
-        Implements the NESS algorithm by Miguez and Crisan.
-
-        :param kde: The kernel density estimator to use for sampling new parameters.
-        """
-
         super().__init__(filter_, particles, **kwargs)
         self._threshold = threshold * particles
 

@@ -38,3 +38,6 @@ class ParticleState(BaseState):
         self.w[indices] = state.w[indices]
         self.ll[indices] = state.ll[indices]
         self.prev_inds[indices] = state.prev_inds[indices]
+
+    def get_timeseries_state(self) -> NewState:
+        return self.x

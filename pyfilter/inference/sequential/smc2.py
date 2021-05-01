@@ -23,7 +23,7 @@ class SMC2(SequentialParticleAlgorithm):
         super().__init__(filter_, particles)
 
         self.register_buffer("_threshold", torch.tensor(threshold * particles))
-        self._kernel = ParticleMetropolisHastings(proposal=kernel or SymmetricMH(), **kwargs)
+        self._kernel = ParticleMetropolisHastings(proposal=kernel, **kwargs)
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
@@ -36,7 +36,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         return SMC2State(state.w, state.filter_state, state.ess)
 
-    def _update(self, y, state: SMC2State):
+    def update(self, y, state: SMC2State):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
@@ -71,9 +71,9 @@ class SMC2(SequentialParticleAlgorithm):
         self.filter._particles[-1] *= 2
         self.filter.set_nparallel(*self.particles)
 
-        fstate = self.filter.longfilter(state.parsed_data, bar=False)
+        new_filter_state = self.filter.longfilter(state.parsed_data, bar=False)
 
-        w = fstate.loglikelihood - state.filter_state.loglikelihood
+        w = new_filter_state.loglikelihood - state.filter_state.loglikelihood
         self._increases += 1
 
-        return SMC2State(w, fstate, state.ess)
+        return SMC2State(w, new_filter_state, state.ess)

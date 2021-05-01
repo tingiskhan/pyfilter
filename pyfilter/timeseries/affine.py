@@ -25,7 +25,9 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
 
     shape = loc.shape[:-n_dim] if n_dim > 0 else loc.shape
 
-    return TransformedDistribution(dist.expand(shape), AffineTransform(loc, scale, event_dim=n_dim))
+    return TransformedDistribution(
+        dist.expand(shape), AffineTransform(loc, scale, event_dim=n_dim), validate_args=False
+    )
 
 
 class AffineProcess(ParameterizedStochasticProcess):

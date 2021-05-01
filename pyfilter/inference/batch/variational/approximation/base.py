@@ -17,10 +17,3 @@ class BaseApproximation(Module, ABC):
 
     def dist(self) -> Distribution:
         raise NotImplementedError()
-
-    def entropy(self) -> torch.Tensor:
-        """
-        Returns the entropy of the variational approximation
-        """
-
-        return self.dist().entropy()

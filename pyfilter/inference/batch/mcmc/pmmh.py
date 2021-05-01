@@ -1,10 +1,10 @@
-from .utils import seed
 import torch
-from ..base import BatchFilterAlgorithm
-from ....logging import LoggingWrapper
-from .state import PMMHState
-from ...utils import PropConstructor, run_pmmh, params_to_tensor
+from .utils import seed
 from .proposal import IndependentProposal
+from .state import PMMHState
+from ..base import BatchFilterAlgorithm
+from ...utils import PropConstructor, run_pmmh, params_to_tensor
+from ...logging import TQDMWrapper
 
 
 class PMMH(BatchFilterAlgorithm):
@@ -24,12 +24,14 @@ class PMMH(BatchFilterAlgorithm):
 
         return PMMHState(params_to_tensor(self._filter.ssm, constrained=True), prev_res)
 
-    def _fit(self, y: torch.Tensor, logging_wrapper: LoggingWrapper, **kwargs):
+    def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y, **kwargs)
 
         prop_filt = self._filter.copy()
 
-        logging_wrapper.set_num_iter(self._max_iter)
+        logging = logging or TQDMWrapper()
+        logging.initialize(self, self._max_iter)
+
         for i in range(self._max_iter):
             prop_dist = self._proposal_builder(state, self._filter, y)
             accept, new_res, prop_filt = run_pmmh(
@@ -40,6 +42,6 @@ class PMMH(BatchFilterAlgorithm):
             self._filter.exchange(prop_filt, accept)
 
             state.update(params_to_tensor(self._filter.ssm, constrained=True))
-            logging_wrapper.do_log(i, self, y)
+            logging.do_log(i, state)
 
         return state
