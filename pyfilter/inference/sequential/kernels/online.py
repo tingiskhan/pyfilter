@@ -23,11 +23,11 @@ class OnlineKernel(BaseKernel):
         stacked = params_to_tensor(filter_.ssm, constrained=False)
         kde = self._kde.fit(stacked, weights)
 
-        inds = self._resampler(weights, normalized=True)
-        filter_.resample(inds)
-        state.filter_state.resample(inds, entire_history=False)
+        indices = self._resampler(weights, normalized=True)
+        filter_.resample(indices)
+        state.filter_state.resample(indices, entire_history=False)
 
-        jittered = kde.sample(inds=inds)
+        jittered = kde.sample(indices=indices)
 
         if self._disc:
             to_jitter = (
@@ -36,7 +36,7 @@ class OnlineKernel(BaseKernel):
                 .unsqueeze(-1)
             )
 
-            jittered = (1 - to_jitter) * stacked[inds] + to_jitter * jittered
+            jittered = (1 - to_jitter) * stacked[indices] + to_jitter * jittered
 
         params_from_tensor(filter_.ssm, jittered, constrained=False)
         state.w[:] = 0.0

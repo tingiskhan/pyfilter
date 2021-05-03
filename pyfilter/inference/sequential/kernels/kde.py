@@ -1,7 +1,8 @@
 import torch
-from ....utils import get_ess
 from math import sqrt
 from typing import Union
+from ....utils import get_ess
+from ....constants import EPS, INFTY
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
@@ -70,7 +71,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
 
 
 class KernelDensityEstimate(object):
-    def __init__(self):
+    def __init__(self, lowest_std: float = EPS):
         """
         Implements the base class for KDEs.
         """
@@ -78,6 +79,7 @@ class KernelDensityEstimate(object):
         self._cov = None
         self._bw_fac = None
         self._means = None
+        self._lowest_std = lowest_std
 
     def fit(self, x: torch.Tensor, w: torch.Tensor) -> "KernelDensityEstimate":
         """
@@ -88,13 +90,16 @@ class KernelDensityEstimate(object):
 
         raise NotImplementedError()
 
-    def sample(self, inds: torch.Tensor = None) -> torch.Tensor:
+    def sample(self, indices: torch.Tensor = None) -> torch.Tensor:
         """
         Samples from the KDE.
-        :param inds: Whether to manually specify the samples chosen
+        :param indices: Whether to manually specify the samples chosen
         """
 
-        raise NotImplementedError()
+        indices = indices if indices is not None else torch.arange(self._means.shape[0], device=self._means.device)
+        std = (self._bw_fac * self._cov.sqrt()).clamp(self._lowest_std, INFTY)
+
+        return _jitter(self._means[indices], std)
 
     def get_ess(self, w):
         return get_ess(w, normalized=True)
@@ -112,10 +117,6 @@ class ShrinkingKernel(KernelDensityEstimate):
         self._means = mean + beta * (x - mean)
 
         return self
-
-    def sample(self, inds=None):
-        inds = inds if inds is not None else torch.arange(self._means.shape[0], device=self._means.device)
-        return _jitter(self._means[inds], self._bw_fac * self._cov.sqrt())
 
 
 class NonShrinkingKernel(ShrinkingKernel):
