@@ -72,7 +72,7 @@ class AffineProcess(ParameterizedStochasticProcess):
 
 
 def _f(x, s):
-    return x
+    return x.values
 
 
 def _g(x, s):
