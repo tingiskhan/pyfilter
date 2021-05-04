@@ -46,13 +46,13 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     :param mean: The mean
     """
 
-    sort, inds = x.sort(0)
-    cumw = w[inds].cumsum(0)
+    sort, sort_indices = x.sort(0)
+    cumulative_weights = w[sort_indices].cumsum(0)
 
-    lowind = (cumw - 0.25).abs().argmin(0)
-    highind = (cumw - 0.75).abs().argmin(0)
+    low_indices = (cumulative_weights - 0.25).abs().argmin(0)
+    high_indices = (cumulative_weights - 0.75).abs().argmin(0)
 
-    iqr = (sort[highind].diag() - sort[lowind].diag()) / 1.349
+    iqr = (sort[high_indices].diag() - sort[low_indices].diag()) / 1.349
     iqr2 = iqr ** 2
 
     w = w.unsqueeze(-1)
@@ -71,11 +71,11 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
 
 
 class KernelDensityEstimate(object):
-    def __init__(self, lowest_std: float = EPS):
-        """
-        Implements the base class for KDEs.
-        """
+    """
+    Implements the base class for KDEs.
+    """
 
+    def __init__(self, lowest_std: float = EPS):
         self._cov = None
         self._bw_fac = None
         self._means = None
@@ -108,7 +108,7 @@ class KernelDensityEstimate(object):
 class ShrinkingKernel(KernelDensityEstimate):
     def fit(self, x, w):
         ess = self.get_ess(w)
-        self._bw_fac = 1.59 * ess ** (-1 / 3)
+        self._bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
 
         mean = (w.unsqueeze(-1) * x).sum(0)
         self._cov = robust_var(x, w, mean)
@@ -122,7 +122,7 @@ class ShrinkingKernel(KernelDensityEstimate):
 class NonShrinkingKernel(ShrinkingKernel):
     def fit(self, x, w):
         ess = self.get_ess(w)
-        self._bw_fac = 1.59 * ess ** (-1 / 3)
+        self._bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
 
         self._cov = robust_var(x, w)
         self._means = x
