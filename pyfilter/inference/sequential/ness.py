@@ -37,7 +37,7 @@ class NESS(BaseNESS):
     Implements the NESS algorithm by Miguez and Crisan.
     """
 
-    def __init__(self, filter_, particles, threshold=0.95, **kwargs):
+    def __init__(self, filter_, particles, threshold=0.9, **kwargs):
         super().__init__(filter_, particles, **kwargs)
         self._threshold = threshold * particles
 
