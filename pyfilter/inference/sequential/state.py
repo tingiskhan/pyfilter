@@ -23,9 +23,9 @@ class FilteringAlgorithmState(AlgorithmState):
 
 
 class SMC2State(FilteringAlgorithmState):
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: TensorTuple = None):
         super().__init__(weights, filter_state, ess)
-        self.parsed_data = TensorTuple()
+        self.parsed_data = parsed_data or TensorTuple()
 
     def append_data(self, y: torch.Tensor):
         self.parsed_data.append(y)
