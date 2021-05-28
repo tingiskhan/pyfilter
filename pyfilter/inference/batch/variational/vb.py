@@ -5,7 +5,7 @@ from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
-from ....timeseries import StateSpaceModel, NewState
+from ....timeseries import StateSpaceModel, NewState, StochasticDifferentialEquation
 from ....constants import EPS
 
 
