@@ -14,14 +14,14 @@ class JointProcess(StochasticProcess):
     def __init__(self, **processes: Dict[str, StochasticProcess]):
         super().__init__(initial_dist=None)
 
+        self._process_names = tuple()
+
         for name, proc in processes.items():
             self.add_module(name, proc)
+            self._process_names += (name,)
 
     def initial_dist(self) -> Distribution:
-        return JointDistribution()
-
-    def initial_sample(self, shape=None) -> NewState:
-        pass
+        return JointDistribution(*(self._modules[name].initial_dist() for name in self._process_names))
 
     def build_density(self, x: NewState) -> Distribution:
         pass
