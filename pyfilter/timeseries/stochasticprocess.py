@@ -118,7 +118,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
 
-class ParameterizedStochasticProcess(PriorMixin, StochasticProcess, ABC):
+class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
     """
     Implements a stochastic process that has functional parameters, i.e. dynamics where the parameters directly
     influence the distribution.

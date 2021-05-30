@@ -1,7 +1,7 @@
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution, Normal, Independent
 import torch
 from typing import Tuple, Union
-from .stochasticprocess import ParameterizedStochasticProcess
+from .stochasticprocess import StructuralStochasticProcess
 from ..distributions import DistributionWrapper
 from .typing import MeanOrScaleFun
 from .state import NewState
@@ -30,7 +30,7 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
     )
 
 
-class AffineProcess(ParameterizedStochasticProcess):
+class AffineProcess(StructuralStochasticProcess):
     def __init__(
         self,
         funcs: Tuple[MeanOrScaleFun, ...],

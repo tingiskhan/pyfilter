@@ -4,7 +4,7 @@ from typing import Tuple
 from torch.distributions import Normal, Independent
 import math
 from .affine import AffineProcess, MeanOrScaleFun
-from .stochasticprocess import ParameterizedStochasticProcess
+from .stochasticprocess import StructuralStochasticProcess
 from .typing import DiffusionFunction
 from ..distributions import DistributionWrapper
 from ..typing import ArrayType
@@ -27,7 +27,7 @@ class OneStepEulerMaruyma(AffineProcess):
         return x.values + drift * self.dt, diffusion
 
 
-class StochasticDifferentialEquation(ParameterizedStochasticProcess, ABC):
+class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
     """
     Base class for stochastic differential equations.
     """
