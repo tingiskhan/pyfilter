@@ -18,11 +18,13 @@ class DistributionTests(unittest.TestCase):
 
         samples = dist()
 
-    def test_JointDistributionMasks(self):
+    def test_JointDistributionMasksAndShape(self):
         joint_distribution = make_joint_distribution()
 
         self.assertEqual(joint_distribution.masks[0], 0)
         self.assertEqual(joint_distribution.masks[1], slice(1, 2))
+
+        self.assertEqual(joint_distribution.event_shape, torch.Size([3]))
 
     def test_JointDistributionSamples(self):
         joint_distribution = make_joint_distribution()
