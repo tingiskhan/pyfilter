@@ -1,6 +1,5 @@
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Union, Sequence
 from torch.distributions import Distribution, constraints
-from torch.distributions.utils import _sum_rightmost
 import torch
 
 
@@ -9,14 +8,17 @@ class JointDistribution(Distribution):
     Defines an object for combining multiple distributions into one. Assumes independence.
     """
 
-    def __init__(self, *distributions: Distribution, **kwargs):
+    def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None,  **kwargs):
         super().__init__(**kwargs)
 
         if any(len(d.event_shape) > 1 for d in distributions):
             raise NotImplementedError(f"Currently cannot handle matrix valued distributions!")
 
         self.distributions = distributions
-        self.masks = self.get_mask(*distributions)
+        self.masks = masks or self.get_mask(*distributions)
+        self._event_shape = torch.Size(
+            [(self.masks[-1].stop if isinstance(self.masks[-1], slice) else self.masks[-1]) + 1]
+        )
 
     def expand(self, batch_shape, _instance=None):
         return JointDistribution(*(d.expand(batch_shape) for d in self.distributions))
