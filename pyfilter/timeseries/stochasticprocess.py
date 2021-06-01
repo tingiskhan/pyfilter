@@ -36,7 +36,7 @@ class StochasticProcess(Module, ABC):
         Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
         """
 
-        return len(self._initial_dist().event_shape)
+        return len(self.initial_dist.event_shape)
 
     @property
     @lru_cache(maxsize=None)
@@ -46,20 +46,22 @@ class StochasticProcess(Module, ABC):
         if it's a multivariate process it return the number of elements in the vector or matrix.
         """
 
-        return self._initial_dist().event_shape.numel()
+        return self.initial_dist.event_shape.numel()
 
     @property
     def initial_dist(self) -> Distribution:
-        return self._initial_dist()
+        dist = self._initial_dist()
+        if self._init_transform is not None:
+            dist = self._init_transform(self, dist)
+
+        return dist
 
     def initial_sample(self, shape: ShapeLike = None) -> NewState:
         """
         Samples a state from the initial distribution.
         """
 
-        dist = self._initial_dist()
-        if self._init_transform is not None:
-            dist = self._init_transform(self, dist)
+        dist = self.initial_dist
 
         return NewState(0.0, dist.expand(size_getter(shape)))
 
@@ -118,7 +120,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
 
-class ParameterizedStochasticProcess(PriorMixin, StochasticProcess, ABC):
+class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
     """
     Implements a stochastic process that has functional parameters, i.e. dynamics where the parameters directly
     influence the distribution.
