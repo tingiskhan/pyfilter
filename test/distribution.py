@@ -65,6 +65,14 @@ class DistributionTests(unittest.TestCase):
         log_prob.backward()
         self.assertIsNotNone(joint_distribution.distributions[0].rate.grad)
 
+    def test_CheckExpand(self):
+        joint_dist = make_joint_distribution()
+
+        new_shape = torch.Size([1000, 10])
+        expanded = joint_dist.expand(new_shape)
+
+        self.assertEqual(expanded.batch_shape, new_shape)
+
 
 if __name__ == "__main__":
     unittest.main()

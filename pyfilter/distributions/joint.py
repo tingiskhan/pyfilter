@@ -5,20 +5,26 @@ import torch
 
 class JointDistribution(Distribution):
     """
-    Defines an object for combining multiple distributions into one. Assumes independence.
+    Defines an object for combining multiple distributions by assuming independence.
     """
 
     def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None,  **kwargs):
-        super().__init__(**kwargs)
+        _masks = masks or self.get_mask(*distributions)
+        event_shape = torch.Size(
+            [(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1]) + 1]
+        )
+
+        batch_shape = distributions[0].batch_shape
+        if any(d.batch_shape != batch_shape for d in distributions):
+            raise NotImplementedError(f"All batch shapes must be congruent!")
+
+        super(JointDistribution, self).__init__(event_shape=event_shape, batch_shape=batch_shape, **kwargs)
 
         if any(len(d.event_shape) > 1 for d in distributions):
             raise NotImplementedError(f"Currently cannot handle matrix valued distributions!")
 
         self.distributions = distributions
-        self.masks = masks or self.get_mask(*distributions)
-        self._event_shape = torch.Size(
-            [(self.masks[-1].stop if isinstance(self.masks[-1], slice) else self.masks[-1]) + 1]
-        )
+        self.masks = _masks
 
     def expand(self, batch_shape, _instance=None):
         return JointDistribution(*(d.expand(batch_shape) for d in self.distributions))
