@@ -30,18 +30,23 @@ class PMMH(BatchFilterAlgorithm):
         prop_filt = self._filter.copy()
 
         logging = logging or TQDMWrapper()
-        logging.initialize(self, self._max_iter)
 
-        for i in range(self._max_iter):
-            prop_dist = self._proposal_builder(state, self._filter, y)
-            accept, new_res, prop_filt = run_pmmh(
-                self._filter, state.filter_result, prop_dist, prop_filt, y, **self._filter_kw
-            )
+        try:
+            logging.initialize(self, self._max_iter)
 
-            state.filter_result.exchange(new_res, accept)
-            self._filter.exchange(prop_filt, accept)
+            for i in range(self._max_iter):
+                prop_dist = self._proposal_builder(state, self._filter, y)
+                accept, new_res, prop_filt = run_pmmh(
+                    self._filter, state.filter_result, prop_dist, prop_filt, y, **self._filter_kw
+                )
 
-            state.update(params_to_tensor(self._filter.ssm, constrained=True))
-            logging.do_log(i, state)
+                state.filter_result.exchange(new_res, accept)
+                self._filter.exchange(prop_filt, accept)
+
+                state.update(params_to_tensor(self._filter.ssm, constrained=True))
+                logging.do_log(i, state)
+        except Exception as e:
+            logging.close()
+            raise e
 
         return state
