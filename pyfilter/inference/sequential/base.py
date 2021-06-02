@@ -30,13 +30,12 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
                 state = self.update(yt, state)
                 logging.do_log(i, state)
 
+            return state
+
         except Exception as e:
-            logging.close()
             raise e
-
-        logging.close()
-
-        return state
+        finally:
+            logging.close()
 
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
