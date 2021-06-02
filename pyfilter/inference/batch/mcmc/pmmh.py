@@ -45,8 +45,10 @@ class PMMH(BatchFilterAlgorithm):
 
                 state.update(params_to_tensor(self._filter.ssm, constrained=True))
                 logging.do_log(i, state)
-        except Exception as e:
-            logging.close()
-            raise e
 
-        return state
+            return state
+
+        except Exception as e:
+            raise e
+        finally:
+            logging.close()

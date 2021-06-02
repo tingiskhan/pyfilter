@@ -98,10 +98,9 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
                 state.converged = self.is_converged(old_loss, state.loss)
                 state.optimizer.zero_grad()
 
+            return state
+
         except Exception as e:
-            logging.close()
             raise e
-
-        logging.close()
-
-        return state
+        finally:
+            logging.close()
