@@ -13,8 +13,7 @@ from ..utils import size_getter
 
 T = TypeVar("T")
 
-# TODO: Move functionality from process.py to here
-# TODO: Rename this to process and remove process.py
+
 class StochasticProcess(Module, ABC):
     """
     Defines the base class for stochastic processes
@@ -24,10 +23,12 @@ class StochasticProcess(Module, ABC):
         self,
         initial_dist: DistributionWrapper,
         initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
+        num_steps: int = 1
     ):
         super().__init__()
         self._initial_dist = initial_dist
         self._init_transform = initial_transform
+        self.num_steps = num_steps
 
     @property
     @lru_cache(maxsize=None)
@@ -77,9 +78,11 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
-        density = self.build_density(x)
+        for _ in range(self.num_steps):
+            density = self.build_density(x)
+            x = x.propagate_from(dist=density, time_increment=time_increment)
 
-        return x.propagate_from(density, time_increment=time_increment)
+        return x
 
     propagate = forward
 

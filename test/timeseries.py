@@ -165,3 +165,12 @@ class TimeseriesTests(unittest.TestCase):
 
         x = ar.sample_path(100)
         self.assertEqual(x.shape, torch.Size([100]))
+
+    def test_SeriesWithSteps(self):
+        ar = m.AR(0.0, 0.99, 0.08, num_steps=5)
+
+        x = ar.initial_sample()
+        for i in range(100):
+            x = ar.propagate(x)
+
+        self.assertEqual(x.time_index, 100 * ar.num_steps)
