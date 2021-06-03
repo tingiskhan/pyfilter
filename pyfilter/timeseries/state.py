@@ -89,8 +89,9 @@ class JointState(NewState):
     # TODO: Should perhaps be first available?
     @staticmethod
     def _join_timeindex(*states) -> torch.Tensor:
-        return torch.stack(tuple(s.time_index for s in states))
+        return torch.stack(tuple(s.time_index for s in states), dim=-1)
 
+    # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
     def __getitem__(self, item: int):
         return NewState(
             time_index=self.time_index[item],
