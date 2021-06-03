@@ -142,9 +142,9 @@ class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
             else:
                 self.register_buffer(name, p if isinstance(p, torch.Tensor) else torch.tensor(p))
 
-    def functional_parameters(self) -> Tuple[Parameter, ...]:
+    def functional_parameters(self, f: Callable[[torch.Tensor], torch.Tensor] = None) -> Tuple[Parameter, ...]:
         res = dict()
         res.update(self._parameters)
         res.update(self._buffers)
 
-        return tuple(v for _, v in sorted(res.items(), key=lambda k: k[0]))
+        return tuple(f(v) if f is not None else v for _, v in sorted(res.items(), key=lambda k: k[0]))

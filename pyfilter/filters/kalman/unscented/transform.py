@@ -104,8 +104,8 @@ class UnscentedFilterTransform(Module):
         return self._get_params_as_view(self._model.observable)
 
     def _get_params_as_view(self, module) -> Tuple[torch.Tensor, ...]:
-        return tuple(
-            p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p for p in module.functional_parameters()
+        return module.functional_parameters(
+            f=lambda p: p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p
         )
 
     def update_state(
