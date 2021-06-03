@@ -11,7 +11,7 @@ class JointDistribution(Distribution):
     def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None,  **kwargs):
         _masks = masks or self.get_mask(*distributions)
         event_shape = torch.Size(
-            [(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1]) + 1]
+            [(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1] + 1)]
         )
 
         batch_shape = distributions[0].batch_shape
@@ -71,7 +71,7 @@ class JointDistribution(Distribution):
 
             if multi_dimensional:
                 size = d.event_shape[-1]
-                slice_ = slice(length, size)
+                slice_ = slice(length, size + 1)
 
                 length += slice_.stop
             else:

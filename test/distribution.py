@@ -24,7 +24,7 @@ class DistributionTests(unittest.TestCase):
         joint_distribution = make_joint_distribution()
 
         self.assertEqual(joint_distribution.masks[0], 0)
-        self.assertEqual(joint_distribution.masks[1], slice(1, 2))
+        self.assertEqual(joint_distribution.masks[1], slice(1, 3))
 
         self.assertEqual(joint_distribution.event_shape, torch.Size([3]))
 
