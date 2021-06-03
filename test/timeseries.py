@@ -1,5 +1,12 @@
 import unittest
-from pyfilter.timeseries import AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, models as m
+from pyfilter.timeseries import (
+    AffineProcess,
+    OneStepEulerMaruyma,
+    AffineEulerMaruyama,
+    models as m,
+    JointStochasticProcess,
+    AffineJointStochasticProcesses
+)
 import torch
 from torch.distributions import (
     Normal,
@@ -11,10 +18,9 @@ from torch.distributions import (
     AffineTransform,
 )
 import math
-from pyfilter.distributions import DistributionWrapper, Prior
+from pyfilter.distributions import DistributionWrapper, Prior, JointDistribution
 from pyfilter.timeseries import StochasticProcess
-from pyfilter.timeseries.state import NewState
-from pyfilter.typing import ShapeLike
+from pyfilter.timeseries.state import NewState, JointState
 
 
 def f(x, alpha, sigma):
@@ -174,3 +180,44 @@ class TimeseriesTests(unittest.TestCase):
             x = ar.propagate(x)
 
         self.assertEqual(x.time_index, 100 * ar.num_steps)
+
+    def test_JointState(self):
+        ar = m.AR(0.0, 0.99, 0.08)
+        ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, ndim=2, dt=1.0)
+
+        state_1 = ar.initial_sample()
+        state_2 = ou.initial_sample()
+
+        joint_state = JointState.from_states(state_1, state_2)
+
+        self.assertIsInstance(joint_state.dist, JointDistribution)
+        self.assertEqual(joint_state.values.shape, torch.Size([3]))
+        self.assertTrue((joint_state.time_index == torch.zeros(2)).all())
+
+        self.assertIs(joint_state[0].dist, state_1.dist)
+        self.assertIs(joint_state[1].dist, state_2.dist)
+
+    def test_JointProcess(self):
+        ar = m.AR(0.0, 0.99, 0.08)
+        ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, ndim=2, dt=1.0)
+
+        joint_process = JointStochasticProcess(ar=ar, ou=ou)
+        inital_dist = joint_process.initial_dist
+
+        self.assertIsInstance(inital_dist, JointDistribution)
+
+        initial_sample = joint_process.initial_sample()
+        self.assertIsInstance(initial_sample, JointState)
+
+        x = joint_process.sample_path(100)
+
+        self.assertEqual(x.shape, torch.Size([100, 3]))
+
+    def test_AffineJointProcess(self):
+        ar = m.AR(0.0, 0.99, 0.08)
+        ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, ndim=2, dt=1.0)
+
+        joint_process = AffineJointStochasticProcesses(ar=ar, ou=ou)
+
+        path = joint_process.sample_path(100)
+        self.assertEqual(path.shape, torch.Size([100, 3]))
