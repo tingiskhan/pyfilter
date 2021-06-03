@@ -221,3 +221,35 @@ class TimeseriesTests(unittest.TestCase):
 
         path = joint_process.sample_path(100)
         self.assertEqual(path.shape, torch.Size([100, 3]))
+
+    def test_LocalLinearTrend(self):
+        ll_trend = m.LocalLinearTrend(1.0, 0.01)
+
+        x = ll_trend.sample_path(100)
+
+        self.assertEqual(x.shape, torch.Size([100, 2]))
+
+    def test_SemiLocalLinearTrend(self):
+        semi_ll_trend = m.SemiLocalLinearTrend(0.99, 0.0, 0.1, 0.01, 0.25)
+
+        x = semi_ll_trend.sample_path(100)
+
+        self.assertEqual(x.shape, torch.Size([100, 2]))
+
+    def test_JointOfJoint(self):
+        ar = m.AR(0.0, 0.99, 0.08)
+        ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, ndim=2, dt=1.0)
+
+        joint_process = AffineJointStochasticProcesses(ar=ar, ou=ou)
+
+        with self.assertRaises(NotImplementedError):
+            joint_joint = AffineJointStochasticProcesses(joint_1=joint_process, joint_2=joint_process)
+
+    def test_JointWithPrior(self):
+        ar = m.AR(0.0, Prior(Exponential, rate=1.0), 0.08)
+        ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, ndim=2, dt=1.0)
+
+        joint_process = AffineJointStochasticProcesses(ar=ar, ou=ou)
+        joint_process.sample_params((1000,))
+
+        self.assertEqual(joint_process.ar.parameter_1.shape, torch.Size([1000]))
