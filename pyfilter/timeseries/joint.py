@@ -12,6 +12,9 @@ class JointStochasticProcess(StochasticProcess):
     """
 
     def __init__(self, **processes: StochasticProcess):
+        if any(isinstance(p, JointStochasticProcess) for p in processes.values()):
+            raise NotImplementedError("Currently does not handle joint of joint!")
+
         # TODO: Feels kinda hacky?
         processes = {k: v for k, v in processes.items() if isinstance(v, StochasticProcess)}
 
@@ -66,5 +69,6 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
 
         return torch.cat(mean, dim=-1), torch.cat(scale, dim=-1)
 
+     # TODO: Should perhaps return a flat list which is split later on, but I think this is better
     def functional_parameters(self, **kwargs):
         return tuple((self._modules[proc_name].functional_parameters(**kwargs) for proc_name in self._proc_names))
