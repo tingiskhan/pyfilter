@@ -91,7 +91,7 @@ class UnscentedFilterTransform(Module):
             self._model.observable.n_dim
         )
 
-        dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
+        dist = MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False)
 
         return UFTCorrectionResult(initial_state.copy(dist=dist), self._state_slc, None)
 
