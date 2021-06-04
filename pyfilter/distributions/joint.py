@@ -8,6 +8,8 @@ class JointDistribution(Distribution):
     Defines an object for combining multiple distributions by assuming independence.
     """
 
+    arg_constraints = {}
+
     def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None,  **kwargs):
         _masks = masks or self.get_mask(*distributions)
         event_shape = torch.Size(
@@ -28,10 +30,6 @@ class JointDistribution(Distribution):
 
     def expand(self, batch_shape, _instance=None):
         return JointDistribution(*(d.expand(batch_shape) for d in self.distributions))
-
-    @property
-    def arg_constraints(self) -> Dict[str, constraints.Constraint]:
-        raise NotImplementedError()
 
     @property
     def support(self) -> Optional[Any]:
