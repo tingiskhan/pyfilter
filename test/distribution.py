@@ -1,7 +1,9 @@
 import unittest
 import torch
 from pyfilter.distributions import Prior, DistributionWrapper, JointDistribution
-from torch.distributions import Exponential, StudentT, Independent
+from torch.distributions import (
+    Exponential, StudentT, Independent, AffineTransform, TransformedDistribution, ExpTransform
+)
 
 
 def make_joint_distribution():
@@ -22,7 +24,7 @@ class DistributionTests(unittest.TestCase):
         joint_distribution = make_joint_distribution()
 
         self.assertEqual(joint_distribution.masks[0], 0)
-        self.assertEqual(joint_distribution.masks[1], slice(1, 2))
+        self.assertEqual(joint_distribution.masks[1], slice(1, 3))
 
         self.assertEqual(joint_distribution.event_shape, torch.Size([3]))
 
@@ -72,6 +74,25 @@ class DistributionTests(unittest.TestCase):
         expanded = joint_dist.expand(new_shape)
 
         self.assertEqual(expanded.batch_shape, new_shape)
+
+    def test_TransformJointDistribution(self):
+        joint_dist = make_joint_distribution()
+
+        transformed = TransformedDistribution(joint_dist, AffineTransform(0.0, 0.0))
+        samples = transformed.sample()
+
+        self.assertTrue((samples == 0.0).all())
+
+        mean = 1.0
+        transformed = TransformedDistribution(joint_dist, AffineTransform(mean, 1.0))
+        samples = transformed.sample()
+
+        self.assertEqual(transformed.log_prob(samples), joint_dist.log_prob(samples - mean))
+
+        exp_transform = TransformedDistribution(joint_dist, ExpTransform())
+        samples = exp_transform.sample((1000,))
+
+        self.assertTrue((samples >= 0.0).all())
 
 
 if __name__ == "__main__":

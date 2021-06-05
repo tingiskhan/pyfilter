@@ -5,7 +5,7 @@ from math import sqrt
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.filters.particle import proposals as prop
-from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama
+from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama, AffineJointStochasticProcesses
 import torch
 from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
@@ -131,3 +131,32 @@ class Tests(unittest.TestCase):
 
             means = result.filter_means
             self.assertLess(torch.std(x[1:] - means), 5e-2)
+
+    def test_JointSeriesOnlyCheckLL(self):
+        mvn = AffineJointStochasticProcesses(linear1=self.linear, linear2=self.linear)
+        model = LinearGaussianObservations(mvn, self.a, 1.0)
+
+        x, y = model.sample_path(500)
+
+        for filter_type, props in [
+            (SISR, {"particles": 500}),
+            (APF, {"particles": 500}),
+            (UKF, {}),
+            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
+            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
+            (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
+        ]:
+            filt = filter_type(model, **props)
+            result = filt.longfilter(y, record_states=True)
+
+            kf = pykalman.KalmanFilter(
+                transition_matrices=[[1.0, 0.0], [0, 1.0]], observation_matrices=self.a.numpy()
+            )
+
+            f_mean, _ = kf.filter(y.numpy())
+
+            # TODO: We only compare log-likelihood as they are independent and thus very difficult to infer
+            ll = kf.loglikelihood(y.numpy())
+            rel_ll_error = np.abs((ll - result.loglikelihood.numpy()) / ll)
+
+            self.assertLess(rel_ll_error, 0.05)

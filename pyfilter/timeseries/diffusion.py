@@ -32,19 +32,10 @@ class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
     Base class for stochastic differential equations.
     """
 
-    def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, num_steps=1, **kwargs):
+    def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, **kwargs):
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
 
         self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
-        self.num_steps = num_steps
-
-    def forward(self, x, time_increment=1.0):
-        for i in range(self.num_steps):
-            x = super(StochasticDifferentialEquation, self).forward(x, time_increment=self.dt)
-
-        return x
-
-    propagate = forward
 
 
 class EulerMaruyama(StochasticDifferentialEquation):
@@ -56,14 +47,13 @@ class EulerMaruyama(StochasticDifferentialEquation):
     def __init__(
         self, prop_state: DiffusionFunction, parameters, initial_dist: DistributionWrapper, dt, num_steps, **kwargs
     ):
-        super().__init__(parameters, initial_dist, dt, num_steps, **kwargs)
+        super().__init__(parameters, initial_dist, dt, **kwargs)
         self._propagator = prop_state
 
     def build_density(self, x):
         return self._propagator(x, self.dt, *self.functional_parameters())
 
 
-# TODO: Make subclass of AffineProcess as well?
 class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     """
     Euler-Maruyama method for SDEs of affine nature. A generalization of `OneStepMaruyama` that allows multiple
@@ -86,12 +76,6 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     def mean_scale(self, x, parameters=None):
         params = parameters or self.functional_parameters()
         return x.values + self.f(x, *params) * self.dt, self.g(x, *params)
-
-    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
-        for i in range(self.num_steps):
-            x = super(AffineEulerMaruyama, self).propagate_conditional(x, u, parameters, time_increment)
-
-        return x
 
 
 class Euler(AffineEulerMaruyama):

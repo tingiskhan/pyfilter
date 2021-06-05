@@ -18,7 +18,7 @@ def _init_trans(module: "AR", dist):
 
 # TODO: Implement lags
 class AR(AffineProcess):
-    def __init__(self, alpha, beta, sigma, initial_dist: Distribution = None):
+    def __init__(self, alpha, beta, sigma, initial_dist: Distribution = None, **kwargs):
         """
         Implements a basic one dimensional autoregressive process.
         """
@@ -26,5 +26,5 @@ class AR(AffineProcess):
         inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
         super().__init__(
-            (_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist, initial_transform=_init_trans
+            (_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist, initial_transform=_init_trans, **kwargs
         )

@@ -6,7 +6,8 @@ from .observable import AffineObservations
 from .diffusion import (
     AffineEulerMaruyama, OneStepEulerMaruyma, Euler, EulerMaruyama, RungeKutta, StochasticDifferentialEquation
 )
-from .state import NewState
+from .state import NewState, JointState
+from .joint import JointStochasticProcess, AffineJointStochasticProcesses
 
 
 # TODO: Remove TimeseriesState and BatchedState
@@ -26,5 +27,8 @@ __all__ = [
     "Euler",
     "EulerMaruyama",
     "RungeKutta",
-    "StochasticDifferentialEquation"
+    "StochasticDifferentialEquation",
+    "JointState",
+    "JointStochasticProcess",
+    "AffineJointStochasticProcesses"
 ]

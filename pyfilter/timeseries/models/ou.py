@@ -12,7 +12,7 @@ def init_trans(module: "OrnsteinUhlenbeck", dist):
 
 # TODO: Fix s.t. initial distribution is function of parameters
 class OrnsteinUhlenbeck(AffineProcess):
-    def __init__(self, kappa, gamma, sigma, ndim: int, dt: float):
+    def __init__(self, kappa, gamma, sigma, ndim: int, dt: float, **kwargs):
         """
         Implements the Ornstein-Uhlenbeck process.
 
@@ -29,7 +29,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
-        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans)
+        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans, **kwargs)
         self._dt = torch.tensor(dt)
 
     def _f(self, x, k, g, s):

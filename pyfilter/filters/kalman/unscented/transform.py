@@ -12,7 +12,7 @@ from ....parameter import ExtendedParameter
 
 
 class UnscentedFilterTransform(Module):
-    MONTE_CARLO_ESTIMATES = 1000
+    MONTE_CARLO_ESTIMATES = 10_000
 
     def __init__(self, model: StateSpaceModel, a=1.0, b=2.0, k=0.0):
         """
@@ -82,14 +82,16 @@ class UnscentedFilterTransform(Module):
         )
 
         cov[..., self._hidden_slc, self._hidden_slc] = construct_diag_from_flat(
-            self._model.hidden.increment_dist().variance, self._model.hidden.n_dim
+            self._model.hidden.increment_dist().sample((self.MONTE_CARLO_ESTIMATES,)).var(0),
+            self._model.hidden.n_dim
         )
 
         cov[..., self._obs_slc, self._obs_slc] = construct_diag_from_flat(
-            self._model.observable.increment_dist().variance, self._model.observable.n_dim
+            self._model.observable.increment_dist().sample((self.MONTE_CARLO_ESTIMATES,)).var(0),
+            self._model.observable.n_dim
         )
 
-        dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
+        dist = MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False)
 
         return UFTCorrectionResult(initial_state.copy(dist=dist), self._state_slc, None)
 
@@ -102,8 +104,8 @@ class UnscentedFilterTransform(Module):
         return self._get_params_as_view(self._model.observable)
 
     def _get_params_as_view(self, module) -> Tuple[torch.Tensor, ...]:
-        return tuple(
-            p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p for p in module.functional_parameters()
+        return module.functional_parameters(
+            f=lambda p: p.view(self._view_shape) if isinstance(p, ExtendedParameter) else p
         )
 
     def update_state(
