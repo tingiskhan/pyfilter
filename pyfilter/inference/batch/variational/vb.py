@@ -5,7 +5,7 @@ from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
-from ....timeseries import StateSpaceModel, NewState, StochasticDifferentialEquation
+from ....timeseries import StateSpaceModel, NewState
 from ....constants import EPS
 
 
@@ -21,7 +21,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._time_inds: torch.Tensor = None
 
         self._is_ssm = isinstance(self._model, StateSpaceModel)
-        self._is_sde = None
+        self._num_steps = None
 
     def is_converged(self, old_loss, new_loss):
         return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
@@ -52,9 +52,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            delta = 1 if not self._is_sde else self._model.hidden.num_steps
-
-            y_state = NewState(self._time_inds[1::delta], values=x_t[:, ::delta])
+            y_state = NewState(self._time_inds[1::self._num_steps], values=x_t[:, ::self._num_steps])
             x_state = NewState(self._time_inds[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)
@@ -81,13 +79,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         opt_params = tuple(param_approx.parameters())
 
         t_end = y.shape[0]
-        if self._is_ssm:
-            self._is_sde = isinstance(self._model.hidden, StochasticDifferentialEquation)
-
-        if self._is_sde:
-            self._time_inds = torch.arange(0, t_end * self._model.hidden.num_steps) * self._model.hidden.dt
-        else:
-            self._time_inds = torch.arange(0, t_end)
+        self._num_steps = self._model.hidden.num_steps if self._is_ssm else self._model.num_steps
+        self._time_inds = torch.arange(0, t_end * self._num_steps)
 
         if self._is_ssm:
             state_approx.initialize(self._time_inds, self._model)
