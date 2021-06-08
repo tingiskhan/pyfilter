@@ -223,14 +223,14 @@ class TimeseriesTests(unittest.TestCase):
         self.assertEqual(path.shape, torch.Size([100, 3]))
 
     def test_LocalLinearTrend(self):
-        ll_trend = m.LocalLinearTrend(1.0, 0.01)
+        ll_trend = m.LocalLinearTrend(torch.tensor([1.0, 0.01]))
 
         x = ll_trend.sample_path(100)
 
         self.assertEqual(x.shape, torch.Size([100, 2]))
 
     def test_SemiLocalLinearTrend(self):
-        semi_ll_trend = m.SemiLocalLinearTrend(0.99, 0.0, 0.1, 0.01, 0.25)
+        semi_ll_trend = m.SemiLocalLinearTrend(0.99, 0.0, torch.tensor([0.1, 0.01]))
 
         x = semi_ll_trend.sample_path(100)
 

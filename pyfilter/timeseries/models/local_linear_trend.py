@@ -6,16 +6,17 @@ from ...utils import concater
 from ...distributions import DistributionWrapper
 
 
-def mean(x, a, sigma_level, sigma_slope):
+def mean(x, a, sigma, _):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
-def scale(x, a, sigma_level, sigma_slope):
-    return concater(sigma_level, sigma_slope)
+def scale(x, a, sigma, _):
+    return sigma
 
 
 def initial_transform(module, base_dist):
-    return TransformedDistribution(base_dist, AffineTransform(0.0, concater(*module.functional_parameters()[-2:])))
+    scale, initial_mean = tuple(module.functional_parameters())[-2:]
+    return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale))
 
 
 class LocalLinearTrend(AffineProcess):
@@ -23,14 +24,14 @@ class LocalLinearTrend(AffineProcess):
     Implements a Local Linear Trend model.
     """
 
-    def __init__(self, sigma_level: ArrayType, sigma_slope: ArrayType, **kwargs):
+    def __init__(self, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
         parameters = (
             torch.tensor([
                 [1.0, 1.0],
                 [0.0, 1.0]
             ]),
-            sigma_level,
-            sigma_slope
+            sigma,
+            initial_mean
         )
 
         initial_dist = increment_dist = DistributionWrapper(
@@ -44,17 +45,17 @@ class LocalLinearTrend(AffineProcess):
         )
 
 
-def semi_mean(x, alpha, beta, sens, s_l, s_s):
+def semi_mean(x, alpha, beta, sigma, _):
     slope = x.values[..., 1]
 
-    new_level = sens * x.values[..., 0] + slope
+    new_level = x.values[..., 0] + slope
     new_slope = alpha * slope + beta
 
     return concater(new_level, new_slope)
 
 
-def semi_scale(x, alpha, beta, sens, s_l, s_s):
-    return scale(x, None, s_l, s_s)
+def semi_scale(x, alpha, beta, sigma, _):
+    return sigma
 
 
 class SemiLocalLinearTrend(AffineProcess):
@@ -62,8 +63,10 @@ class SemiLocalLinearTrend(AffineProcess):
     Implements a semi local linear trend (see Tensorflow)
     """
 
-    def __init__(self, alpha: ArrayType, beta: ArrayType, sigma_level, sigma_slope, sensitivity: ArrayType = 1.0):
-        parameters = (alpha, beta, sensitivity, sigma_level, sigma_slope)
+    def __init__(
+            self, alpha: ArrayType, beta: ArrayType, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs
+    ):
+        parameters = (alpha, beta, sigma, initial_mean) # TODO: Should utilize long running mean rather
 
         initial_dist = increment_dist = DistributionWrapper(
             lambda **u: Independent(Normal(**u), 1),
