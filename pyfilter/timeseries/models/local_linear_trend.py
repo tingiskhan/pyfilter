@@ -79,5 +79,6 @@ class SemiLocalLinearTrend(AffineProcess):
             parameters,
             initial_dist=initial_dist,
             increment_dist=increment_dist,
-            initial_transform=initial_transform
+            initial_transform=initial_transform,
+            **kwargs
         )
