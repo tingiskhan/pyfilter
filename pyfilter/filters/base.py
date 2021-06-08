@@ -57,11 +57,7 @@ class BaseFilter(Module, ABC):
         return self.predict_correct(y, state)
 
     def longfilter(
-        self,
-        y: Iterable[torch.Tensor],
-        bar=True,
-        record_states=False,
-        init_state: BaseState = None,
+        self, y: Iterable[torch.Tensor], bar=True, record_states=False, init_state: BaseState = None,
     ) -> FilterResult:
         """
         Filters the entire data set `y`.

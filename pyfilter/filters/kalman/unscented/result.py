@@ -25,7 +25,7 @@ class UFTCorrectionResult(Module):
         return MultivariateNormal(
             self.x.dist.mean[..., self._state_slice],
             scale_tril=self.x.dist.scale_tril[..., self._state_slice, self._state_slice],
-            validate_args=False
+            validate_args=False,
         )
 
     def calculate_sigma_points(self, cov_scale: float):
@@ -92,7 +92,7 @@ class UFTPredictionResult(Module):
         self.spy = spy
 
     def get_mean_and_covariance(
-            self, wm: torch.Tensor, wc: torch.Tensor
+        self, wm: torch.Tensor, wc: torch.Tensor
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], ...]:
         x_m, x_c = get_meancov(self.spx.values, wm, wc)
         y_m, y_c = get_meancov(self.spy.values, wm, wc)

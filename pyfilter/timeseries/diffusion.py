@@ -93,11 +93,7 @@ class Euler(AffineEulerMaruyama):
             initial_values.shape if isinstance(initial_values, torch.Tensor) else initial_values().event_shape
         )
 
-        iv = DistributionWrapper(
-            lambda **u: Independent(Normal(**u), 1),
-            loc=initial_values,
-            scale=EPS * scale,
-        )
+        iv = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=initial_values, scale=EPS * scale,)
 
         event_shape = iv().event_shape
         if len(event_shape) == 0:

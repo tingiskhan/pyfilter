@@ -7,7 +7,9 @@ PRIOR_PREFIX = "prior__"
 MODULE_SEPARATOR = "."
 
 
-def _parameter_recursion(obj: "PriorMixin", parameter: ExtendedParameter, name: str) -> Tuple[ExtendedParameter, "DistributionWrapper"]:
+def _parameter_recursion(
+    obj: "PriorMixin", parameter: ExtendedParameter, name: str
+) -> Tuple[ExtendedParameter, "DistributionWrapper"]:
     if MODULE_SEPARATOR not in name:
         return parameter, obj._modules[f"{PRIOR_PREFIX}{name}"]
 

@@ -25,19 +25,10 @@ class LocalLinearTrend(AffineProcess):
     """
 
     def __init__(self, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
-        parameters = (
-            torch.tensor([
-                [1.0, 1.0],
-                [0.0, 1.0]
-            ]),
-            sigma,
-            initial_mean
-        )
+        parameters = (torch.tensor([[1.0, 1.0], [0.0, 1.0]]), sigma, initial_mean)
 
         initial_dist = increment_dist = DistributionWrapper(
-            lambda **u: Independent(Normal(**u), 1),
-            loc=torch.zeros(2),
-            scale=torch.ones(2)
+            lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
         )
 
         super().__init__(
@@ -64,14 +55,12 @@ class SemiLocalLinearTrend(AffineProcess):
     """
 
     def __init__(
-            self, alpha: ArrayType, beta: ArrayType, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs
+        self, alpha: ArrayType, beta: ArrayType, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs
     ):
-        parameters = (alpha, beta, sigma, initial_mean) # TODO: Should utilize long running mean rather
+        parameters = (alpha, beta, sigma, initial_mean)  # TODO: Should utilize long running mean rather
 
         initial_dist = increment_dist = DistributionWrapper(
-            lambda **u: Independent(Normal(**u), 1),
-            loc=torch.zeros(2),
-            scale=torch.ones(2)
+            lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
         )
 
         super(SemiLocalLinearTrend, self).__init__(

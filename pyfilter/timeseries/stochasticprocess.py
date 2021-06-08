@@ -23,7 +23,7 @@ class StochasticProcess(Module, ABC):
         self,
         initial_dist: DistributionWrapper,
         initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
-        num_steps: int = 1
+        num_steps: int = 1,
     ):
         super().__init__()
         self._initial_dist = initial_dist

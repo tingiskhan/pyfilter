@@ -41,6 +41,11 @@ def get_bad_inds(*covs: Tuple[torch.Tensor, ...]) -> torch.Tensor:
     singular_or_nan = torch.zeros(covs[0].shape[:-2], device=covs[0].device, dtype=torch.bool)
     for cov in covs:
         cov_det = cov.det()
-        singular_or_nan |= torch.isnan(cov_det) | (cov_det <= _EPS) | (cov_det.abs() >= _COV_FACTOR) | (cov.diagonal(dim1=-2, dim2=-1) <= 0.0).any(-1)
+        singular_or_nan |= (
+            torch.isnan(cov_det)
+            | (cov_det <= _EPS)
+            | (cov_det.abs() >= _COV_FACTOR)
+            | (cov.diagonal(dim1=-2, dim2=-1) <= 0.0).any(-1)
+        )
 
     return singular_or_nan
