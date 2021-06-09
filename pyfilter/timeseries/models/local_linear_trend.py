@@ -15,8 +15,8 @@ def scale(x, a, sigma, _):
 
 
 def initial_transform(module, base_dist):
-    scale, initial_mean = tuple(module.functional_parameters())[-2:]
-    return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale))
+    scale_, initial_mean = tuple(module.functional_parameters())[-2:]
+    return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale_))
 
 
 class LocalLinearTrend(AffineProcess):
@@ -40,7 +40,7 @@ def semi_mean(x, alpha, beta, sigma, _):
     slope = x.values[..., 1]
 
     new_level = x.values[..., 0] + slope
-    new_slope = alpha * slope + beta
+    new_slope = alpha + beta * slope
 
     return concater(new_level, new_slope)
 
