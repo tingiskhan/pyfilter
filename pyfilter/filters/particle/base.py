@@ -87,20 +87,22 @@ class ParticleFilter(BaseFilter, ABC):
         return ParticleState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 
     def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
-        x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)
+        x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
 
+        x = x[1:]
         if not aggregate:
-            return x[1:], y[1:]
+            return x, y
 
         w = normalize(state.w)
         squeezed_w = w.unsqueeze(-1)
 
         sum_axis = -(1 + self.ssm.hidden.n_dim)
 
-        xm = (x * (squeezed_w if self.ssm.hidden_ndim > 1 else w)).sum(sum_axis)
-        ym = (y * (squeezed_w if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
+        obs_ndim = self.ssm.observable.n_dim
+        x_mean = (x * (squeezed_w if self.ssm.hidden.n_dim > 0 else w)).sum(sum_axis)
+        y_mean = (y * (squeezed_w if obs_ndim > 0 else w)).sum(-2 if obs_ndim > 0 else -1)
 
-        return xm[1:], ym[1:]
+        return x_mean, y_mean
 
     # FIXME: Fix this, not working currently I think
     def smooth(self, states: Iterable[ParticleState]):
