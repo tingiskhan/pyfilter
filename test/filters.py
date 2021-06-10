@@ -160,3 +160,16 @@ class Tests(unittest.TestCase):
             rel_ll_error = np.abs((ll - result.loglikelihood.numpy()) / ll)
 
             self.assertLess(rel_ll_error, 0.05)
+
+    def test_FilterPrediction(self):
+        for model in [self.model, self.mv_model]:
+            x, y = model.sample_path(500)
+
+            filt = SISR(model, 500)
+            result = filt.longfilter(y, bar=False)
+
+            steps = 10
+            x, y = filt.predict(result.latest_state, steps)
+
+            self.assertEqual(steps, x.shape[0])
+            self.assertEqual(steps, y.shape[0])
