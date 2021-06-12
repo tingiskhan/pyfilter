@@ -52,7 +52,7 @@ def semi_scale(x, alpha, beta, sigma, _):
 def semi_initial_transform(module, base_dist):
     alpha, beta, scale_, initial_mean = tuple(module.functional_parameters())
 
-    mean_ = concater(alpha, initial_mean)
+    mean_ = concater(initial_mean, alpha)
     scale_ = concater(scale_[..., 0], scale_[..., 1] / (1 - beta ** 2).sqrt())
 
     return TransformedDistribution(base_dist, AffineTransform(mean_, scale_))
