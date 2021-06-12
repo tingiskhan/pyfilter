@@ -90,7 +90,7 @@ def trending_reversion_mean(x, alpha, beta, sigma, _):
 def trending_initial_transform(module, base_dist):
     alpha, beta, scale_, initial_mean = tuple(module.functional_parameters())
 
-    mean_ = concater(initial_mean, alpha)
+    mean_ = concater(alpha, initial_mean)
     scale_ = concater(scale_[..., 0] / (1 - beta ** 2).sqrt(), scale_[..., 1])
 
     return TransformedDistribution(base_dist, AffineTransform(mean_, scale_))
