@@ -5,7 +5,12 @@ from math import sqrt
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.filters.particle import proposals as prop
-from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama, AffineJointStochasticProcesses
+from pyfilter.timeseries import (
+    AffineProcess,
+    LinearGaussianObservations,
+    AffineEulerMaruyama,
+    AffineJointStochasticProcesses,
+)
 import torch
 from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
@@ -149,9 +154,7 @@ class Tests(unittest.TestCase):
             filt = filter_type(model, **props)
             result = filt.longfilter(y, record_states=True)
 
-            kf = pykalman.KalmanFilter(
-                transition_matrices=[[1.0, 0.0], [0, 1.0]], observation_matrices=self.a.numpy()
-            )
+            kf = pykalman.KalmanFilter(transition_matrices=[[1.0, 0.0], [0, 1.0]], observation_matrices=self.a.numpy())
 
             f_mean, _ = kf.filter(y.numpy())
 
