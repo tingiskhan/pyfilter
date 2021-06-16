@@ -16,11 +16,11 @@ class PMMH(BatchFilterAlgorithm):
         super().__init__(filter_, iterations)
         self._num_chains = num_chains
         self._proposal_builder = proposal_builder or IndependentProposal()
-        self._filter_kw = {"record_states": True}
+        self.filter.record_states = True
 
     def initialize(self, y: torch.Tensor, *args, **kwargs) -> PMMHState:
         self._filter = seed(self._filter, y, 50, self._num_chains)
-        prev_res = self._filter.longfilter(y, bar=False, **self._filter_kw)
+        prev_res = self._filter.longfilter(y, bar=False)
 
         return PMMHState(params_to_tensor(self._filter.ssm, constrained=True), prev_res)
 
