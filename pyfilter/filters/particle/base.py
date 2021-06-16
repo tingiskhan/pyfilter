@@ -109,6 +109,9 @@ class ParticleFilter(BaseFilter, ABC):
         hidden_copy = self.ssm.hidden.copy()
         offset = -(2 + self.ssm.hidden.n_dim)
 
+        for p in hidden_copy.parameters():
+            p.unsqueeze_(-2)
+
         res = [choose(states[-1].x.values, self._resampler(states[-1].w))]
         for state in reversed(states[:-1]):
             temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
