@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Tuple, Union, Iterable, Callable
+from typing import Tuple, Union, Callable
 import torch
 from torch.distributions import Categorical
 from ..base import BaseFilter
@@ -104,17 +104,19 @@ class ParticleFilter(BaseFilter, ABC):
 
         return x_mean, y_mean
 
-    # FIXME: Fix this, not working currently I think
-    def smooth(self, states: Iterable[ParticleState]):
-        hidden_copy = self.ssm.hidden.copy((*self.n_parallel, 1, 1))
-        offset = -(2 + self.ssm.hidden_ndim)
+    # TODO: Might not work when we have parameters of wrong size...?
+    def smooth(self, states: Tuple[ParticleState]) -> torch.Tensor:
+        hidden_copy = self.ssm.hidden.copy()
+        offset = -(2 + self.ssm.hidden.n_dim)
 
-        res = [choose(states[-1].x, self._resampler(states[-1].w))]
-        reverse = states[::-1]
-        for state in reverse[1:]:
-            w = state.w.unsqueeze(-2) + hidden_copy.log_prob(res[-1].unsqueeze(offset), state.x.unsqueeze(offset + 1))
+        res = [choose(states[-1].x.values, self._resampler(states[-1].w))]
+        for state in reversed(states[:-1]):
+            temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
+            density = hidden_copy.build_density(temp_state)
 
-            cat = Categorical(normalize(w))
-            res.append(choose(state.x, cat.sample()))
+            w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
+
+            cat = Categorical(logits=w)
+            res.append(choose(state.x.values, cat.sample()))
 
         return torch.stack(res[::-1], dim=0)
