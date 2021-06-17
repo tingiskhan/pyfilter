@@ -18,7 +18,7 @@ class BaseFilter(Module, ABC):
     Base class for filters.
     """
 
-    def __init__(self, model: StateSpaceModel):
+    def __init__(self, model: StateSpaceModel, record_states: bool = False):
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -27,6 +27,7 @@ class BaseFilter(Module, ABC):
         self._model = model
         self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
         self._n_parallel = None
+        self.record_states = record_states
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -57,18 +58,13 @@ class BaseFilter(Module, ABC):
         return self.predict_correct(y, state)
 
     def longfilter(
-        self,
-        y: Iterable[torch.Tensor],
-        bar=True,
-        record_states=False,
-        init_state: BaseState = None,
+        self, y: Iterable[torch.Tensor], bar=True, init_state: BaseState = None,
     ) -> FilterResult:
         """
         Filters the entire data set `y`.
 
         :param y: Data, expected shape: (# time steps, [# dimensions])
         :param bar: Whether to print a progress bar
-        :param record_states: Whether to record states. E.g. required when smoothing
         :param init_state: The initial state to use
         """
 
@@ -78,7 +74,7 @@ class BaseFilter(Module, ABC):
 
         try:
             state = init_state or self.initialize()
-            result = FilterResult(state)
+            result = FilterResult(state, self.record_states)
 
             for yt in y:
                 state = self.filter(yt, state)
@@ -86,7 +82,7 @@ class BaseFilter(Module, ABC):
                 if bar:
                     iter_bar.update(1)
 
-                result.append(state, not record_states)
+                result.append(state)
 
             return result
         except Exception as e:
@@ -124,5 +120,5 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def smooth(self, states: Iterable[BaseState]) -> torch.Tensor:
+    def smooth(self, states: Tuple[BaseState]) -> torch.Tensor:
         raise NotImplementedError()

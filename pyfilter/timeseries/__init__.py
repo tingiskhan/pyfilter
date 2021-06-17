@@ -4,7 +4,12 @@ from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
 from .diffusion import (
-    AffineEulerMaruyama, OneStepEulerMaruyma, Euler, EulerMaruyama, RungeKutta, StochasticDifferentialEquation
+    AffineEulerMaruyama,
+    OneStepEulerMaruyma,
+    Euler,
+    EulerMaruyama,
+    RungeKutta,
+    StochasticDifferentialEquation,
 )
 from .state import NewState, JointState
 from .joint import JointStochasticProcess, AffineJointStochasticProcesses
@@ -30,5 +35,5 @@ __all__ = [
     "StochasticDifferentialEquation",
     "JointState",
     "JointStochasticProcess",
-    "AffineJointStochasticProcesses"
+    "AffineJointStochasticProcesses",
 ]

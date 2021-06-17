@@ -6,7 +6,7 @@ from ..utils import TensorTuple
 
 
 class FilterResult(Module):
-    def __init__(self, init_state: BaseState):
+    def __init__(self, init_state: BaseState, record_states: bool = False):
         """
         Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
         """
@@ -17,6 +17,7 @@ class FilterResult(Module):
         self._filter_means = TensorTuple()
         self._latest_state = init_state
         self._states = list()
+        self.record_states = record_states
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -70,13 +71,13 @@ class FilterResult(Module):
 
         return self
 
-    def append(self, state: BaseState, only_latest=True):
+    def append(self, state: BaseState):
         self._filter_means.append(state.get_mean())
 
         self._loglikelihood += state.get_loglikelihood()
         self._latest_state = state
 
-        if not only_latest:
+        if self.record_states:
             self._states.append(state)
 
         return self

@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Tuple, Union, Iterable, Callable
+from typing import Tuple, Union, Callable
 import torch
 from torch.distributions import Categorical
 from ..base import BaseFilter
@@ -87,32 +87,39 @@ class ParticleFilter(BaseFilter, ABC):
         return ParticleState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 
     def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
-        x, y = self._model.sample_path(steps + 1, x_s=state.x, **kwargs)
+        x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
 
+        x = x[1:]
         if not aggregate:
-            return x[1:], y[1:]
+            return x, y
 
         w = normalize(state.w)
         squeezed_w = w.unsqueeze(-1)
 
         sum_axis = -(1 + self.ssm.hidden.n_dim)
 
-        xm = (x * (squeezed_w if self.ssm.hidden_ndim > 1 else w)).sum(sum_axis)
-        ym = (y * (squeezed_w if self.ssm.obs_ndim > 1 else w)).sum(-2 if self.ssm.obs_ndim > 1 else -1)
+        obs_ndim = self.ssm.observable.n_dim
+        x_mean = (x * (squeezed_w if self.ssm.hidden.n_dim > 0 else w)).sum(sum_axis)
+        y_mean = (y * (squeezed_w if obs_ndim > 0 else w)).sum(-2 if obs_ndim > 0 else -1)
 
-        return xm[1:], ym[1:]
+        return x_mean, y_mean
 
-    # FIXME: Fix this, not working currently I think
-    def smooth(self, states: Iterable[ParticleState]):
-        hidden_copy = self.ssm.hidden.copy((*self.n_parallel, 1, 1))
-        offset = -(2 + self.ssm.hidden_ndim)
+    # TODO: Might not work when we have parameters of wrong size...?
+    def smooth(self, states: Tuple[ParticleState]) -> torch.Tensor:
+        hidden_copy = self.ssm.hidden.copy()
+        offset = -(2 + self.ssm.hidden.n_dim)
 
-        res = [choose(states[-1].x, self._resampler(states[-1].w))]
-        reverse = states[::-1]
-        for state in reverse[1:]:
-            w = state.w.unsqueeze(-2) + hidden_copy.log_prob(res[-1].unsqueeze(offset), state.x.unsqueeze(offset + 1))
+        for p in hidden_copy.parameters():
+            p.unsqueeze_(-2)
 
-            cat = Categorical(normalize(w))
-            res.append(choose(state.x, cat.sample()))
+        res = [choose(states[-1].x.values, self._resampler(states[-1].w))]
+        for state in reversed(states[:-1]):
+            temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
+            density = hidden_copy.build_density(temp_state)
+
+            w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
+
+            cat = Categorical(logits=w)
+            res.append(choose(state.x.values, cat.sample()))
 
         return torch.stack(res[::-1], dim=0)

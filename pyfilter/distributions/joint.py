@@ -10,11 +10,9 @@ class JointDistribution(Distribution):
 
     arg_constraints = {}
 
-    def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None,  **kwargs):
+    def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None, **kwargs):
         _masks = masks or self.get_mask(*distributions)
-        event_shape = torch.Size(
-            [(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1] + 1)]
-        )
+        event_shape = torch.Size([(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1] + 1)])
 
         batch_shape = distributions[0].batch_shape
         if any(d.batch_shape != batch_shape for d in distributions):

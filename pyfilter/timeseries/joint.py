@@ -28,14 +28,12 @@ class JointStochasticProcess(StochasticProcess):
 
     def initial_sample(self, shape=None) -> JointState:
         return JointState.from_states(
-            *(self._modules[name].initial_sample(shape) for name in self._proc_names),
-            mask=self.masks
+            *(self._modules[name].initial_sample(shape) for name in self._proc_names), mask=self.masks
         )
 
     def build_density(self, x: JointState) -> Distribution:
         return JointDistribution(
-            *(self._modules[name].build_density(x[i]) for i, name in enumerate(self._proc_names)),
-            masks=self.masks
+            *(self._modules[name].build_density(x[i]) for i, name in enumerate(self._proc_names)), masks=self.masks
         )
 
 
@@ -69,6 +67,6 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
 
         return torch.cat(mean, dim=-1), torch.cat(scale, dim=-1)
 
-     # TODO: Should perhaps return a flat list which is split later on, but I think this is better
+    # TODO: Should perhaps return a flat list which is split later on, but I think this is better
     def functional_parameters(self, **kwargs):
         return tuple((self._modules[proc_name].functional_parameters(**kwargs) for proc_name in self._proc_names))

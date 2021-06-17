@@ -2,7 +2,12 @@ import unittest
 import torch
 from pyfilter.distributions import Prior, DistributionWrapper, JointDistribution
 from torch.distributions import (
-    Exponential, StudentT, Independent, AffineTransform, TransformedDistribution, ExpTransform
+    Exponential,
+    StudentT,
+    Independent,
+    AffineTransform,
+    TransformedDistribution,
+    ExpTransform,
 )
 
 

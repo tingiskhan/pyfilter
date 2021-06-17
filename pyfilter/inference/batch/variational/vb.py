@@ -52,7 +52,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            y_state = NewState(self._time_inds[1::self._num_steps], values=x_t[:, ::self._num_steps])
+            y_state = NewState(self._time_inds[1 :: self._num_steps], values=x_t[:, :: self._num_steps])
             x_state = NewState(self._time_inds[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)
@@ -70,7 +70,9 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood = dist.log_prob(y[1:]).sum(1)
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
-        return -(log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy)
+        return -(
+            log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy
+        )
 
     def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
         sample_model(self._model, (self._n_samples, 1))

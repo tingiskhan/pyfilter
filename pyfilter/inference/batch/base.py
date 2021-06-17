@@ -57,7 +57,7 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
     """
 
     def __init__(
-            self, model: Process, max_iter: int, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None
+        self, model: Process, max_iter: int, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None
     ):
         super().__init__(max_iter)
 

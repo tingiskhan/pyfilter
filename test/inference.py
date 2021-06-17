@@ -141,6 +141,19 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         state = pmmh.fit(y)
 
+    def test_SequentialAlgorithmsWithRecordStates(self):
+        for true_model, model in [(make_model(False), make_model(True)), (make_model(False, 2), make_model(True, 2))]:
+            x, y = true_model.sample_path(25)
+
+            filt = APF(model.copy(), 30, record_states=True)
+            alg = NESS(filt, 50)
+
+            state = alg.fit(y)
+
+            smoothed = filt.smooth(state.filter_state.states)
+
+            self.assertEqual(torch.Size([25, 50, 30]), smoothed.shape[:3])
+
 
 if __name__ == "__main__":
     unittest.main()

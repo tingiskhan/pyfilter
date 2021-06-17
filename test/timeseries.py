@@ -5,7 +5,7 @@ from pyfilter.timeseries import (
     AffineEulerMaruyama,
     models as m,
     JointStochasticProcess,
-    AffineJointStochasticProcesses
+    AffineJointStochasticProcesses,
 )
 import torch
 from torch.distributions import (
@@ -223,14 +223,14 @@ class TimeseriesTests(unittest.TestCase):
         self.assertEqual(path.shape, torch.Size([100, 3]))
 
     def test_LocalLinearTrend(self):
-        ll_trend = m.LocalLinearTrend(1.0, 0.01)
+        ll_trend = m.LocalLinearTrend(torch.tensor([1.0, 0.01]))
 
         x = ll_trend.sample_path(100)
 
         self.assertEqual(x.shape, torch.Size([100, 2]))
 
     def test_SemiLocalLinearTrend(self):
-        semi_ll_trend = m.SemiLocalLinearTrend(0.99, 0.0, 0.1, 0.01, 0.25)
+        semi_ll_trend = m.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([0.1, 0.01]))
 
         x = semi_ll_trend.sample_path(100)
 
@@ -253,3 +253,9 @@ class TimeseriesTests(unittest.TestCase):
         joint_process.sample_params((1000,))
 
         self.assertEqual(joint_process.ar.parameter_1.shape, torch.Size([1000]))
+
+    def test_TrendingReversion(self):
+        trending_reversion = m.TrendingMeanReversion(0.0, 0.99, torch.tensor([0.05, 0.0001]))
+
+        x = trending_reversion.sample_path(1000)
+        self.assertEqual(torch.Size([1000, 2]), x.shape)

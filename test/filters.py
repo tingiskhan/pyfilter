@@ -5,7 +5,12 @@ from math import sqrt
 from torch.distributions import Normal, Independent
 from pyfilter.filters import SISR, APF, UKF
 from pyfilter.filters.particle import proposals as prop
-from pyfilter.timeseries import AffineProcess, LinearGaussianObservations, AffineEulerMaruyama, AffineJointStochasticProcesses
+from pyfilter.timeseries import (
+    AffineProcess,
+    LinearGaussianObservations,
+    AffineEulerMaruyama,
+    AffineJointStochasticProcesses,
+)
 import torch
 from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
@@ -55,9 +60,21 @@ class Tests(unittest.TestCase):
 
         assert state.x.shape == torch.Size([1000])
 
-    def test_Filters(self):
+    def test_Filtering(self):
         for model in [self.model, self.mv_model]:
             x, y = model.sample_path(500)
+
+            if model is self.model:
+                kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
+            else:
+                kf = pykalman.KalmanFilter(
+                    transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=self.a.numpy()
+                )
+
+            f_mean, _ = kf.filter(y.numpy())
+
+            if model.hidden.n_dim < 1:
+                f_mean = f_mean[:, 0]
 
             for filter_type, props in [
                 (SISR, {"particles": 500}),
@@ -67,22 +84,10 @@ class Tests(unittest.TestCase):
                 (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
                 (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
             ]:
-                filt = filter_type(model, **props)
-                result = filt.longfilter(y, record_states=True)
+                filt = filter_type(model, **props, record_states=True)
+                result = filt.longfilter(y)
 
                 filtmeans = result.filter_means.numpy()
-
-                if model is self.model:
-                    kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
-                else:
-                    kf = pykalman.KalmanFilter(
-                        transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=self.a.numpy()
-                    )
-
-                f_mean, _ = kf.filter(y.numpy())
-
-                if model.hidden.n_dim < 1:
-                    f_mean = f_mean[:, 0]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
 
@@ -146,12 +151,10 @@ class Tests(unittest.TestCase):
             (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
             (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
         ]:
-            filt = filter_type(model, **props)
-            result = filt.longfilter(y, record_states=True)
+            filt = filter_type(model, **props, record_states=True)
+            result = filt.longfilter(y)
 
-            kf = pykalman.KalmanFilter(
-                transition_matrices=[[1.0, 0.0], [0, 1.0]], observation_matrices=self.a.numpy()
-            )
+            kf = pykalman.KalmanFilter(transition_matrices=[[1.0, 0.0], [0, 1.0]], observation_matrices=self.a.numpy())
 
             f_mean, _ = kf.filter(y.numpy())
 
@@ -160,3 +163,45 @@ class Tests(unittest.TestCase):
             rel_ll_error = np.abs((ll - result.loglikelihood.numpy()) / ll)
 
             self.assertLess(rel_ll_error, 0.05)
+
+    def test_FilterPrediction(self):
+        for model in [self.model, self.mv_model]:
+            x, y = model.sample_path(500)
+
+            filt = SISR(model, 500)
+            result = filt.longfilter(y, bar=False)
+
+            steps = 10
+            x, y = filt.predict(result.latest_state, steps)
+
+            self.assertEqual(steps, x.shape[0])
+            self.assertEqual(steps, y.shape[0])
+
+    def test_Smoothing(self):
+        for model in [self.model, self.mv_model]:
+            x, y = self.model.sample_path(500)
+
+            if model is self.model:
+                kf = pykalman.KalmanFilter(transition_matrices=1.0, observation_matrices=1.0)
+            else:
+                kf = pykalman.KalmanFilter(
+                    transition_matrices=[[0.5, 1 / 3], [0, 1.0]], observation_matrices=self.a.numpy()
+                )
+
+            s_mean, _ = kf.smooth(y.numpy())
+
+            if model.hidden.n_dim < 1:
+                s_mean = s_mean[:, 0]
+
+            for filter_type, props in [
+                (SISR, {"particles": 500}),
+                (APF, {"particles": 500}),
+            ]:
+                filt = filter_type(model, **props, record_states=True)
+                result = filt.longfilter(y)
+
+                smoothed = filt.smooth(result.states)
+                self.assertEqual(torch.Size([500, 500]), smoothed.shape[:2])
+
+                rel_error = np.median(np.abs((smoothed.mean(1) - s_mean) / s_mean))
+                self.assertLess(rel_error, 0.05)

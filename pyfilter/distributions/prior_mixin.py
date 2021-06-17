@@ -4,6 +4,17 @@ from ..parameter import ExtendedParameter
 
 
 PRIOR_PREFIX = "prior__"
+MODULE_SEPARATOR = "."
+
+
+def _parameter_recursion(
+    obj: "PriorMixin", parameter: ExtendedParameter, name: str
+) -> Tuple[ExtendedParameter, "DistributionWrapper"]:
+    if MODULE_SEPARATOR not in name:
+        return parameter, obj._modules[f"{PRIOR_PREFIX}{name}"]
+
+    split_name = name.split(MODULE_SEPARATOR)
+    return _parameter_recursion(obj._modules[split_name[0]], parameter, MODULE_SEPARATOR.join(split_name[1:]))
 
 
 class PriorMixin(object):
@@ -14,12 +25,7 @@ class PriorMixin(object):
 
     def parameters_and_priors(self) -> Iterable[Tuple[ExtendedParameter, "DistributionWrapper"]]:
         for n, p in self.named_parameters():
-            if "." not in n:
-                yield p, self._modules[f"{PRIOR_PREFIX}{n}"]
-            else:
-                # TODO: Use recursion...
-                sub_mod, name = n.split(".")
-                yield p, self._modules[sub_mod]._modules[f"{PRIOR_PREFIX}{name}"]
+            yield _parameter_recursion(self, p, n)
 
     def priors(self):
         for _, m in self.parameters_and_priors():

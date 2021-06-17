@@ -68,7 +68,7 @@ class JointState(NewState):
         return JointState(
             time_index=cls._join_timeindex(*states),
             values=cls._join_values(*states),
-            distribution=cls._join_distributions(*states, mask=mask)
+            distribution=cls._join_distributions(*states, mask=mask),
         )
 
     @staticmethod
@@ -96,16 +96,11 @@ class JointState(NewState):
         return NewState(
             time_index=self.time_index[item],
             distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
-            values=self.values[..., self.mask[item]]
+            values=self.values[..., self.mask[item]],
         )
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
-        return JointState(
-            time_index=self.time_index + time_increment,
-            distribution=dist,
-            values=values,
-            mask=self.mask
-        )
+        return JointState(time_index=self.time_index + time_increment, distribution=dist, values=values, mask=self.mask)
 
     def copy(self, dist: Distribution = None, values: torch.Tensor = None):
         return JointState(time_index=self.time_index, distribution=dist, values=values, mask=self.mask)
