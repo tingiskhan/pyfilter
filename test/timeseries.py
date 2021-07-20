@@ -263,8 +263,8 @@ class TimeseriesTests(unittest.TestCase):
     def test_LLTSV(self):
         llt_sv = m.LocalLinearTrendWithStochasticVolatility(
             torch.tensor([0.01, 0.02]),
-            torch.tensor([0.0, -2.0]),
-            torch.tensor([0.05, 0.075])
+            torch.tensor([0.0, 0.0]),
+            torch.tensor([0.001, 0.075])
         )
 
         x = llt_sv.sample_path(1000)
