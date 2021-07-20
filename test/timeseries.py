@@ -259,3 +259,14 @@ class TimeseriesTests(unittest.TestCase):
 
         x = trending_reversion.sample_path(1000)
         self.assertEqual(torch.Size([1000, 2]), x.shape)
+
+    def test_LLTSV(self):
+        llt_sv = m.LocalLinearTrendWithStochasticVolatility(
+            torch.tensor([0.01, 0.02]),
+            torch.tensor([0.0, -2.0]),
+            torch.tensor([0.05, 0.075])
+        )
+
+        x = llt_sv.sample_path(1000)
+
+        self.assertEqual(torch.Size([1000, 3]), x.shape)
