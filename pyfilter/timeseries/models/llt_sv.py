@@ -42,5 +42,5 @@ class LocalLinearTrendWithStochasticVolatility(AffineProcess):
         )
 
         super(LocalLinearTrendWithStochasticVolatility, self).__init__(
-            (_mean, _scale), parameters, initial_dist, increment_dist, initial_transform=initial_transform
+            (_mean, _scale), parameters, initial_dist, increment_dist, initial_transform=initial_transform, **kwargs
         )
