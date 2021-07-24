@@ -230,7 +230,7 @@ class TimeseriesTests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([100, 2]))
 
     def test_SemiLocalLinearTrend(self):
-        semi_ll_trend = m.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([0.1, 0.01]))
+        semi_ll_trend = m.SemiLocalLinearTrend(0.0, 0.01, torch.tensor([0.1, 0.001]))
 
         x = semi_ll_trend.sample_path(100)
 
@@ -259,3 +259,14 @@ class TimeseriesTests(unittest.TestCase):
 
         x = trending_reversion.sample_path(1000)
         self.assertEqual(torch.Size([1000, 2]), x.shape)
+
+    def test_LLTSV(self):
+        llt_sv = m.LocalLinearTrendWithStochasticVolatility(
+            torch.tensor([0.01, 0.02]),
+            torch.tensor([0.0, 0.0]),
+            torch.tensor([0.001, 0.075])
+        )
+
+        x = llt_sv.sample_path(1000)
+
+        self.assertEqual(torch.Size([1000, 3]), x.shape)

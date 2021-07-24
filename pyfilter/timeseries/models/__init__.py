@@ -3,6 +3,7 @@ from .verhulst import Verhulst
 from .ar import AR
 from .epidemiological import OneFactorSIR
 from .local_linear_trend import LocalLinearTrend, SemiLocalLinearTrend, TrendingMeanReversion
+from .llt_sv import LocalLinearTrendWithStochasticVolatility
 
 __all__ = [
     "OrnsteinUhlenbeck",
@@ -12,4 +13,5 @@ __all__ = [
     "LocalLinearTrend",
     "SemiLocalLinearTrend",
     "TrendingMeanReversion",
+    "LocalLinearTrendWithStochasticVolatility",
 ]

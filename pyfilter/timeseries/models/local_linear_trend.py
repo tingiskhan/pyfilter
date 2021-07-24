@@ -40,7 +40,7 @@ def semi_mean(x, mean_, coef_, sigma, _):
     slope = x.values[..., 1]
 
     new_level = x.values[..., 0] + slope
-    new_slope = mean_ + coef_ * (slope - mean_)
+    new_slope = slope + coef_ * (mean_ - slope)
 
     return concater(new_level, new_slope)
 
@@ -53,7 +53,7 @@ def semi_initial_transform(module, base_dist):
     mean_, coef_, scale_, initial_mean = tuple(module.functional_parameters())
 
     mean_ = concater(initial_mean, mean_)
-    scale_ = concater(scale_[..., 0], scale_[..., 1] / (1 - coef_ ** 2).sqrt())
+    scale_ = concater(scale_[..., 0], scale_[..., 1] / (2 * coef_).sqrt())
 
     return TransformedDistribution(base_dist, AffineTransform(mean_, scale_))
 
