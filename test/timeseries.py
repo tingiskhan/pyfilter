@@ -230,7 +230,7 @@ class TimeseriesTests(unittest.TestCase):
         self.assertEqual(x.shape, torch.Size([100, 2]))
 
     def test_SemiLocalLinearTrend(self):
-        semi_ll_trend = m.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([0.1, 0.01]))
+        semi_ll_trend = m.SemiLocalLinearTrend(0.0, 0.01, torch.tensor([0.1, 0.001]))
 
         x = semi_ll_trend.sample_path(100)
 
