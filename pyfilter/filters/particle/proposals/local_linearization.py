@@ -30,6 +30,7 @@ class LocalLinearization(LinearGaussianObservations):
 
         return self
 
+    # TODO: Fix
     def get_constant_and_offset(self, params, x):
         x.values.requires_grad_(True)
 
