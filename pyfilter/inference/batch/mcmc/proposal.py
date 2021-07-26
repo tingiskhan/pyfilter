@@ -41,7 +41,10 @@ class GradientBasedProposal(IndependentProposal):
         hidden_dens = filter_.ssm.hidden.build_density(xtm1)
         obs_dens = filter_.ssm.observable.build_density(xt)
 
-        logl = (hidden_dens.log_prob(xt.values) + obs_dens.log_prob(y)).mean(-1).sum(0) + eval_prior_log_prob(filter_.ssm, constrained=False).squeeze(-1)
+        logl = filter_.ssm.hidden.initial_dist.log_prob(smoothed[0]).mean(-1)
+        logl += eval_prior_log_prob(filter_.ssm, constrained=False).squeeze(-1)
+        logl = (hidden_dens.log_prob(xt.values) + obs_dens.log_prob(y)).mean(-1).sum(0)
+
         logl.backward(torch.ones_like(logl))
 
         loc = params + params.grad * self._eps
