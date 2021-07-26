@@ -9,7 +9,7 @@ from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
-from pyfilter.inference.batch.mcmc import PMMH
+from pyfilter.inference.batch.mcmc import PMMH, proposal as p
 from pyfilter.inference.utils import parameters_and_priors_from_model
 
 
@@ -153,6 +153,19 @@ class InferenceAlgorithmTests(unittest.TestCase):
             smoothed = filt.smooth(state.filter_state.states)
 
             self.assertEqual(torch.Size([25, 50, 30]), smoothed.shape[:3])
+
+    def test_PMMHWithGradient(self):
+        static_model = make_model(False)
+        x, y = static_model.sample_path(100)
+
+        model = make_model(True)
+
+        filt = APF(model, 200)
+        pmmh = PMMH(filt, 500, num_chains=6, proposal_builder=p.GradientBasedProposal())
+
+        state = pmmh.fit(y)
+
+        # TODO: Add check for posterior
 
 
 if __name__ == "__main__":

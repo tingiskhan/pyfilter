@@ -37,7 +37,7 @@ class PMMH(BatchFilterAlgorithm):
             for i in range(self._max_iter):
                 prop_dist = self._proposal_builder(state, self._filter, y)
                 accept, new_res, prop_filt = run_pmmh(
-                    self._filter, state.filter_result, prop_dist, prop_filt, y, **self._filter_kw
+                    self._filter, state.filter_result, prop_dist, prop_filt, y
                 )
 
                 state.filter_result.exchange(new_res, accept)
