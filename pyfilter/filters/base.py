@@ -77,7 +77,9 @@ class BaseFilter(Module, ABC):
 
         try:
             state = init_state or self.initialize()
+
             result = FilterResult(state, self.record_states)
+            result.append(state)
 
             for yt in y:
                 state = self.filter(yt, state)
