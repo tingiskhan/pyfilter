@@ -87,7 +87,7 @@ class Tests(unittest.TestCase):
                 filt = filter_type(model, **props, record_states=True)
                 result = filt.longfilter(y)
 
-                filtmeans = result.filter_means.numpy()
+                filtmeans = result.filter_means.numpy()[1:]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
 
