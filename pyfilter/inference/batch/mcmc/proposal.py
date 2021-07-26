@@ -2,7 +2,7 @@ from torch.distributions import Independent, Normal
 import torch
 from .state import PMMHState
 from ....filters import BaseFilter
-from ...utils import params_to_tensor, eval_prior_log_prob, parameters_and_priors_from_model, params_from_tensor
+from ...utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
 from ....timeseries import NewState
 
 
@@ -23,7 +23,7 @@ class GradientBasedProposal(IndependentProposal):
         super().__init__(**kwargs)
         self._eps = eps
 
-    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
+    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
         smoothed = filter_.smooth(state.filter_result.states)
 
         params = params_to_tensor(filter_.ssm, constrained=False)
