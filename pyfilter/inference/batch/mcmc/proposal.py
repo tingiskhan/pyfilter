@@ -23,7 +23,7 @@ class GradientBasedProposal(IndependentProposal):
         super().__init__(**kwargs)
         self._eps = eps
 
-    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
+    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
         smoothed = filter_.smooth(state.filter_result.states)
 
         params = params_to_tensor(filter_.ssm, constrained=False)
