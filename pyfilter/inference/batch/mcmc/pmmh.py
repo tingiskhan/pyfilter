@@ -1,9 +1,9 @@
 import torch
-from .utils import seed
-from .proposal import IndependentProposal
+from .utils import seed, run_pmmh
+from .proposals import RandomWalk, BaseProposal
 from .state import PMMHState
 from ..base import BatchFilterAlgorithm
-from ...utils import PropConstructor, run_pmmh, params_to_tensor
+from ...utils import params_to_tensor
 from ...logging import TQDMWrapper
 
 
@@ -12,10 +12,10 @@ class PMMH(BatchFilterAlgorithm):
     Implements the Particle Marginal Metropolis Hastings algorithm.
     """
 
-    def __init__(self, filter_, iterations: int, num_chains: int = 4, proposal_builder: PropConstructor = None):
+    def __init__(self, filter_, iterations: int, num_chains: int = 4, proposal: BaseProposal = None):
         super().__init__(filter_, iterations)
         self._num_chains = num_chains
-        self._proposal_builder = proposal_builder or IndependentProposal()
+        self._proposal = proposal or RandomWalk()
         self.filter.record_states = True
 
     def initialize(self, y: torch.Tensor, *args, **kwargs) -> PMMHState:
@@ -33,14 +33,14 @@ class PMMH(BatchFilterAlgorithm):
 
         try:
             logging.initialize(self, self._max_iter)
+            prop_dist = self._proposal.build(state, self._filter, y)
 
             for i in range(self._max_iter):
-                prop_dist = self._proposal_builder(state, self._filter, y)
                 accept, new_res, prop_filt = run_pmmh(
-                    self._filter, state.filter_result, prop_dist, prop_filt, y
+                    self._filter, state, self._proposal, prop_dist, prop_filt, y
                 )
 
-                state.filter_result.exchange(new_res, accept)
+                state.filter_state.exchange(new_res, accept)
                 self._filter.exchange(prop_filt, accept)
 
                 state.update(params_to_tensor(self._filter.ssm, constrained=True))

@@ -9,7 +9,7 @@ from pyfilter.utils import concater
 from pyfilter.distributions import DistributionWrapper
 from pyfilter.inference.sequential import NESSMC2, NESS, SMC2FW, SMC2
 from pyfilter.inference.batch.variational import approximation as apx, VariationalBayes
-from pyfilter.inference.batch.mcmc import PMMH, proposal as p
+from pyfilter.inference.batch.mcmc import PMMH, proposals as p
 from pyfilter.inference.utils import parameters_and_priors_from_model
 
 
@@ -161,7 +161,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
         model = make_model(True)
 
         filt = APF(model, 200)
-        pmmh = PMMH(filt, 500, num_chains=6, proposal_builder=p.GradientBasedProposal())
+        pmmh = PMMH(filt, 500, num_chains=6, proposal=p.GradientBasedProposal())
 
         state = pmmh.fit(y)
 

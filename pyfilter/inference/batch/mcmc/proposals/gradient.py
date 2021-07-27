@@ -1,38 +1,29 @@
 from torch.distributions import Independent, Normal
 import torch
 from math import sqrt
-from .state import PMMHState
-from ....filters import BaseFilter
-from ...utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
-from ....timeseries import NewState
+from .random_walk import RandomWalk
+from ....utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
+from .....timeseries import NewState
 
 
-class IndependentProposal(object):
-    def __init__(self, scale: float = 1e-2):
-        self._scale = scale
-
-    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
-        return Independent(Normal(params_to_tensor(filter_.ssm, constrained=False), self._scale), 1)
-
-
-class GradientBasedProposal(object):
+class GradientBasedProposal(RandomWalk):
     """
     Implements a proposal utilizing gradients.
     """
 
     def __init__(self, eps: float = 1e-4):
+        super().__init__(sqrt(2 * eps))
         self._eps = eps
-        self._scale = sqrt(2 * eps)
 
-    def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
-        smoothed = filter_.smooth(state.filter_result.states)
+    def build(self, state, filter_, y):
+        smoothed = filter_.smooth(state.filter_state.states)
 
         params = params_to_tensor(filter_.ssm, constrained=False)
         params.requires_grad_(True)
 
         params_from_tensor(filter_.ssm, params)
 
-        time = torch.stack(tuple(s.x.time_index for s in state.filter_result.states))
+        time = torch.stack(tuple(s.x.time_index for s in state.filter_state.states))
 
         xtm1 = NewState(time[:-1], values=smoothed[:-1])
         xt = NewState(time[1:], values=smoothed[1:])

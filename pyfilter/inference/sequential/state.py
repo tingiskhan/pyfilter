@@ -1,15 +1,14 @@
 import torch
 from typing import List
-from ..state import AlgorithmState
+from ..state import ParticleState
 from ...filters import FilterResult
 from ...utils import normalize, TensorTuple
 
 
-class FilteringAlgorithmState(AlgorithmState):
+class FilteringAlgorithmState(ParticleState):
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: List[torch.Tensor] = None):
-        super().__init__()
+        super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.filter_state = filter_state
         self.ess = ess or list()
 
     def normalized_weights(self):
@@ -20,6 +19,9 @@ class FilteringAlgorithmState(AlgorithmState):
 
     def append_ess(self, ess: torch.Tensor):
         self.ess.append(ess)
+
+    def copy(self, filter_state):
+        return FilteringAlgorithmState(torch.zeros_like(self.w), filter_state)
 
 
 class SMC2State(FilteringAlgorithmState):
