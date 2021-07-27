@@ -1,5 +1,6 @@
 from torch.distributions import Independent, Normal
 import torch
+from math import sqrt
 from .state import PMMHState
 from ....filters import BaseFilter
 from ...utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
@@ -14,14 +15,14 @@ class IndependentProposal(object):
         return Independent(Normal(params_to_tensor(filter_.ssm, constrained=False), self._scale), 1)
 
 
-class GradientBasedProposal(IndependentProposal):
+class GradientBasedProposal(object):
     """
     Implements a proposal utilizing gradients.
     """
 
-    def __init__(self, eps: float = 1e-4, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, eps: float = 1e-4):
         self._eps = eps
+        self._scale = sqrt(2 * eps)
 
     def __call__(self, state: PMMHState, filter_: BaseFilter, y: torch.Tensor):
         smoothed = filter_.smooth(state.filter_result.states)
