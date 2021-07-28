@@ -41,10 +41,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         if proposal == "auto":
-            try:
-                proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
-            except KeyError:
-                proposal = Bootstrap()
+            proposal = _PROPOSAL_MAPPING.get(self._model.__class__.__name__, Bootstrap)()
 
         self._proposal = proposal.set_model(self._model)  # type: Proposal
 
