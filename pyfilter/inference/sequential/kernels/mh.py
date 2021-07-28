@@ -1,20 +1,7 @@
 import torch
-from torch.distributions import Distribution
 from .base import BaseKernel
-from ...utils import _construct_mvn, params_to_tensor
-from ...batch.mcmc.proposals import BaseProposal
+from ...batch.mcmc.proposals import BaseProposal, SymmetricMH
 from ...batch.mcmc.utils import run_pmmh
-
-
-class SymmetricMH(BaseProposal):
-    def build(self, state, filter_, y):
-        values = params_to_tensor(filter_.ssm, constrained=False)
-        weights = state.normalized_weights()
-
-        return _construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
-
-    def exchange(self, old: Distribution, new: Distribution, indices: torch.Tensor) -> None:
-        pass
 
 
 class ParticleMetropolisHastings(BaseKernel):
