@@ -39,7 +39,7 @@ class GradientBasedProposal(RandomWalk):
         logl += eval_prior_log_prob(filter_.ssm, constrained=False).squeeze(-1)
         logl = (hidden_dens.log_prob(xt.values) + obs_dens.log_prob(y)).mean(-1).sum(0)
 
-        g = grad(logl, params, torch.ones_like(logl), create_graph=not self._use_second_order)[-1]
+        g = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
         step = self._eps * torch.ones_like(params)
         scale = self._scale * torch.ones_like(params)

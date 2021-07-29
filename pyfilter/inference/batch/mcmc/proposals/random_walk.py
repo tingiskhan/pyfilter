@@ -15,7 +15,5 @@ class RandomWalk(BaseProposal):
         return Independent(Normal(params_to_tensor(filter_.ssm, constrained=False), self._scale), 1)
 
     def exchange(self, old, new, indices):
-        new_loc = old.mean[:]
-        new_loc[indices] = new.mean[indices]
-
-        return Independent(Normal(new_loc, self._scale), 1)
+        old.base_dist.loc[indices] = new.base_dist.loc[indices]
+        old.base_dist.scale[indices] = new.base_dist.scale[indices]
