@@ -4,9 +4,4 @@ from .gradient import GradientBasedProposal
 from .symmetric_mh import SymmetricMH
 
 
-__all__ = [
-    "BaseProposal",
-    "RandomWalk",
-    "GradientBasedProposal",
-    "SymmetricMH"
-]
+__all__ = ["BaseProposal", "RandomWalk", "GradientBasedProposal", "SymmetricMH"]

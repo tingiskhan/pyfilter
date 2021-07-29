@@ -5,10 +5,4 @@ from .joint import JointDistribution
 from .mvn import SampleMVN
 
 
-__all__ = [
-    "DistributionWrapper",
-    "Prior",
-    "PriorMixin",
-    "JointDistribution",
-    "SampleMVN"
-]
+__all__ = ["DistributionWrapper", "Prior", "PriorMixin", "JointDistribution", "SampleMVN"]

@@ -22,4 +22,3 @@ class RandomWalk(BaseProposal):
         new_scale[indices] = new.stddev[indices]
 
         old.base_dist.__init__(new_loc, new_scale)
-

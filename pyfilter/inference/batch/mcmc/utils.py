@@ -3,7 +3,13 @@ from torch.distributions import Distribution
 from typing import Tuple
 from .proposals import BaseProposal
 from ...state import ParticleState
-from ...utils import params_to_tensor, parameters_and_priors_from_model, params_from_tensor, sample_model, eval_prior_log_prob
+from ...utils import (
+    params_to_tensor,
+    parameters_and_priors_from_model,
+    params_from_tensor,
+    sample_model,
+    eval_prior_log_prob,
+)
 from ....filters import BaseFilter, FilterResult
 from ....constants import INFTY
 

@@ -8,9 +8,7 @@ from ..batch.mcmc.proposals import BaseProposal
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(
-        self, filter_, particles, threshold=0.2, kernel: BaseProposal = None, max_increases=5, **kwargs
-    ):
+    def __init__(self, filter_, particles, threshold=0.2, kernel: BaseProposal = None, max_increases=5, **kwargs):
         """
         Implements the SMC2 algorithm by Chopin et al.
 
