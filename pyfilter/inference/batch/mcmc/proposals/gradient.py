@@ -1,6 +1,7 @@
 from torch.distributions import Independent, Normal
 import torch
 from math import sqrt
+from torch.autograd import grad
 from .random_walk import RandomWalk
 from ....utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
 from .....timeseries import NewState
@@ -11,9 +12,10 @@ class GradientBasedProposal(RandomWalk):
     Implements a proposal utilizing gradients.
     """
 
-    def __init__(self, eps: float = 1e-4):
+    def __init__(self, eps: float = 1e-4, use_second_order: bool = False):
         super().__init__(sqrt(2 * eps))
         self._eps = eps
+        self._use_second_order = use_second_order
 
     def build(self, state, filter_, y):
         smoothed = filter_.smooth(state.filter_state.states)
@@ -37,13 +39,23 @@ class GradientBasedProposal(RandomWalk):
         logl += eval_prior_log_prob(filter_.ssm, constrained=False).squeeze(-1)
         logl = (hidden_dens.log_prob(xt.values) + obs_dens.log_prob(y)).mean(-1).sum(0)
 
-        logl.backward(torch.ones_like(logl))
+        g = grad(logl, params, torch.ones_like(logl), create_graph=True)[-1]
 
-        loc = params + params.grad * self._eps
+        step = self._eps * torch.ones_like(params)
+        scale = self._scale * torch.ones_like(params)
+
+        if self._use_second_order:
+            neg_inv_hess = -1.0 / grad(g, params, torch.ones_like(g))[-1]
+            mask = neg_inv_hess > 0.0
+
+            step[mask] *= neg_inv_hess[mask]
+            scale[mask] = step[mask].pow(0.5)
+
+        loc = params + step * g
         params.detach_()
 
         # TODO: Better?
         for v in filter_.ssm.parameters():
             v.detach_()
 
-        return Independent(Normal(loc, self._scale), 1)
+        return Independent(Normal(loc, scale), 1)
