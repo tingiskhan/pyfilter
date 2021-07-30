@@ -8,8 +8,10 @@ class SampleMVN(Distribution):
     Sample based MVN.
     """
 
-    def __init__(self, samples: torch.Tensor, weights: torch.Tensor, scale: float = 1.1):
-        super().__init__()
+    arg_constraints = {}
+
+    def __init__(self, samples: torch.Tensor, weights: torch.Tensor, scale: float = 1.1, **kwargs):
+        super().__init__(validate_args=kwargs.pop("validate_args", False), **kwargs)
 
         self.samples = samples
         self.weights = weights
