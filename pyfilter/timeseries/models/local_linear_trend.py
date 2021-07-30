@@ -6,7 +6,7 @@ from ...utils import concater
 from ...distributions import DistributionWrapper
 
 
-def mean(x, a, sigma, _):
+def mean(x, a, sigma2, _):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
@@ -36,23 +36,23 @@ class LocalLinearTrend(AffineProcess):
         )
 
 
-def semi_mean(x, mean_, coef_, sigma, _):
-    slope = x.values[..., 1]
+def semi_mean(x, mean_, coef_, sigma2, _):
+    slope = x.values[..., 0]
 
-    new_level = x.values[..., 0] + slope
+    new_level = x.values[..., 1] + slope
     new_slope = slope + coef_ * (mean_ - slope)
 
-    return concater(new_level, new_slope)
+    return concater(new_slope, new_level)
 
 
-def semi_scale(x, alpha, beta, sigma, _):
-    return sigma
+def semi_scale(x, alpha, beta, sigma2, _):
+    return sigma2.cumsum(-1).sqrt()
 
 
 def semi_initial_transform(module, base_dist):
     mean_, coef_, scale_, initial_mean = tuple(module.functional_parameters())
 
-    scale_ = concater(scale_[..., 0], scale_[..., 1] / (2 * coef_).sqrt())
+    scale_ = concater(scale_[..., 0] / (2 * coef_), scale_[..., 1]).cumsum(-1).sqrt()
 
     return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale_))
 
