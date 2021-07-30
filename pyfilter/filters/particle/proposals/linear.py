@@ -40,7 +40,7 @@ class LinearGaussianObservations(Proposal):
 
         ttc = tc.transpose(-2, -1)
         diag_o_var_inv = construct_diag_from_flat(o_var_inv, self._model.observable.n_dim)
-        t2 = torch.matmul(ttc, torch.matmul(diag_o_var_inv, tc))
+        t2 = ttc.matmul(diag_o_var_inv).matmul(tc)
 
         cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
         t1 = h_var_inv * loc
