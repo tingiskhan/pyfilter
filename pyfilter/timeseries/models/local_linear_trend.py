@@ -10,13 +10,13 @@ def mean(x, a, sigma, _):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
-def scale(x, a, sigma, _):
-    return sigma
+def scale(x, a, sigma2, _):
+    return sigma2.cumsum(-1).sqrt()
 
 
 def initial_transform(module, base_dist):
-    scale_, initial_mean = tuple(module.functional_parameters())[-2:]
-    return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale_))
+    var_, initial_mean = tuple(module.functional_parameters())[-2:]
+    return TransformedDistribution(base_dist, AffineTransform(initial_mean, var_.cumsum(-1).sqrt()))
 
 
 class LocalLinearTrend(AffineProcess):
@@ -24,8 +24,8 @@ class LocalLinearTrend(AffineProcess):
     Implements a Local Linear Trend model.
     """
 
-    def __init__(self, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
-        parameters = (torch.tensor([[1.0, 1.0], [0.0, 1.0]]), sigma, initial_mean)
+    def __init__(self, sigma2: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
+        parameters = (torch.tensor([[1.0, 0.0], [1.0, 1.0]]), sigma2, initial_mean)
 
         initial_dist = increment_dist = DistributionWrapper(
             lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
