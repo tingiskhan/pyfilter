@@ -57,7 +57,7 @@ class Linearized(Proposal):
 
                 g.detach_()
 
-            mean = mean.detach() + step * g.detach()
+            mean = mean.detach() + step * g
             new_x = new_x.copy(new_x.dist, mean)
 
         if self._is1d:
