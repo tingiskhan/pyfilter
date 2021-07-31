@@ -48,8 +48,8 @@ class GradientBasedProposal(RandomWalk):
             neg_inv_hess = -1.0 / grad(g, params, torch.ones_like(g))[-1]
             mask = neg_inv_hess > 0.0
 
-            step[mask] *= neg_inv_hess[mask]
-            scale[mask] = step[mask].sqrt()
+            step[mask] = neg_inv_hess[mask]
+            scale[mask] = neg_inv_hess[mask].sqrt()
 
         loc = params + step * g
         params.detach_()
