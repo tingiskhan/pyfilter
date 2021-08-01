@@ -5,11 +5,11 @@ from ...distributions import DistributionWrapper
 from ...typing import ArrayType
 
 
-def _f(x, s):
+def _f(x, s, _):
     return x.values
 
 
-def _g(x, s):
+def _g(x, s, _):
     return s
 
 
