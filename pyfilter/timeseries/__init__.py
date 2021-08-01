@@ -1,5 +1,5 @@
 from .stochasticprocess import StochasticProcess, StructuralStochasticProcess
-from .affine import AffineProcess, RandomWalk
+from .affine import AffineProcess
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations
@@ -20,7 +20,6 @@ __all__ = [
     "StochasticProcess",
     "StructuralStochasticProcess",
     "AffineProcess",
-    "RandomWalk",
     "StateSpaceModel",
     "LinearGaussianObservations",
     "LinearObservations",
