@@ -20,14 +20,11 @@ def init_trans(model: "RandomWalk", base_dist):
 
 
 class RandomWalk(AffineProcess):
+    """
+    Defines a simple random walk model.
+    """
+
     def __init__(self, std: ArrayType, initial_mean: ArrayType = None):
-        """
-        Defines a random walk.
-
-        :param std: The vector of standard deviations
-        :type std: torch.Tensor|float|Distribution
-        """
-
         if not isinstance(std, torch.Tensor):
             normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
