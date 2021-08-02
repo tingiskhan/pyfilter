@@ -147,7 +147,7 @@ class Tests(unittest.TestCase):
             (SISR, {"particles": 500}),
             (APF, {"particles": 500}),
             (UKF, {}),
-            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
+            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, use_second_order=True)}),
             (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
             (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
         ]:
