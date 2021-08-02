@@ -35,6 +35,6 @@ class RandomWalk(AffineProcess):
                     lambda **u: Independent(Normal(**u), 1), loc=torch.zeros_like(std), scale=std
                 )
 
-        initial_mean_ = initial_mean if initial_mean is not None else torch.zeros_like(std)
+        initial_mean_ = initial_mean if initial_mean is not None else normal.loc
 
         super().__init__((_f, _g), (std, initial_mean_), normal, normal, initial_transform=init_trans)

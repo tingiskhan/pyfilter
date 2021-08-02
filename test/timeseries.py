@@ -270,3 +270,9 @@ class TimeseriesTests(unittest.TestCase):
         x = llt_sv.sample_path(1000)
 
         self.assertEqual(torch.Size([1000, 3]), x.shape)
+
+    def test_RandomWalk(self):
+        rw = m.RandomWalk(0.1)
+        x = rw.sample_path(100)
+
+        self.assertEqual(torch.Size([100]), x.shape)
