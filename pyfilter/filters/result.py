@@ -19,6 +19,8 @@ class FilterResult(Module):
         self._states = list()
         self.record_states = record_states
 
+        self.append(init_state)
+
     @property
     def loglikelihood(self) -> torch.Tensor:
         return self._buffers["_loglikelihood"]
