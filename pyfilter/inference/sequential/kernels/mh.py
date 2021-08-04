@@ -22,10 +22,10 @@ class ParticleMetropolisHastings(BaseKernel):
         prop_filter = filter_.copy()
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
+        dist = self._proposal.build(state, filter_, y)
+
         filter_.resample(indices)
         state.filter_state.resample(indices)
-
-        dist = self._proposal.build(state, filter_, y)
 
         accepted = torch.zeros_like(state.w, dtype=torch.bool)
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
