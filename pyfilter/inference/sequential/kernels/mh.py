@@ -19,22 +19,22 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def _update(self, filter_, state, y, *args):
-        prop_filt = filter_.copy()
+        prop_filter = filter_.copy()
         indices = self._resampler(state.normalized_weights(), normalized=True)
-
-        dist = self._proposal.build(state, filter_, y)
 
         filter_.resample(indices)
         state.filter_state.resample(indices)
+
+        dist = self._proposal.build(state, filter_, y)
 
         accepted = torch.zeros_like(state.w, dtype=torch.bool)
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
 
         for _ in range(self._n_steps):
-            to_accept, prop_state, prop_filt = run_pmmh(filter_, state, self._proposal, dist, prop_filt, y, shape)
+            to_accept, prop_state, prop_filter = run_pmmh(filter_, state, self._proposal, dist, prop_filter, y, shape)
             accepted |= to_accept
 
-            filter_.exchange(prop_filt, to_accept)
+            filter_.exchange(prop_filter, to_accept)
             state.filter_state.exchange(prop_state, to_accept)
 
         self.accepted = accepted.float().mean()
