@@ -15,7 +15,6 @@ class FilterResult(Module):
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
         self._filter_means = TensorTuple()
-        self._latest_state = init_state
         self._states = list()
         self.record_states = record_states
 
