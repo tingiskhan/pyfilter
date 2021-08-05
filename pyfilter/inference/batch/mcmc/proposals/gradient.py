@@ -51,6 +51,8 @@ class GradientBasedProposal(RandomWalk):
             step[mask] = neg_inv_hess[mask]
             scale[mask] = neg_inv_hess[mask].sqrt()
 
+            g.detach_()
+
         loc = params + step * g
         params.detach_()
 
