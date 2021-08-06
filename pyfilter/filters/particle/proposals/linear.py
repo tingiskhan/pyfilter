@@ -101,7 +101,7 @@ class LinearGaussianObservations(Proposal):
             else:
                 tc = c.unsqueeze(-2)
                 diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
-                cov = (o_var + tc.matmul(diag_h_var).matmul(tc.transpose(-2, -1))[..., 0, 0])
+                cov = o_var + tc.matmul(diag_h_var).matmul(tc.transpose(-2, -1))[..., 0, 0]
 
             return Normal(o_loc, cov.sqrt(), validate_args=False).log_prob(y)
 

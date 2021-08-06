@@ -14,5 +14,5 @@ __all__ = [
     "LocalLinearTrend",
     "SemiLocalLinearTrend",
     "LocalLinearTrendWithStochasticVolatility",
-    "RandomWalk"
+    "RandomWalk",
 ]
