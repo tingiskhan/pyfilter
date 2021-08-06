@@ -51,8 +51,9 @@ def run_pmmh(
     prop_filter: BaseFilter,
     y: torch.Tensor,
     size=torch.Size([]),
+    mutate_kernel=False,
     **kwargs,
-) -> Tuple[torch.Tensor, FilterResult, BaseFilter]:
+) -> torch.Tensor:
     """
     Runs one iteration of a vectorized Particle Marginal Metropolis hastings.
     """
@@ -71,6 +72,10 @@ def run_pmmh(
     log_acc_prob = diff_prop + diff_prior + diff_logl
     accepted: torch.Tensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob
 
-    proposal.exchange(prop_kernel, new_prop_kernel, accepted)
+    state.filter_state.exchange(new_res, accepted)
+    filter_.exchange(prop_filter, accepted)
 
-    return accepted, new_res, prop_filter
+    if mutate_kernel:
+        proposal.exchange(prop_kernel, new_prop_kernel, accepted)
+
+    return accepted
