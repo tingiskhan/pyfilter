@@ -27,7 +27,7 @@ class PMMH(BatchFilterAlgorithm):
     def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y, **kwargs)
 
-        prop_filt = self._filter.copy()
+        prop_filter = self._filter.copy()
 
         logging = logging or TQDMWrapper()
 
@@ -36,7 +36,7 @@ class PMMH(BatchFilterAlgorithm):
             prop_dist = self._proposal.build(state, self._filter, y)
 
             for i in range(self._max_iter):
-                run_pmmh(self._filter, state, self._proposal, prop_dist, prop_filt, y, mutate_kernel=True)
+                run_pmmh(self._filter, state, self._proposal, prop_dist, prop_filter, y, mutate_kernel=True)
 
                 state.update(params_to_tensor(self._filter.ssm, constrained=True))
                 logging.do_log(i, state)
