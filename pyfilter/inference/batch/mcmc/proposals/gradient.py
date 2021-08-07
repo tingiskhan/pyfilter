@@ -45,13 +45,7 @@ class GradientBasedProposal(RandomWalk):
         scale = self._scale * torch.ones_like(params)
 
         if self._use_second_order:
-            neg_inv_hess = -1.0 / grad(g, params, torch.ones_like(g))[-1]
-            mask = neg_inv_hess > 0.0
-
-            step[mask] = neg_inv_hess[mask]
-            scale[mask] = neg_inv_hess[mask].sqrt()
-
-            g.detach_()
+            raise NotImplementedError("Second order information is currently not implemented!")
 
         loc = params + step * g
         params.detach_()
