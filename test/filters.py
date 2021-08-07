@@ -201,7 +201,7 @@ class Tests(unittest.TestCase):
                 result = filt.longfilter(y)
 
                 smoothed = filt.smooth(result.states)
-                self.assertEqual(torch.Size([500, 500]), smoothed.shape[:2])
+                self.assertEqual(torch.Size([501, 500]), smoothed.shape[:2])
 
-                rel_error = np.median(np.abs((smoothed.mean(1) - s_mean) / s_mean))
+                rel_error = np.median(np.abs((smoothed[1:].mean(1) - s_mean) / s_mean))
                 self.assertLess(rel_error, 0.05)
