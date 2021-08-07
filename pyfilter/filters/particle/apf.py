@@ -14,9 +14,9 @@ class APF(ParticleFilter):
 
         if torch.isnan(y).any():
             indices = self._resampler(normalized, normalized=True)
-            state.x.values[:] = choose(state.x.values, indices)
+            copied_x = state.x.copy(values=choose(state.x.values, indices))
 
-            x = self.ssm.hidden.forward(state.x)
+            x = self.ssm.hidden.forward(copied_x)
 
             return ParticleState(x, torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), indices)
 
@@ -24,12 +24,12 @@ class APF(ParticleFilter):
 
         resample_weights = pre_weights + state.w
 
-        resampled_indices = self._resampler(resample_weights)
-        state.x.values[:] = choose(state.x.values, resampled_indices)
+        indices = self._resampler(resample_weights)
+        copied_x = state.x.copy(values=choose(state.x.values, indices))
 
-        x, weights = self._proposal.sample_and_weight(y, state.x)
+        x, weights = self._proposal.sample_and_weight(y, copied_x)
 
-        w = weights - choose(pre_weights, resampled_indices)
-        ll = loglikelihood(w) + torch.log((normalized * torch.exp(pre_weights)).sum(-1))
+        w = weights - choose(pre_weights, indices)
+        ll = loglikelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
 
-        return ParticleState(x, w, ll, resampled_indices)
+        return ParticleState(x, w, ll, indices)
