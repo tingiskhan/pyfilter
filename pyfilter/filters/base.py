@@ -55,7 +55,7 @@ class BaseFilter(Module, ABC):
         Performs a filtering move given observation `y` and previous state of the filter.
         """
 
-        return self.predict_correct(y, state)
+        return self.__call__(y, state)
 
     def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: BaseState = None,) -> FilterResult:
         """
@@ -98,6 +98,9 @@ class BaseFilter(Module, ABC):
 
     def predict_correct(self, y: Optional[torch.Tensor], state: TState) -> TState:
         raise NotImplementedError()
+
+    def forward(self, *args, **kwargs):
+        return self.predict_correct(*args, **kwargs)
 
     def resample(self, indices: torch.Tensor) -> "BaseFilter":
         """
