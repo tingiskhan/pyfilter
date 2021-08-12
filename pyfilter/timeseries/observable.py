@@ -11,7 +11,7 @@ class GeneralObservable(StructuralStochasticProcess, ABC):
     """
 
     def __init__(self, dimension: Size, parameters, **kwargs):
-        super().__init__(parameters, **kwargs)
+        super().__init__(parameters, initial_dist=None, **kwargs)
         self._dim = dimension
 
     @property
