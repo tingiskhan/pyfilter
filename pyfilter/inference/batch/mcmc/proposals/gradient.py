@@ -1,6 +1,5 @@
 from torch.distributions import Independent, Normal
 import torch
-from math import sqrt
 from torch.autograd import grad
 from .random_walk import RandomWalk
 from ....utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
@@ -12,9 +11,9 @@ class GradientBasedProposal(RandomWalk):
     Implements a proposal utilizing gradients.
     """
 
-    def __init__(self, eps: float = 1e-4, use_second_order: bool = False):
-        super().__init__(sqrt(2 * eps))
-        self._eps = eps
+    def __init__(self, use_second_order: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        self._eps = self._scale ** 2.0 / 2.0
         self._use_second_order = use_second_order
 
     def build(self, state, filter_, y):
