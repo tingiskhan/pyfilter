@@ -145,7 +145,7 @@ class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
         elif isinstance(p, Parameter):
             self.register_parameter(name, p)
         else:
-            self.register_buffer(name, p if isinstance(p, torch.Tensor) else torch.tensor(p))
+            self.register_buffer(name, p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p))
 
     def functional_parameters(self, f: Callable[[torch.Tensor], torch.Tensor] = None) -> Tuple[Parameter, ...]:
         res = dict()
