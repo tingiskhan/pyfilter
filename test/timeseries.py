@@ -276,3 +276,9 @@ class TimeseriesTests(unittest.TestCase):
         x = rw.sample_path(100)
 
         self.assertEqual(torch.Size([100]), x.shape)
+
+    def test_Verhulst(self):
+        rw = m.Verhulst(0.01, 2.0, 0.1, 0.1, num_steps=10)
+        x = rw.sample_path(100)
+
+        self.assertEqual(torch.Size([100]), x.shape)
