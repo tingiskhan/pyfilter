@@ -27,7 +27,14 @@ class OrnsteinUhlenbeck(AffineProcess):
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
-        super().__init__((self._f, self._g), (kappa, gamma, sigma, initial_state_mean), dist, dist, initial_transform=init_trans, **kwargs)
+        super().__init__(
+            (self._f, self._g),
+            (kappa, gamma, sigma, initial_state_mean),
+            dist,
+            dist,
+            initial_transform=init_trans,
+            **kwargs
+        )
         self._dt = torch.tensor(dt)
 
     def _f(self, x, k, g, s, _):

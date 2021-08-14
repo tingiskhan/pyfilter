@@ -35,5 +35,5 @@ __all__ = [
     "JointState",
     "JointStochasticProcess",
     "AffineJointStochasticProcesses",
-    "GeneralObservable"
+    "GeneralObservable",
 ]
