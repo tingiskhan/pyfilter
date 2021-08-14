@@ -133,14 +133,19 @@ class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
         super().__init__(**kwargs)
 
         for i, p in enumerate(parameters):
-            name = f"parameter_{i}"
+            self._register_parameter_or_prior(f"parameter_{i}", p)
 
-            if isinstance(p, Prior):
-                self.register_prior(name, p)
-            elif isinstance(p, Parameter):
-                self.register_parameter(name, p)
-            else:
-                self.register_buffer(name, p if isinstance(p, torch.Tensor) else torch.tensor(p))
+    def _register_parameter_or_prior(self, name: str, p):
+        """
+        Helper method for registering parameters or priors.
+        """
+
+        if isinstance(p, Prior):
+            self.register_prior(name, p)
+        elif isinstance(p, Parameter):
+            self.register_parameter(name, p)
+        else:
+            self.register_buffer(name, p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p))
 
     def functional_parameters(self, f: Callable[[torch.Tensor], torch.Tensor] = None) -> Tuple[Parameter, ...]:
         res = dict()

@@ -1,23 +1,24 @@
 import torch
 from torch.distributions import Normal, Independent, AffineTransform
 from torch.autograd import grad
-from typing import Optional
 from ....timeseries import AffineProcess
 from .base import Proposal
 
 
 class Linearized(Proposal):
-    def __init__(self, n_steps=1, alpha: Optional[float] = 0.25):
+    def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
         Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
         models that are log-concave in the observation density.
 
         :param n_steps: The number of steps to take when approximating the mean of the proposal density
-        :param alpha: Takes step proportional to `alpha` if not None, else uses second order information
+        :param alpha: Takes step proportional to `alpha` if `use_second_order` is False
         """
         super().__init__()
         self._alpha = alpha
         self._n_steps = n_steps
+        self._use_second_order = use_second_order
+
         self._is1d = None
 
     def set_model(self, model):
@@ -33,28 +34,31 @@ class Linearized(Proposal):
         new_x = self._model.hidden.propagate(x)
         affine_transform = next(trans for trans in new_x.dist.transforms if isinstance(trans, AffineTransform))
 
-        h_loc, h_scale = affine_transform.loc[:], affine_transform.scale[:]
-        new_x.values = h_loc
+        mean, h_scale = affine_transform.loc[:], affine_transform.scale[:]
+        new_x.values = mean
 
         for _ in range(self._n_steps):
-            h_loc.requires_grad_(True)
+            mean.requires_grad_(True)
 
             y_dist = self._model.observable.build_density(new_x)
 
-            logl = y_dist.log_prob(y) + new_x.dist.log_prob(h_loc)
-            g = grad(logl, h_loc, grad_outputs=torch.ones_like(logl), create_graph=self._alpha is None)[-1]
+            logl = y_dist.log_prob(y) + new_x.dist.log_prob(mean)
+            g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
-            if self._alpha is None:
-                step = -1 / grad(g, h_loc, grad_outputs=torch.ones_like(g))[-1]
-                std = step.sqrt()
-            else:
-                std = h_scale.detach()
-                step = self._alpha
+            step = self._alpha * torch.ones_like(g)
+            std = h_scale.clone()
 
-            h_loc = h_loc.detach() + step * g.detach()
-            new_x = new_x.copy(new_x.dist, h_loc)
+            if self._use_second_order:
+                neg_inv_hess = -1.0 / grad(g, mean, grad_outputs=torch.ones_like(g))[-1]
+                mask = neg_inv_hess > 0.0
 
-        mean = h_loc.detach()
+                step[mask] = neg_inv_hess[mask]
+                std[mask] = neg_inv_hess[mask].sqrt()
+
+                g.detach_()
+
+            mean = mean.detach() + step * g
+            new_x = new_x.copy(new_x.dist, mean)
 
         if self._is1d:
             kernel = Normal(mean, std, validate_args=False)

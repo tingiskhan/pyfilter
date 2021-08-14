@@ -1,18 +1,14 @@
+import torch
 from .base import SequentialParticleAlgorithm
-from .kernels import ParticleMetropolisHastings, SymmetricMH
-from .kernels.mh import PropConstructor
+from .kernels import ParticleMetropolisHastings
 from ...utils import get_ess
 from ...filters import ParticleFilter
-from torch import isfinite
 from .state import SMC2State
-from typing import Optional
-import torch
+from ..batch.mcmc.proposals import BaseProposal
 
 
 class SMC2(SequentialParticleAlgorithm):
-    def __init__(
-        self, filter_, particles, threshold=0.2, kernel: Optional[PropConstructor] = None, max_increases=5, **kwargs
-    ):
+    def __init__(self, filter_, particles, threshold=0.2, kernel: BaseProposal = None, max_increases=5, **kwargs):
         """
         Implements the SMC2 algorithm by Chopin et al.
 
@@ -47,7 +43,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         state.filter_state.append(filter_state)
 
-        if ess < self._threshold or (~isfinite(state.w)).any():
+        if ess < self._threshold or (~torch.isfinite(state.w)).any():
             state = self.rejuvenate(state)
 
         return state

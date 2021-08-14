@@ -6,17 +6,17 @@ from ...utils import concater
 from ...distributions import DistributionWrapper
 
 
-def mean(x, a, sigma, _):
+def mean(x, a, sigma2, _):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
-def scale(x, a, sigma, _):
-    return sigma
+def scale(x, a, sigma2, _):
+    return sigma2.cumsum(-1).sqrt()
 
 
 def initial_transform(module, base_dist):
-    scale_, initial_mean = tuple(module.functional_parameters())[-2:]
-    return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale_))
+    var_, initial_mean = tuple(module.functional_parameters())[-2:]
+    return TransformedDistribution(base_dist, AffineTransform(initial_mean, var_.cumsum(-1).sqrt()))
 
 
 class LocalLinearTrend(AffineProcess):
@@ -24,8 +24,8 @@ class LocalLinearTrend(AffineProcess):
     Implements a Local Linear Trend model.
     """
 
-    def __init__(self, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
-        parameters = (torch.tensor([[1.0, 1.0], [0.0, 1.0]]), sigma, initial_mean)
+    def __init__(self, sigma2: ArrayType, initial_mean: ArrayType = torch.zeros(2), **kwargs):
+        parameters = (torch.tensor([[1.0, 0.0], [1.0, 1.0]]), sigma2, initial_mean)
 
         initial_dist = increment_dist = DistributionWrapper(
             lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
@@ -36,23 +36,23 @@ class LocalLinearTrend(AffineProcess):
         )
 
 
-def semi_mean(x, mean_, coef_, sigma, _):
-    slope = x.values[..., 1]
+def semi_mean(x, mean_, coef_, sigma2, _):
+    slope = x.values[..., 0]
 
-    new_level = x.values[..., 0] + slope
+    new_level = x.values[..., 1] + slope
     new_slope = slope + coef_ * (mean_ - slope)
 
-    return concater(new_level, new_slope)
+    return concater(new_slope, new_level)
 
 
-def semi_scale(x, alpha, beta, sigma, _):
-    return sigma
+def semi_scale(x, alpha, beta, sigma2, _):
+    return sigma2.cumsum(-1).sqrt()
 
 
 def semi_initial_transform(module, base_dist):
     mean_, coef_, scale_, initial_mean = tuple(module.functional_parameters())
 
-    scale_ = concater(scale_[..., 0], scale_[..., 1] / (2 * coef_).sqrt())
+    scale_ = concater(scale_[..., 0] / (2 * coef_), scale_[..., 1]).cumsum(-1).sqrt()
 
     return TransformedDistribution(base_dist, AffineTransform(initial_mean, scale_))
 

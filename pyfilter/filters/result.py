@@ -15,9 +15,10 @@ class FilterResult(Module):
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
         self._filter_means = TensorTuple()
-        self._latest_state = init_state
         self._states = list()
         self.record_states = record_states
+
+        self.append(init_state)
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -74,7 +75,7 @@ class FilterResult(Module):
     def append(self, state: BaseState):
         self._filter_means.append(state.get_mean())
 
-        self._loglikelihood += state.get_loglikelihood()
+        self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
         self._latest_state = state
 
         if self.record_states:

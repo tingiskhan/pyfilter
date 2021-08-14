@@ -41,10 +41,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._resampler = resampling
 
         if proposal == "auto":
-            try:
-                proposal = _PROPOSAL_MAPPING[self._model.__class__.__name__]()
-            except KeyError:
-                proposal = Bootstrap()
+            proposal = _PROPOSAL_MAPPING.get(self._model.__class__.__name__, Bootstrap)()
 
         self._proposal = proposal.set_model(self._model)  # type: Proposal
 
@@ -82,7 +79,7 @@ class ParticleFilter(BaseFilter, ABC):
     def initialize(self) -> ParticleState:
         x = self._model.hidden.initial_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
-        prev_inds = torch.ones_like(w) * torch.arange(w.shape[-1], device=x.device)
+        prev_inds = torch.ones(w.shape, dtype=torch.long, device=x.device) * torch.arange(w.shape[-1], device=x.device)
 
         return ParticleState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 

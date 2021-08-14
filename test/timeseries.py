@@ -223,7 +223,7 @@ class TimeseriesTests(unittest.TestCase):
         self.assertEqual(path.shape, torch.Size([100, 3]))
 
     def test_LocalLinearTrend(self):
-        ll_trend = m.LocalLinearTrend(torch.tensor([1.0, 0.01]))
+        ll_trend = m.LocalLinearTrend(torch.tensor([0.01, 1.0]))
 
         x = ll_trend.sample_path(100)
 
@@ -270,3 +270,15 @@ class TimeseriesTests(unittest.TestCase):
         x = llt_sv.sample_path(1000)
 
         self.assertEqual(torch.Size([1000, 3]), x.shape)
+
+    def test_RandomWalk(self):
+        rw = m.RandomWalk(0.1)
+        x = rw.sample_path(100)
+
+        self.assertEqual(torch.Size([100]), x.shape)
+
+    def test_Verhulst(self):
+        rw = m.Verhulst(0.01, 2.0, 0.1, 0.1, num_steps=10)
+        x = rw.sample_path(100)
+
+        self.assertEqual(torch.Size([100]), x.shape)

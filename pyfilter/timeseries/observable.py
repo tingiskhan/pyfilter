@@ -1,5 +1,26 @@
 from functools import lru_cache
+from abc import ABC
+from torch import Size
+from .stochasticprocess import StructuralStochasticProcess
 from .affine import AffineProcess
+
+
+class GeneralObservable(StructuralStochasticProcess, ABC):
+    """
+    Implements a helper class for observations of general type.
+    """
+
+    def __init__(self, dimension: Size, parameters, **kwargs):
+        super().__init__(parameters, initial_dist=None, **kwargs)
+        self._dim = dimension
+
+    @property
+    def n_dim(self) -> int:
+        return len(self._dim)
+
+    @property
+    def num_vars(self) -> int:
+        return self._dim.numel()
 
 
 class AffineObservations(AffineProcess):

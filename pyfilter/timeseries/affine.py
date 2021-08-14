@@ -72,33 +72,3 @@ class AffineProcess(StructuralStochasticProcess):
             x = x.propagate_from(values=loc + scale * u, time_increment=time_increment)
 
         return x
-
-
-def _f(x, s):
-    return x.values
-
-
-def _g(x, s):
-    return s
-
-
-class RandomWalk(AffineProcess):
-    def __init__(self, std: Union[torch.Tensor, float, Distribution], initial_dist=None):
-        """
-        Defines a random walk.
-
-        :param std: The vector of standard deviations
-        :type std: torch.Tensor|float|Distribution
-        """
-
-        if not isinstance(std, torch.Tensor):
-            normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        else:
-            if std.shape[-1] < 2:
-                normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-            else:
-                normal = DistributionWrapper(
-                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros_like(std), scale=std
-                )
-
-        super().__init__((_f, _g), (std,), initial_dist or normal, normal)

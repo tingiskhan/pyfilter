@@ -80,14 +80,14 @@ class Tests(unittest.TestCase):
                 (SISR, {"particles": 500}),
                 (APF, {"particles": 500}),
                 (UKF, {}),
-                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
-                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5)}),
+                (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, use_second_order=True)}),
                 (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
             ]:
                 filt = filter_type(model, **props, record_states=True)
                 result = filt.longfilter(y)
 
-                filtmeans = result.filter_means.numpy()
+                filtmeans = result.filter_means.numpy()[1:]
 
                 rel_error = np.median(np.abs((filtmeans - f_mean) / f_mean))
 
@@ -147,7 +147,7 @@ class Tests(unittest.TestCase):
             (SISR, {"particles": 500}),
             (APF, {"particles": 500}),
             (UKF, {}),
-            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=None)}),
+            (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, use_second_order=True)}),
             (SISR, {"particles": 500, "proposal": prop.Linearized(n_steps=5, alpha=0.01)}),
             (SISR, {"particles": 500, "proposal": prop.LocalLinearization()}),
         ]:
@@ -201,7 +201,7 @@ class Tests(unittest.TestCase):
                 result = filt.longfilter(y)
 
                 smoothed = filt.smooth(result.states)
-                self.assertEqual(torch.Size([500, 500]), smoothed.shape[:2])
+                self.assertEqual(torch.Size([501, 500]), smoothed.shape[:2])
 
-                rel_error = np.median(np.abs((smoothed.mean(1) - s_mean) / s_mean))
+                rel_error = np.median(np.abs((smoothed[1:].mean(1) - s_mean) / s_mean))
                 self.assertLess(rel_error, 0.05)
