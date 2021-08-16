@@ -32,7 +32,7 @@ class ParticleState(BaseState):
         nested = self.w.dim() > 1
 
         mean = (self.x.values * normalized_weights).sum(sum_axis)
-        var = ((self.x.values - mean if not nested else mean.unsqueeze(1)) ** 2 * normalized_weights).sum(sum_axis)
+        var = ((self.x.values - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
 
         return mean, var
 
