@@ -5,7 +5,14 @@ from ..timeseries import NewState
 
 
 class BaseState(Module, ABC):
+    """
+    Base state for all filter states to inherit from.
+    """
+
     def get_mean(self) -> Tensor:
+        raise NotImplementedError()
+
+    def get_variance(self) -> Tensor:
         raise NotImplementedError()
 
     def resample(self, indices: Tensor):
