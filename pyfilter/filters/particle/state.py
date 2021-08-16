@@ -39,7 +39,7 @@ class ParticleState(BaseState):
     def get_mean(self):
         return self._mean
 
-    def get_variance(self) -> Tensor:
+    def get_variance(self):
         return self._var
 
     def normalized_weights(self):
