@@ -152,7 +152,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
             smoothed = filt.smooth(state.filter_state.states)
 
-            self.assertEqual(torch.Size([25, 50, 30]), smoothed.shape[:3])
+            self.assertEqual(torch.Size([26, 50, 30]), smoothed.shape[:3])
 
     def test_PMMHWithGradient(self):
         static_model = make_model(False)
@@ -160,7 +160,7 @@ class InferenceAlgorithmTests(unittest.TestCase):
 
         model = make_model(True)
 
-        filt = APF(model, 200)
+        filt = APF(model, 200, record_states=True)
         pmmh = PMMH(filt, 500, num_chains=6, proposal=p.GradientBasedProposal())
 
         state = pmmh.fit(y)
