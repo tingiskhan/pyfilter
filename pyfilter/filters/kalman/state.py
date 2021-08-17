@@ -17,7 +17,7 @@ class KalmanState(BaseState):
     def get_mean(self):
         return self.utf.x_dist().mean.clone()
 
-    def get_variance(self) -> Tensor:
+    def get_variance(self):
         return self.utf.x_dist().variance.clone()
 
     # TODO: Fix this

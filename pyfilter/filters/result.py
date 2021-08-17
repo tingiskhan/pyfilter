@@ -6,10 +6,11 @@ from ..utils import TensorTuple
 
 
 class FilterResult(Module):
+    """
+    Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
+    """
+
     def __init__(self, init_state: BaseState, record_states: bool = False):
-        """
-        Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
-        """
         super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
@@ -46,7 +47,7 @@ class FilterResult(Module):
 
     def exchange(self, res: "FilterResult", indices: torch.Tensor):
         """
-        Exchanges the specified indices of self with res.
+        Exchanges the specified indices of `self` with `res`.
         """
 
         self._loglikelihood[indices] = res.loglikelihood[indices]
@@ -66,7 +67,7 @@ class FilterResult(Module):
 
     def resample(self, indices: torch.Tensor, entire_history=True):
         """
-        Resamples the specified indices of self with res.
+        Resamples the specified indices of `self` with `res`.
         """
 
         self._loglikelihood[:] = self.loglikelihood[indices]
