@@ -15,8 +15,9 @@ def _g(x, s, _):
 
 def init_trans(model: "RandomWalk", base_dist):
     sigma, mean = tuple(model.functional_parameters())
+    initial_mean = mean if mean is not None else base_dist.loc
 
-    return TransformedDistribution(base_dist, AffineTransform(mean, sigma))
+    return TransformedDistribution(base_dist, AffineTransform(initial_mean, sigma))
 
 
 class RandomWalk(AffineProcess):
@@ -35,6 +36,4 @@ class RandomWalk(AffineProcess):
                     lambda **u: Independent(Normal(**u), 1), loc=torch.zeros_like(std), scale=std
                 )
 
-        initial_mean_ = initial_mean if initial_mean is not None else normal.loc
-
-        super().__init__((_f, _g), (std, initial_mean_), normal, normal, initial_transform=init_trans)
+        super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans)
