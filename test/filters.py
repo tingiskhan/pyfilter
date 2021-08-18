@@ -135,7 +135,7 @@ class Tests(unittest.TestCase):
             result = filt.longfilter(y)
 
             means = result.filter_means
-            self.assertLess(torch.std(x[1:] - means), 5e-2)
+            self.assertLess(torch.std(x - means), 5e-2)
 
     def test_JointSeriesOnlyCheckLL(self):
         mvn = AffineJointStochasticProcesses(linear1=self.linear, linear2=self.linear)
