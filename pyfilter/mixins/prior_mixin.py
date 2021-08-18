@@ -17,7 +17,11 @@ def _parameter_recursion(
     return _parameter_recursion(obj._modules[split_name[0]], parameter, MODULE_SEPARATOR.join(split_name[1:]))
 
 
-class PriorMixin(object):
+class AllowPriorMixin(object):
+    """
+    Mixin for modules that allow specifying priors on parameters.
+    """
+
     def register_prior(self, name, prior):
         prior_name = f"{PRIOR_PREFIX}{name}"
         self.add_module(prior_name, prior)

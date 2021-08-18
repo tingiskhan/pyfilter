@@ -7,4 +7,4 @@ DistributionOrBuilder = Union[
     Type[Distribution], Callable[[Type[Distribution], Sequence[Union[torch.Tensor, float]]], Distribution]
 ]
 
-Parameters = Union[torch.Tensor, float, int]
+HyperParameters = Union[torch.Tensor, float, int]

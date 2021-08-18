@@ -3,7 +3,7 @@ import torch
 from typing import Dict
 
 
-class BuilderMixin(object):
+class DistributionBuilderMixin(object):
     def get_parameters(self) -> Dict[str, torch.Tensor]:
         res = dict()
 
