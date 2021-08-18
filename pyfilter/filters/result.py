@@ -25,6 +25,10 @@ class FilterResult(Module):
 
         self.append(init_state)
 
+        # TODO: Do this on base class?
+        self._register_state_dict_hook(TensorTuple.dump_hook)
+        self._register_load_state_dict_pre_hook(lambda *args: TensorTuple.load_hook(self, *args))
+
     @property
     def loglikelihood(self) -> torch.Tensor:
         return self._buffers["_loglikelihood"]

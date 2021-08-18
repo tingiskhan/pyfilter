@@ -3,13 +3,19 @@ from ..filters import FilterResult
 
 
 class AlgorithmState(Module):
-    pass
+    """
+    Base class for algorithm states.
+    """
 
 
-class ParticleState(AlgorithmState):
+class FilterAlgorithmState(AlgorithmState):
+    """
+    Base class for filter based algorithms.
+    """
+
     def __init__(self, filter_state: FilterResult):
         super().__init__()
         self.filter_state = filter_state
 
     def copy(self, filter_state: FilterResult):
-        return ParticleState(filter_state)
+        return FilterAlgorithmState(filter_state)

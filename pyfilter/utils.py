@@ -1,6 +1,7 @@
 import torch
-from typing import Union, Iterable
-from torch.nn import Module
+from typing import Union, Iterable, Iterator
+from torch.utils.data import IterableDataset
+from torch.utils.data.dataset import T_co
 from .constants import INFTY
 from .typing import ShapeLike
 
@@ -16,60 +17,45 @@ def size_getter(shape: ShapeLike) -> torch.Size:
     return torch.Size(shape)
 
 
-class TensorTuple(Module):
+class TensorTuple(IterableDataset):
     """
-    Implements a tuple-like data type for storing tensors with methods of `torch.nn.Module`.
+    Implements a tuple like tensor storage.
     """
 
-    KEY_PREFIX = "item"
+    def __init__(self, *tensors):
+        self.tensors = tensors
 
-    def __init__(self, *args):
-        super().__init__()
-        self._i = -1
+    def __iter__(self) -> Iterator[T_co]:
+        for t in self.tensors:
+            yield t
 
-        for a in args:
-            self.append(a)
+    def __getitem__(self, index) -> T_co:
+        return self.tensors[index]
 
-        self._register_load_state_dict_pre_hook(self._hook)
+    def __add__(self, other: IterableDataset):
+        return TensorTuple(*self.tensors, *other.tensors)
 
-    @classmethod
-    def _make_key(cls, i: int):
-        return f"{cls.KEY_PREFIX}_{i}"
+    def values(self) -> torch.Tensor:
+        return torch.stack(self.tensors, dim=0)
 
-    def append(self, x: torch.Tensor):
-        self._i += 1
-        self.register_buffer(self._make_key(self._i), x)
+    def append(self, tensor: torch.Tensor):
+        self.tensors += (tensor,)
 
-    def __getitem__(self, item: int):
-        if item < 0:
-            return self._buffers[self._make_key(self._i + 1 + item)]
-
-        return self._buffers[self._make_key(item)]
-
-    def __iter__(self):
-        return (v for v in self._buffers.values())
-
-    def __len__(self):
-        return len(self._buffers)
-
-    def values(self):
-        if self._i == 0:
-            return torch.empty(0)
-
-        return torch.stack(tuple(self._buffers.values()), 0)
-
-    def _hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        for k, v in state_dict.items():
-            if prefix:
-                k = k.replace(prefix, "")
-
-            if not k.startswith(self.KEY_PREFIX):
+    @staticmethod
+    def dump_hook(obj, state_dict, prefix, local_metadata):
+        for k, v in vars(obj).items():
+            if not isinstance(v, TensorTuple):
                 continue
 
-            self.register_buffer(k, v)
+            state_dict[k] = getattr(obj, k)
 
-        return
+    @staticmethod
+    def load_hook(obj, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        for k, v in vars(obj).items():
+            if not isinstance(v, TensorTuple):
+                continue
 
+            setattr(obj, k, state_dict.pop(k))
 
 def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:
     """

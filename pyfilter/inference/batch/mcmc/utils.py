@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Distribution
 from typing import Tuple
 from .proposals import BaseProposal
-from ...state import ParticleState
+from ...state import FilterAlgorithmState
 from ...utils import (
     params_to_tensor,
     parameters_and_priors_from_model,
@@ -45,7 +45,7 @@ def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> Ba
 
 def run_pmmh(
     filter_: BaseFilter,
-    state: ParticleState,
+    state: FilterAlgorithmState,
     proposal: BaseProposal,
     prop_kernel: Distribution,
     prop_filter: BaseFilter,
