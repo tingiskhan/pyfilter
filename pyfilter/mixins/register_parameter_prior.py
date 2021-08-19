@@ -4,11 +4,11 @@ from ..distributions.prior import Prior
 
 
 class RegisterParameterAndPriorMixin(object):
-    def _register_parameter_or_prior(self, name: str, p):
-        """
-        Helper method for registering parameters or priors.
-        """
+    """
+    Mixin for registering parameters or priors on module.
+    """
 
+    def _register_parameter_or_prior(self, name: str, p):
         if isinstance(p, Prior):
             self.register_prior(name, p)
         elif isinstance(p, Parameter):

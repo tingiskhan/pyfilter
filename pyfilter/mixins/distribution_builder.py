@@ -4,6 +4,10 @@ from typing import Dict
 
 
 class DistributionBuilderMixin(object):
+    """
+    Mixin for "modulizing" distributions.
+    """
+
     def get_parameters(self) -> Dict[str, torch.Tensor]:
         res = dict()
 
