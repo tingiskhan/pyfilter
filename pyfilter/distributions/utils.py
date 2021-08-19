@@ -1,6 +1,11 @@
 from torch.distributions import MultivariateNormal
 import torch
 
+if torch.__version__ >= "1.9.0":
+    chol_fun = torch.linalg.cholesky
+else:
+    chol_fun = torch.cholesky
+
 
 def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     """
@@ -14,6 +19,6 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0):
     if cov.det() == 0.0:
         chol = cov.diag().sqrt().diag()
     else:
-        chol = cov.cholesky()
+        chol = chol_fun(cov)
 
     return MultivariateNormal(mean, scale_tril=scale * chol)
