@@ -57,6 +57,7 @@ class TensorTuple(IterableDataset):
 
             setattr(obj, k, state_dict.pop(k))
 
+
 def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Calculates the ESS from an array of log weights.
