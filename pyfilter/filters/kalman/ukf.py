@@ -6,13 +6,11 @@ from .state import KalmanState
 
 
 class UKF(BaseKalmanFilter):
+    """
+    Implements the Unscented Kalman Filter by van der Merwe.
+    """
+
     def __init__(self, model, utf_kwargs: Dict[str, object] = None, **kwargs):
-        """
-        Implements the Unscented Kalman Filter by van der Merwe.
-
-        :param utf_kwargs: Any kwargs passed to `UnscentedFilterTransform`
-        """
-
         super().__init__(model, **kwargs)
         self._ut = UnscentedFilterTransform(model, **(utf_kwargs or dict()))
 
