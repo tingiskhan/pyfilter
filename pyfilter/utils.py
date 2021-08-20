@@ -43,19 +43,16 @@ class TensorTuple(IterableDataset):
 
     @staticmethod
     def dump_hook(obj, state_dict, prefix, local_metadata):
-        for k, v in vars(obj).items():
-            if not isinstance(v, TensorTuple):
-                continue
-
+        for k, v in filter(lambda kk, vv: isinstance(vv, TensorTuple), vars(obj).items()):
             state_dict[k] = getattr(obj, k)
 
     @staticmethod
     def load_hook(obj, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        for k, v in vars(obj).items():
-            if not isinstance(v, TensorTuple):
-                continue
-
+        for k, v in filter(lambda kk, vv: isinstance(vv, TensorTuple), vars(obj).items()):
             setattr(obj, k, state_dict.pop(k))
+
+    def apply(self, fn):
+        self.tensors = tuple(fn(t) for t in self.tensors)
 
 
 def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:

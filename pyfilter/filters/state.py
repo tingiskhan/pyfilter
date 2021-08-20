@@ -1,10 +1,10 @@
 from torch import Tensor
-from torch.nn import Module
 from abc import ABC
 from ..timeseries import NewState
+from ..state import BaseState
 
 
-class BaseState(Module, ABC):
+class BaseFilterState(BaseState, ABC):
     """
     Base state for all filter states to inherit from.
     """

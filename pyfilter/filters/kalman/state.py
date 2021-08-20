@@ -1,10 +1,10 @@
 from torch import Tensor
-from ..state import BaseState
+from ..state import BaseFilterState
 from .unscented.result import UFTCorrectionResult
 from ...utils import choose
 
 
-class KalmanState(BaseState):
+class KalmanFilterState(BaseFilterState):
     """
     State object for Kalman type filters.
     """

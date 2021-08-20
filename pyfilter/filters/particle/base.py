@@ -8,13 +8,17 @@ from ...timeseries import LinearGaussianObservations as LGO
 from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 from ...utils import get_ess, normalize, choose
 from ..utils import _construct_empty
-from .state import ParticleState
+from .state import ParticleFilterState
 
 
 _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
 
 
 class ParticleFilter(BaseFilter, ABC):
+    """
+    Base class for particle filters.
+    """
+
     def __init__(
         self,
         model,
@@ -24,16 +28,6 @@ class ParticleFilter(BaseFilter, ABC):
         ess=0.9,
         **kwargs
     ):
-        """
-        Implements the base functionality of a particle filter.
-
-        :param particles: How many particles to use
-        :param resampling: Which resampling method to use
-        :param proposal: Which proposal to use, set to `auto` to let algorithm decide
-        :param ess: At which level to resample
-        :param kwargs: Any key-worded arguments passed to `BaseFilter`
-        """
-
         super().__init__(model, **kwargs)
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
@@ -76,14 +70,14 @@ class ParticleFilter(BaseFilter, ABC):
 
         return self
 
-    def initialize(self) -> ParticleState:
+    def initialize(self) -> ParticleFilterState:
         x = self._model.hidden.initial_sample(self.particles)
         w = torch.zeros(self.particles, device=x.device)
         prev_inds = torch.ones(w.shape, dtype=torch.long, device=x.device) * torch.arange(w.shape[-1], device=x.device)
 
-        return ParticleState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
+        return ParticleFilterState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 
-    def predict(self, state: ParticleState, steps, aggregate: bool = True, **kwargs):
+    def predict(self, state: ParticleFilterState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
 
         x = x[1:]
@@ -102,7 +96,7 @@ class ParticleFilter(BaseFilter, ABC):
         return x_mean, y_mean
 
     # TODO: Might not work when we have parameters of wrong size...?
-    def smooth(self, states: Tuple[ParticleState]) -> torch.Tensor:
+    def smooth(self, states: Tuple[ParticleFilterState]) -> torch.Tensor:
         hidden_copy = self.ssm.hidden.copy()
         offset = -(2 + self.ssm.hidden.n_dim)
 

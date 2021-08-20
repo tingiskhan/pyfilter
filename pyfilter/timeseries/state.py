@@ -1,12 +1,12 @@
-from torch.nn import Module
 import torch
 from typing import Union, Optional
 from torch.distributions import Distribution
 from ..distributions import JointDistribution
+from ..state import BaseState
 
 
 # TODO: Rename to TimeseriesState/ProcessState
-class NewState(Module):
+class NewState(BaseState):
     """
     The state object for timeseries.
     """

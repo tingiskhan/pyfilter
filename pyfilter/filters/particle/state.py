@@ -1,11 +1,11 @@
 import torch
 from torch import Tensor
-from ..state import BaseState
+from ..state import BaseFilterState
 from ...utils import choose, normalize
 from ...timeseries import NewState
 
 
-class ParticleState(BaseState):
+class ParticleFilterState(BaseFilterState):
     """
     State object for particle based filters.
     """

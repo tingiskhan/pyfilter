@@ -1,8 +1,8 @@
-from torch.nn import Module
+from ..state import StateWithTensorTuples
 from ..filters import FilterResult
 
 
-class AlgorithmState(Module):
+class AlgorithmState(StateWithTensorTuples):
     """
     Base class for algorithm states.
     """

@@ -5,7 +5,11 @@ from ...filters import FilterResult
 from ...utils import normalize, TensorTuple
 
 
-class FilteringAlgorithmState(FilterAlgorithmState):
+class SequentialAlgorithmState(FilterAlgorithmState):
+    """
+    Base state for sequential particle algorithms.
+    """
+
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: List[torch.Tensor] = None):
         super().__init__(filter_state)
         self.register_buffer("w", weights)
@@ -21,10 +25,14 @@ class FilteringAlgorithmState(FilterAlgorithmState):
         self.ess.append(ess)
 
     def copy(self, filter_state):
-        return FilteringAlgorithmState(torch.zeros_like(self.w), filter_state)
+        return SequentialAlgorithmState(torch.zeros_like(self.w), filter_state)
 
 
-class SMC2State(FilteringAlgorithmState):
+class SMC2State(SequentialAlgorithmState):
+    """
+    Custom state class for SMC2.
+    """
+
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: TensorTuple = None):
         super().__init__(weights, filter_state, ess)
         self.parsed_data = parsed_data or TensorTuple()
