@@ -8,6 +8,7 @@ from ....constants import EPS, INFTY
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
     """
     Jitters the parameters.
+
     :param values: The values
     :param scale: The scaling to use for the variance of the proposal
     :return: Proposed values
@@ -19,6 +20,7 @@ def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Te
 def silverman(n: int, ess: float):
     """
     Returns Silverman's factor.
+
     :param n: The dimension
     :param ess: The ess
     :return: Bandwidth factor
@@ -30,6 +32,7 @@ def silverman(n: int, ess: float):
 def scott(n: int, ess: float):
     """
     Returns Silverman's factor.
+
     :param n: The dimension
     :param ess: The ess
     :return: Bandwidth factor
@@ -41,6 +44,7 @@ def scott(n: int, ess: float):
 def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None):
     """
     Calculates the scale robustly
+
     :param x: The values
     :param w: The weights
     :param mean: The mean
@@ -82,20 +86,9 @@ class KernelDensityEstimate(object):
         self._lowest_std = lowest_std
 
     def fit(self, x: torch.Tensor, w: torch.Tensor) -> "KernelDensityEstimate":
-        """
-        Fits the KDE.
-        :param x: The samples
-        :param w: The weights
-        """
-
         raise NotImplementedError()
 
     def sample(self, indices: torch.Tensor = None) -> torch.Tensor:
-        """
-        Samples from the KDE.
-        :param indices: Whether to manually specify the samples chosen
-        """
-
         indices = indices if indices is not None else torch.arange(self._means.shape[0], device=self._means.device)
         std = (self._bw_fac * self._cov.sqrt()).clamp(self._lowest_std, INFTY)
 
@@ -146,11 +139,11 @@ class LiuWestShrinkage(ShrinkingKernel):
 
 
 class IndependentGaussian(ShrinkingKernel):
+    """
+    Gaussian KDE assuming independence.
+    """
+
     def __init__(self, factor=silverman):
-        """
-        Implements a Gaussian KDE.
-        :param factor: How to calculate the factor bandwidth
-        """
         super().__init__()
         self._fac = factor
         self._w = None
@@ -167,11 +160,11 @@ class IndependentGaussian(ShrinkingKernel):
 
 
 class ConstantKernel(ShrinkingKernel):
+    """
+    KDE assuming constant bandwidth, used in original NESS paper.
+    """
+
     def __init__(self, bw: Union[float, torch.Tensor]):
-        """
-        Kernel with constant, prespecified bandwidth.
-        :param bw: The bandwidth to use
-        """
         super().__init__()
         self._bw_fac = bw
         self._w = None
