@@ -2,38 +2,36 @@ import torch
 from typing import Dict
 from .base import BaseKalmanFilter
 from .unscented import UnscentedFilterTransform
-from .state import KalmanState
+from .state import KalmanFilterState
 
 
 class UKF(BaseKalmanFilter):
+    """
+    Implements the Unscented Kalman Filter by van der Merwe.
+    """
+
     def __init__(self, model, utf_kwargs: Dict[str, object] = None, **kwargs):
-        """
-        Implements the Unscented Kalman Filter by van der Merwe.
-
-        :param utf_kwargs: Any kwargs passed to `UnscentedFilterTransform`
-        """
-
         super().__init__(model, **kwargs)
         self._ut = UnscentedFilterTransform(model, **(utf_kwargs or dict()))
 
-    def initialize(self) -> KalmanState:
+    def initialize(self) -> KalmanFilterState:
         res = self._ut.initialize(self.n_parallel)
-        return KalmanState(res, torch.zeros(self.n_parallel, device=res.x.device))
+        return KalmanFilterState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def predict_correct(self, y, state: KalmanState):
+    def predict_correct(self, y, state: KalmanFilterState):
         p = self._ut.predict(state.utf)
 
         if torch.isnan(y).any():
             (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
             res = self._ut.update_state(x_m, x_c, p.spx, state.utf, y_m, y_c, p.spy)
 
-            return KalmanState(res, torch.zeros_like(state.ll))
+            return KalmanFilterState(res, torch.zeros_like(state.ll))
 
         res = self._ut.correct(y, p, state.utf)
 
-        return KalmanState(res, res.y.dist.log_prob(y))
+        return KalmanFilterState(res, res.y.dist.log_prob(y))
 
-    def predict(self, state: KalmanState, steps, *args, **kwargs):
+    def predict(self, state: KalmanFilterState, steps, *args, **kwargs):
         utf_state = state.utf
 
         p = self._ut.predict(state.utf)

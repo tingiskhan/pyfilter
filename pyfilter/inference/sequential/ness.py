@@ -3,7 +3,7 @@ from ...utils import get_ess
 from .kernels import OnlineKernel, NonShrinkingKernel, KernelDensityEstimate
 from torch import isfinite
 from abc import ABC
-from .state import FilteringAlgorithmState
+from .state import SequentialAlgorithmState
 from typing import Optional
 
 
@@ -16,7 +16,7 @@ class BaseNESS(SequentialParticleAlgorithm, ABC):
         if not isinstance(self._kernel, OnlineKernel):
             raise ValueError(f"Kernel must be of instance {OnlineKernel.__class__.__name__}!")
 
-    def do_update(self, state: FilteringAlgorithmState) -> bool:
+    def do_update(self, state: SequentialAlgorithmState) -> bool:
         raise NotImplementedError()
 
     def update(self, y, state):

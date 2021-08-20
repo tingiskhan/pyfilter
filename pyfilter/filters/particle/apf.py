@@ -1,7 +1,7 @@
 import torch
 from .base import ParticleFilter
 from ...utils import loglikelihood, choose
-from .state import ParticleState
+from .state import ParticleFilterState
 
 
 class APF(ParticleFilter):
@@ -9,7 +9,7 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def predict_correct(self, y, state: ParticleState):
+    def predict_correct(self, y, state: ParticleFilterState):
         normalized = state.normalized_weights()
 
         if torch.isnan(y).any():
@@ -18,7 +18,7 @@ class APF(ParticleFilter):
 
             x = self.ssm.hidden.forward(copied_x)
 
-            return ParticleState(x, torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), indices)
+            return ParticleFilterState(x, torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), indices)
 
         pre_weights = self.proposal.pre_weight(y, state.x)
 
@@ -32,4 +32,4 @@ class APF(ParticleFilter):
         w = weights - choose(pre_weights, indices)
         ll = loglikelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
 
-        return ParticleState(x, w, ll, indices)
+        return ParticleFilterState(x, w, ll, indices)

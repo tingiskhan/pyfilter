@@ -1,16 +1,16 @@
 import torch
-from torch.nn import Module
 from typing import List
-from .state import BaseState
+from .state import BaseFilterState
 from ..utils import TensorTuple
+from ..state import StateWithTensorTuples
 
 
-class FilterResult(Module):
+class FilterResult(StateWithTensorTuples):
     """
     Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
     """
 
-    def __init__(self, init_state: BaseState, record_states: bool = False):
+    def __init__(self, init_state: BaseFilterState, record_states: bool = False):
         super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
@@ -38,11 +38,11 @@ class FilterResult(Module):
         return self._filter_vars.values()
 
     @property
-    def states(self) -> List[BaseState]:
+    def states(self) -> List[BaseFilterState]:
         return self._states
 
     @property
-    def latest_state(self) -> BaseState:
+    def latest_state(self) -> BaseFilterState:
         return self._latest_state
 
     def exchange(self, res: "FilterResult", indices: torch.Tensor):
@@ -83,7 +83,7 @@ class FilterResult(Module):
 
         return self
 
-    def append(self, state: BaseState):
+    def append(self, state: BaseFilterState):
         self._filter_means.append(state.get_mean())
         self._filter_vars.append(state.get_variance())
 

@@ -5,10 +5,12 @@ from typing import TypeVar, Callable, Union, Tuple
 from torch.nn import Module, Parameter
 from abc import ABC
 from functools import lru_cache
-from ..distributions import DistributionWrapper, Prior, PriorMixin
 from .state import NewState
+from ..distributions import DistributionWrapper
 from ..typing import ShapeLike
 from ..utils import size_getter
+from ..mixins import AllowPriorMixin
+from ..mixins.register_parameter_prior import RegisterParameterAndPriorMixin
 
 
 T = TypeVar("T")
@@ -123,7 +125,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
 
-class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
+class StructuralStochasticProcess(AllowPriorMixin, RegisterParameterAndPriorMixin, StochasticProcess, ABC):
     """
     Implements a stochastic process that has functional parameters, i.e. dynamics where the parameters directly
     influence the distribution.
@@ -134,18 +136,6 @@ class StructuralStochasticProcess(PriorMixin, StochasticProcess, ABC):
 
         for i, p in enumerate(parameters):
             self._register_parameter_or_prior(f"parameter_{i}", p)
-
-    def _register_parameter_or_prior(self, name: str, p):
-        """
-        Helper method for registering parameters or priors.
-        """
-
-        if isinstance(p, Prior):
-            self.register_prior(name, p)
-        elif isinstance(p, Parameter):
-            self.register_parameter(name, p)
-        else:
-            self.register_buffer(name, p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p))
 
     def functional_parameters(self, f: Callable[[torch.Tensor], torch.Tensor] = None) -> Tuple[Parameter, ...]:
         res = dict()

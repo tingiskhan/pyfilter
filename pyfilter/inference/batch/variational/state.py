@@ -5,6 +5,10 @@ from typing import Optional
 
 
 class VariationalState(AlgorithmState):
+    """
+    State for VBI.
+    """
+
     def __init__(
         self,
         converged: bool,

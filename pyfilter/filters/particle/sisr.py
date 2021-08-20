@@ -1,7 +1,7 @@
 from .base import ParticleFilter
 from ...utils import loglikelihood, choose
 import torch
-from .state import ParticleState
+from .state import ParticleFilterState
 
 
 class SISR(ParticleFilter):
@@ -9,7 +9,7 @@ class SISR(ParticleFilter):
     Implements the SISR filter by Gordon et al.
     """
 
-    def predict_correct(self, y, state: ParticleState) -> ParticleState:
+    def predict_correct(self, y, state: ParticleFilterState) -> ParticleFilterState:
         old_normalized_w = state.normalized_weights()
 
         indices, mask = self._resample_state(state.w)
@@ -17,7 +17,7 @@ class SISR(ParticleFilter):
 
         if torch.isnan(y).any():
             x = self.ssm.hidden.forward(copied_x)
-            return ParticleState(x, 0.0 * old_normalized_w, 0.0 * state.get_loglikelihood(), indices)
+            return ParticleFilterState(x, 0.0 * old_normalized_w, 0.0 * state.get_loglikelihood(), indices)
 
         x, weights = self.proposal.sample_and_weight(y, copied_x)
 
@@ -26,4 +26,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleState(x, w, loglikelihood(weights, old_normalized_w), indices)
+        return ParticleFilterState(x, w, loglikelihood(weights, old_normalized_w), indices)

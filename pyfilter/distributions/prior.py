@@ -1,17 +1,17 @@
 from torch.distributions import TransformedDistribution, biject_to
 import torch
-from typing import Tuple, Dict
+from typing import Tuple
 from torch.nn import Module
-from .mixin import BuilderMixin
-from .typing import DistributionOrBuilder, Parameters
+from ..mixins import DistributionBuilderMixin
+from .typing import HyperParameters, DistributionOrBuilder
 
 
-class Prior(BuilderMixin, Module):
+class Prior(DistributionBuilderMixin, Module):
     """
     Class representing a Bayesian prior on a parameter.
     """
 
-    def __init__(self, base_dist: DistributionOrBuilder, **parameters: Parameters):
+    def __init__(self, base_dist: DistributionOrBuilder, **parameters: HyperParameters):
         super().__init__()
 
         self.base_dist = base_dist

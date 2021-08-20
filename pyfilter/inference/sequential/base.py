@@ -1,6 +1,6 @@
 from abc import ABC
 import torch
-from .state import FilteringAlgorithmState
+from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
 from ..utils import sample_model
@@ -13,14 +13,14 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     Base class for sequential algorithms using filters in order to approximate the log likelihood.
     """
 
-    def update(self, y: torch.Tensor, state: FilteringAlgorithmState) -> FilteringAlgorithmState:
+    def update(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Performs an update using a single observation `y`.
         """
 
         raise NotImplementedError()
 
-    def fit(self, y, logging=None, **kwargs) -> FilteringAlgorithmState:
+    def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
         logging.initialize(self, y.shape[0])
 
@@ -57,15 +57,15 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
         sample_model(self.filter.ssm, shape)
 
-    def initialize(self) -> FilteringAlgorithmState:
+    def initialize(self) -> SequentialAlgorithmState:
         self.sample_params()
 
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
-        return FilteringAlgorithmState(init_weights, FilterResult(init_state, record_states=self.filter.record_states))
+        return SequentialAlgorithmState(init_weights, FilterResult(init_state, record_states=self.filter.record_states))
 
-    def predict(self, steps, state: FilteringAlgorithmState, aggregate=True, **kwargs):
+    def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
@@ -103,8 +103,8 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         raise NotImplementedError()
 
     def do_on_switch(
-        self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm, state: FilteringAlgorithmState
-    ) -> FilteringAlgorithmState:
+        self, first: SequentialParticleAlgorithm, second: SequentialParticleAlgorithm, state: SequentialAlgorithmState
+    ) -> SequentialAlgorithmState:
         raise NotImplementedError()
 
     def initialize(self):

@@ -7,10 +7,10 @@ from typing import Tuple, Iterable, TypeVar, Optional
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
-from .state import BaseState
+from .state import BaseFilterState
 
 
-TState = TypeVar("TState", bound=BaseState)
+TState = TypeVar("TState", bound=BaseFilterState)
 
 
 class BaseFilter(Module, ABC):
@@ -57,7 +57,7 @@ class BaseFilter(Module, ABC):
 
         return self.__call__(y, state)
 
-    def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: BaseState = None,) -> FilterResult:
+    def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: BaseFilterState = None, ) -> FilterResult:
         """
         Filters the entire data set `y`.
 
@@ -122,5 +122,5 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def smooth(self, states: Tuple[BaseState]) -> torch.Tensor:
+    def smooth(self, states: Tuple[BaseFilterState]) -> torch.Tensor:
         raise NotImplementedError()
