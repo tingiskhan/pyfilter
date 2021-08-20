@@ -6,10 +6,11 @@ from ....utils import Process
 
 
 class BaseApproximation(Module, ABC):
+    """
+    Base class for constructing variational approximations.
+    """
+
     def __init__(self):
-        """
-        Base class for constructing variational approximations.
-        """
         super().__init__()
 
     def initialize(self, data: torch.Tensor, model: Process):
