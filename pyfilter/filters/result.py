@@ -1,5 +1,6 @@
 import torch
-from typing import List
+from typing import List, Union
+from collections import deque
 from .state import BaseFilterState
 from ..utils import TensorTuple
 from ..state import StateWithTensorTuples
@@ -10,7 +11,8 @@ class FilterResult(StateWithTensorTuples):
     Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
     """
 
-    def __init__(self, init_state: BaseFilterState, record_states: bool = False):
+    # TODO: Add dump and load hook for 'latest_state'
+    def __init__(self, init_state: BaseFilterState, record_states: Union[bool, int] = False):
         super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
@@ -18,10 +20,9 @@ class FilterResult(StateWithTensorTuples):
         self.tensor_tuples["filter_means"] = TensorTuple()
         self.tensor_tuples["filter_variances"] = TensorTuple()
 
-        self.record_states = record_states
-
-        self._states = list()
-        self._latest_state = None
+        self._states = deque(
+            maxlen=1 if record_states is False else (None if isinstance(record_states, bool) else record_states)
+        )
 
         self.append(init_state)
 
@@ -39,11 +40,11 @@ class FilterResult(StateWithTensorTuples):
 
     @property
     def states(self) -> List[BaseFilterState]:
-        return self._states
+        return list(self._states)
 
     @property
     def latest_state(self) -> BaseFilterState:
-        return self._latest_state
+        return self._states[-1]
 
     def exchange(self, res: "FilterResult", indices: torch.Tensor):
         """
@@ -56,8 +57,7 @@ class FilterResult(StateWithTensorTuples):
             for old_tensor, new_tensor in zip(old_tt.tensors, new_tt.tensors):
                 old_tensor[indices] = new_tensor[indices]
 
-        self._latest_state.exchange(res.latest_state, indices)
-        for ns, os in zip(res.states[:-1], self.states[:-1]):
+        for ns, os in zip(res.states, self.states):
             os.exchange(ns, indices)
 
         return self
@@ -74,8 +74,7 @@ class FilterResult(StateWithTensorTuples):
                 for tensor in tt.tensors:
                     tensor[:] = tensor[indices]
 
-        self._latest_state.resample(indices)
-        for s in self.states[:-1]:
+        for s in self.states:
             s.resample(indices)
 
         return self
@@ -84,10 +83,9 @@ class FilterResult(StateWithTensorTuples):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
 
+        # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
-        self._latest_state = state
 
-        if self.record_states:
-            self._states.append(state)
+        self._states.append(state)
 
         return self
