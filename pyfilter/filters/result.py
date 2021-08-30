@@ -26,6 +26,9 @@ class FilterResult(StateWithTensorTuples):
 
         self.append(init_state)
 
+        self._register_state_dict_hook(self._state_dump_hook)
+        self._register_load_state_dict_pre_hook(self._state_load_hook)
+
     @property
     def loglikelihood(self) -> torch.Tensor:
         return self._buffers["_loglikelihood"]
@@ -89,3 +92,12 @@ class FilterResult(StateWithTensorTuples):
         self._states.append(state)
 
         return self
+
+    @staticmethod
+    def _state_dump_hook(self: "FilterResult", state_dict, prefix, local_metadata):
+        # TODO: Might have use prefix?
+        state_dict["latest_state"] = self.latest_state.state_dict(prefix=prefix)
+
+    def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        # TODO: Might have use prefix?
+        self.latest_state.load_state_dict(state_dict.pop("latest_state"))
