@@ -11,7 +11,7 @@ class FilterResult(StateWithTensorTuples):
     Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
     """
 
-    # TODO: Add dump and load hook for 'latest_state'
+    # TODO: Add dump and load hook for 'latest_state' or all states?
     def __init__(self, init_state: BaseFilterState, record_states: Union[bool, int] = False):
         super().__init__()
 
