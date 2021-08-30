@@ -34,12 +34,13 @@ class StateWithTensorTuples(BaseState):
 
     @staticmethod
     def dump_hook(self, state_dict, prefix, local_metadata):
+        # TODO: Might have use prefix?
         for k, v in self.tensor_tuples.items():
             state_dict[f"{self._TENSOR_TUPLE_PREFIX}.{k}"] = v.tensors
 
     def load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         to_pop = list()
-
+        # TODO: Might have use prefix?
         # TODO: Correct to only check startswith?
         for k, v in filter(lambda x: x[0].startswith(self._TENSOR_TUPLE_PREFIX), state_dict.items()):
             self.tensor_tuples[k.replace(f"{self._TENSOR_TUPLE_PREFIX}.", "")] = TensorTuple(*v)
