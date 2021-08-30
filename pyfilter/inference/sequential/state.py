@@ -35,10 +35,11 @@ class SMC2State(SequentialAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: TensorTuple = None):
         super().__init__(weights, filter_state, ess)
-        self.parsed_data = parsed_data or TensorTuple()
+        self.tensor_tuples["parsed_data"] = parsed_data or TensorTuple()
 
-        self._register_state_dict_hook(TensorTuple.dump_hook)
-        self._register_load_state_dict_pre_hook(lambda *args: TensorTuple.load_hook(self, *args))
+    @property
+    def parsed_data(self) -> TensorTuple:
+        return self.tensor_tuples["parsed_data"]
 
     def append_data(self, y: torch.Tensor):
         self.parsed_data.append(y)

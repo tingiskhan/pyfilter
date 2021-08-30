@@ -15,8 +15,8 @@ class FilterResult(StateWithTensorTuples):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self._filter_means = TensorTuple()
-        self._filter_vars = TensorTuple()
+        self.tensor_tuples["filter_means"] = TensorTuple()
+        self.tensor_tuples["filter_variances"] = TensorTuple()
 
         self.record_states = record_states
 
@@ -31,11 +31,11 @@ class FilterResult(StateWithTensorTuples):
 
     @property
     def filter_means(self) -> torch.Tensor:
-        return self._filter_means.values()
+        return self.tensor_tuples["filter_means"].values()
 
     @property
     def filter_variance(self) -> torch.Tensor:
-        return self._filter_vars.values()
+        return self.tensor_tuples["filter_variances"].values()
 
     @property
     def states(self) -> List[BaseFilterState]:
@@ -52,12 +52,9 @@ class FilterResult(StateWithTensorTuples):
 
         self._loglikelihood[indices] = res.loglikelihood[indices]
 
-        # TODO: Not the best...
-        for old_fm, new_fm in zip(self._filter_means, res._filter_means):
-            old_fm[indices] = new_fm[indices]
-
-        for old_var, new_var in zip(self._filter_vars, res._filter_vars):
-            old_var[indices] = new_var[indices]
+        for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
+            for old_tensor, new_tensor in zip(old_tt.tensors, new_tt.tensors):
+                old_tensor[indices] = new_tensor[indices]
 
         self._latest_state.exchange(res.latest_state, indices)
         for ns, os in zip(res.states[:-1], self.states[:-1]):
@@ -73,9 +70,9 @@ class FilterResult(StateWithTensorTuples):
         self._loglikelihood[:] = self.loglikelihood[indices]
 
         if entire_history:
-            for mean, var in zip(self._filter_means, self._filter_vars):
-                mean[:] = mean[indices]
-                var[:] = var[indices]
+            for tt in self.tensor_tuples.values():
+                for tensor in tt.tensors:
+                    tensor[:] = tensor[indices]
 
         self._latest_state.resample(indices)
         for s in self.states[:-1]:
@@ -84,8 +81,8 @@ class FilterResult(StateWithTensorTuples):
         return self
 
     def append(self, state: BaseFilterState):
-        self._filter_means.append(state.get_mean())
-        self._filter_vars.append(state.get_variance())
+        self.tensor_tuples["filter_means"].append(state.get_mean())
+        self.tensor_tuples["filter_variances"].append(state.get_variance())
 
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
         self._latest_state = state
