@@ -6,6 +6,12 @@ from typing import Optional, Dict, Any
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
+    """
+    Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
+    SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
+    demanding to use the SMC2.
+    """
+
     def __init__(
         self,
         filter_,
@@ -14,15 +20,6 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         smc2_kw: Optional[Dict[str, Any]] = None,
         ness_kw: Optional[Dict[str, Any]] = None,
     ):
-        """
-        Implements a hybrid of the NESS and SMC2 algorithm, as recommended in the NESS article. That is, we use the
-        SMC2 algorithm for the first part of the series and then switch to NESS when it becomes too computationally
-        demanding to use the SMC2.
-
-        :param smc2_kw: Any key worded arguments to SMC2
-        :param ness_kw: Any key worded arguments for NESS
-        """
-
         super().__init__(filter_, particles, switch, first_kw=smc2_kw, second_kw=ness_kw)
 
     def make_first(self, filter_, particles, **kwargs):
