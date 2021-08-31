@@ -31,6 +31,12 @@ def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: 
 
 
 class AffineProcess(StructuralStochasticProcess):
+    """
+    Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
+    that is, given a base distribution X we get a new distribution Y as
+        Y = loc + scale * X
+    """
+
     def __init__(
         self,
         funcs: Tuple[MeanOrScaleFun, ...],
@@ -39,14 +45,6 @@ class AffineProcess(StructuralStochasticProcess):
         increment_dist: DistributionWrapper,
         **kwargs
     ):
-        """
-        Class for defining model with affine dynamics. And by affine we mean affine in terms of pytorch distributions,
-        that is, given a base distribution X we get a new distribution Y as
-            Y = loc + scale * X
-
-        :param funcs: The functions governing the dynamics of the process
-        """
-
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
         self.f, self.g = funcs
 
@@ -63,6 +61,7 @@ class AffineProcess(StructuralStochasticProcess):
 
         :return: (mean, scale)
         """
+
         params = parameters or self.functional_parameters()
         return self.f(x, *params), self.g(x, *params)
 
