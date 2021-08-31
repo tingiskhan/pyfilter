@@ -18,7 +18,7 @@ T = TypeVar("T")
 
 class StochasticProcess(Module, ABC):
     """
-    Defines the base class for stochastic processes
+    Defines the base class for stochastic processes.
     """
 
     def __init__(
@@ -86,7 +86,8 @@ class StochasticProcess(Module, ABC):
 
         return x
 
-    propagate = forward
+    def propagate(self, x: NewState, time_increment=1.0) -> NewState:
+        return self.__call__(x, time_increment=time_increment)
 
     def sample_path(self, steps: int, samples: ShapeLike = None, x_s: NewState = None) -> torch.Tensor:
         """
