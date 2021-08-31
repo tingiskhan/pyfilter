@@ -82,7 +82,7 @@ class FilterResult(StateWithTensorTuples):
 
         return self
 
-    def append(self, state: BaseFilterState):
+    def forward(self, state: BaseFilterState):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
 
@@ -92,6 +92,9 @@ class FilterResult(StateWithTensorTuples):
         self._states.append(state)
 
         return self
+
+    def append(self, *args, **kwargs):
+        return self.__call__(*args, **kwargs)
 
     @staticmethod
     def _state_dump_hook(self: "FilterResult", state_dict, prefix, local_metadata):
