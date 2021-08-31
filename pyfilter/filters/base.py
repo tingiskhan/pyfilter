@@ -3,7 +3,7 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Iterable, TypeVar, Optional
+from typing import Tuple, Iterable, TypeVar, Optional, List, Callable
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
@@ -18,7 +18,7 @@ class BaseFilter(Module, ABC):
     Base class for filters.
     """
 
-    def __init__(self, model: StateSpaceModel, record_states: bool = False):
+    def __init__(self, model: StateSpaceModel, record_states: bool = False, pre_append_callbacks: List[Callable[[TState], None]] = None):
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -28,6 +28,8 @@ class BaseFilter(Module, ABC):
         self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
         self._n_parallel = None
         self.record_states = record_states
+
+        self._pre_append_callbacks = pre_append_callbacks or list()
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -50,6 +52,14 @@ class BaseFilter(Module, ABC):
     def initialize(self) -> TState:
         raise NotImplementedError()
 
+    def initialize_result(self, state: TState = None) -> FilterResult[TState]:
+        res = FilterResult(state or self.initialize(), self.record_states)
+
+        for callback in self._pre_append_callbacks:
+            res.register_forward_pre_hook(callback)
+
+        return res
+
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
         Performs a filtering move given observation `y` and previous state of the filter.
@@ -57,7 +67,7 @@ class BaseFilter(Module, ABC):
 
         return self.__call__(y, state)
 
-    def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: BaseFilterState = None, ) -> FilterResult:
+    def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
         Filters the entire data set `y`.
 
@@ -72,8 +82,7 @@ class BaseFilter(Module, ABC):
 
         try:
             state = init_state or self.initialize()
-
-            result = FilterResult(state, self.record_states)
+            result = self.initialize_result(state)
 
             for yt in y:
                 state = self.filter(yt, state)
@@ -96,7 +105,7 @@ class BaseFilter(Module, ABC):
     def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError()
 
-    def predict_correct(self, y: Optional[torch.Tensor], state: TState) -> TState:
+    def predict_correct(self, y: torch.Tensor, state: TState) -> TState:
         raise NotImplementedError()
 
     def forward(self, *args, **kwargs):

@@ -38,15 +38,13 @@ def _get_shape(a):
 
 
 class LinearObservations(StateSpaceModel):
-    def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist, **kwargs):
-        """
-        Defines a class of observation dynamics where the observed variable is a linear combination of the states.
+    """
+    Defines a class of observation dynamics where the observed variable is a linear combination of the states, i.e.
 
-        :param hidden: The hidden dynamics
-        :param a: The A-matrix
-        :param scale: The variance of the observations
-        :param base_dist: The base distribution
-        """
+        Y = a * x + scale * base_dist,
+    """
+
+    def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist):
 
         dim, is_1d = _get_shape(a)
 
@@ -62,20 +60,15 @@ class LinearObservations(StateSpaceModel):
 
         observable = AffineObservations((f, g), (a, scale), base_dist)
 
-        super().__init__(hidden, observable, **kwargs)
+        super().__init__(hidden, observable)
 
 
 class LinearGaussianObservations(LinearObservations):
+    """
+    Implements an SSM of type `LinearObservations` where the `base_dist` corresponds to a Gaussian distribution.
+    """
+
     def __init__(self, hidden, a=1.0, scale=1.0, **kwargs):
-        """
-        Implements a State Space model that's linear in the observation equation but has arbitrary dynamics in the
-        state process.
-
-        :param hidden: The hidden dynamics
-        :param a: The A-matrix
-        :param scale: The variance of the observations
-        """
-
         dim, is_1d = _get_shape(a)
 
         if is_1d:

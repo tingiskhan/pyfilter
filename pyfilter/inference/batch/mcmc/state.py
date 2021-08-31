@@ -13,8 +13,5 @@ class PMMHState(FilterAlgorithmState):
         super().__init__(filter_result)
         self.samples = TensorTuple(initial_sample)
 
-        self._register_state_dict_hook(TensorTuple.dump_hook)
-        self._register_load_state_dict_pre_hook(lambda *args: TensorTuple.load_hook(self, *args))
-
     def update(self, sample: torch.Tensor):
         self.samples.append(sample)

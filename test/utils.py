@@ -44,6 +44,7 @@ class UtilTests(unittest.TestCase):
         res2.load_state_dict(res.state_dict())
 
         self.assertTrue((res2.filter_means == res.filter_means).all())
+        self.assertTrue((res2.latest_state.w == res.latest_state.w).all())
 
 
 if __name__ == "__main__":
