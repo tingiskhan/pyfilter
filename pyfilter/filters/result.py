@@ -1,18 +1,20 @@
 import torch
-from typing import List, Union
+from typing import List, Union, TypeVar, Generic
 from collections import deque
 from .state import BaseFilterState
 from ..utils import TensorTuple
 from ..state import StateWithTensorTuples
 
+TState = TypeVar("TState", bound=BaseFilterState)
 
-class FilterResult(StateWithTensorTuples):
+
+class FilterResult(StateWithTensorTuples, Generic[TState]):
     """
     Implements a basic object for storing log likelihoods and the filtered means of a filter algorithm.
     """
 
-    # TODO: Add dump and load hook for 'latest_state' or all states?
-    def __init__(self, init_state: BaseFilterState, record_states: Union[bool, int] = False):
+    # TODO: Add dump and load hook for all states instead of just last?
+    def __init__(self, init_state: TState, record_states: Union[bool, int] = False):
         super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
@@ -42,14 +44,14 @@ class FilterResult(StateWithTensorTuples):
         return self.tensor_tuples["filter_variances"].values()
 
     @property
-    def states(self) -> List[BaseFilterState]:
+    def states(self) -> List[TState]:
         return list(self._states)
 
     @property
-    def latest_state(self) -> BaseFilterState:
+    def latest_state(self) -> TState:
         return self._states[-1]
 
-    def exchange(self, res: "FilterResult", indices: torch.Tensor):
+    def exchange(self, res: "FilterResult[TState]", indices: torch.Tensor):
         """
         Exchanges the specified indices of `self` with `res`.
         """
@@ -82,7 +84,7 @@ class FilterResult(StateWithTensorTuples):
 
         return self
 
-    def forward(self, state: BaseFilterState):
+    def forward(self, state: TState):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
 
@@ -97,7 +99,7 @@ class FilterResult(StateWithTensorTuples):
         return self.__call__(*args, **kwargs)
 
     @staticmethod
-    def _state_dump_hook(self: "FilterResult", state_dict, prefix, local_metadata):
+    def _state_dump_hook(self: "FilterResult[TState]", state_dict, prefix, local_metadata):
         # TODO: Might have use prefix?
         state_dict["latest_state"] = self.latest_state.state_dict(prefix=prefix)
 

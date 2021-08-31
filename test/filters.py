@@ -205,3 +205,29 @@ class Tests(unittest.TestCase):
 
                 rel_error = np.median(np.abs((smoothed[1:].mean(1) - s_mean) / s_mean))
                 self.assertLess(rel_error, 0.05)
+
+    def test_UseCallback(self):
+        x, y = self.model.sample_path(500)
+
+        class Callback(object):
+            def __init__(self):
+                self.result = list()
+
+            def __call__(self, obj, x_):
+                self.result.append(x_)
+
+        cb = Callback()
+        filt = SISR(self.model, 500, pre_append_callbacks=[cb])
+
+        res = filt.longfilter(y)
+
+        self.assertEqual(len(cb.result), x.shape[0] - 1)
+
+    def test_CheckUsingVariableStateLength(self):
+        x, y = self.model.sample_path(500)
+
+        filt = SISR(self.model, 500, record_states=10)
+
+        res = filt.longfilter(y)
+
+        self.assertEqual(len(res.states), 10)
