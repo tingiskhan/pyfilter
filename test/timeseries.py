@@ -276,3 +276,9 @@ class TimeseriesTests(unittest.TestCase):
         x = rw.sample_path(100)
 
         self.assertEqual(torch.Size([100]), x.shape)
+
+    def test_UCSV(self):
+        model = m.UCSV(0.001, initial_state_mean=torch.tensor([0.0, -4.0]))
+        x = model.sample_path(1000)
+
+        self.assertEqual(torch.Size([1000, 2]), x.shape)
