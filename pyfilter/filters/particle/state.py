@@ -50,7 +50,7 @@ class ParticleFilterState(BaseFilterState):
             self.x.copy(values=choose(self.x.values, indices)),
             choose(self.w, indices),
             choose(self.ll, indices),
-            choose(self.prev_inds, indices)
+            choose(self.prev_inds, indices),
         )
 
     def get_loglikelihood(self):
