@@ -6,7 +6,7 @@ from ..base import BaseFilter
 from ...resampling import systematic
 from ...timeseries import LinearGaussianObservations as LGO
 from .proposals import Bootstrap, Proposal, LinearGaussianObservations
-from ...utils import get_ess, normalize, choose
+from ...utils import get_ess, choose
 from ..utils import _construct_empty
 from .state import ParticleFilterState
 
@@ -84,18 +84,17 @@ class ParticleFilter(BaseFilter, ABC):
         if not aggregate:
             return x, y
 
-        w = normalize(state.w)
-        squeezed_w = w.unsqueeze(-1)
+        w = state.normalized_weights()
+        w_unsqueezed = w.unsqueeze(-1)
 
         sum_axis = -(1 + self.ssm.hidden.n_dim)
 
         obs_ndim = self.ssm.observable.n_dim
-        x_mean = (x * (squeezed_w if self.ssm.hidden.n_dim > 0 else w)).sum(sum_axis)
-        y_mean = (y * (squeezed_w if obs_ndim > 0 else w)).sum(-2 if obs_ndim > 0 else -1)
+        x_mean = (x * (w_unsqueezed if self.ssm.hidden.n_dim > 0 else w)).sum(sum_axis)
+        y_mean = (y * (w_unsqueezed if obs_ndim > 0 else w)).sum(-2 if obs_ndim > 0 else -1)
 
         return x_mean, y_mean
 
-    # TODO: Might not work when we have parameters of wrong size...?
     def smooth(self, states: Tuple[ParticleFilterState]) -> torch.Tensor:
         hidden_copy = self.ssm.hidden.copy()
         offset = -(2 + self.ssm.hidden.n_dim)
