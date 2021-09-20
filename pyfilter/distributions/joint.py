@@ -16,8 +16,8 @@ class JointDistribution(Distribution):
             >>> from torch.distributions import Normal, Exponential
             >>> import torch
             >>>
-            >>> distribution = JointDistribution(*[Normal(0.0, 1.0), Exponential(1.0)])
-            >>> y = distribution.sample(1000)
+            >>> distribution = JointDistribution(Normal(0.0, 1.0), Exponential(1.0))
+            >>> y = distribution.sample((1000,))    # should be 1000 x 2
             >>>
             >>> log_prob = distribution.log_prob(y)
 
@@ -97,9 +97,10 @@ class JointDistribution(Distribution):
         Example:
             >>> from torch.distributions import Normal, Exponential
             >>> import torch
+            >>> from pyfilter.distributions import JointDistribution
             >>>
-            >>> distributions = [Normal(0.0, 1.0), Exponential(1.0)]
-            >>> y = torch.cat([d.sample(1000) for d in distributions], dim=-1)
+            >>> distributions = Normal(0.0, 1.0), Exponential(1.0)
+            >>> y = torch.stack([d.sample((1000,)) for d in distributions], dim=-1)
             >>>
             >>> slices = JointDistribution.infer_indices(*distributions)
             >>> log_probs = [d.log_prob(y[..., s]) for d, s in zip(distributions, slices)]

@@ -82,7 +82,7 @@ class Prior(DistributionBuilderMixin, Module):
                 >>> from pyfilter.distributions import Prior
                 >>>
                 >>> exponential_prior = Prior(Exponential, rate=1.0)
-                >>> samples = exponential_prior.build_distribution().sample(1000)
+                >>> samples = exponential_prior.build_distribution().sample((1000,))
                 >>>
                 >>> unconstrained = exponential_prior.get_unconstrained(samples)  # there should now be negative values
         """
@@ -104,7 +104,7 @@ class Prior(DistributionBuilderMixin, Module):
                 >>> from pyfilter.distributions import Prior
                 >>>
                 >>> exponential_prior = Prior(Exponential, rate=1.0)
-                >>> samples = Normal(0.0, 1.0).sample(1000)
+                >>> samples = Normal(0.0, 1.0).sample((1000,))
                 >>>
                 >>> constrained = exponential_prior.get_unconstrained(samples)  # all should be positive
 
