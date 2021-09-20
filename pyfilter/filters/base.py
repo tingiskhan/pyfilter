@@ -68,8 +68,11 @@ class BaseFilter(Module, ABC):
     def set_nparallel(self, num_filters: int):
         """
         Sets the number of parallel filters to use by utilizing broadcasting. Useful when running sequential particle
-        algorith or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
+        algorithms or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
         objects.
+
+        Example:
+
 
         Args:
              num_filters: The number of filters to run in parallel.
@@ -169,21 +172,28 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def predict_correct(self, y: torch.Tensor, state: TState) -> TState:
+    def forward(self, y: torch.Tensor, state: TState) -> TState:
         """
         Method to be overridden by derived filters.
+
+        Args:
+            y: See ``self.filter(...)``.
+            state: See ``self.filter(...)``.
 
         """
 
         raise NotImplementedError()
 
-    def forward(self, *args, **kwargs):
-        return self.predict_correct(*args, **kwargs)
-
     def resample(self, indices: torch.Tensor) -> "BaseFilter":
         """
-        Resamples the filter, used in when we have nested filters.
+        Resamples the parameters of the ``.ssm`` attribute, used e.g. when running parallel filters.
+
+        Args:
+             indices: The indices to select.
         """
+
+        if self.n_parallel.numel() == 0:
+            raise Exception("No parallel filters, cannot resample!")
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
@@ -193,12 +203,22 @@ class BaseFilter(Module, ABC):
 
     def exchange(self, filter_: "BaseFilter", indices: torch.Tensor):
         """
-        Exchanges the filters, used when we have have nested filters.
+        Exchanges the parameters of ``.ssm`` with the parameters of ``filter_.ssm`` at the locations specified by
+        ``indices``.
+
+        Args:
+            filter_: The filter to exchange parameters with.
+            indices: Mask specifying which parallel filters to exchange.
         """
+
+        if self.n_parallel.numel() == 0:
+            raise Exception("No parallel filters, cannot resample!")
+
+
 
         self._model.exchange(indices, filter_.ssm)
 
         return self
 
-    def smooth(self, states: Tuple[BaseFilterState]) -> torch.Tensor:
+    def smooth(self, states: Sequence[BaseFilterState]) -> torch.Tensor:
         raise NotImplementedError()

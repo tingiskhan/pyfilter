@@ -18,7 +18,7 @@ class UKF(BaseKalmanFilter):
         res = self._ut.initialize(self.n_parallel)
         return KalmanFilterState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def predict_correct(self, y, state: KalmanFilterState):
+    def forward(self, y, state: KalmanFilterState):
         p = self._ut.predict(state.utf)
 
         if torch.isnan(y).any():

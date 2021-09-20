@@ -9,7 +9,7 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def predict_correct(self, y, state: ParticleFilterState):
+    def forward(self, y, state: ParticleFilterState):
         normalized = state.normalized_weights()
 
         if torch.isnan(y).any():

@@ -9,7 +9,7 @@ class SISR(ParticleFilter):
     Implements the SISR filter by Gordon et al.
     """
 
-    def predict_correct(self, y, state: ParticleFilterState) -> ParticleFilterState:
+    def forward(self, y, state: ParticleFilterState) -> ParticleFilterState:
         old_normalized_w = state.normalized_weights()
 
         indices, mask = self._resample_state(state.w)
