@@ -11,6 +11,15 @@ class UKF(BaseKalmanFilter):
     """
 
     def __init__(self, model, utf_kwargs: Dict[str, object] = None, **kwargs):
+        """
+        Initializes the UKF.
+
+        Args:
+             model: See base.
+             utf_kwargs: Kwargs passed to ``pyfilter.filters.kalman.unscented.UnscentedFilterTransform``.
+             kwargs: Kwargs passed to base.
+        """
+
         super().__init__(model, **kwargs)
         self._ut = UnscentedFilterTransform(model, **(utf_kwargs or dict()))
 
