@@ -105,7 +105,7 @@ class Tests(unittest.TestCase):
         linear = AffineProcess((f, g), (1.0, 1.0), self.norm, self.norm)
         self.model.hidden = linear
 
-        filt = SISR(self.model, 1000).set_nparallel(shape)
+        filt = SISR(self.model, 1000).set_num_parallel(shape)
         result = filt.longfilter(y)
 
         filtermeans = result.filter_means

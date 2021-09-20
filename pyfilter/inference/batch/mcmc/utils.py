@@ -18,7 +18,7 @@ def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> Ba
     seed_filter = filter_.copy()
 
     num_samples = num_chains * num_seeds
-    seed_filter.set_nparallel(num_samples)
+    seed_filter.set_num_parallel(num_samples)
 
     sample_model(seed_filter.ssm, (num_samples, 1))
 
@@ -35,7 +35,7 @@ def seed(filter_: BaseFilter, y: torch.Tensor, num_seeds: int, num_chains) -> Ba
     num_params = sum(p.get_numel(constrained=True) for _, p in parameters_and_priors_from_model(filter_.ssm))
     best_params = params[best_ll]
 
-    filter_.set_nparallel(num_chains)
+    filter_.set_num_parallel(num_chains)
 
     sample_model(filter_.ssm, (num_chains, 1))
     params_from_tensor(filter_.ssm, best_params.expand(num_chains, num_params), constrained=False)

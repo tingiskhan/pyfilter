@@ -65,17 +65,26 @@ class BaseFilter(Module, ABC):
 
         return torch.Size([self._n_parallel])
 
-    def set_nparallel(self, num_filters: int):
+    def set_num_parallel(self, num_filters: int):
         """
         Sets the number of parallel filters to use by utilizing broadcasting. Useful when running sequential particle
         algorithms or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
         objects.
 
-        Example:
-
-
         Args:
              num_filters: The number of filters to run in parallel.
+
+        Example:
+            >>> from pyfilter.filters.particle import SISR
+            >>>
+            >>> model = ...
+            >>>
+            >>> sisr = SISR(model, 1000)
+            >>> sisr.set_num_parallel(50)
+            >>>
+            >>> state = sisr.initialize()
+            >>> state.x.values.shape
+            torch.Size([50, 1000])
         """
 
         raise NotImplementedError()

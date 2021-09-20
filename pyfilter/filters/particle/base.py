@@ -62,7 +62,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return out, mask
 
-    def set_nparallel(self, num_filters: int):
+    def set_num_parallel(self, num_filters: int):
         self._n_parallel = torch.tensor(num_filters)
         self._particles = torch.tensor(
             (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])), dtype=torch.int

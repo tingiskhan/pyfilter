@@ -47,7 +47,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         super().__init__(filter_)
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
-        self.filter.set_nparallel(particles)
+        self.filter.set_num_parallel(particles)
 
     @property
     def particles(self) -> torch.Size:
