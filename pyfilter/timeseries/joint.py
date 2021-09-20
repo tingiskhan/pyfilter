@@ -33,7 +33,7 @@ class JointStochasticProcess(StochasticProcess):
 
     def build_density(self, x: JointState) -> Distribution:
         return JointDistribution(
-            *(self._modules[name].build_density(x[i]) for i, name in enumerate(self._proc_names)), masks=self.masks
+            *(self._modules[name].build_density(x[i]) for i, name in enumerate(self._proc_names)), indices=self.masks
         )
 
 

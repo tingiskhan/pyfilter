@@ -84,7 +84,7 @@ class JointState(NewState):
         if all(s.dist is None for s in states):
             return None
 
-        return JointDistribution(*(s.dist for s in states), masks=mask)
+        return JointDistribution(*(s.dist for s in states), indices=mask)
 
     # TODO: Should perhaps be first available?
     @staticmethod
