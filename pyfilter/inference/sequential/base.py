@@ -63,7 +63,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
-        return SequentialAlgorithmState(init_weights, self.filter.initialize_result(init_state))
+        return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
 
     def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)

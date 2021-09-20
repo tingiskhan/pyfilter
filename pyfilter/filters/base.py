@@ -3,7 +3,7 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Iterable, TypeVar, Optional, List, Callable
+from typing import Tuple, Iterable, TypeVar, Union, List, Callable
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
@@ -15,15 +15,29 @@ TState = TypeVar("TState", bound=BaseFilterState)
 
 class BaseFilter(Module, ABC):
     """
-    Base class for filters.
+    Abstract base class for filters.
     """
 
     def __init__(
         self,
         model: StateSpaceModel,
-        record_states: bool = False,
+        record_states: Union[bool, int] = False,
         pre_append_callbacks: List[Callable[[TState], None]] = None,
     ):
+        """
+        Initializes the filter object.
+
+        Args:
+            model: The state space model to use for filtering.
+            record_states: Optional parameter for whether to record all, or some of the
+                ``pyfilter.filters.state.BaseFilterState`` objects. Can be either a ``bool``  or an ``int``, if ``int``
+                the ``pyfilter.filters.result.FilterResult`` object will retain ``record_states`` number of states. If
+                ``True`` will retain *all* states, and only the latest if ``False``. Do note that recording all states
+                will be very memory intensive for particle filters.
+            pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
+                to appending the new state.
+        """
+
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
@@ -42,6 +56,10 @@ class BaseFilter(Module, ABC):
 
     @property
     def n_parallel(self) -> torch.Size:
+        """
+        Returns the number of parallel filters.
+        """
+
         if self._n_parallel is None or self._n_parallel == 0:
             return torch.Size([])
 
@@ -49,15 +67,32 @@ class BaseFilter(Module, ABC):
 
     def set_nparallel(self, num_filters: int):
         """
-        Sets the number of parallel filters to use
+        Sets the number of parallel filters to use by utilizing broadcasting. Useful when running sequential particle
+        algorith or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
+        objects.
+
+        Args:
+             num_filters: The number of filters to run in parallel.
         """
 
         raise NotImplementedError()
 
     def initialize(self) -> TState:
+        """
+        Initializes the filter.
+        """
+
         raise NotImplementedError()
 
-    def initialize_result(self, state: TState = None) -> FilterResult[TState]:
+    def initialize_with_result(self, state: TState = None) -> FilterResult[TState]:
+        """
+        Initializes the filter using ``.initialize()`` if ``state`` is ``None``, and wraps the result using
+        ``pyfilter.filters.result.FilterResult``. Also registers the callbacks on the ``FilterResult`` object.
+
+        Args:
+            state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``
+        """
+
         res = FilterResult(state or self.initialize(), self.record_states)
 
         for callback in self._pre_append_callbacks:
@@ -67,7 +102,11 @@ class BaseFilter(Module, ABC):
 
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
-        Performs a filtering move given observation `y` and previous state of the filter.
+        Performs a filtering move given observation `y` and previous state of the filter. Wraps the ``__call__`` method
+        of `torch.nn.Module``.
+
+        Args:
+            y: The next observation
         """
 
         return self.__call__(y, state)
@@ -87,7 +126,7 @@ class BaseFilter(Module, ABC):
 
         try:
             state = init_state or self.initialize()
-            result = self.initialize_result(state)
+            result = self.initialize_with_result(state)
 
             for yt in y:
                 state = self.filter(yt, state)
