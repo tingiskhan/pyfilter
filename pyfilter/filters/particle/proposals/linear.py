@@ -8,8 +8,11 @@ from ....utils import construct_diag_from_flat
 
 class LinearGaussianObservations(Proposal):
     """
-    Proposal designed for cases when the observation density is a linear combination of the states, and has a Gaussian
-    density. Note that your state space model must of type `LinearGaussianObservations` in order to use this proposal.
+    This proposal corresponds to the optimal choice whenever we have that the observation model is given by a linear
+    combination of the states, i.e.:
+        .. math::
+            Y_t = A \cdot X_t + \epsilon_t,
+    where :math:`A` is a matrix of dimension (observation space, latent space).
     """
 
     def __init__(self):
