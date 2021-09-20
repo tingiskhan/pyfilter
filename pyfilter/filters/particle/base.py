@@ -7,7 +7,7 @@ from ...resampling import systematic
 from ...timeseries import LinearGaussianObservations as LGO
 from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 from ...utils import get_ess, choose
-from ..utils import _construct_empty
+from ..utils import _construct_empty_index
 from .state import ParticleFilterState
 
 
@@ -51,7 +51,7 @@ class ParticleFilter(BaseFilter, ABC):
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._resample_threshold
 
-        out = _construct_empty(w)
+        out = _construct_empty_index(w)
 
         if not mask.any():
             return out, mask
