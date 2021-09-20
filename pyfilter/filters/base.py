@@ -29,11 +29,7 @@ class BaseFilter(Module, ABC):
 
         Args:
             model: The state space model to use for filtering.
-            record_states: Optional parameter for whether to record all, or some of the
-                ``pyfilter.filters.state.BaseFilterState`` objects. Can be either a ``bool``  or an ``int``, if ``int``
-                the ``pyfilter.filters.result.FilterResult`` object will retain ``record_states`` number of states. If
-                ``True`` will retain *all* states, and only the latest if ``False``. Do note that recording all states
-                will be very memory intensive for particle filters.
+            record_states: See ``pyfilter.timeseries.result.record_states``.
             pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
                 to appending the new state.
         """
@@ -222,8 +218,6 @@ class BaseFilter(Module, ABC):
 
         if self.n_parallel.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
-
-
 
         self._model.exchange(indices, filter_.ssm)
 
