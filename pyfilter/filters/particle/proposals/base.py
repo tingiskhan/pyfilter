@@ -60,7 +60,8 @@ class Proposal(ABC):
 
     def pre_weight(self, y: torch.Tensor, x: NewState) -> torch.Tensor:
         """
-        Pre-weights previous state ``x`` w.r.t. the current observation ``y``.
+        Pre-weights previous state ``x`` w.r.t. the current observation ``y``. Used in the ``APF`` when evaluating which
+        candidate particles to select for propagation.
 
         Args:
             y: The current observation.
