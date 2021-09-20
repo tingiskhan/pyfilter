@@ -225,9 +225,7 @@ class BaseFilter(Module, ABC):
 
     def smooth(self, states: Sequence[BaseFilterState]) -> torch.Tensor:
         """
-        Smooths the estimated trajectory by sampling from:
-            .. math::
-                p(x_{1:t} | y_{1:t})
+        Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 
         Args:
             states: The filtered states.
