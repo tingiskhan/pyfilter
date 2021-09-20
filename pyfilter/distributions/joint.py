@@ -30,9 +30,9 @@ class JointDistribution(Distribution):
         Initializes the joint distribution object.
 
         Args:
-            distributions: Iterable of `pytorch.distributions.Distribution` objects.
+            distributions: Iterable of ``pytorch.distributions.Distribution`` objects.
             indices: Optional parameter specifying which distribution corresponds to which column in input tensors. If
-                `None`, then is inferred.
+                ``None``, then is inferred.
             kwargs: Key-worded arguments passed to base class.
         """
 
@@ -85,11 +85,11 @@ class JointDistribution(Distribution):
     @staticmethod
     def infer_indices(*distributions: Distribution) -> Tuple[Union[int, slice]]:
         """
-        Given a sequence of `pytorch.distributions.Distribution` objects, this method infers the indices at which to
+        Given a sequence of ``pytorch.distributions.Distribution`` objects, this method infers the indices at which to
         slice an input tensor.
 
         Args:
-            distributions: Sequence of `pytorch.distributions.Distribution` objects.
+            distributions: Sequence of ``pytorch.distributions.Distribution`` objects.
 
         Returns:
             A tuple containing indices and/or slices.
