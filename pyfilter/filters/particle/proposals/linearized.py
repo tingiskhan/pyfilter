@@ -6,13 +6,20 @@ from .base import Proposal
 
 
 class Linearized(Proposal):
+    """
+    # TODO
+    """
+
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
-        models that are log-concave in the observation density.
+        Initializes the ``Linearized`` proposal
 
-        :param n_steps: The number of steps to take when approximating the mean of the proposal density
-        :param alpha: Takes step proportional to `alpha` if `use_second_order` is False
+        Args:
+            n_steps: The number of steps to take when performing gradient descent
+            alpha: The step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+                ``False``, or when the Hessian is badly conditioned.
+            use_second_order: Whether to use second order information when constructing the proposal distribution.
+                Amounts to using the diagonal of the Hessian.
         """
         super().__init__()
         self._alpha = alpha
