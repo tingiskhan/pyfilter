@@ -163,7 +163,7 @@ class BaseFilter(Module, ABC):
 
     def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Given the previous ``state``, predict ``steps`` into the future.
+        Given the previous ``state``, predict ``steps`` steps into the future.
 
         Args:
               state: Previous state.
