@@ -3,7 +3,7 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Iterable, TypeVar, Union, List, Callable
+from typing import Tuple, Sequence, TypeVar, Union, List, Callable
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
@@ -90,7 +90,7 @@ class BaseFilter(Module, ABC):
         ``pyfilter.filters.result.FilterResult``. Also registers the callbacks on the ``FilterResult`` object.
 
         Args:
-            state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``
+            state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
         """
 
         res = FilterResult(state or self.initialize(), self.record_states)
@@ -102,27 +102,30 @@ class BaseFilter(Module, ABC):
 
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
-        Performs a filtering move given observation `y` and previous state of the filter. Wraps the ``__call__`` method
-        of `torch.nn.Module``.
+        Performs one filter move given observation ``y`` and previous state of the filter. Wraps the ``__call__``
+        method of `torch.nn.Module``.
 
         Args:
-            y: The next observation
+            y: The observation for which to filter.
+            state: The previous state of the filter.
+
+        Returns:
+            New and updated state.
         """
 
         return self.__call__(y, state)
 
-    def longfilter(self, y: Iterable[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
+    def longfilter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
-        Filters the entire data set `y`.
+        Batch version of ``.filter(...)`` where entire data set is parsed.
 
-        :param y: Data, expected shape: (# time steps, [# dimensions])
-        :param bar: Whether to print a progress bar
-        :param init_state: The initial state to use
+        Args:
+            y: Data set to filter.
+            bar: Whether to display a ``tqdm`` progress bar.
+            init_state: Optional parameter for whether to pass an initial state
         """
 
-        iter_bar: tqdm = None
-        if bar:
-            iter_bar = tqdm(desc=str(self.__class__.__name__), total=y.shape[0])
+        iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
 
         try:
             state = init_state or self.initialize()
@@ -144,12 +147,34 @@ class BaseFilter(Module, ABC):
                 iter_bar.close()
 
     def copy(self) -> "BaseFilter":
+        """
+        Creates a deep copy of the filter object.
+        """
+
         return copy.deepcopy(self)
 
     def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Given the previous ``state``, predict ``steps`` into the future.
+
+        Args:
+              state: Previous state.
+              steps: The number of steps to predict.
+              args: Any filter specific arguments.
+              kwargs: Any filter specific kwargs.
+
+        Returns:
+            Returns a tuple consisting of (predicted x, predicted y).
+        """
+
         raise NotImplementedError()
 
     def predict_correct(self, y: torch.Tensor, state: TState) -> TState:
+        """
+        Method to be overridden by derived filters.
+
+        """
+
         raise NotImplementedError()
 
     def forward(self, *args, **kwargs):
