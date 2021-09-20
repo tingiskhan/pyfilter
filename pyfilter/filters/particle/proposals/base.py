@@ -30,7 +30,7 @@ class Proposal(ABC):
         Sets the model to be used in the proposal.
 
         Args:
-            model: The model to be used
+            model: The model to be used.
         """
 
         self._model = model
