@@ -16,7 +16,7 @@ _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
 
 class ParticleFilter(BaseFilter, ABC):
     """
-    Base class for particle filters.
+    Abstract base class for particle filters.
     """
 
     def __init__(
@@ -25,13 +25,25 @@ class ParticleFilter(BaseFilter, ABC):
         particles: int,
         resampling: Callable[[torch.Tensor], torch.Tensor] = systematic,
         proposal: Union[str, Proposal] = "auto",
-        ess=0.9,
+        ess_threshold=0.9,
         **kwargs
     ):
+        """
+        Initializes the particle filter object.
+
+        Args:
+            model: See base.
+            particles: The number of particles to use for estimating the filter distribution.
+            resampling: The resampling method. Takes as input the log weights and returns indices.
+            proposal: The proposal distribution generator to use.
+            ess_threshold: The relative "effective sample size" threshold at where to perform resampling. Not relevant
+                for ``APF`` as resampling is always performed.
+        """
+
         super().__init__(model, **kwargs)
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
-        self._resample_threshold = ess
+        self._resample_threshold = ess_threshold
         self._resampler = resampling
 
         if proposal == "auto":
@@ -41,6 +53,11 @@ class ParticleFilter(BaseFilter, ABC):
 
     @property
     def particles(self) -> torch.Size:
+        """
+        Returns the number of particles currently used by the filter. If running parallel filters, this corresponds to
+        ``torch.Size([number of parallel filters, number of particles])``, else ``torch.Size([number of particles])``.
+        """
+
         return torch.Size([self._particles] if self._particles.dim() == 0 else self._particles)
 
     @property
