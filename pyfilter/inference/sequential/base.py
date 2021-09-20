@@ -71,13 +71,13 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         if not aggregate:
             return px, py
 
-        w = normalize(state.w)
-        wsqd = w.unsqueeze(-1)
+        w = state.normalized_weights()
+        w_unsqueezed = w.unsqueeze(-1)
 
-        xm = (px * (wsqd if self.filter.ssm.hidden_ndim > 1 else w)).sum(1)
-        ym = (py * (wsqd if self.filter.ssm.obs_ndim > 1 else w)).sum(1)
+        x_m = (px * (w_unsqueezed if self.filter.ssm.hidden.n_dim > 0 else w)).sum(1)
+        y_m = (py * (w_unsqueezed if self.filter.ssm.observable.n_dim > 0 else w)).sum(1)
 
-        return xm, ym
+        return x_m, y_m
 
 
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):

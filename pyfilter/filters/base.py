@@ -18,7 +18,12 @@ class BaseFilter(Module, ABC):
     Base class for filters.
     """
 
-    def __init__(self, model: StateSpaceModel, record_states: bool = False, pre_append_callbacks: List[Callable[[TState], None]] = None):
+    def __init__(
+        self,
+        model: StateSpaceModel,
+        record_states: bool = False,
+        pre_append_callbacks: List[Callable[[TState], None]] = None,
+    ):
         super().__init__()
 
         if not isinstance(model, StateSpaceModel):
