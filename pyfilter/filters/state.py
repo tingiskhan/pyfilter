@@ -25,7 +25,7 @@ class BaseFilterState(BaseState, ABC):
 
     def resample(self, indices: Tensor):
         """
-        Resamples the necessary objects of ``self``. Only matters when running parallel filters.
+        Resamples the necessary objects of ``self`` at ``indices``. Only matters when running parallel filters.
 
         Args:
             indices: The indices to select.
