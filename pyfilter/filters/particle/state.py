@@ -18,7 +18,7 @@ class ParticleFilterState(BaseFilterState):
             x: The state particles of the timeseries.
             w: The log weights associated with the state particles.
             ll: The estimate log-likelihood, i.e. :math:`p(y_t)`.
-            prev_indices: The previous indices.
+            prev_indices: The indices of the previous state particles that were used to propagate to this state.
         """
 
         super().__init__()

@@ -184,7 +184,6 @@ class BaseFilter(Module, ABC):
         Args:
             y: See ``self.filter(...)``.
             state: See ``self.filter(...)``.
-
         """
 
         raise NotImplementedError()
