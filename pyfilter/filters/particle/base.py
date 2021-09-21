@@ -36,7 +36,7 @@ class ParticleFilter(BaseFilter, ABC):
             particles: The number of particles to use for estimating the filter distribution.
             resampling: The resampling method. Takes as input the log weights and returns indices.
             proposal: The proposal distribution generator to use.
-            ess_threshold: The relative "effective sample size" threshold at where to perform resampling. Not relevant
+            ess_threshold: The relative "effective sample size" threshold at which to perform resampling. Not relevant
                 for ``APF`` as resampling is always performed.
         """
 
