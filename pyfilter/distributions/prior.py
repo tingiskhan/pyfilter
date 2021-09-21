@@ -133,7 +133,7 @@ class Prior(DistributionBuilderMixin, Module):
         prior.
 
         Args:
-            constrained: Get the number of elements of the unconstrained distribution.
+            constrained: Whether to get the number of elements of the constrained or unconstrained distribution.
         """
 
         return (self().event_shape if not constrained else self.unconstrained_prior.event_shape).numel()
