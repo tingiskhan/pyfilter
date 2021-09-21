@@ -24,7 +24,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     def append_ess(self, ess: torch.Tensor):
         self.ess.append(ess)
 
-    def copy(self, filter_state):
+    def replicate(self, filter_state):
         return SequentialAlgorithmState(torch.zeros_like(self.w), filter_state)
 
 

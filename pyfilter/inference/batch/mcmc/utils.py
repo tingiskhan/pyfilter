@@ -66,7 +66,7 @@ def run_pmmh(
     diff_logl = new_res.loglikelihood - state.filter_state.loglikelihood
     diff_prior = (eval_prior_log_prob(prop_filter.ssm, False) - eval_prior_log_prob(filter_.ssm, False)).squeeze()
 
-    new_prop_kernel = proposal.build(state.copy(new_res), prop_filter, y)
+    new_prop_kernel = proposal.build(state.replicate(new_res), prop_filter, y)
     diff_prop = new_prop_kernel.log_prob(params_to_tensor(filter_.ssm, constrained=False)) - prop_kernel.log_prob(rvs)
 
     log_acc_prob = diff_prop + diff_prior + diff_logl
