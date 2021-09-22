@@ -47,7 +47,8 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
     """
-    Abstract base class for Bayesian sequential algorithms that use a particle approximation of the parameter posterior.
+    Abstract base class for Bayesian sequential algorithms that use a particle approximation of the parameter
+    posteriors.
     """
 
     def __init__(self, filter_, particles: int):
