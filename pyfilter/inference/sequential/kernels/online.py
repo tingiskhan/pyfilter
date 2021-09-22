@@ -1,20 +1,20 @@
 import torch
 from .base import BaseKernel
-from .kde import JitterKernel, NonShrinkingKernel
+from .jittering import JitterKernel, NonShrinkingKernel
 from ...utils import params_to_tensor, params_from_tensor
 
 
 class OnlineKernel(BaseKernel):
-    def __init__(self, kde=None, discrete=False, **kwargs):
+    def __init__(self, kernel=None, discrete=False, **kwargs):
         """
         Base class for kernels being used in an online manner.
-        :param kde: The kernel density estimator to use
-        :type kde: JitterKernel
+        :param kernel: The kernel density estimator to use
+        :type kernel: JitterKernel
         """
 
         super().__init__(**kwargs)
 
-        self._kde = kde or NonShrinkingKernel()
+        self._kernel = kernel or NonShrinkingKernel()
         self._disc = discrete
 
     def update(self, filter_, state, *args):
@@ -23,7 +23,7 @@ class OnlineKernel(BaseKernel):
         stacked = params_to_tensor(filter_.ssm, constrained=False)
         indices = self._resampler(weights, normalized=True)
 
-        jittered = self._kde.sample(stacked, weights, indices)
+        jittered = self._kernel.jitter(stacked, weights, indices)
 
         filter_.resample(indices)
         state.filter_state.resample(indices, entire_history=False)
