@@ -1,6 +1,6 @@
 from .base import SequentialParticleAlgorithm
 from ...utils import get_ess
-from .kernels import OnlineKernel, NonShrinkingKernel, KernelDensityEstimate
+from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
 from torch import isfinite
 from abc import ABC
 from .state import SequentialAlgorithmState
@@ -12,7 +12,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     Abstract base class for purely online particle algorithms.
     """
 
-    def __init__(self, filter_, particles, kde: Optional[KernelDensityEstimate] = None, discrete=False):
+    def __init__(self, filter_, particles, kde: Optional[JitterKernel] = None, discrete=False):
         """
         Initializes the ``BaseOnlineAlgorithm`` class.
 

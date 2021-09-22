@@ -84,27 +84,23 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> t
     return var
 
 
-class KernelDensityEstimate(ABC):
+class JitterKernel(ABC):
     """
-    Abstract base class for kernel density estimates.
+    Abstract base class for jittering kernels.
     """
 
     def __init__(self, std_threshold: float = EPS):
         """
-        Initializes ``KernelDensityEstimate`` class.
+        Initializes ``JitterKernel`` class.
 
         Args:
             std_threshold: Optional parameter. The minimum allowed standard deviation to avoid issues relating to
                 numerical precision whenever the KDE is "badly conditioned".
         """
 
-        self._cov = None
-        self._bw_fac = None
-        self._values = None
-
         self._lowest_std = std_threshold
 
-    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor):
+    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
         """
         Method to be overridden by derived subclasses. Specifies how to construct the KDE.
 
@@ -112,24 +108,34 @@ class KernelDensityEstimate(ABC):
             x: The samples to use for constructing the KDE.
             w: The normalized weights associated with ``x``.
             indices: The rows of ``x`` to choose.
+
+        Returns:
+            Returns the tuple ``(bandwidth, mean, scale)``.
         """
 
         raise NotImplementedError()
 
-    def sample(self) -> torch.Tensor:
+    def sample(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
         """
         Samples from the KDE using normal distributions.
+
+        Args:
+            See ``fit(...)``.
+
+        Returns:
+            Jittered values.
         """
 
-        std = (self._bw_fac * self._cov.sqrt()).clamp(self._lowest_std, INFTY)
+        bw, mean, scale = self.fit(x, w, indices)
+        std = (bw * scale).clamp(self._lowest_std, INFTY)
 
-        return _jitter(self._values, std)
+        return _jitter(mean, std)
 
     def get_ess(self, w):
         return get_ess(w, normalized=True)
 
 
-class ShrinkingKernel(KernelDensityEstimate):
+class ShrinkingKernel(JitterKernel):
     """
     Defines the shrinking kernel defined in `Learning and filtering via simulation: smoothly jittered particle filters.`
     by Thomas Flury and Neil Shepard.
@@ -137,13 +143,15 @@ class ShrinkingKernel(KernelDensityEstimate):
 
     def fit(self, x, w, indices):
         ess = self.get_ess(w)
-        self._bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
+        bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
 
         mean = (w.unsqueeze(-1) * x).sum(0)
-        self._cov = robust_var(x, w, mean)
+        var = robust_var(x, w, mean)
 
-        beta = sqrt(1.0 - self._bw_fac ** 2)
-        self._values = (mean + beta * (x - mean))[indices]
+        beta = sqrt(1.0 - bw_fac ** 2)
+        means = (mean + beta * (x - mean))[indices]
+
+        return bw_fac, means, var.sqrt()
 
 
 class NonShrinkingKernel(ShrinkingKernel):
@@ -153,10 +161,12 @@ class NonShrinkingKernel(ShrinkingKernel):
 
     def fit(self, x, w, indices):
         ess = self.get_ess(w)
-        self._bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
+        bw_fac = (1.59 * ess ** (-1 / 3)).clamp(EPS, 1 - EPS)
 
-        self._cov = robust_var(x, w)
-        self._values = x[indices]
+        var = robust_var(x, w)
+        values = x[indices]
+
+        return bw_fac, values, var.sqrt()
 
 
 class LiuWestShrinkage(ShrinkingKernel):
@@ -181,38 +191,10 @@ class LiuWestShrinkage(ShrinkingKernel):
     def fit(self, x, w, indices):
         mean = (w.unsqueeze(-1) * x).sum(0)
 
-        self._cov = robust_var(x, w, mean)
-        self._values = (x * self._a + (1 - self._a) * mean)[indices]
+        var = robust_var(x, w, mean)
+        values = (x * self._a + (1 - self._a) * mean)[indices]
 
-        return self
-
-
-class IndependentGaussian(ShrinkingKernel):
-    """
-    Basic Gaussian KDE.
-    """
-
-    def __init__(self, factor=silverman):
-        """
-        Initializes the ``IndependentGaussian`` class.
-
-        Args:
-            factor: Function for calculating the bandwidth factor of the KDE.
-        """
-
-        super().__init__()
-        self._fac = factor
-        self._w = None
-
-    def fit(self, x, w, indices):
-        ess = self.get_ess(w)
-        self._bw_fac = self._fac(x.shape[-1], ess)
-
-        self._cov = robust_var(x, w)
-        self._w = w
-        self._values = x[indices]
-
-        return self
+        return self._bw_fac, values, var.sqrt()
 
 
 class ConstantKernel(ShrinkingKernel):
@@ -222,7 +204,7 @@ class ConstantKernel(ShrinkingKernel):
 
     def __init__(self, bw: Union[float, torch.Tensor]):
         """
-        Initializes the ``IndependentGaussian`` class.
+        Initializes the ``ConstantKernel`` class.
 
         Args:
             bw: The constant bandwidth/scale to use.
@@ -230,11 +212,9 @@ class ConstantKernel(ShrinkingKernel):
 
         super().__init__()
         self._bw_fac = bw
-        self._w = None
 
     def fit(self, x, w, indices):
-        self._w = w
-        self._values = x[indices]
-        self._cov = torch.ones(self._values.shape[-1], device=self._values.device)
+        values = x[indices]
+        scale = torch.ones(values.shape[-1], device=values.device)
 
-        return self
+        return 1.0, values, scale
