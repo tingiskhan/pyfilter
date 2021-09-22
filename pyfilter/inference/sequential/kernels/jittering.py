@@ -199,22 +199,21 @@ class LiuWestShrinkage(ShrinkingKernel):
 
 class ConstantKernel(ShrinkingKernel):
     """
-    KDE assuming constant bandwidth, used in original ``NESS`` paper.
+    Kernel assuming constant scale, used in original ``NESS`` paper.
     """
 
-    def __init__(self, bw: Union[float, torch.Tensor]):
+    def __init__(self, scale: Union[float, torch.Tensor]):
         """
         Initializes the ``ConstantKernel`` class.
 
         Args:
-            bw: The constant bandwidth/scale to use.
+            scale: The constant bandwidth/scale to use.
         """
 
         super().__init__()
-        self._bw_fac = bw
+        self._scale = scale
 
     def fit(self, x, w, indices):
         values = x[indices]
-        scale = torch.ones(values.shape[-1], device=values.device)
 
-        return 1.0, values, scale
+        return 1.0, values, self._scale
