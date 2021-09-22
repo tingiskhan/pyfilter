@@ -21,13 +21,14 @@ class OnlineKernel(BaseKernel):
         weights = state.normalized_weights()
 
         stacked = params_to_tensor(filter_.ssm, constrained=False)
-        kde = self._kde.fit(stacked, weights)
-
         indices = self._resampler(weights, normalized=True)
+
+        self._kde.fit(stacked, weights, indices)
+
         filter_.resample(indices)
         state.filter_state.resample(indices, entire_history=False)
 
-        jittered = kde.sample(indices=indices)
+        jittered = self._kde.sample()
 
         if self._disc:
             to_jitter = (
