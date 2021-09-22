@@ -109,7 +109,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     chronological subset of the data, and the other the remaining points.
 
     One such example is the ``NESSMC2``, where we first utilize the costly but exact ``SMC2`` algorithm, and then switch
-    to the ``NESS`` which is a pure online algorithm, but with slower convergence than ``SMC2``.
+    to the ``NESS`` algorithm which is a pure online algorithm, but with slower convergence than ``SMC2``.
     """
 
     def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any]):
