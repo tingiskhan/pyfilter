@@ -83,7 +83,7 @@ class NESS(BaseOnlineAlgorithm):
 
 class FixedWidthNESS(BaseOnlineAlgorithm):
     """
-    Implements a fixed observation width version of ``NESS`` see TODO.
+    Implements a fixed observation width version of ``NESS``.
     """
 
     def __init__(self, filter_, particles, block_len=125, **kwargs):

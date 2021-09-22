@@ -11,11 +11,21 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     """
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: List[torch.Tensor] = None):
+        """
+        Initializes the ``SequentialAlgorithmState`` class.
+
+        Args:
+            weights: The log weights associated with the particle approximation.
+            filter_state: The current state of the filter. Somewhat misnamed as we keep track of the entire history of
+                the filter, should perhaps be called ``filter_result``.
+            ess: Optional parameter, passes the collection of ESS's.
+        """
+
         super().__init__(filter_state)
         self.register_buffer("w", weights)
         self.ess = ess or list()
 
-    def normalized_weights(self):
+    def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
 
     def get_ess(self) -> torch.Tensor:
@@ -30,10 +40,20 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
 class SMC2State(SequentialAlgorithmState):
     """
-    Custom state class for SMC2.
+    Custom state class for ``SMC2``, as it requires keeping a history of the parsed observations.
     """
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: TensorTuple = None):
+        """
+        Initializes the ``SMC2State`` class.
+
+        Args:
+            weights: See base:
+            filter_state: See base.
+            ess: See base.
+            parsed_data: The collection of observations that have been parsed by the algorithm.
+        """
+
         super().__init__(weights, filter_state, ess)
         self.tensor_tuples["parsed_data"] = parsed_data or TensorTuple()
 
