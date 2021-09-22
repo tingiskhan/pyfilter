@@ -18,7 +18,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
             weights: The log weights associated with the particle approximation.
             filter_state: The current state of the filter. Somewhat misnamed as we keep track of the entire history of
                 the filter, should perhaps be called ``filter_result``.
-            ess: Optional parameter, passes the collection of ESS's.
+            ess: Optional parameter, only used when re-initializing a state object.
         """
 
         super().__init__(filter_state)
