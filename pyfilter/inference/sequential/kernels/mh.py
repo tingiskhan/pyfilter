@@ -18,7 +18,7 @@ class ParticleMetropolisHastings(BaseKernel):
         self._proposal = proposal or SymmetricMH()
         self.accepted = None
 
-    def _update(self, filter_, state, y, *args):
+    def update(self, filter_, state, y, *args):
         prop_filter = filter_.copy()
         indices = self._resampler(state.normalized_weights(), normalized=True)
 

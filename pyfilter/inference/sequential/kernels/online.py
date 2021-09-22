@@ -17,7 +17,7 @@ class OnlineKernel(BaseKernel):
         self._kde = kde or NonShrinkingKernel()
         self._disc = discrete
 
-    def _update(self, filter_, state, *args):
+    def update(self, filter_, state, *args):
         weights = state.normalized_weights()
 
         stacked = params_to_tensor(filter_.ssm, constrained=False)
