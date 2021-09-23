@@ -5,11 +5,18 @@ from ...utils import params_to_tensor, params_from_tensor
 
 
 class OnlineKernel(BaseKernel):
-    def __init__(self, kernel=None, discrete=False, **kwargs):
+    """
+    Kernel for mutating parameter particles in an online fashion.
+    """
+
+    def __init__(self, kernel: JitterKernel = None, discrete=False, **kwargs):
         """
-        Base class for kernels being used in an online manner.
-        :param kernel: The kernel density estimator to use
-        :type kernel: JitterKernel
+        Initializes the ``OnlineKernel`` class.
+
+        Args:
+            kernel: The kernel to use for jittering the parameter particles.
+            discrete: Whether to mutate all particles, or just some of them with a probability proportional to the ESS.
+            kwargs: See base.
         """
 
         super().__init__(**kwargs)

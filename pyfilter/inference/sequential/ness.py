@@ -22,7 +22,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             kde: Optional parameter. The kernel density estimate to use when mutating particles from :math:`t`
                 to :math:`t+1`. If ``None`` defaults to using
                 ``pyfilter.inference.sequential.kernels.NonShrinkingKernel``.
-            discrete: Whether to mutate all particles, or just some of them with a varying probability.
+            discrete: See ``pyfilter.inference.sequential.kernels.OnlineKernel``.
         """
 
         super().__init__(filter_, particles)
