@@ -98,19 +98,19 @@ class JitterKernel(ABC):
                 numerical precision whenever the KDE is "badly conditioned".
         """
 
-        self._lowest_std = std_threshold
+        self._min_std = std_threshold
 
-    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor, torch.Tensor):
+    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         """
         Method to be overridden by derived subclasses. Specifies how to jitter a given collection of samples.
 
         Args:
-            x: The samples to use for constructing the KDE.
+            x: The samples to jitter.
             w: The normalized weights associated with ``x``.
             indices: The rows of ``x`` to choose.
 
         Returns:
-            Returns the tuple ``(bandwidth, mean, scale)``.
+            Returns the tuple ``(mean, scale)``.
         """
 
         raise NotImplementedError()
@@ -126,8 +126,8 @@ class JitterKernel(ABC):
             Jittered values.
         """
 
-        bw, mean, scale = self.fit(x, w, indices)
-        std = (bw * scale).clamp(self._lowest_std, INFTY)
+        mean, scale = self.fit(x, w, indices)
+        std = scale.clamp(self._min_std, INFTY)
 
         return _jitter(mean, std)
 
@@ -151,7 +151,7 @@ class ShrinkingKernel(JitterKernel):
         beta = sqrt(1.0 - bw_fac ** 2)
         means = (mean + beta * (x - mean))[indices]
 
-        return bw_fac, means, var.sqrt()
+        return means, bw_fac * var.sqrt()
 
 
 class NonShrinkingKernel(ShrinkingKernel):
@@ -166,7 +166,7 @@ class NonShrinkingKernel(ShrinkingKernel):
         var = robust_var(x, w)
         values = x[indices]
 
-        return bw_fac, values, var.sqrt()
+        return values, bw_fac * var.sqrt()
 
 
 class LiuWestShrinkage(ShrinkingKernel):
@@ -194,7 +194,7 @@ class LiuWestShrinkage(ShrinkingKernel):
         var = robust_var(x, w, mean)
         values = (x * self._a + (1 - self._a) * mean)[indices]
 
-        return self._bw_fac, values, var.sqrt()
+        return values, self._bw_fac * var.sqrt()
 
 
 class ConstantKernel(ShrinkingKernel):
@@ -216,4 +216,4 @@ class ConstantKernel(ShrinkingKernel):
     def fit(self, x, w, indices):
         values = x[indices]
 
-        return 1.0, values, self._scale
+        return values, self._scale
