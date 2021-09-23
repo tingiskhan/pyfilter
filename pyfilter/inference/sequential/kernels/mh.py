@@ -5,11 +5,18 @@ from ...batch.mcmc.utils import run_pmmh
 
 
 class ParticleMetropolisHastings(BaseKernel):
+    """
+    Implements the Particle Metropolis Hastings kernel.
+    """
+
     def __init__(self, n_steps=1, proposal: BaseProposal = None, **kwargs):
         """
-        Implements a base class for the particle Metropolis Hastings class.
+        Initializes the ``ParticleMetropolisHastings`` class.
 
-        :param n_steps: The number of steps to perform
+        Args:
+            n_steps: The number of successive PMMH steps to perform at each update.
+            proposal: The method of how to generate the proposal distribution.
+            kwargs: See base.
         """
 
         super().__init__(**kwargs)
