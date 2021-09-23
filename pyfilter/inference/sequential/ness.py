@@ -12,22 +12,21 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     Abstract base class for purely online particle algorithms.
     """
 
-    def __init__(self, filter_, particles, kde: Optional[JitterKernel] = None, discrete=False):
+    def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False):
         """
         Initializes the ``BaseOnlineAlgorithm`` class.
 
         Args:
             filter_: See base.
             particles: See base.
-            kde: Optional parameter. The kernel density estimate to use when mutating particles from :math:`t`
-                to :math:`t+1`. If ``None`` defaults to using
-                ``pyfilter.inference.sequential.kernels.NonShrinkingKernel``.
+            kernel: Optional parameter. The jittering kernel to use when mutating particles from :math:`t` to
+                :math:`t+1`. If ``None`` defaults to using ``pyfilter.inference.sequential.kernels.NonShrinkingKernel``.
             discrete: See ``pyfilter.inference.sequential.kernels.OnlineKernel``.
         """
 
         super().__init__(filter_, particles)
 
-        self._kernel = OnlineKernel(kernel=kde or NonShrinkingKernel(), discrete=discrete)
+        self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)
 
         if not isinstance(self._kernel, OnlineKernel):
             raise ValueError(f"Kernel must be of instance {OnlineKernel.__class__.__name__}!")
