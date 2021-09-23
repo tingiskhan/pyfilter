@@ -126,6 +126,9 @@ class JitterKernel(ABC):
             Jittered values.
         """
 
+        if indices.shape[0] != x.shape[0]:
+            raise Exception(f"Shape of ``indices`` is not congruent with ``x``: {indices.shape[0]} != {x.shape[0]}")
+
         mean, scale = self.fit(x, w, indices)
         std = scale.clamp(self._min_std, INFTY)
 
