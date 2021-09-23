@@ -184,7 +184,7 @@ class LiuWestShrinkage(ShrinkingKernel):
 
         Args:
              a: The ``a`` parameter of the shrinkage kernel, controls the amount of shrinkage applied to the mean of
-                the distribution. Defined in (0, 1). The closer to 1 it is, the less shrinkage is applied.
+                the distribution. Defined on (0, 1). The closer to 1 it is, the less shrinkage is applied.
         """
 
         super().__init__()
