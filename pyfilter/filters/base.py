@@ -172,7 +172,8 @@ class BaseFilter(Module, ABC):
               kwargs: Any filter specific kwargs.
 
         Returns:
-            Returns a tuple consisting of (predicted x, predicted y).
+            Returns a tuple consisting of ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
+            ``(steps, [additional shapes])``.
         """
 
         raise NotImplementedError()
