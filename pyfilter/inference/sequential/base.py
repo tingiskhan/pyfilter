@@ -42,7 +42,7 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
         except Exception as e:
             raise e
         finally:
-            logging.close()
+            logging.teardown()
 
 
 class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):

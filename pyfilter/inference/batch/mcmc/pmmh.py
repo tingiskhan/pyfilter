@@ -45,4 +45,4 @@ class PMMH(BatchFilterAlgorithm):
         except Exception as e:
             raise e
         finally:
-            logging.close()
+            logging.teardown()

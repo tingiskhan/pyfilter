@@ -46,9 +46,9 @@ class TQDMLossVisualiser(TQDMWrapper):
 
     def do_log(self, iteration, state):
         self._run_avg_loss = self._smoothing * self._run_avg_loss + (1 - self._smoothing) * state.loss
-        self._tqdm.set_description(self._desc_format.format(alg=self._alg, loss=self._run_avg_loss))
+        self._tqdm_bar.set_description(self._desc_format.format(alg=self._alg, loss=self._run_avg_loss))
 
-        self._tqdm.update(1)
+        self._tqdm_bar.update(1)
 
 
 class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
@@ -103,4 +103,4 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         except Exception as e:
             raise e
         finally:
-            logging.close()
+            logging.teardown()
