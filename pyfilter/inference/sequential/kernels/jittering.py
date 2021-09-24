@@ -56,7 +56,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> t
     Args:
         x: The samples to calculate the variance for.
         w: The normalized weights associated with ``x``.
-        mean: Optional parameter. If you've already caluclated the mean outside of the function, you may pass that value
+        mean: Optional parameter. If you've already calculated the mean outside of the function, you may pass that value
             to avoid wasting computational resources.
     """
 
