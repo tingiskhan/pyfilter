@@ -47,6 +47,10 @@ class BaseAlgorithm(Module, ABC):
             steps: The number of steps into the future to predict the timeseries.
             state: The current state of the algorithm.
             kwargs: Any algorithm specific kwargs.
+
+        Returns:
+            Returns the tuple ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
+            ``(steps, [additional shapes])``.
         """
 
         raise NotImplementedError()
@@ -58,7 +62,7 @@ class BaseAlgorithm(Module, ABC):
 class BaseFilterAlgorithm(BaseAlgorithm, ABC):
     """
     Abstract base class for algorithms utilizing filters for building an approximation of the log likelihood,
-    :math:`\log \: \hat{p}(y_{1:t})`, rather than the excat likelihood.
+    :math:`\log \: \hat{p}(y_{1:t})`, rather than the exact likelihood.
     """
 
     def __init__(self, filter_: BaseFilter):
