@@ -7,7 +7,7 @@ from abc import ABC
 from functools import lru_cache
 from .state import NewState
 from ..distributions import DistributionWrapper
-from ..typing import ShapeLike
+from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
 from ..mixins import AllowPriorMixin
 from ..mixins.register_parameter_prior import RegisterParameterAndPriorMixin
@@ -18,7 +18,10 @@ T = TypeVar("T")
 
 class StochasticProcess(Module, ABC):
     """
-    Defines the base class for stochastic processes.
+    Abstract base class for stochastic processes. By "stochastic process" we mean a sequence of random variables,
+    :math:`\{X_t}_{t \in T}`, defined on a common probability space. Derived classes should override the
+    ``.build_distribution(...)`` method, which builds the distribution of :math:`X_{t+1}` given
+    :math:`\{X_j\}_{j \leq t}`.
     """
 
     def __init__(
@@ -27,6 +30,21 @@ class StochasticProcess(Module, ABC):
         initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
         num_steps: int = 1,
     ):
+        """
+        Initializes the ``StochasticProcess`` class.
+
+        Args:
+            initial_dist: The initial distribution of the process. Corresponds to a
+                ``pyfilter.distributions.DistributionWrapper`` rather than a ``pytorch`` distribution as we require
+                being able to move the distribution between devices.
+            initial_transform: Optional parameter allowing for re-parameterizing the initial distribution with
+                parameters of the ``StochasticProcess`` object. One example is the Ornstein-Uhlenbeck process, where
+                the initial distribution is usually defined as the stationary process of the distribution, which in turn
+                is defined by the three parameters governing the process.
+            num_steps: Optional parameter allowing to skip time steps when sampling. E.g. if we set ``num_steps`` to 5,
+                we only return every fifth sample when propagating the process.
+        """
+
         super().__init__()
         self._initial_dist = initial_dist
         self._init_transform = initial_transform
@@ -36,7 +54,8 @@ class StochasticProcess(Module, ABC):
     @lru_cache(maxsize=None)
     def n_dim(self) -> int:
         """
-        Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc - just like torch.
+        Returns the dimension of the process. If it's univariate it returns a 0, 1 for a vector etc, just like
+        ``pytorch``.
         """
 
         return len(self.initial_dist.event_shape)
@@ -53,6 +72,10 @@ class StochasticProcess(Module, ABC):
 
     @property
     def initial_dist(self) -> Distribution:
+        """
+        Returns the initial distribution and any eventual re-parameterization given by ``._init_transform``.
+        """
+
         dist = self._initial_dist()
         if self._init_transform is not None:
             dist = self._init_transform(self, dist)
@@ -62,6 +85,12 @@ class StochasticProcess(Module, ABC):
     def initial_sample(self, shape: ShapeLike = None) -> NewState:
         """
         Samples a state from the initial distribution.
+
+        Args:
+            shape: The shape to sample.
+
+        Returns:
+            Returns an initial sample of the process wrapped in a ``NewState`` object.
         """
 
         dist = self.initial_dist
@@ -70,11 +99,16 @@ class StochasticProcess(Module, ABC):
 
     def build_density(self, x: NewState) -> Distribution:
         """
-        Method for defining the density used in `propagate`. Differs whether it's an observable or hidden process. If
-        it's an observable process this method corresponds to the observation density, whereas for a hidden process it
-        corresponds to the transition density.
+        Method to be overridden by derived classes. Defines how to construct the transition density to :math:`X_{t+1}`
+        given the state at :math:`t`, i.e. this method corresponds to building the density:
+            .. math::
+                x_{t+1} \sim p \\right ( \cdot \mid \{x_j\}_{j \leq t} \left ).
 
-        :param x: The current or previous state of the hidden process, depending on whether self is observable or hidden
+        Args:
+            x: The previous state of the process.
+
+        Returns:
+            Returns the density of the state at :math:`t+1`.
         """
 
         raise NotImplementedError()
@@ -87,16 +121,33 @@ class StochasticProcess(Module, ABC):
         return x
 
     def propagate(self, x: NewState, time_increment=1.0) -> NewState:
+        """
+        Propagates the process from a previous state to a new state. Wraps around the ``__call__`` method of
+        ``pytorch.nn.Module`` to allow registering forward hooks etc.
+
+        Args:
+            x: The previous state of the process.
+            time_increment: The amount of time steps to increment the time index with.
+
+        Returns:
+            The new state of the process.
+        """
+
         return self.__call__(x, time_increment=time_increment)
 
     def sample_path(self, steps: int, samples: ShapeLike = None, x_s: NewState = None) -> torch.Tensor:
         """
-        Samples a trajectory from the model.
+        Samples a trajectory from the stochastic process, i.e. samples the collection :math:`\{X_j\}_{j \leq T}`, where
+        :math:`T` corresponds to ``steps``.
 
-        :param steps: The number of steps
-        :param samples: Number of sample paths
-        :param x_s: The start value for the latent process
-        :return: An array of sampled values
+        Args:
+            steps: The number of steps to sample.
+            samples: Optional parameter, corresponds to the batch size to sample.
+            x_s: Optional parameter, whether to use a pre-defined initial state or sample a new one. If ``None`` samples
+                an initial state, else uses ``x_s``.
+
+        Returns:
+            Returns a tensor of shape ``(steps, [samples], [.n_dim])``.
         """
 
         x_s = self.initial_sample(samples) if x_s is None else x_s
@@ -107,7 +158,7 @@ class StochasticProcess(Module, ABC):
 
         return torch.stack(tuple(r.values for r in res), dim=0)
 
-    def copy(self):
+    def copy(self) -> "StochasticProcess":
         """
         Returns a deep copy of the object.
         """
@@ -116,11 +167,23 @@ class StochasticProcess(Module, ABC):
 
     def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None, time_increment=1.0) -> NewState:
         """
-        Propagate the process conditional on both state and draws from incremental distribution.
+        Propagate the process conditional on both state and draws from an incremental distribution. This method assumes
+        that we may perform the following parameterization:
+            .. math::
+                X_{t+1} = H(t, \{X_j\}, W_t},
 
-        :param x: The current or previous state, depending on whether it's a hidden or observable process
-        :param u: Draws from distribution
-        :param parameters: Whether to override the parameters that go into the functions with some other values
+        where :math:`H: \: T \\times \mathcal{X}^t \\times \mathcal{W} \\rightarrow \mathcal{X}`, where :math:`W_t`
+        are samples drawn from the incremental distribution.
+
+        This method is mainly intended to be used filters that either require sigma points (see
+        ``pyfilter.filters.kalman.UKF``), or SQMC filters (currently not implemented).
+
+        Args:
+            x: See ``.propagate(...)``
+            u: The samples from the incremental distribution.
+            parameters: Optional parameters, when performing the re-parameterization we sometimes require the parameters
+                of ``self`` to be of another dimension (e.g. ``UKF``). This parameter allows that.
+            time_increment: See ``.propagate(...)``.
         """
 
         raise NotImplementedError()
@@ -128,17 +191,34 @@ class StochasticProcess(Module, ABC):
 
 class StructuralStochasticProcess(AllowPriorMixin, RegisterParameterAndPriorMixin, StochasticProcess, ABC):
     """
-    Implements a stochastic process that has functional parameters, i.e. dynamics where the parameters directly
-    influence the distribution.
+    While ``StochasticProcess`` allows for any type of parameterization of ``.build_density(...)`` this derived class
+    implements the special case of "classical" timeseries modelling. I.e. in which there is an analytical expression for
+    the density of the next state, where the parameters comprise of the previous state and any parameters governing the
+    process. An example would be the auto regressive process.
     """
 
-    def __init__(self, parameters, **kwargs):
+    def __init__(self, parameters: Tuple[ArrayType, ...], **kwargs):
+        """
+        Initializes the ``StructuralStochasticProcess`` class.
+
+        Args:
+            parameters: The parameters of the analytical function, excluding the state.
+            kwargs: See base.
+        """
+
         super().__init__(**kwargs)
 
         for i, p in enumerate(parameters):
             self._register_parameter_or_prior(f"parameter_{i}", p)
 
     def functional_parameters(self, f: Callable[[torch.Tensor], torch.Tensor] = None) -> Tuple[Parameter, ...]:
+        """
+        Returns the functional parameters of the process, i.e. the input parameter ``parameters`` of ``.__init__(...)``.
+
+        Args:
+            f: Optional parameter, whether to apply some sort of transformation to the parameters prior to returning.
+        """
+
         res = dict()
         res.update(self._parameters)
         res.update(self._buffers)
