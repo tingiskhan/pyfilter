@@ -73,7 +73,7 @@ class StochasticProcess(Module, ABC):
     @property
     def initial_dist(self) -> Distribution:
         """
-        Returns the initial distribution and any eventual re-parameterization given by ``._init_transform``.
+        Returns the initial distribution and any re-parameterization given by ``._init_transform``.
         """
 
         dist = self._initial_dist()
@@ -87,7 +87,7 @@ class StochasticProcess(Module, ABC):
         Samples a state from the initial distribution.
 
         Args:
-            shape: The shape to sample.
+            shape: Optional parameter, the batch shape to use.
 
         Returns:
             Returns an initial sample of the process wrapped in a ``NewState`` object.
@@ -127,7 +127,7 @@ class StochasticProcess(Module, ABC):
 
         Args:
             x: The previous state of the process.
-            time_increment: The amount of time steps to increment the time index with.
+            time_increment: Optional parameter, the amount of time steps to increment the time index with.
 
         Returns:
             The new state of the process.
@@ -181,7 +181,7 @@ class StochasticProcess(Module, ABC):
         Args:
             x: See ``.propagate(...)``
             u: The samples from the incremental distribution.
-            parameters: Optional parameters, when performing the re-parameterization we sometimes require the parameters
+            parameters: Optional parameter, when performing the re-parameterization we sometimes require the parameters
                 of ``self`` to be of another dimension (e.g. ``UKF``). This parameter allows that.
             time_increment: See ``.propagate(...)``.
         """
