@@ -37,7 +37,7 @@ class Prior(DistributionBuilderMixin, Module):
 
     def __init__(self, distribution: DistributionOrBuilder, **parameters: HyperParameters):
         """
-        Initializes the prior class.
+        Initializes the ``Prior`` class.
 
         Args:
             distribution: The distribution of the prior. Can be either a type, or a callable that takes as input kwargs

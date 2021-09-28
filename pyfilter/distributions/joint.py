@@ -27,7 +27,7 @@ class JointDistribution(Distribution):
 
     def __init__(self, *distributions: Distribution, indices: Sequence[Union[int, slice]] = None, **kwargs):
         """
-        Initializes the joint distribution object.
+        Initializes the ``JointDistribution`` class.
 
         Args:
             distributions: Iterable of ``pytorch.distributions.Distribution`` objects.
