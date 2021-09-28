@@ -14,10 +14,24 @@ from ..constants import EPS
 class OneStepEulerMaruyma(AffineProcess):
     """
     Implements a one-step Euler-Maruyama model, similar to PyMC3. I.e. where we perform one iteration of the
-    following recursion: dX[t] = a(X[t-1]) * dt + b(X[t-1]) * dW[t]
+    following recursion:
+        .. math::
+            X_{t+1} = X_t + a(X_t) \Delta t + b(X_t) \cdot \Delta W_t
     """
 
     def __init__(self, funcs, parameters, initial_dist, increment_dist, dt: float, **kwargs):
+        """
+        Initializes the ``OneStepEulerMaruyma`` class.
+
+        Args:
+             funcs: See base.
+             parameters: See base.
+             initial_dist: See base.
+             increment_dist: See base. However, do not that you need to include the :math:`\Delta t` term yourself in
+                the ``DistributionWrapper`` class.
+             dt: The time delta to use.
+        """
+
         super().__init__(funcs, parameters, initial_dist, increment_dist, **kwargs)
         self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
@@ -29,7 +43,12 @@ class OneStepEulerMaruyma(AffineProcess):
 
 class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
     """
-    Base class for stochastic differential equations.
+    Abstract base class for stochastic differential equations, i.e. stochastic processes where we may express the next
+    state :math:`X_{t+1}` in terms of the following expression:
+        .. math::
+            X_{t+1} = h(X_t, \\theta, \Delta t),
+
+     # TODO.
     """
 
     def __init__(self, parameters, initial_dist: DistributionWrapper, dt: float, **kwargs):
