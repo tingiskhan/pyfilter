@@ -12,7 +12,7 @@ class UKF(BaseKalmanFilter):
 
     def __init__(self, model, utf_kwargs: Dict[str, object] = None, **kwargs):
         """
-        Initializes the UKF.
+        Initializes the ``UKF`` class.
 
         Args:
              model: See base.
