@@ -6,7 +6,6 @@ from .state import VariationalState
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
 from ....timeseries import StateSpaceModel, NewState
-from ....constants import EPS
 
 
 class VariationalBayes(OptimizationBasedAlgorithm):
@@ -22,9 +21,6 @@ class VariationalBayes(OptimizationBasedAlgorithm):
 
         self._is_ssm = isinstance(self._model, StateSpaceModel)
         self._num_steps = None
-
-    def is_converged(self, old_loss, new_loss):
-        return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
 
     def sample_parameter_approximation(self, param_approximation: ParameterMeanField) -> Distribution:
         param_dist = param_approximation.dist()
