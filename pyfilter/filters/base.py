@@ -25,7 +25,7 @@ class BaseFilter(Module, ABC):
         pre_append_callbacks: List[Callable[[TState], None]] = None,
     ):
         """
-        Initializes the filter object.
+        Initializes the ``BaseFilter`` class.
 
         Args:
             model: The state space model to use for filtering.

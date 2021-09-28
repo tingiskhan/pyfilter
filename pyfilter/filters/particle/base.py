@@ -29,7 +29,7 @@ class ParticleFilter(BaseFilter, ABC):
         **kwargs
     ):
         """
-        Initializes the particle filter object.
+        Initializes the ``ParticleFilter`` class.
 
         Args:
             model: See base.

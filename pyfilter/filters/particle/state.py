@@ -12,7 +12,7 @@ class ParticleFilterState(BaseFilterState):
 
     def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
-        Initializes ``ParticleFilterState``.
+        Initializes the ``ParticleFilterState`` class.
 
         Args:
             x: The state particles of the timeseries.
