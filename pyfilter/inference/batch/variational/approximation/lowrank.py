@@ -6,10 +6,17 @@ from .meanfield import StateMeanField
 
 class StateLowRank(StateMeanField):
     """
-    State approximation using low rank matrices.
+    State approximation using low rank matrices as per ``torch.distributions.LowRankMultivariateNormal``.
     """
 
     def __init__(self, rank: int = 2):
+        """
+        Initializes the ``StateLowRank`` class.
+
+        Args:
+            rank: The rank of the matrix to use, see ``torch.distributions.LowRankMultivariateNormal``.
+        """
+
         super().__init__()
         self.w = None
         self._rank = rank
@@ -29,5 +36,5 @@ class StateLowRank(StateMeanField):
 
         return self
 
-    def dist(self):
+    def get_approximation(self):
         return Independent(LowRankMultivariateNormal(self.mean, self.w, self.log_std.exp()), self._dim)
