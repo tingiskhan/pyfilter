@@ -19,7 +19,11 @@ class PMMHState(FilterAlgorithmState):
         """
 
         super().__init__(filter_result)
-        self.samples = TensorTuple(initial_sample)
+        self.tensor_tuples["samples"] = TensorTuple(initial_sample)
+
+    @property
+    def samples(self) -> TensorTuple:
+        return self.tensor_tuples["samples"]
 
     def update_chain(self, sample: torch.Tensor):
         """
