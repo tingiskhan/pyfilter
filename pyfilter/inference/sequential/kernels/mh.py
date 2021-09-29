@@ -26,7 +26,6 @@ class ParticleMetropolisHastings(BaseKernel):
         self.accepted = None
 
     def update(self, filter_, state, y, *args):
-        prop_filter = filter_.copy()
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
         dist = self._proposal.build(state, filter_, y)
@@ -38,7 +37,7 @@ class ParticleMetropolisHastings(BaseKernel):
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
 
         for _ in range(self._n_steps):
-            to_accept = run_pmmh(filter_, state, self._proposal, dist, prop_filter, y, shape, mutate_kernel=False)
+            to_accept = run_pmmh(filter_, state, self._proposal, dist, y, shape, mutate_kernel=False)
             accepted |= to_accept
 
         self.accepted = accepted.float().mean()

@@ -80,7 +80,7 @@ class TQDMLossVisualiser(TQDMWrapper):
         self._run_avg_loss = self._smoothing * self._run_avg_loss + (1 - self._smoothing) * state.loss
         self._tqdm_bar.set_description(self._desc_format.format(alg=self._alg, loss=self._run_avg_loss))
 
-        self._tqdm_bar.update(1)
+        self._tqdm_bar.update_chain(1)
 
 
 class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):

@@ -9,11 +9,25 @@ from ...logging import TQDMWrapper
 
 class PMMH(BatchFilterAlgorithm):
     """
-    Implements the Particle Marginal Metropolis Hastings algorithm.
+    Implements the `Particle Marginal Metropolis Hastings` algorithm found in `Particle Markov chain Monte Carlo
+    methods` by C. Andrieu et al.
     """
 
-    def __init__(self, filter_, iterations: int, num_chains: int = 4, proposal: BaseProposal = None):
-        super().__init__(filter_, iterations)
+    def __init__(self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None):
+        """
+        Initializes the ``PMMH`` class.
+
+        Args:
+             filter_: See base.
+             samples: The number of PMMH samples to draw.
+             num_chains: The number of parallel chains to run. The total number of samples on termination is thus
+                ``samples * num_chains``. Do note that we utilize broadcasting rather than ``for``-loops.
+             proposal: Optional parameter specifying how to construct the proposal density for candidate
+                :math:`\\theta^*` given the previously accepted candidate :math:`i`. If not specified, defaults to
+                ``pyfilter.inference.batch.mcmc.proposals.RandomWalk``.
+        """
+
+        super().__init__(filter_, samples)
         self._num_chains = num_chains
         self._proposal = proposal or RandomWalk()
 
@@ -26,8 +40,6 @@ class PMMH(BatchFilterAlgorithm):
     def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y, **kwargs)
 
-        prop_filter = self._filter.copy()
-
         logging = logging or TQDMWrapper()
 
         try:
@@ -35,9 +47,9 @@ class PMMH(BatchFilterAlgorithm):
             prop_dist = self._proposal.build(state, self._filter, y)
 
             for i in range(self._max_iter):
-                run_pmmh(self._filter, state, self._proposal, prop_dist, prop_filter, y, mutate_kernel=True)
+                run_pmmh(self._filter, state, self._proposal, prop_dist, y, mutate_kernel=True)
 
-                state.update(params_to_tensor(self._filter.ssm, constrained=True))
+                state.update_chain(params_to_tensor(self._filter.ssm, constrained=True))
                 logging.do_log(i, state)
 
             return state
