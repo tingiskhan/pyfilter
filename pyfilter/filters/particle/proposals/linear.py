@@ -8,14 +8,23 @@ from ....utils import construct_diag_from_flat
 
 class LinearGaussianObservations(Proposal):
     """
-    This proposal corresponds to the optimal choice whenever we have that the observation model is given by a linear
-    combination of the states, i.e.:
+    Implements the optimal proposal density whenever we have that both the latent and observation densities are
+    Gaussian, and that the mean of the observation density can be expressed as a linear combination of the latent
+    states. More specifically, we have that
         .. math::
-            Y_t = A \cdot X_t + \epsilon_t,
-    where :math:`A` is a matrix of dimension (observation space, latent space).
+            Y_t = A \cdot X_t + V_t, \n
+            X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) W_{t+1},
+
+    where :math:`A` is a matrix of dimension ``(dimension of observation space, dimension of  latent space)``,
+    :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\\theta` denotes the
+    parameters of the functions :math:`f` and :math:`g`.
     """
 
     def __init__(self):
+        """
+        Initializes the ``LinearGaussianObservations`` class.
+        """
+
         super().__init__()
         self._hidden_is1d = None
         self._observable_is1d = None

@@ -53,7 +53,6 @@ class Proposal(ABC):
 
         Returns:
             The new state together with the associated weights.
-
         """
 
         raise NotImplementedError()
