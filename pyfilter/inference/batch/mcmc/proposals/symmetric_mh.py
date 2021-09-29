@@ -4,10 +4,9 @@ from .base import BaseProposal
 from .....distributions.utils import construct_mvn
 
 
-# TODO: Inherit from other subclass?
 class SymmetricMH(BaseProposal):
     """
-    Builds a symmetric proposal, used in SMC2.
+    Builds a symmetric proposal as defined in the original `SMC2` paper.
     """
 
     def build(self, state, filter_, y):
@@ -16,5 +15,5 @@ class SymmetricMH(BaseProposal):
 
         return construct_mvn(values, weights, scale=1.1)  # Same scale in in particles
 
-    def exchange(self, old, new, indices: torch.Tensor) -> None:
+    def exchange(self, latest, candidate, indices: torch.Tensor) -> None:
         return
