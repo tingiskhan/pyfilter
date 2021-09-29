@@ -13,7 +13,7 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNo
 
     Args:
         x: The samples from which to create the the multivariate normal distribution. Should be of size
-            ``(#batch size, #dimension of space)``.
+            ``(batch size, dimension of space)``.
         w: The weights associated to each point of ``x``, should therefore be of size ``batch size``.
         scale: Applies a scaling to the Cholesky factorized covariance matrix of the distribution.
     """
