@@ -6,9 +6,8 @@ import torch
 class JointDistribution(Distribution):
     """
     Defines an object for combining multiple distributions by assuming independence, i.e. we define:
-
-    .. math::
-        p(x_1, x_2, ..., x_n) = p(x_1) \cdot p(x_2) ... \cdot p(x_n)
+        .. math::
+            p(x_1, x_2, ..., x_n) = p(x_1) \cdot p(x_2) ... \cdot p(x_n)
 
     Example:
         A basic example can be seen below, where we combine a normal and and exponential distribution:
