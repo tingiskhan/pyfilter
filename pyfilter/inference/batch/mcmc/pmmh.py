@@ -23,8 +23,8 @@ class PMMH(BatchFilterAlgorithm):
              num_chains: The number of parallel chains to run. The total number of samples on termination is thus
                 ``samples * num_chains``. Do note that we utilize broadcasting rather than ``for``-loops.
              proposal: Optional parameter specifying how to construct the proposal density for candidate
-                :math:`\\theta^*` given the previously accepted candidate :math:`i`. If not specified, defaults to
-                ``pyfilter.inference.batch.mcmc.proposals.RandomWalk``.
+                :math:`\\theta^*` given the previously accepted candidate :math:`\\theta_i`. If not specified, defaults
+                to ``pyfilter.inference.batch.mcmc.proposals.RandomWalk``.
         """
 
         super().__init__(filter_, samples)
