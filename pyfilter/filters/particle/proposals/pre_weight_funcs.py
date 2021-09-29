@@ -1,7 +1,8 @@
-from typing import Callable
+from typing import Callable, TypeVar
 from ....timeseries import AffineEulerMaruyama, AffineProcess, StochasticProcess, NewState
 
-_RESULT = Callable[[StochasticProcess, NewState], NewState]
+T = TypeVar("T", bound=StochasticProcess)
+_RESULT = Callable[[T, NewState], NewState]
 
 
 def _affine_process(mod: AffineProcess, state: NewState) -> NewState:
@@ -13,7 +14,18 @@ def _affine_euler(mod: AffineEulerMaruyama, state: NewState) -> NewState:
     return mod.propagate_conditional(state, 0.0)
 
 
-def get_pre_weight_func(func, process: StochasticProcess) -> _RESULT:
+def get_pre_weight_func(func: _RESULT, process: StochasticProcess) -> _RESULT:
+    """
+    Gets function for generating a pre-weight for the APF.
+
+    Args:
+        func: Whether to override the choosing by passing your own custom function, else defaults to pre-defined ones.
+        process: The process for which to choose a pre-weighting function for.
+
+    Returns:
+        Returns the function.
+    """
+
     if func is not None:
         return func
 
@@ -23,4 +35,4 @@ def get_pre_weight_func(func, process: StochasticProcess) -> _RESULT:
     if isinstance(process, AffineProcess):
         return _affine_process
 
-    return None
+    raise Exception("You didn't pass a custom function, and couldn't find a suitable pre-defined one!")

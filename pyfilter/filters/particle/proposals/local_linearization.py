@@ -5,9 +5,7 @@ from ....timeseries import AffineProcess
 
 class LocalLinearization(LinearGaussianObservations):
     """
-    A proposal distribution useful for when the mean of the observable distribution is a non-linear function of the
-    underlying state. The proposal linearizes the non-linear function around E[\mu(x_{t-1})] and then uses
-    `LinearGaussianObservations` as a proposal.
+    # TODO.
     """
 
     def __init__(self):
