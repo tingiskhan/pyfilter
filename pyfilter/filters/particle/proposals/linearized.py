@@ -29,7 +29,7 @@ class Linearized(Proposal):
         self._is1d = None
 
     def set_model(self, model):
-        if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
+        if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
 
         self._model = model
