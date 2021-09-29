@@ -59,10 +59,10 @@ class TQDMLossVisualiser(TQDMWrapper):
         Args:
             smoothing: Optional parameter. The smoothing to apply to the rolling loss:
                 .. math::
-                    \\tilde{\\theta_{t+1} = \\alpha \cdot \\tilde{\\theta_t} + (1 - \\alpha) \cdot \\theta_{t+1},
+                    \\tilde{\\theta_{i+1} = \\alpha \cdot \\tilde{\\theta_i} + (1 - \\alpha) \cdot \\theta_{i+1},
 
-                where we have replaced ``smoothing`` with :math:`\alpha` for brevity, and where :math:`\\theta_t`
-                denotes the loss at time :math:`t`.
+                where we have replaced ``smoothing`` with :math:`\alpha` for brevity, and where :math:`\\theta_i`
+                denotes the loss at iteration :math:`i`.
         """
 
         super().__init__()
@@ -109,20 +109,33 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         self._opt_type = optimizer
         self.opt_kwargs = opt_kwargs or dict()
 
-    def is_converged(self, old_loss: torch.Tensor, new_loss: torch.Tensor):
+    def is_converged(self, prev_loss: torch.Tensor, current_loss: torch.Tensor) -> bool:
         """
-        Method for checking, given new and old loss, whether the optimization has converged.
+        Method for checking, given losses at iterations :math:`i-1` and :math:`i`, whether the optimization has
+        converged.
 
         Args:
-            old_loss: The loss at the previous iteration.
-            new_loss:
+            prev_loss: The loss at the previous iteration.
+            current_loss: The loss at the current iteration.
+
+        Returns:
+            ``bool`` indicating whether optimization has converged.
         """
 
-        return ((new_loss - old_loss).abs() < EPS) & (old_loss != new_loss)
+        return ((current_loss - prev_loss).abs() < EPS) & (prev_loss != current_loss)
 
     def loss(self, y: torch.Tensor, state: AlgorithmState) -> torch.Tensor:
         """
-        Method for defining the loss used in determining gradients.
+        Method to be overridden by derived classes. Defines how to calculate loss given the dataset ``y``, and previous
+        state ``state`` of the algorithm.
+
+        Args:
+            y: The dataset to consider when calculating the loss, of shape
+                ``(number of observations, [dimension of observation space])``.
+            state: The previous state of the algorithm.
+
+        Returns:
+            Returns the loss.
         """
 
         raise NotImplementedError()
