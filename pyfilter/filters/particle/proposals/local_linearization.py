@@ -5,7 +5,18 @@ from ....timeseries import AffineProcess
 
 class LocalLinearization(LinearGaussianObservations):
     """
-    # TODO.
+    Given a state space model with dynamics
+        .. math::
+            Y_t = a_\\theta(X_t) + V_t, \n
+            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+
+    where :math:`a_\\theta` is a continuous and differentiable function w.r.t. to :math:`X_t`, and parameterized by
+    :math:`\\theta`, and :math:`V_t \sim \mathcal{N}(0, \sigma)`. This proposal linearizes :math:`a_\\theta` and
+    re-casts the observation dynamics into
+        .. math::
+            Y_t = a_\\theta(\\tilde{X}_t) + \\nabla a_\\theta(\\tilde{X}_t) \cdot (X_t - \\tilde{X}_t) + V_t,
+
+    where we let :math:`\\tilde{x}_t \coloneqq f_\\theta(x_{t-1})`.
     """
 
     def __init__(self):

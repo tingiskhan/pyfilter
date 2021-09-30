@@ -13,11 +13,11 @@ class LinearGaussianObservations(Proposal):
     states. More specifically, we have that
         .. math::
             Y_t = A \cdot X_t + V_t, \n
-            X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) W_{t+1},
+            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
 
     where :math:`A` is a matrix of dimension ``(dimension of observation space, dimension of  latent space)``,
     :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\\theta` denotes the
-    parameters of the functions :math:`f` and :math:`g`.
+    parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
     def __init__(self):
