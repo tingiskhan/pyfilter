@@ -13,7 +13,7 @@ class Linearized(Proposal):
             X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) W_{t+1},
 
     where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`x_t`, and which is
-    continuous and (twice) differentiable w.r.t. :math:`x_t`. This proposal seeks to approximate the optimal proposal
+    continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
     density :math:`p_\\theta(y_t \mid x_t) \cdot p_\\theta(x_t \mid x_{t-1})` by linearizing and approximating it using
     a normal distribution.
     """
