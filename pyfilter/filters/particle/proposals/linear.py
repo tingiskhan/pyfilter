@@ -67,7 +67,7 @@ class LinearGaussianObservations(Proposal):
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov), validate_args=False)
 
-    def get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
+    def _get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
         return params[0], None
 
     def sample_and_weight(self, y, x):
@@ -80,7 +80,7 @@ class LinearGaussianObservations(Proposal):
         params = self._model.observable.functional_parameters()
 
         new_state.values = loc
-        c, offset = self.get_constant_and_offset(params, new_state)
+        c, offset = self._get_constant_and_offset(params, new_state)
 
         _, o_scale = self._model.observable.mean_scale(new_state)
         o_var_inv = 1 / o_scale ** 2
@@ -102,7 +102,7 @@ class LinearGaussianObservations(Proposal):
         h_var = h_scale ** 2
 
         params = self._model.observable.functional_parameters()
-        c, offset = self.get_constant_and_offset(params, new_state)
+        c, offset = self._get_constant_and_offset(params, new_state)
 
         if offset is not None:
             o_loc = offset

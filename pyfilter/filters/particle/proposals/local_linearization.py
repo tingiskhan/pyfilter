@@ -20,6 +20,10 @@ class LocalLinearization(LinearGaussianObservations):
     """
 
     def __init__(self):
+        """
+        Initializes the ``LocalLinearization`` class.
+        """
+
         super().__init__()
 
         self._hidden_is1d = None
@@ -40,7 +44,7 @@ class LocalLinearization(LinearGaussianObservations):
         return self
 
     # TODO: Fix
-    def get_constant_and_offset(self, params, x):
+    def _get_constant_and_offset(self, params, x):
         x.values.requires_grad_(True)
 
         loc, _ = self._model.observable.mean_scale(x)
