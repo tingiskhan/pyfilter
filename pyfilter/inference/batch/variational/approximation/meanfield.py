@@ -9,7 +9,9 @@ from ....utils import priors_from_model
 class StateMeanField(BaseApproximation):
     """
     Mean field approximation for states. Assumes that the state distributions can be approximated using independent
-    normal distributions parameterized using a mean and scale.
+    normal distributions parameterized using a mean and scale, i.e. in which we approximate the state distribution by
+        .. math::
+            p(x_0, x_1, \dots, x_n) = \prod_{i=0}^n \mathcal{N}(x_i \mid \mu_i, \sigma_i).
     """
 
     def __init__(self):
@@ -48,7 +50,10 @@ class StateMeanField(BaseApproximation):
 class ParameterMeanField(BaseApproximation):
     """
     Mean field approximation for parameters. Assumes that the `unconstrained` parameter distributions can be
-    approximated using normal distributions parameterized using a mean and scale.
+    approximated using normal distributions parameterized using a mean and scale, i.e.
+        .. math::
+            p(\\theta_1, \dots, \\theta__n) = \prod_{i=1}^n \mathcal{N}(\\theta_i \mid \mu_i, \sigma_i).
+
     """
 
     def __init__(self):
