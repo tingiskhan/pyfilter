@@ -14,8 +14,8 @@ class Linearized(Proposal):
 
     where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`x_t`, and which is
     continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
-    density :math:`p_\\theta(y_t \mid x_t) \cdot p_\\theta(x_t \mid x_{t-1})` by linearizing and approximating it using
-    a normal distribution.
+    density :math:`p_\\theta(y_t \mid x_t) \cdot p_\\theta(x_t \mid x_{t-1})` by linearizing it around
+    :math:`f(x_t, \\theta)` and approximating it using a normal distribution.
     """
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
