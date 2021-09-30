@@ -7,7 +7,15 @@ from .base import Proposal
 
 class Linearized(Proposal):
     """
-    # TODO
+    Given a state space model with dynamics
+        .. math::
+            Y_t \sim p_\\theta(x_t), \n
+            X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) W_{t+1},
+
+    where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`x_t`, and which is
+    continuous and (twice) differentiable w.r.t. :math:`x_t`. This proposal seeks to approximate the optimal proposal
+    density :math:`p_\\theta(y_t \mid x_t) \cdot p_\\theta(x_t \mid x_{t-1})` by linearizing and approximating it using
+    a normal distribution.
     """
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
@@ -30,7 +38,7 @@ class Linearized(Proposal):
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
-            raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
+            raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
 
         self._model = model
         self._is1d = self._model.hidden.n_dim == 0

@@ -69,6 +69,14 @@ class UnscentedFilterTransform(Module):
         self._wm[1:] = self._wc[1:] = 1 / 2 / (self._n_dim + lamda)
 
     def initialize(self, shape: ShapeLike = None) -> UFTCorrectionResult:
+        """
+        Initializes the ``UnscentedFilterTransform`` class by creating a state object.
+
+        Args:
+            shape: Optional parameter for whenever we need to perform transforms in parallel. Used whenever
+                ``pyfilter.filters.kalman.UKF`` has more than ``None`` parallel filters.
+        """
+
         shape = size_getter(shape)
         self._view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
@@ -123,6 +131,17 @@ class UnscentedFilterTransform(Module):
         yc: torch.Tensor = None,
         y_state: NewState = None,
     ) -> UFTCorrectionResult:
+        """
+        Creates a new state given the latest estimate of the means and covariances together with the previous correction
+        state object.
+
+        Args:
+            xm: The estimated mean of the latent process.
+            xc: The estimate covariance of the latent process.
+            x_state: The
+
+        """
+
         mean = prev_corr.x.dist.mean.clone()
         cov = prev_corr.x.dist.covariance_matrix.clone()
 
