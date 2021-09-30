@@ -9,7 +9,7 @@ class Linearized(Proposal):
     """
     Given a state space model with dynamics
         .. math::
-            Y_t \sim p_\\theta(x_t), \n
+            Y_t \sim p_\\theta(y_t \mid X_t), \n
             X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) W_{t+1},
 
     where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`x_t`, and which is
