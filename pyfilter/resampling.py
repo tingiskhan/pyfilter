@@ -34,7 +34,7 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     return res.squeeze(0) if is_1d else res
 
 
-def multinomial(w: torch.Tensor, normalized=False):
+def multinomial(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs multinomial sampling.
 
@@ -46,7 +46,7 @@ def multinomial(w: torch.Tensor, normalized=False):
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
 
 
-def residual(w: torch.Tensor, normalized=False):
+def residual(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
