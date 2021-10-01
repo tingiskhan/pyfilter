@@ -7,19 +7,19 @@ from ..distributions import DistributionWrapper
 from ..typing import ArrayType
 
 
-def f_0d(x, a, scale):
+def _f_0d(x, a, scale):
     return a * x.values
 
 
-def f_1d(x, a, scale):
-    return f_2d(x, a.unsqueeze(-2), scale).squeeze(-1)
+def _f_1d(x, a, scale):
+    return _f_2d(x, a.unsqueeze(-2), scale).squeeze(-1)
 
 
-def f_2d(x, a, scale):
+def _f_2d(x, a, scale):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
-def g(x, a, *scale):
+def _g(x, a, *scale):
     return scale[-1] if len(scale) == 1 else scale
 
 
@@ -52,13 +52,13 @@ class LinearObservations(StateSpaceModel):
             raise ValueError("The distribution is not of correct shape!")
 
         if not is_1d:
-            f = f_2d
+            f = _f_2d
         elif is_1d and hidden.n_dim > 0:
-            f = f_1d
+            f = _f_1d
         else:
-            f = f_0d
+            f = _f_0d
 
-        observable = AffineObservations((f, g), (a, scale), base_dist)
+        observable = AffineObservations((f, _g), (a, scale), base_dist)
 
         super().__init__(hidden, observable)
 
