@@ -7,10 +7,22 @@ from .stochasticprocess import StochasticProcess
 
 class StateSpaceModel(Module):
     """
-    Combines a hidden and observable processes to constitute a state space model.
+    Class representing a state space model, i.e. a dynamical system given by the pair stochastic processes
+    :math:`\{X_t\}` and :math:`\{Y_t\}`, where :math:`X_t` is independent from :math:`Y_t`, and :math:`Y_t`
+    conditionally indpendent given :math:`X_t`. See more `here`_.
+
+    .. _`here`: https://en.wikipedia.org/wiki/State-space_representation
     """
 
     def __init__(self, hidden: StochasticProcess, observable: StochasticProcess):
+        """
+        Initializes the ``StateSpaceModel`` class.
+
+        Args:
+            hidden: The hidden process.
+            observable: The observable process.
+        """
+
         super().__init__()
         self.hidden = hidden
         self.observable = observable
@@ -31,19 +43,24 @@ class StateSpaceModel(Module):
 
         return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
 
-    def exchange(self, indices: torch.Tensor, new_model: "StateSpaceModel"):
+    def exchange(self, indices: torch.Tensor, other: "StateSpaceModel") -> "StateSpaceModel":
         """
-        Exchanges the parameters of `self` with `newmodel` at indices.
+        Exchanges the parameters of ``self`` with ``other`` at ``indices``.
 
-        :param indices: The indices to exchange
-        :param new_model: The model which to exchange with
+        Args:
+            indices: The indices at which exchange parameters.
+            other: The other model to exchange parameters with.
         """
 
-        for self_proc, new_proc in [(self.hidden, new_model.hidden), (self.observable, new_model.observable)]:
+        for self_proc, new_proc in [(self.hidden, other.hidden), (self.observable, other.observable)]:
             for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
                 self_param[indices] = new_param[indices]
 
         return self
 
-    def copy(self):
+    def copy(self) -> "StateSpaceModel":
+        """
+        Creates a deep copy of ``self``.
+        """
+
         return deepcopy(self)
