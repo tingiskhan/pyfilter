@@ -7,7 +7,7 @@ from .diffusion import (
     AffineEulerMaruyama,
     OneStepEulerMaruyma,
     Euler,
-    EulerMaruyama,
+    DiscretizedStochasticDifferentialEquation,
     RungeKutta,
     StochasticDifferentialEquation,
 )
@@ -29,7 +29,7 @@ __all__ = [
     "models",
     "NewState",
     "Euler",
-    "EulerMaruyama",
+    "DiscretizedStochasticDifferentialEquation",
     "RungeKutta",
     "StochasticDifferentialEquation",
     "JointState",
