@@ -8,7 +8,7 @@ from .result import UFTCorrectionResult, UFTPredictionResult
 from ....utils import construct_diag_from_flat, size_getter
 from ....typing import ShapeLike
 from ....timeseries import StateSpaceModel, NewState
-from ....parameter import ExtendedParameter
+from ....parameter import PriorBoundParameter
 
 
 class UnscentedFilterTransform(Module):
@@ -118,7 +118,7 @@ class UnscentedFilterTransform(Module):
 
     def _get_params_as_view(self, module) -> Tuple[torch.Tensor, ...]:
         return module.functional_parameters(
-            f=lambda p: p.view(*self._view_shape, *p.shape[1:]) if isinstance(p, ExtendedParameter) else p
+            f=lambda p: p.view(*self._view_shape, *p.shape[1:]) if isinstance(p, PriorBoundParameter) else p
         )
 
     def update_state(

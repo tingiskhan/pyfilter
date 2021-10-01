@@ -1,6 +1,6 @@
 import torch
 from typing import Iterable, Tuple
-from ..parameter import ExtendedParameter
+from ..parameter import PriorBoundParameter
 
 
 PRIOR_PREFIX = "prior__"
@@ -8,8 +8,8 @@ MODULE_SEPARATOR = "."
 
 
 def _parameter_recursion(
-    obj: "PriorMixin", parameter: ExtendedParameter, name: str
-) -> Tuple[ExtendedParameter, "DistributionWrapper"]:
+    obj: "PriorMixin", parameter: PriorBoundParameter, name: str
+) -> Tuple[PriorBoundParameter, "DistributionWrapper"]:
     if MODULE_SEPARATOR not in name:
         return parameter, obj._modules[f"{PRIOR_PREFIX}{name}"]
 
@@ -25,9 +25,9 @@ class AllowPriorMixin(object):
     def register_prior(self, name, prior):
         prior_name = f"{PRIOR_PREFIX}{name}"
         self.add_module(prior_name, prior)
-        self.register_parameter(name, ExtendedParameter(prior().sample(), requires_grad=False))
+        self.register_parameter(name, PriorBoundParameter(prior().sample(), requires_grad=False))
 
-    def parameters_and_priors(self) -> Iterable[Tuple[ExtendedParameter, "DistributionWrapper"]]:
+    def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "DistributionWrapper"]]:
         for n, p in self.named_parameters():
             yield _parameter_recursion(self, p, n)
 

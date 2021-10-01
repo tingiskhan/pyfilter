@@ -2,13 +2,13 @@ import torch
 from typing import Tuple, Union
 from ..timeseries import StateSpaceModel, StochasticProcess
 from ..distributions import Prior
-from ..parameter import ExtendedParameter
+from ..parameter import PriorBoundParameter
 
 
 Process = Union[StochasticProcess, StateSpaceModel]
 
 
-def parameters_and_priors_from_model(model: Process) -> Tuple[Tuple[ExtendedParameter, Prior], ...]:
+def parameters_and_priors_from_model(model: Process) -> Tuple[Tuple[PriorBoundParameter, Prior], ...]:
     """
     Gets the parameters and priors for a given model.
 
