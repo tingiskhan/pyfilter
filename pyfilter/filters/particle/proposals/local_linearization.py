@@ -17,6 +17,9 @@ class LocalLinearization(LinearGaussianObservations):
             Y_t = a_\\theta(\\tilde{X}_t) + \\nabla a_\\theta(\\tilde{X}_t) \cdot (X_t - \\tilde{X}_t) + V_t,
 
     where we let :math:`\\tilde{x}_t \coloneqq f_\\theta(x_{t-1})`.
+
+    .. warning::
+        Please note that this currently only works for observation models where we have one variable.
     """
 
     def __init__(self):
