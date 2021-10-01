@@ -8,12 +8,22 @@ from ..state import BaseState
 # TODO: Rename to TimeseriesState/ProcessState
 class NewState(BaseState):
     """
-    The state object for timeseries.
+    State object for ``StochasticProcess``.
     """
 
     def __init__(
         self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None
     ):
+        """
+        Initializes the ``NewState`` class.
+
+        Args:
+            time_index: The time index of the state.
+            distribution: Optional parameter, the distribution of the state at ``time_index``.
+            values: Optional parameter, the values of the state at ``time_index``. If ``None`` and passing
+                ``distribution`` values will be sampled from ``distribution`` when accessing ``.values`` attribute.
+        """
+
         super().__init__()
 
         if distribution is None and values is None:
@@ -25,6 +35,10 @@ class NewState(BaseState):
 
     @property
     def values(self) -> torch.Tensor:
+        """
+        The values of the state.
+        """
+
         if self._values is not None:
             return self._values
 
@@ -37,16 +51,42 @@ class NewState(BaseState):
 
     @property
     def shape(self):
+        """
+        The shape of ``.values``.
+        """
+
         return self.values.shape
 
     @property
     def device(self):
+        """
+        The device of ``.values``.
+        """
+
         return self.values.device
 
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return NewState(self.time_index, dist, values)
+    def copy(self, dist: Distribution = None, values: torch.Tensor = None) -> "NewState":
+        """
+        Returns a new instance of ``NewState`` with specified ``dist`` and ``values`` but with ``time_index`` of
+        current instance.
+
+        Args:
+            dist: See ``__init__``.
+            values: See ``__init__``.
+        """
+
+        return self.propagate_from(dist, values, time_increment=0.0)
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
+        """
+        Returns a new instance of ``NewState`` with ``dist`` and ``values``, and ``time_index`` given by
+        ``.time_index + time_increment``.
+
+        Args:
+            dist: See ``__init__``.
+            values: See ``__init__``.
+        """
+
         return NewState(self.time_index + time_increment, dist, values)
 
 
