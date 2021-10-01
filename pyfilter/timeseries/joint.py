@@ -8,10 +8,32 @@ from ..distributions import JointDistribution, DistributionWrapper
 
 class JointStochasticProcess(StochasticProcess):
     """
-    Implements an object for combining multiple series into one by assuming independence.
+    A stochastic process comprising multiple separate stochastic processes by assuming independence between them. That
+    is, given :math:`n` stochastic processes :math:`\{X^i_t\}, i = 1, \dots, n\:`
+        .. math::
+            p(x^1_{t+1}, \dots, x^n_{t+1} \mid x^1_t, \dots, x^n_t) = \prod^n_{i=1} p(x^i_{t+1} \mid x^i_t)
+
+    Example:
+        In this example we'll construct a joint process of a random walk and an Ornstein-Uhlenbeck process.
+            >>> from pyfilter.timeseries import models as m, JointStochasticProcess
+            >>>
+            >>> ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, 1, 1.0)
+            >>> rw = m.RandomWalk(0.05)
+            >>>
+            >>> joint = JointStochasticProcess(ou=ou, rw=rw)
+            >>> x = joint.sample_path(1000)
+            >>> x.shape
+            torch.Size([1000, 2])
     """
 
     def __init__(self, **processes: StochasticProcess):
+        """
+        Initializes the ``JointStochasticProcess`` class.
+
+        Args:
+            processes: Key-worded processes, where the process will be registered as a module with key.
+        """
+
         if any(isinstance(p, JointStochasticProcess) for p in processes.values()):
             raise NotImplementedError("Currently does not handle joint of joint!")
 
@@ -39,10 +61,17 @@ class JointStochasticProcess(StochasticProcess):
 
 class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
     """
-    Implements a joint process where all sub processes are of affine nature.
+    Similar to ``JointStochasticProcess`` but with the exception that all processes are of type ``AffineProcess``.
     """
 
     def __init__(self, **processes: AffineProcess):
+        """
+        Initializes the ``AffineJointStochasticProcesses`` class.
+
+        Args:
+            processes: See base.
+        """
+
         if not all(isinstance(p, AffineProcess) for p in processes.values()):
             raise ValueError(f"All processes must be of type '{AffineProcess.__name__}'!")
 
