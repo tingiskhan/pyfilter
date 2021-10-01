@@ -101,7 +101,7 @@ class JointState(NewState):
 
         Args:
             args: See base.
-            indices: TODO.
+            indices: See ``pyfilter.distributions.JointDistribution``.
         """
 
         super().__init__(*args, **kwargs)
@@ -112,7 +112,15 @@ class JointState(NewState):
         self.indices = indices or self.dist.indices
 
     @classmethod
-    def from_states(cls, *states, indices=None):
+    def from_states(cls, *states: NewState, indices: Sequence[Union[int, slice]] = None) -> "JointState":
+        """
+        Given a sequence of ``NewState`` construct a ``JointState`` object.
+
+        Args:
+            states: An iterable of states to combine into an instance of ``JointState``.
+            indices: See ``__init__``.
+        """
+
         return JointState(
             time_index=cls._join_timeindex(*states),
             values=cls._join_values(*states),
