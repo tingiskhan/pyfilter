@@ -24,12 +24,12 @@ class OneStepEulerMaruyma(AffineProcess):
         Initializes the ``OneStepEulerMaruyma`` class.
 
         Args:
-             funcs: See base.
-             parameters: See base.
-             initial_dist: See base.
-             increment_dist: See base. However, do not that you need to include the :math:`\Delta t` term yourself in
-                the ``DistributionWrapper`` class.
-             dt: The time delta to use.
+            funcs: See base.
+            parameters: See base.
+            initial_dist: See base.
+            increment_dist: See base. However, do not that you need to include the :math:`\Delta t` term yourself in
+               the ``DistributionWrapper`` class.
+            dt: The time delta to use.
         """
 
         super().__init__(funcs, parameters, initial_dist, increment_dist, **kwargs)
@@ -120,7 +120,7 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
             dynamics: Tuple of callables that define the drift and diffusion respectively.
             parameters: See base.
             initial_dist: See base.
-            increment_dist: The ``AffineProcess``.
+            increment_dist: See ``AffineProcess``.
             dt: See base.
             kwargs: See base.
         """
