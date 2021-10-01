@@ -1,6 +1,7 @@
 import torch
 from .base import ParticleFilter
-from ...utils import loglikelihood, choose
+from .utils import loglikelihood
+from ...utils import choose
 from .state import ParticleFilterState
 
 
