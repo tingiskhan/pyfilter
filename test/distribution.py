@@ -28,8 +28,8 @@ class DistributionTests(unittest.TestCase):
     def test_JointDistributionMasksAndShape(self):
         joint_distribution = make_joint_distribution()
 
-        self.assertEqual(joint_distribution.masks[0], 0)
-        self.assertEqual(joint_distribution.masks[1], slice(1, 3))
+        self.assertEqual(joint_distribution.indices[0], 0)
+        self.assertEqual(joint_distribution.indices[1], slice(1, 3))
 
         self.assertEqual(joint_distribution.event_shape, torch.Size([3]))
 

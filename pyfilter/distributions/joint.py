@@ -35,8 +35,8 @@ class JointDistribution(Distribution):
             kwargs: Key-worded arguments passed to base class.
         """
 
-        _masks = indices or self.infer_indices(*distributions)
-        event_shape = torch.Size([(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1] + 1)])
+        _indices = indices or self.infer_indices(*distributions)
+        event_shape = torch.Size([(_indices[-1].stop if isinstance(_indices[-1], slice) else _indices[-1] + 1)])
 
         batch_shape = distributions[0].batch_shape
         if any(d.batch_shape != batch_shape for d in distributions):
@@ -48,7 +48,7 @@ class JointDistribution(Distribution):
             raise NotImplementedError(f"Currently cannot handle matrix valued distributions!")
 
         self.distributions = distributions
-        self.masks = _masks
+        self.indices = _indices
 
     def expand(self, batch_shape, _instance=None):
         return JointDistribution(*(d.expand(batch_shape) for d in self.distributions))
@@ -67,7 +67,7 @@ class JointDistribution(Distribution):
 
     def cdf(self, value):
         res = 0.0
-        for d, m in zip(self.distributions, self.masks):
+        for d, m in zip(self.distributions, self.indices):
             res *= d.cdf(value[..., m])
 
         return res
@@ -127,7 +127,7 @@ class JointDistribution(Distribution):
 
     def log_prob(self, value):
         # TODO: Add check for wrong dimensions
-        return sum(d.log_prob(value[..., m]) for d, m in zip(self.distributions, self.masks))
+        return sum(d.log_prob(value[..., m]) for d, m in zip(self.distributions, self.indices))
 
     def rsample(self, sample_shape=torch.Size()):
         res = tuple(
