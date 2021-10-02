@@ -16,10 +16,10 @@ class UFTCorrectionResult(Module):
         Initializes the ``UFTCorrectionResult`` class.
 
         Args:
-             x: The state of the latent process together with the increment and observation density. See original paper
+            x: The state of the latent process together with the increment and observation density. See original paper
                 for more details.
-             state_slice: The slice which selects the state from ``x.values``.
-             y: The state of the observation process.
+            state_slice: The slice which selects the state from ``x.values``.
+            y: The state of the observation process.
         """
 
         super().__init__()
