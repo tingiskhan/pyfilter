@@ -6,7 +6,9 @@ from ....constants import EPS as _EPS
 _COV_FACTOR = 1 / _EPS
 
 
-def propagate_sps(spx: NewState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]) -> NewState:
+def propagate_sps(
+    spx: NewState, spn: torch.Tensor, process: StochasticProcess, temp_params: Tuple[torch.Tensor, ...]
+) -> NewState:
     """
     Propagates sigma points via the process dynamics from :math:`t \\rightarrow t+1`.
 
