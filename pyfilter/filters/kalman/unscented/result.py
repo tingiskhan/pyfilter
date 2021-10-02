@@ -1,8 +1,8 @@
 import torch
 from torch.distributions import MultivariateNormal, Normal
 from torch.nn import Module
-from typing import Union, Tuple
-from .utils import get_meancov
+from typing import Union
+from .utils import get_mean_and_cov
 from ....timeseries import NewState
 
 
@@ -153,7 +153,7 @@ class UFTPredictionResult(Module):
             Returns the tuple ``((latent mean, latent covariance), (observable mean, observable covariance))``.
         """
 
-        x_m, x_c = get_meancov(self.spx.values, mean_weights, covariance_weights)
-        y_m, y_c = get_meancov(self.spy.values, mean_weights, covariance_weights)
+        x_m, x_c = get_mean_and_cov(self.spx.values, mean_weights, covariance_weights)
+        y_m, y_c = get_mean_and_cov(self.spy.values, mean_weights, covariance_weights)
 
         return (x_m, x_c), (y_m, y_c)
