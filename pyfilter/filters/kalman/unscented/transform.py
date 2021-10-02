@@ -138,8 +138,14 @@ class UnscentedFilterTransform(Module):
         Args:
             xm: The estimated mean of the latent process.
             xc: The estimate covariance of the latent process.
-            x_state: The
+            x_state: The latest state of the latent process, contains the sigma points.
+            prev_corr: The previous correction state.
+            ym: The estimated mean of the observation process.
+            yc: THe estimate covariance of the observation process.
+            y_state: The latest state of the observation process, contains the sigma points.
 
+        Returns:
+            A new ``UTFCorrectionResult`` object with updated means and covariances.
         """
 
         mean = prev_corr.x.dist.mean.clone()
@@ -171,6 +177,16 @@ class UnscentedFilterTransform(Module):
         return UFTCorrectionResult(x_state, self._state_slc, y_state)
 
     def predict(self, utf_corr: UFTCorrectionResult) -> UFTPredictionResult:
+        """
+        Given the latest ``UTFCorrectionResult`` do a one-step ahead prediction.
+
+        Args:
+            utf_corr: The latest ``UTFCorrectionResult``.
+
+        Returns:
+            The one-step ahead prediction.
+        """
+
         sps = utf_corr.calculate_sigma_points(self._cov_scale)
 
         hidden_state = utf_corr.x.copy(values=sps[..., self._state_slc])
@@ -183,6 +199,18 @@ class UnscentedFilterTransform(Module):
     def correct(
         self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult
     ) -> UFTCorrectionResult:
+        """
+        Corrects the prediction from ``.predict(...)`` using the latest observation ``y``.
+
+        Args:
+            y: The latest observation.
+            uft_pred: The latest prediction.
+            prev_corr: The previous correction result.
+
+        Returns:
+            The correction result for the latest observation.
+        """
+
         (x_m, x_c), (y_m, y_c) = uft_pred.get_mean_and_covariance(self._wm, self._wc)
 
         if x_m.dim() > 1:
