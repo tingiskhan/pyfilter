@@ -19,8 +19,8 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         Initializes the ``FilterResult`` object.
 
         Args:
-             init_state: The initial state.
-             record_states: Optional parameter for whether to record all, or some of the
+            init_state: The initial state.
+            record_states: Optional parameter for whether to record all, or some of the
                 ``pyfilter.filters.state.BaseFilterState`` objects. Can be either a ``bool``  or an ``int``, if ``int``
                 the ``pyfilter.filters.result.FilterResult`` object will retain ``record_states`` number of states. If
                 ``True`` will retain *all* states, and only the latest if ``False``. Do note that recording all states
