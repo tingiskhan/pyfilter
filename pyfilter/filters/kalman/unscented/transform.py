@@ -180,7 +180,9 @@ class UnscentedFilterTransform(Module):
 
         return UFTPredictionResult(spx, spy)
 
-    def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult) -> UFTCorrectionResult:
+    def correct(
+        self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult
+    ) -> UFTCorrectionResult:
         (x_m, x_c), (y_m, y_c) = uft_pred.get_mean_and_covariance(self._wm, self._wc)
 
         if x_m.dim() > 1:

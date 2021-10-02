@@ -88,9 +88,7 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
     Abstract base class of batch type algorithms where an optimizer is used.
     """
 
-    def __init__(
-        self, model: Process, max_iter, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None
-    ):
+    def __init__(self, model: Process, max_iter, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None):
         """
         Initializes the ``OptimizationBasedAlgorithm`` class.
 

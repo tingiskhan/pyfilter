@@ -15,6 +15,8 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
     if weights is None:
         temp = (importance_weights - (max_w.unsqueeze(-1) if max_w.dim() > 0 else max_w)).exp().mean(-1).log()
     else:
-        temp = (weights * (importance_weights - (max_w.unsqueeze(-1) if max_w.dim() > 0 else max_w)).exp()).sum(-1).log()
+        temp = (
+            (weights * (importance_weights - (max_w.unsqueeze(-1) if max_w.dim() > 0 else max_w)).exp()).sum(-1).log()
+        )
 
     return max_w + temp

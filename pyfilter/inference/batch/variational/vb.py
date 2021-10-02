@@ -57,7 +57,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            y_state = NewState(self._time_indices[1::self._num_steps], values=x_t[:, ::self._num_steps])
+            y_state = NewState(self._time_indices[1 :: self._num_steps], values=x_t[:, :: self._num_steps])
             x_state = NewState(self._time_indices[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)

@@ -156,7 +156,9 @@ class JointState(NewState):
         )
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
-        return JointState(time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices)
+        return JointState(
+            time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices
+        )
 
     def copy(self, dist: Distribution = None, values: torch.Tensor = None):
         return JointState(time_index=self.time_index, distribution=dist, values=values, indices=self.indices)

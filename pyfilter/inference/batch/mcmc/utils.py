@@ -103,7 +103,9 @@ def run_pmmh(
     diff_prior = (eval_prior_log_prob(proposal_filter.ssm, False) - eval_prior_log_prob(filter_.ssm, False)).squeeze()
 
     new_prop_kernel = proposal.build(state.replicate(new_res), proposal_filter, y)
-    diff_prop = new_prop_kernel.log_prob(params_to_tensor(filter_.ssm, constrained=False)) - proposal_kernel.log_prob(rvs)
+    diff_prop = new_prop_kernel.log_prob(params_to_tensor(filter_.ssm, constrained=False)) - proposal_kernel.log_prob(
+        rvs
+    )
 
     log_acc_prob = diff_prop + diff_prior + diff_logl
     accepted: torch.Tensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob

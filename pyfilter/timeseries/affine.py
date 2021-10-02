@@ -8,7 +8,9 @@ from .state import NewState
 from ..typing import ArrayType
 
 
-def _define_transdist(loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: Distribution) -> TransformedDistribution:
+def _define_transdist(
+    loc: torch.Tensor, scale: torch.Tensor, n_dim: int, dist: Distribution
+) -> TransformedDistribution:
     """
     Helper method for defining an affine transition density given the location and scale.
 
