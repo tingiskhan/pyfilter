@@ -42,7 +42,7 @@ class Prior(DistributionBuilderMixin, Module):
         Args:
             distribution: The distribution of the prior. Can be either a type, or a callable that takes as input kwargs
                 corresponding to ``parameters``.
-            parameters: The parameters of the distribution
+            parameters: The parameters of the distribution.
         """
 
         super().__init__()
