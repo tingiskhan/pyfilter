@@ -1,5 +1,5 @@
 from .base import ParticleFilter
-from .utils import loglikelihood
+from .utils import log_likelihood
 from ...utils import choose
 import torch
 from .state import ParticleFilterState
@@ -27,4 +27,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleFilterState(x, w, loglikelihood(weights, old_normalized_w), indices)
+        return ParticleFilterState(x, w, log_likelihood(weights, old_normalized_w), indices)

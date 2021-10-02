@@ -1,6 +1,6 @@
 import torch
 from .base import ParticleFilter
-from .utils import loglikelihood
+from .utils import log_likelihood
 from ...utils import choose
 from .state import ParticleFilterState
 
@@ -31,6 +31,6 @@ class APF(ParticleFilter):
         x, weights = self._proposal.sample_and_weight(y, copied_x)
 
         w = weights - choose(pre_weights, indices)
-        ll = loglikelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
+        ll = log_likelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
 
         return ParticleFilterState(x, w, ll, indices)
