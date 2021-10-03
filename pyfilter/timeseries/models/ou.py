@@ -18,9 +18,9 @@ class OrnsteinUhlenbeck(AffineProcess):
     Implements the solved Ornstein-Uhlenbeck process, i.e. the solution to the SDE
         .. math::
             dX_t = \\kappa (\\gamma - X_t) dt + \\sigma dW_t, \n
-            X_0 \sim \\mathcal{N}(\\gamma, \\frac{\\sigma}{\\sqrt{2\\kappa}},
+            X_0 \\sim \\mathcal{N}(\\gamma, \\frac{\\sigma}{\\sqrt{2\\kappa}},
 
-    where :math:`\\kappa, \\sigma \in \mathbb{R}_+^n`, and :math:`\\gamma \in \mathbb{R}^n`.
+    where :math:`\\kappa, \\sigma \\in \\mathbb{R}_+^n`, and :math:`\\gamma \\in \\mathbb{R}^n`.
     """
 
     def __init__(self, kappa: ArrayType, gamma: ArrayType, sigma: ArrayType, ndim: int = None, dt: float = 1.0, initial_state_mean: ArrayType = None, **kwargs):
