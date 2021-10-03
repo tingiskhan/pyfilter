@@ -21,7 +21,7 @@ def joint_distribution():
 
 
 class TestDistributions(object):
-    def test_PositivePrior(self):
+    def test_prior(self):
         prior = Prior(Exponential, rate=0.1)
         wrapper = DistributionWrapper(StudentT, df=prior)
 
@@ -29,7 +29,7 @@ class TestDistributions(object):
 
         assert isinstance(dist, StudentT) and (dist.df > 0).all()
 
-    def test_DistributionWrapper(self):
+    def test_distribution_wrapper(self):
         wrapper = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         dist = wrapper.build_distribution()
 
@@ -37,13 +37,13 @@ class TestDistributions(object):
 
 
 class TestJointDistribution(object):
-    def test_JointDistributionMasksAndShape(self, joint_distribution):
+    def test_mask(self, joint_distribution):
         assert joint_distribution.indices[0] == 0
         assert joint_distribution.indices[1] == slice(1, 3)
 
         assert joint_distribution.event_shape == torch.Size([3])
 
-    def test_JointDistributionSamples(self, joint_distribution):
+    def test_samples(self, joint_distribution):
         samples = joint_distribution.sample()
 
         assert samples.shape == torch.Size([3])
@@ -53,7 +53,7 @@ class TestJointDistribution(object):
 
         assert more_samples.shape == torch.Size([*more_sample_shape, 3])
 
-    def test_JointDistributionLogProb(self, joint_distribution):
+    def test_log_prob(self, joint_distribution):
         shape = torch.Size([1000, 300])
 
         samples = joint_distribution.sample(shape)
@@ -61,11 +61,11 @@ class TestJointDistribution(object):
 
         assert log_prob.shape == shape
 
-    def test_JointDistributionEntropy(self, joint_distribution):
+    def test_entropy(self, joint_distribution):
         expected = joint_distribution.distributions[0].entropy() + joint_distribution.distributions[1].entropy()
         assert joint_distribution.entropy() == expected
 
-    def test_CheckGradient(self, joint_distribution):
+    def test_gradient(self, joint_distribution):
         samples = joint_distribution.sample()
 
         joint_distribution.distributions[0].rate.requires_grad_(True)
@@ -76,13 +76,13 @@ class TestJointDistribution(object):
         log_prob.backward()
         assert joint_distribution.distributions[0].rate.grad is not None
 
-    def test_CheckExpand(self, joint_distribution):
+    def test_expand(self, joint_distribution):
         new_shape = torch.Size([1000, 10])
         expanded = joint_distribution.expand(new_shape)
 
         assert expanded.batch_shape == new_shape
 
-    def test_TransformJointDistribution(self, joint_distribution):
+    def test_transform(self, joint_distribution):
         transformed = TransformedDistribution(joint_distribution, AffineTransform(0.0, 0.0))
         samples = transformed.sample()
 

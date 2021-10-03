@@ -34,7 +34,7 @@ def weights():
 
 
 class TestResampling(object):
-    def test_SystematicMatrix(self, weights):
+    def test_systematic(self, weights):
         u = torch.rand(weights.shape)
 
         pyfilter_inds = systematic(weights, u=u, normalized=True).numpy()
