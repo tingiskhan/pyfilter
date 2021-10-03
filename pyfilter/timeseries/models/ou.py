@@ -13,13 +13,33 @@ def init_trans(module: "OrnsteinUhlenbeck", dist):
     return TransformedDistribution(dist, AffineTransform(initial_, sigma / (2 * kappa).sqrt()))
 
 
-# TODO: Fix s.t. initial distribution is function of parameters
 class OrnsteinUhlenbeck(AffineProcess):
     """
-    Implements the Ornstein-Uhlenbeck process.
+    Implements the solved Ornstein-Uhlenbeck process, i.e. the solution to the SDE
+        .. math::
+            dX_t = \\kappa (\\gamma - X_t) dt + \\sigma dW_t, \n
+            X_0 \sim \\mathcal{N}(\\gamma, \\frac{\\sigma}{\\sqrt{2\\kappa}},
+
+    where :math:`\\kappa, \\sigma \in \mathbb{R}_+^n`, and :math:`\\gamma \in \mathbb{R}^n`.
     """
 
-    def __init__(self, kappa, gamma, sigma, ndim: int, dt: float, initial_state_mean: ArrayType = None, **kwargs):
+    def __init__(self, kappa: ArrayType, gamma: ArrayType, sigma: ArrayType, ndim: int = None, dt: float = 1.0, initial_state_mean: ArrayType = None, **kwargs):
+        """
+        Initializes the ``OrnsteinUhlenbeck`` class.
+
+        Args:
+            kappa: The reversion parameter.
+            gamma: The mean parameter.
+            sigma: The volatility parameter.
+            ndim: Optional parameter controlling the dimension of the process. Inferred from ``sigma`` if ``None``.
+            dt: Optional, the timestep to use.
+            initial_state_mean: Optional, whether to use another initial mean than ``gamma``.
+            kwargs: See base.
+        """
+
+        if ndim is None:
+            ndim = 1 if isinstance(sigma, float) else sigma.shape[-1]
+
         if ndim > 1:
             dist = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(ndim), scale=torch.ones(ndim)
