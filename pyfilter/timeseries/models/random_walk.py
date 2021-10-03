@@ -30,13 +30,14 @@ class RandomWalk(AffineProcess):
     where :math:`x_0` is the initial mean, defaulting to zero.
     """
 
-    def __init__(self, std: ArrayType, initial_mean: ArrayType = None):
+    def __init__(self, std: ArrayType, initial_mean: ArrayType = None, **kwargs):
         """
         Initializes the ``RandomWalk`` model.
 
         Args:
             std: Corresponds to :math:`\\sigma` in class doc.
             initial_mean: Optional parameter specifying the mean of the initial values. Defaults to zero if ``None``.
+            kwargs: See base.
         """
 
         if isinstance(std, float):
@@ -51,4 +52,4 @@ class RandomWalk(AffineProcess):
                     lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(shape), scale=std
                 )
 
-        super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans)
+        super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans, **kwargs)
