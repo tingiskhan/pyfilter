@@ -25,7 +25,7 @@ class RandomWalk(AffineProcess):
     Defines a Gaussian random walk process, i.e. in which the dynamics are given by
         .. math::
             X_{t+1} \\sim \\mathcal{N}(X_t, \\sigma), \n
-            X_0 \sim \\mathcal{N}(x_0, \\sigma),
+            X_0 \\sim \\mathcal{N}(x_0, \\sigma),
 
     where :math:`x_0` is the initial mean, defaulting to zero.
     """
@@ -49,7 +49,7 @@ class RandomWalk(AffineProcess):
                 normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
             else:
                 normal = DistributionWrapper(
-                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(shape), scale=std
+                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(shape), scale=torch.ones(shape)
                 )
 
         super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans, **kwargs)
