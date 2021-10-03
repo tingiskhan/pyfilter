@@ -7,7 +7,7 @@ from ...distributions import DistributionWrapper
 
 
 def mean(x, a, sigma, _):
-    return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
+    return a.matmul(x.values.unsqueeze(-1)).squeeze(-1)
 
 
 def scale(x, a, sigma, _):
