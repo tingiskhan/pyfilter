@@ -14,6 +14,7 @@ def timeseries_models():
         models.RandomWalk(0.05 * torch.ones(2)),
         models.Verhulst(0.01, 1.0, 0.05, 1.0),
         models.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([1e-3, 1e-2])),
+        models.UCSV(0.01, torch.tensor([0.0, 1.0])),
     )
 
 
