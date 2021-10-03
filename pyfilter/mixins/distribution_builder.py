@@ -21,3 +21,11 @@ class DistributionBuilderMixin(object):
 
     def forward(self) -> Distribution:
         return self.build_distribution()
+
+    @property
+    def shape(self) -> torch.Size:
+        """
+        Returns the event shape of the distribution.
+        """
+
+        return self.build_distribution().event_shape

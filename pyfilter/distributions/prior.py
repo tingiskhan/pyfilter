@@ -53,8 +53,6 @@ class Prior(DistributionBuilderMixin, Module):
         for k, v in parameters.items():
             self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))
 
-        self.shape = self().event_shape
-
     @property
     def bijection(self) -> Transform:
         """
