@@ -35,7 +35,7 @@ class UCSV(AffineProcess):
         .. math::
             L_{t+1} = L_t + V_t W_{t+1}, \n
             \\log{V_{t+1}} = \\log{V_t} + \\sigma_v U_{t+1}, \n
-            L_0, \\log{V_0} \\sim \\mathcal{N}(x^i_0, \\sigma_v), \: i \\in [L, V].
+            L_0, \\log{V_0} \\sim \\mathcal{N}(x^i_0, \\sigma_v), \\: i \\in [L, V].
 
     where :math:`\\sigma_v > 0`.
     """
