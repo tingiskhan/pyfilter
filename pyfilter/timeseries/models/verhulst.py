@@ -22,10 +22,26 @@ def init_transform(module, dist):
 
 class Verhulst(AffineEulerMaruyama):
     """
-    Defines a Verhulst process.
+    Implements a discretized Verhulst SDE with the following dynamics
+        .. math::
+            dX_t = \\kappa (\\gamma - X_t)X_t dt + \\sigma X_t dW_t, \n
+            X_0 \\sim \\left | \\mathcal{N}(x_0, \\frac{\\sigma}{\\sqrt{2\\kappa}} \\right |,
+
+    where :math:`\\kappa, \\gamma, \\sigma > 0`.
     """
 
     def __init__(self, reversion, mean, vol, dt, initial_state_mean: ArrayType = None, **kwargs):
+        """
+        Initializes the ``Verhulst`` class.
+
+        Args:
+            reversion: Corresponds to :math:`\\kappa`.
+            mean: Corresponds to :math:`\\gamma`.
+            vol: Corresponds to :math:`\\sigma`.
+            initial_state_mean: See ``OrnsteinUhlenbeck``.
+            kwargs: See base.
+        """
+
         super().__init__(
             (f, g_),
             (reversion, mean, vol, initial_state_mean),
