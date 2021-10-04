@@ -73,4 +73,3 @@ class TestTimeseries(object):
             x = m.propagate(x)
 
             assert x.time_index == num_steps
-
