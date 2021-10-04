@@ -28,7 +28,8 @@ def custom_models():
         AffineEulerMaruyama((f, g), reversion_params, normal, sde_normal, dt=dt),
         OneStepEulerMaruyma((f, g), reversion_params, normal, sde_normal, dt=dt),
         Euler(lambda *u: f(*u, 0.0), reversion_params[:1], 5.0, dt=dt, tuning_std=1e-2),
-        RungeKutta(lambda *u: f(*u, 0.0), reversion_params[:1], 5.0, dt=dt, tuning_std=1e-2)
+        RungeKutta(lambda *u: f(*u, 0.0), reversion_params[:1], 5.0, dt=dt, tuning_std=1e-2),
+        RungeKutta(lambda *u: f(*u, 0.0), reversion_params[:1], torch.tensor([5.0, 1.0]), dt=dt, tuning_std=1e-2)
     )
 
 @pytest.fixture
