@@ -4,6 +4,7 @@ import torch
 from pyfilter.resampling import systematic
 from pyfilter.utils import normalize
 
+torch.random.manual_seed(123)
 
 def filterpy_systematic_resample(weights, u):
     """
@@ -35,8 +36,6 @@ def weights():
 
 class TestResampling(object):
     def test_systematic(self, weights):
-        torch.random.manual_seed(123)
-
         u = torch.rand(weights.shape)
 
         pyfilter_inds = systematic(weights, u=u, normalized=True).numpy()
