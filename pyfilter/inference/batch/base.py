@@ -1,7 +1,7 @@
 from abc import ABC
 import torch
-from typing import Type, Dict, Any
-from torch.optim import Optimizer, Adam, Adadelta
+from typing import Type, Dict, Any, Sequence
+from torch.optim import Optimizer, Adam
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from ..state import AlgorithmState
 from ..utils import Process
@@ -25,7 +25,14 @@ class BaseBatchAlgorithm(BaseAlgorithm, ABC):
         super(BaseBatchAlgorithm, self).__init__()
         self._max_iter = int(max_iter)
 
-    def initialize(self, y: torch.Tensor, *args, **kwargs):
+    def initialize(self, y: torch.Tensor) -> AlgorithmState:
+        """
+        Initializes the algorithm by returning an ``AlgorithmState``.
+
+        Args:
+            y: The dataset to parse, of shape ``(number of observations, [dimension of observable space])``.
+        """
+
         raise NotImplementedError()
 
 
@@ -80,7 +87,7 @@ class TQDMLossVisualiser(TQDMWrapper):
         self._run_avg_loss = self._smoothing * self._run_avg_loss + (1 - self._smoothing) * state.loss
         self._tqdm_bar.set_description(self._desc_format.format(alg=self._alg, loss=self._run_avg_loss))
 
-        self._tqdm_bar.update_chain(1)
+        self._tqdm_bar.update(1)
 
 
 class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
@@ -105,7 +112,8 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         self._model = model
 
         self._opt_type = optimizer
-        self.opt_kwargs = opt_kwargs or dict()
+        self._opt_kwargs = opt_kwargs or dict()
+        self.optimizer: Optimizer = None
 
     def is_converged(self, prev_loss: torch.Tensor, current_loss: torch.Tensor) -> bool:
         """
@@ -138,9 +146,19 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def fit(self, y: torch.Tensor, logging=None, **kwargs) -> AlgorithmState:
+    def construct_optimizer(self, parameters: Sequence[torch.Tensor]):
+        """
+        Constructs the optimizer to use.
+
+        Args:
+            parameters: The parameters to optimize.
+        """
+
+        self.optimizer = self._opt_type(parameters, **self._opt_kwargs)
+
+    def fit(self, y: torch.Tensor, logging=None) -> AlgorithmState:
         logging = logging or TQDMLossVisualiser()
-        state = self.initialize(y, **kwargs)
+        state = self.initialize(y)
 
         try:
             logging.initialize(self, self._max_iter)
@@ -151,14 +169,14 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
                 elbo = self.loss(y, state)
 
                 elbo.backward()
-                state.optimizer.step()
+                self.optimizer.step()
 
                 state.loss = elbo.detach()
                 logging.do_log(state.iterations, state)
 
                 state.iterations += 1
                 state.converged = self.is_converged(old_loss, state.loss)
-                state.optimizer.zero_grad()
+                self.optimizer.zero_grad()
 
             return state
 

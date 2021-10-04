@@ -13,6 +13,13 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
     Abstract base class for sequential algorithms using filters in order to approximate the log likelihood.
     """
 
+    def initialize(self) -> SequentialAlgorithmState:
+        """
+        Initializes the algorithm by returning an ``SequentialAlgorithmState``.
+        """
+
+        raise NotImplementedError()
+
     def update(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Updates the algorithm and filter state given the latest observation ``y``.

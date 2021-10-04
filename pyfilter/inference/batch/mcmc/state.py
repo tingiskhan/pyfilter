@@ -4,14 +4,14 @@ from ....filters import FilterResult
 from ....utils import TensorTuple
 
 
-class PMMHState(FilterAlgorithmState):
+class PMMHResult(FilterAlgorithmState):
     """
-    State object for PMMH algorithm.
+    Result object for PMMH algorithm.
     """
 
     def __init__(self, initial_sample: torch.Tensor, filter_result: FilterResult):
         """
-        Initializes the ``PMMHState`` class.
+        Initializes the ``PMMHResult`` class.
 
         Args:
             initial_sample: The initial sample of the Markov chain.

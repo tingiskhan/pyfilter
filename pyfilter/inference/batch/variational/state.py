@@ -1,11 +1,9 @@
 import torch
 from ...state import AlgorithmState
-from .approximation import ParameterMeanField, StateMeanField
-from torch.optim import Adadelta as Optimizer
-from typing import Optional
+from .approximation import BaseApproximation
 
 
-class VariationalState(AlgorithmState):
+class VariationalResult(AlgorithmState):
     """
     State class for ``VariationalBayes``.
     """
@@ -15,26 +13,23 @@ class VariationalState(AlgorithmState):
         converged: bool,
         loss: torch.Tensor,
         iterations: int,
-        param_approx: ParameterMeanField,
-        optimizer: Optimizer,
-        state_approx: Optional[StateMeanField] = None,
+        parameter_approximation: BaseApproximation,
+        state_approximation: BaseApproximation = None
     ):
         """
         Initializes the ``VariationalState`` class.
 
         Args:
-             converged: Boolean indicating whether optimizer has converged.
-             loss: The loss at the current iteration.
-             iterations: The number of iterations that we have currently performed.
-             param_approx: The parameter approximation.
-             optimizer: The optimizer used in ``VariationalBayes``.
-             state_approx: Optional parameter, the state approximation.
+            converged: Boolean indicating whether optimizer has converged.
+            loss: The loss at the current iteration.
+            iterations: The number of iterations that we have currently performed.
+            parameter_approximation: The optimized parameter approximation.
+            state_approximation: The optimized parameter approximation.
         """
 
         super().__init__()
         self.converged = converged
         self.loss = loss
         self.iterations = iterations
-        self.optimizer = optimizer
-        self.param_approx = param_approx
-        self.state_approx = state_approx
+        self.parameter_approximation = parameter_approximation
+        self.state_approximation = state_approximation

@@ -15,7 +15,7 @@ class BaseAlgorithm(Module, ABC):
     def __init__(self):
         super().__init__()
 
-    def fit(self, y: torch.Tensor, logging: DefaultLogger = None, **kwargs) -> AlgorithmState:
+    def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
         """
         Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
 
@@ -23,18 +23,6 @@ class BaseAlgorithm(Module, ABC):
             y: The data to consider, should of size ``(number of time steps, [dimension of observed space])``.
             logging: Class inherited from ``DefaultLogger`` to handle logging. E.g. ``VariationalBayes`` logs every
                 iteration of the full dataset, whereas sequential algorithms every data point.
-            kwargs: Any algorithm specific kwargs.
-        """
-
-        raise NotImplementedError()
-
-    def initialize(self, *args, **kwargs) -> AlgorithmState:
-        """
-        Initializes the algorithm by returning an ``AlgorithmState``.
-
-        Args:
-            args: Any arguments required by the derived algorithm.
-            kwargs: Any kwargs required by the derived algorithm.
         """
 
         raise NotImplementedError()

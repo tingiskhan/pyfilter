@@ -1,8 +1,7 @@
 import torch
-from typing import Optional
 from torch.distributions import Distribution
 from .approximation import StateMeanField, ParameterMeanField
-from .state import VariationalState
+from .state import VariationalResult
 from ..base import OptimizationBasedAlgorithm
 from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
 from ....timeseries import StateSpaceModel, NewState
@@ -13,7 +12,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
     Implements the `Variational Bayes` algorithm.
     """
 
-    def __init__(self, model, n_samples=4, max_iter=30e3, **kwargs):
+    def __init__(self, model, parameter_approximation: ParameterMeanField, n_samples=4, max_iter=30e3, state_approximation : StateMeanField = None, **kwargs):
         """
         Initializes the ``VariationalBayes`` class.
 
@@ -21,6 +20,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
              model: See base.
              n_samples: The number of Monte Carlo samples to use when approximating the loss.
              max_iter: See base.
+             parameter_approximation: The type of variational approximation for the parameters to use.
+             state_approximation: The type of variational approximation for the states to use.
              kwargs: See base.
         """
 
@@ -30,6 +31,12 @@ class VariationalBayes(OptimizationBasedAlgorithm):
 
         self._is_ssm = isinstance(self._model, StateSpaceModel)
         self._num_steps = None
+
+        if state_approximation is None and isinstance(self._model, StateSpaceModel):
+            raise Exception(f"You must pass ``state_approx`` if model is of type ``{StateSpaceModel.__class__}``")
+
+        self._param_approx = parameter_approximation
+        self._state_approx = state_approximation
 
     def _construct_and_sample(self, param_approximation: ParameterMeanField) -> Distribution:
         param_dist = param_approximation.get_approximation()
@@ -43,11 +50,11 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         return param_dist
 
     def loss(self, y, state):
-        param_dist = self._construct_and_sample(state.param_approx)
+        param_dist = self._construct_and_sample(self._param_approx)
         entropy = param_dist.entropy()
 
         if self._is_ssm:
-            state_dist = state.state_approx.get_approximation()
+            state_dist = self._state_approx.get_approximation()
             transformed = state_dist.rsample((self._n_samples,))
 
             x_t = transformed[:, 1:]
@@ -79,23 +86,20 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy
         )
 
-    def initialize(self, y, param_approx: ParameterMeanField, state_approx: Optional[StateMeanField] = None):
-        if state_approx is None and isinstance(self._model, StateSpaceModel):
-            raise Exception(f"You must pass ``state_approx`` if model is of type ``{StateSpaceModel.__class__}``")
-
+    def initialize(self, y):
         sample_model(self._model, torch.Size([self._n_samples, 1]))
-        param_approx.initialize(y, self._model)
+        self._param_approx.initialize(y, self._model)
 
-        opt_params = tuple(param_approx.parameters())
+        opt_params = tuple(self._param_approx.parameters())
 
         t_end = y.shape[0]
         self._num_steps = self._model.hidden.num_steps if self._is_ssm else self._model.num_steps
         self._time_indices = torch.arange(0, t_end * self._num_steps)
 
         if self._is_ssm:
-            state_approx.initialize(self._time_indices, self._model)
-            opt_params += tuple(state_approx.parameters())
+            self._state_approx.initialize(self._time_indices, self._model)
+            opt_params += tuple(self._state_approx.parameters())
 
-        optimizer = self._opt_type(opt_params, **self.opt_kwargs)
+        self.construct_optimizer(opt_params)
 
-        return VariationalState(False, float("inf"), 0, param_approx, optimizer, state_approx)
+        return VariationalResult(False, torch.tensor(float("inf")), 0, self._param_approx, self._state_approx)
