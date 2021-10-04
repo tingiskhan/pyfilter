@@ -35,6 +35,12 @@ class TestDistributions(object):
 
         assert (dist.mean == torch.tensor(0.0)) and (dist.variance == torch.tensor(1.0))
 
+    def test_distribution_bad_parameter(self):
+        wrapper = DistributionWrapper(Normal, loc=0.0, scale=-1.0, validate_args=True)
+
+        with pytest.raises(ValueError):
+            dist = wrapper.build_distribution()
+
 
 class TestJointDistribution(object):
     def test_mask(self, joint_distribution):
