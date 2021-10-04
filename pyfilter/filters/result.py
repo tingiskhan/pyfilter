@@ -46,7 +46,7 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
     @property
     def loglikelihood(self) -> torch.Tensor:
         """
-        Returns the current estimate of the total log likelihood, :math:`\log \: p (y_{1:t})`.
+        Returns the current estimate of the total log likelihood, :math:`\\log{p(y_{1:t})}`.
         """
 
         return self._buffers["_loglikelihood"]

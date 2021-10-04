@@ -62,7 +62,7 @@ class BaseAlgorithm(Module, ABC):
 class BaseFilterAlgorithm(BaseAlgorithm, ABC):
     """
     Abstract base class for algorithms utilizing filters for building an approximation of the log likelihood,
-    :math:`\log \: \hat{p}(y_{1:t})`, rather than the exact likelihood.
+    :math:`\\log{\\hat{p}(y_{1:t})}`, rather than the exact likelihood.
     """
 
     def __init__(self, filter_: BaseFilter):

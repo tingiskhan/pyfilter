@@ -9,12 +9,12 @@ class Linearized(Proposal):
     """
     Given a state space model with dynamics
         .. math::
-            Y_t \sim p_\\theta(y_t \mid X_t), \n
+            Y_t \\sim p_\\theta(y_t \\mid X_t), \n
             X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
 
     where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`X_t`, and which is
     continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
-    density :math:`p_\\theta(y_t \mid x_t) \cdot p_\\theta(x_t \mid x_{t-1})` by linearizing it around
+    density :math:`p_\\theta(y_t \\mid x_t) \\cdot p_\\theta(x_t \\mid x_{t-1})` by linearizing it around
     :math:`f_\\theta(x_t)` and approximate it using a normal distribution.
     """
 

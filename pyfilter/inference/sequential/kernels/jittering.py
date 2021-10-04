@@ -10,7 +10,7 @@ def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Te
     """
     Jitters values by the transform:
         .. math::
-            \hat{\\theta} = \\theta + \epsilon, \: \epsilon \sim \mathcal{N}(0, \sigma).
+            \\hat{\\theta} = \\theta + \\epsilon, \\: \\epsilon \\sim \\mathcal{N}(0, \\sigma).
 
     Args:
         values: The values to jitter, i.e. :math:`\\theta`.
@@ -51,7 +51,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> t
     """
     Calculates the scale robustly by defining variance as:
         .. math::
-            V(\\theta) = \{ \min(IQR(\\theta), \sigma(\\theta)) \}^2.
+            V(\\theta) = \\{ \\min(IQR(\\theta), \\sigma(\\theta)) \\}^2.
 
     Args:
         x: The samples to calculate the variance for.

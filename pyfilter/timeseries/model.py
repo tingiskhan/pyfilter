@@ -8,7 +8,7 @@ from .stochasticprocess import StochasticProcess
 class StateSpaceModel(Module):
     """
     Class representing a state space model, i.e. a dynamical system given by the pair stochastic processes
-    :math:`\{X_t\}` and :math:`\{Y_t\}`, where :math:`X_t` is independent from :math:`Y_t`, and :math:`Y_t`
+    :math:`\\{X_t\\}` and :math:`\\{Y_t\\}`, where :math:`X_t` is independent from :math:`Y_t`, and :math:`Y_t`
     conditionally indpendent given :math:`X_t`. See more `here`_.
 
     .. _`here`: https://en.wikipedia.org/wiki/State-space_representation

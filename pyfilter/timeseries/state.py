@@ -85,6 +85,7 @@ class NewState(BaseState):
         Args:
             dist: See ``__init__``.
             values: See ``__init__``.
+            time_increment: Optional, specifies how much to increase ``.time_index`` with for new state.
         """
 
         return NewState(self.time_index + time_increment, dist, values)

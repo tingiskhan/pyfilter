@@ -59,9 +59,9 @@ class TQDMLossVisualiser(TQDMWrapper):
         Args:
             smoothing: Optional parameter. The smoothing to apply to the rolling loss:
                 .. math::
-                    \\tilde{\\theta_{i+1} = \\alpha \cdot \\tilde{\\theta_i} + (1 - \\alpha) \cdot \\theta_{i+1},
+                    \\tilde{\\theta_{i+1} = \\alpha \\cdot \\tilde{\\theta_i} + (1 - \\alpha) \\cdot \\theta_{i+1},
 
-                where we have replaced ``smoothing`` with :math:`\alpha` for brevity, and where :math:`\\theta_i`
+                where we have replaced ``smoothing`` with :math:`\\alpha` for brevity, and where :math:`\\theta_i`
                 denotes the loss at iteration :math:`i`.
         """
 

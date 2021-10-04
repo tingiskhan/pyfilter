@@ -11,12 +11,12 @@ class LocalLinearization(LinearGaussianObservations):
             X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
 
     where :math:`a_\\theta` is a continuous and differentiable function w.r.t. to :math:`X_t`, and parameterized by
-    :math:`\\theta`, and :math:`V_t \sim \mathcal{N}(0, \sigma)`. This proposal linearizes :math:`a_\\theta` and
+    :math:`\\theta`, and :math:`V_t \\sim \\mathcal{N}(0, \\sigma)`. This proposal linearizes :math:`a_\\theta` and
     re-casts the observation dynamics into
         .. math::
-            Y_t = a_\\theta(\\tilde{X}_t) + \\nabla a_\\theta(\\tilde{X}_t) \cdot (X_t - \\tilde{X}_t) + V_t,
+            Y_t = a_\\theta(\\tilde{X}_t) + \\nabla a_\\theta(\\tilde{X}_t) \\cdot (X_t - \\tilde{X}_t) + V_t,
 
-    where we let :math:`\\tilde{x}_t \coloneqq f_\\theta(x_{t-1})`.
+    where we let :math:`\\tilde{x}_t \\coloneqq f_\\theta(x_{t-1})`.
 
     .. warning::
         Please note that this currently only works for observation models where we have one variable.

@@ -12,7 +12,7 @@ class LinearGaussianObservations(Proposal):
     Gaussian, and that the mean of the observation density can be expressed as a linear combination of the latent
     states. More specifically, we have that
         .. math::
-            Y_t = A \cdot X_t + V_t, \n
+            Y_t = A \\cdot X_t + V_t, \n
             X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
 
     where :math:`A` is a matrix of dimension ``(dimension of observation space, dimension of  latent space)``,

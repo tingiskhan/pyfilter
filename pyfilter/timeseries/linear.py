@@ -40,10 +40,10 @@ class LinearObservations(StateSpaceModel):
     """
     Defines a state space model where the observation dynamics are given by a linear combination of the latent states
         .. math::
-            Y_t = A \cdot X_t + \sigma W_t,
+            Y_t = A \\cdot X_t + \\sigma W_t,
 
     where :math:`A` is a matrix of size ``(dimension of observation space, dimension of latent space)``, :math:`W_t` is
-    a random variable with arbitrary density, and :math:`\sigma` is a scaling parameter.
+    a random variable with arbitrary density, and :math:`\\sigma` is a scaling parameter.
     """
 
     def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist: DistributionWrapper):

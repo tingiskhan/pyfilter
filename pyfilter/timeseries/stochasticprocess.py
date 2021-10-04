@@ -19,9 +19,9 @@ T = TypeVar("T")
 class StochasticProcess(Module, ABC):
     """
     Abstract base class for stochastic processes. By "stochastic process" we mean a sequence of random variables,
-    :math:`\{X_t}_{t \in T}`, defined on a common probability space. Derived classes should override the
+    :math:`\\{X_t\\}_{t \\in T}`, defined on a common probability space. Derived classes should override the
     ``.build_distribution(...)`` method, which builds the distribution of :math:`X_{t+1}` given
-    :math:`\{X_j\}_{j \leq t}`.
+    :math:`\\{X_j\\}_{j \\leq t}`.
     """
 
     def __init__(
@@ -102,7 +102,7 @@ class StochasticProcess(Module, ABC):
         Method to be overridden by derived classes. Defines how to construct the transition density to :math:`X_{t+1}`
         given the state at :math:`t`, i.e. this method corresponds to building the density:
             .. math::
-                x_{t+1} \sim p \\right ( \cdot \mid \{x_j\}_{j \leq t} \left ).
+                x_{t+1} \\sim p \\right ( \\cdot \\mid \\{x_j\\}_{j \\leq t} \\left ).
 
         Args:
             x: The previous state of the process.
@@ -137,8 +137,8 @@ class StochasticProcess(Module, ABC):
 
     def sample_path(self, steps: int, samples: ShapeLike = None, x_s: NewState = None) -> torch.Tensor:
         """
-        Samples a trajectory from the stochastic process, i.e. samples the collection :math:`\{X_j\}_{j \leq T}`, where
-        :math:`T` corresponds to ``steps``.
+        Samples a trajectory from the stochastic process, i.e. samples the collection :math:`\\{X_j\\}_{j \\leq T}`,
+        where :math:`T` corresponds to ``steps``.
 
         Args:
             steps: The number of steps to sample.
@@ -170,9 +170,9 @@ class StochasticProcess(Module, ABC):
         Propagate the process conditional on both state and draws from an incremental distribution. This method assumes
         that we may perform the following parameterization:
             .. math::
-                X_{t+1} = H(t, \{X_j\}, W_t},
+                X_{t+1} = H(t, \\{X_j\\}, W_t},
 
-        where :math:`H: \: T \\times \mathcal{X}^t \\times \mathcal{W} \\rightarrow \mathcal{X}`, where :math:`W_t`
+        where :math:`H: \\: T \\times \\mathcal{X}^t \\times \\mathcal{W} \\rightarrow \\mathcal{X}`, where :math:`W_t`
         are samples drawn from the incremental distribution.
 
         This method is mainly intended to be used filters that either require sigma points (see

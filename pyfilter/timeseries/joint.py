@@ -9,9 +9,9 @@ from ..distributions import JointDistribution, DistributionWrapper
 class JointStochasticProcess(StochasticProcess):
     """
     A stochastic process comprising multiple separate stochastic processes by assuming independence between them. That
-    is, given :math:`n` stochastic processes :math:`\{X^i_t\}, i = 1, \dots, n\:`
+    is, given :math:`n` stochastic processes :math:`\\{X^i_t\\}, i = 1, \\dots, n\:`
         .. math::
-            p(x^1_{t+1}, \dots, x^n_{t+1} \mid x^1_t, \dots, x^n_t) = \prod^n_{i=1} p(x^i_{t+1} \mid x^i_t)
+            p(x^1_{t+1}, \\dots, x^n_{t+1} \\mid x^1_t, \\dots, x^n_t) = \\prod^n_{i=1} p(x^i_{t+1} \\mid x^i_t)
 
     Example:
         In this example we'll construct a joint process of a random walk and an Ornstein-Uhlenbeck process.

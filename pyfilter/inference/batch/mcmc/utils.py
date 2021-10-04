@@ -19,7 +19,7 @@ TFilter = TypeVar("TFilter", bound=BaseFilter)
 def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: int) -> TFilter:
     """
     Seeds the initial sample(s) of the Markov chain by running the chosen filter on a subset of the data, and then
-    picking the best one in terms of total log likelihood, i.e. :math:`p_\\theta(y_{1:t}) \cdot p(\\theta)`.
+    picking the best one in terms of total log likelihood, i.e. :math:`p_\\theta(y_{1:t}) \\cdot p(\\theta)`.
 
     Args:
         filter_: The filter to use in the PMCMC algorithm.
