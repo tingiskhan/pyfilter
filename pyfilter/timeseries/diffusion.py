@@ -16,7 +16,7 @@ class OneStepEulerMaruyma(AffineProcess):
     Implements a one-step Euler-Maruyama model, similar to PyMC3. I.e. where we perform one iteration of the
     following recursion:
         .. math::
-            X_{t+1} = X_t + a(X_t) \Delta t + b(X_t) \cdot \Delta W_t
+            X_{t+1} = X_t + a(X_t) \\Delta t + b(X_t) \\cdot \\Delta W_t
     """
 
     def __init__(self, funcs, parameters, initial_dist, increment_dist, dt: float, **kwargs):
@@ -27,7 +27,7 @@ class OneStepEulerMaruyma(AffineProcess):
             funcs: See base.
             parameters: See base.
             initial_dist: See base.
-            increment_dist: See base. However, do not that you need to include the :math:`\Delta t` term yourself in
+            increment_dist: See base. However, do not that you need to include the :math:`\\Delta t` term yourself in
                the ``DistributionWrapper`` class.
             dt: The time delta to use.
         """
@@ -68,9 +68,9 @@ class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
 
 class DiscretizedStochasticDifferentialEquation(StochasticDifferentialEquation):
     """
-    Defines a discretized stochastic differential equation, in which the next state :math:`X_{t+\Delta t}` is given by
+    Defines a discretized stochastic differential equation, in which the next state :math:`X_{t+\\Delta t}` is given by
         .. math::
-            X_{t+\Delta t} = h(X_t, \\theta, \Delta t).
+            X_{t+\\Delta t} = h(X_t, \\theta, \\Delta t).
 
     This e.g. encompasses the Euler-Maruyama and Milstein schemes.
     """
@@ -99,7 +99,7 @@ class AffineEulerMaruyama(AffineProcess, StochasticDifferentialEquation):
     Defines the Euler-Maruyama scheme for an SDE of affine nature, i.e. in which the dynamics are given by the
     functional pair of the drift and diffusion, such that we have
         .. math::
-            X_{t+\Delta t} = X_t + f_\\theta(X_t) \Delta t + g_\\theta(X_t) \Delta W_t,
+            X_{t+\\Delta t} = X_t + f_\\theta(X_t) \\Delta t + g_\\theta(X_t) \\Delta W_t,
 
     where :math:`W_t` is an arbitrary random variable from which we can sample.
     """
@@ -143,11 +143,11 @@ class Euler(AffineEulerMaruyama):
 
     we recast the model into
         .. math::
-            X_{t + \Delta t} = X_t + f_\\theta(X_t) \Delta t + W_t,
+            X_{t + \\Delta t} = X_t + f_\\theta(X_t) \\Delta t + W_t,
             _
-    where :math:`W_t` is a zero mean Gaussian distribution with a tunable standard deviation :math:`\sigma_{tune}`. In
-    the limit that :math:`\sigma_{tune} \\rightarrow 0` we get the standard Euler scheme for ODEs. Thus, the higher the
-    value of :math:`\sigma_{tune}`, the more we allow to deviate from the original model.
+    where :math:`W_t` is a zero mean Gaussian distribution with a tunable standard deviation :math:`\\sigma_{tune}`. In
+    the limit that :math:`\\sigma_{tune} \\rightarrow 0` we get the standard Euler scheme for ODEs. Thus, the higher the
+    value of :math:`\\sigma_{tune}`, the more we allow to deviate from the original model.
 
     See: https://arxiv.org/abs/2011.09718?context=stat
     """
@@ -167,27 +167,28 @@ class Euler(AffineEulerMaruyama):
             kwargs: See base.
         """
 
-        scale = torch.ones(
-            initial_values.shape if isinstance(initial_values, torch.Tensor) else initial_values().event_shape
-        )
+        scale = 1.0 if isinstance(initial_values, float) else torch.ones(initial_values.shape)
 
-        iv = DistributionWrapper(
-            lambda **u: Independent(Normal(**u), 1),
-            loc=initial_values,
-            scale=EPS * scale,
-        )
-
-        event_shape = iv().event_shape
-        if len(event_shape) == 0:
+        if isinstance(scale, float):
             dist = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt) * tuning_std)
+            iv = DistributionWrapper(Normal, loc=initial_values, scale=EPS * scale)
         else:
-            dist = DistributionWrapper(
+            iv = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1),
-                loc=torch.zeros(event_shape),
-                scale=tuning_std * math.sqrt(dt) * torch.ones(event_shape),
+                loc=initial_values,
+                scale=EPS * scale,
             )
 
-        super().__init__((dynamics, lambda *args: 1.0), parameters, iv, dist, dt, **kwargs)
+            dist = DistributionWrapper(
+                lambda **u: Independent(Normal(**u), 1),
+                loc=torch.zeros(scale.shape),
+                scale=tuning_std * math.sqrt(dt) * torch.ones(scale.shape),
+            )
+
+        def g(x, *args):
+            return torch.zeros_like(x.values)
+
+        super().__init__((dynamics, g), parameters, iv, dist, dt, **kwargs)
 
 
 class RungeKutta(Euler):

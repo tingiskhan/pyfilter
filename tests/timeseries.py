@@ -1,11 +1,39 @@
 import pytest
-from pyfilter.timeseries import models
+from pyfilter.timeseries import models, AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, RungeKutta, Euler
 import torch
+from pyfilter.distributions import DistributionWrapper
+from torch.distributions import Normal
+from math import sqrt
+
+
+def f(x, kappa, sigma):
+    return -kappa * x.values
+
+
+def g(x, kappa, sigma):
+    return sigma
 
 
 @pytest.fixture
-def timeseries_models():
+def custom_models():
+    normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+
+    dt = 0.05
+    sde_normal = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
+
+    reversion_params = (0.01, 0.05)
+
     return (
+        AffineProcess((f, g), reversion_params, normal, normal),
+        AffineEulerMaruyama((f, g), reversion_params, normal, sde_normal, dt=dt),
+        OneStepEulerMaruyma((f, g), reversion_params, normal, sde_normal, dt=dt),
+        Euler(lambda *u: f(*u, 0.0), reversion_params[:1], 5.0, dt=dt, tuning_std=1e-2),
+        RungeKutta(lambda *u: f(*u, 0.0), reversion_params[:1], 5.0, dt=dt, tuning_std=1e-2)
+    )
+
+@pytest.fixture
+def timeseries_models(custom_models):
+    return custom_models + (
         models.AR(0.0, 0.99, 0.05),
         models.LocalLinearTrend(torch.tensor([1e-3, 1e-2])),
         models.OrnsteinUhlenbeck(0.01, 0.0, 0.05),
@@ -38,12 +66,10 @@ class TestTimeseries(object):
         num_steps = 5
 
         for m in timeseries_models:
-            try:
-                m.num_steps = num_steps
+            m.num_steps = num_steps
 
-                x = m.initial_sample()
-                x = m.propagate(x)
+            x = m.initial_sample()
+            x = m.propagate(x)
 
-                assert x.time_index == num_steps
-            finally:
-                m.num_steps = 1
+            assert x.time_index == num_steps
+
