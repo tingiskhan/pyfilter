@@ -13,18 +13,30 @@ def _g(x, alpha, beta, sigma):
 
 def _init_trans(module: "AR", dist):
     alpha, beta, sigma = module.functional_parameters()
-    return TransformedDistribution(dist, AffineTransform(alpha, sigma / (2 * (1 - beta)).sqrt()))
+    return TransformedDistribution(dist, AffineTransform(alpha, sigma / ((1 - beta) ** 2.0).sqrt()))
 
 
 # TODO: Implement lags
 class AR(AffineProcess):
-    def __init__(self, alpha, beta, sigma, initial_dist: Distribution = None, **kwargs):
-        """
-        Implements a basic one dimensional autoregressive process.
-        """
+    """
+    Implements an AR(1) process, i.e. a process given by
+        .. math:
+            X_{t+1} = \\alpha + \\beta X_t + \\sigma W_t, \n
+            X_0 \\sim \\mathcal{N}(\\alpha, \\frac{\\sigma}{\\sqrt{(1 - \\beta)^2}).
+    """
 
+    def __init__(self, alpha, beta, sigma, **kwargs):
+        """
+        Initializes the ``AR`` class.
+
+        Args:
+            alpha: The mean of the process.
+            beta: The reversion of the process, usually constrained to :math:`(-1, 1)`.
+            sigma: The volatility of the process.
+            kwargs: See base.
+        """
         inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
         super().__init__(
-            (_f, _g), (alpha, beta, sigma), initial_dist or inc_dist, inc_dist, initial_transform=_init_trans, **kwargs
+            (_f, _g), (alpha, beta, sigma), inc_dist, inc_dist, initial_transform=_init_trans, **kwargs
         )
