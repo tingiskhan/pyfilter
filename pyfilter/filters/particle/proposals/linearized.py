@@ -40,7 +40,7 @@ class Linearized(Proposal):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
 
-        self._model = model
+        super(Linearized, self).set_model(model)
         self._is1d = self._model.hidden.n_dim == 0
 
         return self

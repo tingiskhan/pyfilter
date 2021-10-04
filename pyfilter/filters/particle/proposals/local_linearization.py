@@ -39,7 +39,7 @@ class LocalLinearization(LinearGaussianObservations):
         if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
             raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
 
-        self._model = model
+        super(LocalLinearization, self).set_model(model)
 
         self._hidden_is1d = self._model.hidden.n_dim == 0
         self._observable_is1d = self._model.observable.n_dim == 0
