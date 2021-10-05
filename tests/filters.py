@@ -2,38 +2,59 @@ import pytest
 from pyfilter.timeseries import models as m, LinearGaussianObservations
 from pyfilter.filters.particle import SISR, APF, proposals as props
 from pyfilter.filters.kalman import UKF
+from pykalman import KalmanFilter
+import numpy as np
 
 
 @pytest.fixture
 def linear_models():
     ar = m.AR(0.0, 0.99, 0.05)
-    obs_1d = LinearGaussianObservations(ar, 1.0, 0.05)
+    obs_1d = LinearGaussianObservations(ar, 1.0, 0.15)
+
+    kalman_1d = KalmanFilter(
+        transition_matrices=obs_1d.hidden.parameter_1,
+        observation_matrices=obs_1d.observable.parameter_0,
+        transition_covariance=obs_1d.hidden.parameter_2 ** 2.0,
+        transition_offsets=obs_1d.hidden.parameter_0,
+        observation_covariance=obs_1d.observable.parameter_1 ** 2.0,
+        initial_state_covariance=(obs_1d.hidden.parameter_2 / (1 - obs_1d.hidden.parameter_1)) ** 2.0
+    )
 
     # TODO: Add more models
-    return (obs_1d,)
+    return (
+        [obs_1d, kalman_1d],
+    )
 
 
-@pytest.fixture
-def filters(linear_models):
-    filters_ = tuple()
+def construct_filters(model):
     particle_types = (SISR, APF)
 
-    for mod in linear_models:
-        filters_ += (
-            *(pt(mod, 500) for pt in particle_types),
-            UKF(mod),
-            *(pt(mod, 500, proposal=props.Bootstrap()) for pt in particle_types),
-            *(pt(mod, 500, proposal=props.Linearized()) for pt in particle_types),
-            *(pt(mod, 500, proposal=props.LocalLinearization()) for pt in particle_types),
-        )
-
-    return filters_
+    return (
+        *(pt(model, 500, proposal=props.LinearGaussianObservations()) for pt in particle_types),
+        UKF(model),
+        *(pt(model, 5000, proposal=props.Bootstrap()) for pt in particle_types),
+        *(pt(model, 500, proposal=props.Linearized(n_steps=5)) for pt in particle_types),
+        *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True)) for pt in particle_types),
+    )
 
 
 class TestFilters(object):
-    def test_compare_with_kalman_filter(self, filters):
-        for f in filters:
-            x, y = f.ssm.sample_path(500)
+    RELATIVE_TOLERANCE = 1e-2
 
-            filter_result = f.longfilter(y, bar=False)
-            # TODO: Compare with Kalman
+    def test_compare_with_kalman_filter(self, linear_models):
+        for model, kalman_model in linear_models:
+            x, y = model.sample_path(500)
+
+            kalman_mean, _ = kalman_model.filter(y.numpy())
+            kalman_ll = kalman_model.loglikelihood(y.numpy())
+
+            for f in construct_filters(model):
+                filter_result = f.longfilter(y)
+
+                assert np.abs((filter_result.loglikelihood.numpy() - kalman_ll) / kalman_ll) < self.RELATIVE_TOLERANCE
+
+                means = filter_result.filter_means
+                if model.hidden.n_dim > 0:
+                    means.unsqueeze_(-1)
+
+                assert np.abs((means - kalman_mean) / kalman_mean).mean() < self.RELATIVE_TOLERANCE
