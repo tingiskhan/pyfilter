@@ -4,7 +4,6 @@ import torch
 from pyfilter.resampling import systematic
 from pyfilter.utils import normalize
 
-torch.random.manual_seed(123)
 
 def filterpy_systematic_resample(weights, u):
     """
