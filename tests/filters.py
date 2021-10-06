@@ -7,9 +7,6 @@ from pyfilter.filters.kalman import UKF
 from pykalman import KalmanFilter
 
 
-torch.manual_seed(123)
-
-
 @pytest.fixture
 def linear_models():
     ar = m.AR(0.0, 0.99, 0.05)
@@ -43,15 +40,15 @@ def linear_models():
     )
 
 
-def construct_filters(model):
+def construct_filters(model, **kwargs):
     particle_types = (SISR, APF)
 
     return (
-        *(pt(model, 500, proposal=props.LinearGaussianObservations()) for pt in particle_types),
-        UKF(model),
-        *(pt(model, 5000, proposal=props.Bootstrap()) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5)) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True)) for pt in particle_types),
+        *(pt(model, 500, proposal=props.LinearGaussianObservations(), **kwargs) for pt in particle_types),
+        UKF(model, **kwargs),
+        *(pt(model, 5000, proposal=props.Bootstrap(), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=props.Linearized(n_steps=5), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
     )
 
 
@@ -99,9 +96,28 @@ class TestFilters(object):
                 means = result.filter_means[1:]
                 assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
 
+    def test_smoothing(self, linear_models):
+        for model, kalman_model in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            kalman_mean, _ = kalman_model.smooth(y.numpy())
+
+            for f in construct_filters(model, record_states=True):
+                # Currently UKF does not implement smoothing
+                if isinstance(f, UKF):
+                    continue
+
+                result = f.longfilter(y)
+                smoothed_x = f.smooth(result.states)
+
+                if model.hidden.n_dim < 1:
+                    smoothed_x.unsqueeze_(-1)
+
+                assert smoothed_x.shape[:2] == torch.Size([self.SERIES_LENGTH + 1, *f.particles])
+                assert ((smoothed_x[1:].mean(1) - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
+
     # TODO: Add SDE test
     # TODO: Add joint test
-    # TODO: Add smoothing test
     # TODO: Add callback test
     # TODO: Add test for saving partial history
     # TODO: Add prediction test
