@@ -51,19 +51,19 @@ class LinearGaussianObservations(Proposal):
         tc = c if not self._observable_is1d else c.unsqueeze(-2)
 
         ttc = tc.transpose(-2, -1)
-        diag_o_var_inv = construct_diag_from_flat(o_var_inv, self._model.observable.n_dim)
-        t2 = ttc.matmul(diag_o_var_inv).matmul(tc)
+        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.observable.n_dim)
+        t2 = ttc.matmul(o_inv_cov).matmul(tc)
 
         cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
         t1 = h_var_inv * loc
 
         if self._observable_is1d:
-            t2 = (diag_o_var_inv.squeeze(-1) * y).unsqueeze(-1)
+            t2 = o_inv_cov.squeeze(-1) * y
         else:
-            t2 = torch.matmul(diag_o_var_inv, y)
+            t2 = o_inv_cov.matmul(y)
 
-        t3 = ttc.matmul(t2)[..., 0]
-        m = cov.matmul((t1 + t3).unsqueeze(-1))[..., 0]
+        t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
+        m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov), validate_args=False)
 
