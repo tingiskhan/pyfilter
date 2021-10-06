@@ -39,7 +39,7 @@ def propagate_sps(
 
 def covariance(a: torch.Tensor, b: torch.Tensor, covariance_weights: torch.Tensor) -> torch.Tensor:
     """
-    Calculates the covariance via :math:`w_{c} \cdot a \cdot b^T`.
+    Calculates the covariance via :math:`w_{c} \\cdot a \\cdot b^T`.
 
     Args:
         a: The A matrix.

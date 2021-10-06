@@ -38,7 +38,7 @@ class AffineProcess(StructuralStochasticProcess):
     Class for defining stochastic processes of affine nature, i.e. where we can express the next state :math:`X_{t+1}`
     given the previous state (assuming Markovian) :math:`X_t` as:
         .. math::
-            X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) \cdot W_{t+1},
+            X_{t+1} = f(X_t, \\theta) + g(X_t, \\theta) \\cdot W_{t+1},
 
     where :math:`\\theta` denotes the parameter set governing the functions :math:`f` and :math:`g`, and :math:`W_t`
     denotes random variable with arbitrary density (from which we can sample).
