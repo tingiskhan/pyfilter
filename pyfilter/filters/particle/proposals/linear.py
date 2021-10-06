@@ -56,11 +56,7 @@ class LinearGaussianObservations(Proposal):
 
         cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
         t1 = h_var_inv * loc
-
-        if self._observable_is1d:
-            t2 = o_inv_cov.squeeze(-1) * y
-        else:
-            t2 = o_inv_cov.matmul(y)
+        t2 = o_inv_cov.squeeze(-1) * y if self._observable_is1d else o_inv_cov.matmul(y)
 
         t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
         m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
