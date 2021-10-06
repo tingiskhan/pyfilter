@@ -80,7 +80,7 @@ class LinearGaussianObservations(LinearObservations):
     mean and unit variance.
     """
 
-    def __init__(self, hidden, a=1.0, scale=1.0, **kwargs):
+    def __init__(self, hidden, a=1.0, scale=1.0):
         """
         Initializes the ``LinearGaussianObservations`` class.
 
@@ -88,7 +88,6 @@ class LinearGaussianObservations(LinearObservations):
             hidden: See base.
             a: See base.
             scale: See base.
-            kwargs: See base.
         """
 
         dim, is_1d = _get_shape(a)
@@ -100,4 +99,4 @@ class LinearGaussianObservations(LinearObservations):
                 lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(dim), scale=torch.ones(dim)
             )
 
-        super().__init__(hidden, a, scale, n, **kwargs)
+        super().__init__(hidden, a, scale, n)
