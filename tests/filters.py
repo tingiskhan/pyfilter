@@ -68,7 +68,7 @@ def construct_filters(model, **kwargs):
 class TestFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     PARALLEL_FILTERS = 20
-    SERIES_LENGTH = 500
+    SERIES_LENGTH = 100
 
     def test_compare_with_kalman_filter(self, linear_models):
         for model, kalman_model in linear_models:
