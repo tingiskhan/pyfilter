@@ -98,3 +98,10 @@ class TestFilters(object):
 
                 means = result.filter_means[1:]
                 assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
+
+    # TODO: Add SDE test
+    # TODO: Add joint test
+    # TODO: Add smoothing test
+    # TODO: Add callback test
+    # TODO: Add test for saving partial history
+    # TODO: Add prediction test
