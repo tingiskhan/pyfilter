@@ -69,6 +69,8 @@ class TestFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     PARALLEL_FILTERS = 20
     SERIES_LENGTH = 100
+    PREDICTION_STEPS = 5
+    STATE_RECORD_LENGTH = 5
 
     def test_compare_with_kalman_filter(self, linear_models):
         for model, kalman_model in linear_models:
@@ -80,6 +82,7 @@ class TestFilters(object):
             for f in construct_filters(model):
                 result = f.longfilter(y)
 
+                assert len(result.states) == 1
                 assert ((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE
 
                 means = result.filter_means[1:]
@@ -129,8 +132,42 @@ class TestFilters(object):
                 assert smoothed_x.shape[:2] == torch.Size([self.SERIES_LENGTH + 1, *f.particles])
                 assert ((smoothed_x[1:].mean(1) - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
 
+    def test_prediction(self, linear_models):
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            for f in construct_filters(model):
+                result = f.longfilter(y)
+
+                x_pred, y_pred = f.predict(result.latest_state, self.PREDICTION_STEPS)
+
+                assert x_pred.shape[:1] == y_pred.shape[:1] == torch.Size([self.PREDICTION_STEPS])
+
+    def test_partial_state_history(self, linear_models):
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            for f in construct_filters(model, record_states=self.STATE_RECORD_LENGTH):
+                result = f.longfilter(y)
+
+                assert (len(result.states) == self.STATE_RECORD_LENGTH) and (result.states[-1] is result.latest_state)
+
+    def test_callback(self, linear_models):
+        class Callback(object):
+            def __init__(self):
+                self.calls = 0
+
+            def __call__(self, obj, x_):
+                self.calls += 1
+
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            cb = Callback()
+            for f in construct_filters(model, pre_append_callbacks=[cb]):
+                result = f.longfilter(y)
+
+                assert cb.calls % self.SERIES_LENGTH == 0
+
     # TODO: Add SDE test
     # TODO: Add joint test
-    # TODO: Add callback test
-    # TODO: Add test for saving partial history
-    # TODO: Add prediction test
