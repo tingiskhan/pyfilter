@@ -10,26 +10,26 @@ from pykalman import KalmanFilter
 @pytest.fixture
 def linear_models():
     ar = m.AR(0.0, 0.99, 0.05)
-    obs_1d = LinearGaussianObservations(ar, 1.0, 0.15)
+    obs_1d_1d = LinearGaussianObservations(ar, 1.0, 0.15)
 
-    kalman_1d = KalmanFilter(
-        transition_matrices=obs_1d.hidden.parameter_1,
-        observation_matrices=obs_1d.observable.parameter_0,
-        transition_covariance=obs_1d.hidden.parameter_2 ** 2.0,
-        transition_offsets=obs_1d.hidden.parameter_0,
-        observation_covariance=obs_1d.observable.parameter_1 ** 2.0,
-        initial_state_covariance=(obs_1d.hidden.parameter_2 / (1 - obs_1d.hidden.parameter_1)) ** 2.0
+    kalman_1d_1d = KalmanFilter(
+        transition_matrices=obs_1d_1d.hidden.parameter_1,
+        observation_matrices=obs_1d_1d.observable.parameter_0,
+        transition_covariance=obs_1d_1d.hidden.parameter_2 ** 2.0,
+        transition_offsets=obs_1d_1d.hidden.parameter_0,
+        observation_covariance=obs_1d_1d.observable.parameter_1 ** 2.0,
+        initial_state_covariance=(obs_1d_1d.hidden.parameter_2 / (1 - obs_1d_1d.hidden.parameter_1)) ** 2.0
     )
 
     rw = m.RandomWalk(torch.tensor([0.05, 0.1]))
-    obs_2d = LinearGaussianObservations(rw, torch.eye(2), 0.15 * torch.ones(2))
+    obs_2d2_d = LinearGaussianObservations(rw, torch.eye(2), 0.15 * torch.ones(2))
 
     state_covariance = rw.parameter_0 ** 2.0 * np.eye(2)
-    kalman_2d = KalmanFilter(
+    kalman_2d_2d = KalmanFilter(
         transition_matrices=np.eye(2),
         observation_matrices=np.eye(2),
         transition_covariance=state_covariance,
-        observation_covariance=obs_2d.observable.parameter_1 ** 2.0 * np.eye(2),
+        observation_covariance=obs_2d2_d.observable.parameter_1 ** 2.0 * np.eye(2),
         initial_state_covariance=state_covariance
     )
 
@@ -47,8 +47,8 @@ def linear_models():
 
     # TODO: Add more models
     return (
-        [obs_1d, kalman_1d],
-        [obs_2d, kalman_2d],
+        [obs_1d_1d, kalman_1d_1d],
+        [obs_2d2_d, kalman_2d_2d],
         [obs_2d_1d, kalman_2d_1d],
     )
 
