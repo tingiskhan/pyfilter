@@ -83,6 +83,9 @@ class TestFilters(object):
             x, y = model.sample_path(self.SERIES_LENGTH)
 
             kalman_mean, _ = kalman_model.filter(y.numpy())
+            if model.hidden.n_dim > 0:
+                kalman_mean = kalman_mean[:, None]
+
             kalman_ll = kalman_model.loglikelihood(y.numpy())
 
             for f in construct_filters(model):
@@ -94,7 +97,4 @@ class TestFilters(object):
                 assert ((result.loglikelihood - kalman_ll) / kalman_ll).abs().median() < self.RELATIVE_TOLERANCE
 
                 means = result.filter_means[1:]
-                if model.hidden.n_dim > 0:
-                    kalman_mean = kalman_mean[:, None]
-
                 assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
