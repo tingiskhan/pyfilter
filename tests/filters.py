@@ -33,10 +33,23 @@ def linear_models():
         initial_state_covariance=state_covariance
     )
 
+    llt = m.LocalLinearTrend(torch.tensor([0.01, 0.05]))
+    obs_2d_1d = LinearGaussianObservations(llt, torch.tensor([0.0, 1.0]), 0.15)
+
+    state_covariance_2 = llt.parameter_1.pow(2.0).cumsum(0) * np.eye(2)
+    kalman_2d_1d = KalmanFilter(
+        transition_matrices=llt.parameter_0,
+        observation_matrices=obs_2d_1d.observable.parameter_0,
+        transition_covariance=state_covariance_2,
+        observation_covariance=obs_2d_1d.observable.parameter_1 ** 2.0,
+        initial_state_covariance=state_covariance_2
+    )
+
     # TODO: Add more models
     return (
         [obs_1d, kalman_1d],
         [obs_2d, kalman_2d],
+        [obs_2d_1d, kalman_2d_1d],
     )
 
 
