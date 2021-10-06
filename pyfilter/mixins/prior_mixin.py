@@ -23,22 +23,42 @@ class AllowPriorMixin(object):
     """
 
     def register_prior(self, name, prior):
+        """
+        Registers a prior for a given parameter by registering ``prior`` as a module on ``self`` with naming convention
+        ``{PRIOR_PREFIX}{name}, and a ``pyfilter.parameter.PriorBoundParameter`` with ``name``.
+        
+        Args:
+            name: The name to use for the prior.
+            prior: The prior of the parameter.
+        """
+
         prior_name = f"{PRIOR_PREFIX}{name}"
         self.add_module(prior_name, prior)
         self.register_parameter(name, PriorBoundParameter(prior().sample(), requires_grad=False))
 
     def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "DistributionWrapper"]]:
+        """
+        Returns the priors and parameters of the module as an iterable of tuples, i.e::
+            [(prior_parameter_0, parameter_0), ..., (prior_parameter_n, parameter_n)]
+        """
+
         for n, p in self.named_parameters():
             yield _parameter_recursion(self, p, n)
 
     def priors(self):
+        """
+        Same as ``.parameters_and_priors()`` but only returns the priors.
+        """
+
         for _, m in self.parameters_and_priors():
             yield m
 
-    # TODO: Fix static type checking
-    def sample_params(self, shape):
+    def sample_params(self, shape: torch.Size):
         """
         Samples the parameters of the model in place.
+
+        Args:
+            shape: The shape of the parameters to use when sampling.
         """
 
         for param, prior in self.parameters_and_priors():
