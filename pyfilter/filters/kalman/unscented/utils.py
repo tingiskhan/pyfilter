@@ -1,7 +1,7 @@
 import torch
 from typing import Tuple
 from ....timeseries import StochasticProcess, NewState
-from ....constants import EPS as _EPS
+from ....constants import EPS2 as _EPS
 
 _COV_FACTOR = 1 / _EPS
 
