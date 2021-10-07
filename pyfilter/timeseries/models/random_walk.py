@@ -43,7 +43,7 @@ class RandomWalk(AffineProcess):
         if isinstance(std, float):
             normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
-            shape = std.shape[-1]
+            shape = std.shape.numel()
 
             if shape == 0:
                 normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
