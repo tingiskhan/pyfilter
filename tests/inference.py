@@ -62,3 +62,6 @@ class TestsSequentialAlgorithm(object):
                         prior_log_prob = prior.unconstrained_prior.log_prob(inverse_true_value).numpy()
 
                         assert (posterior_log_prob > prior_log_prob).all()
+
+# TODO: Add test for PMMH with all available proposals
+# TODO: Add test for VariationalBayes
