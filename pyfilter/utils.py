@@ -46,6 +46,9 @@ class TensorTuple(IterableDataset):
         return torch.stack(self.tensors, dim=0)
 
     def append(self, tensor: torch.Tensor):
+        if not isinstance(tensor, torch.Tensor):
+            raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
+
         self.tensors += (tensor,)
 
     def apply(self, fn):
