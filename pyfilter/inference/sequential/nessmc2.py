@@ -38,8 +38,8 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         return SMC2(filter_, particles, threshold=threshold, **kwargs)
 
     def make_second(self, filter_, particles, **kwargs):
-        kde = kwargs.pop("kernel", ShrinkingKernel())
-        return NESS(filter_, particles, kde=kde, threshold=kwargs.pop("threshold", 0.95), **kwargs)
+        kernel = kwargs.pop("kernel", ShrinkingKernel())
+        return NESS(filter_, particles, kernel=kernel, threshold=kwargs.pop("threshold", 0.95), **kwargs)
 
     def do_on_switch(self, first: SMC2, second: NESS, state):
         return self._first.rejuvenate(state)
