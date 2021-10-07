@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 import torch
-from pyfilter.timeseries import models as m, LinearGaussianObservations
-from pyfilter.filters.particle import SISR, APF, proposals as props
+from pyfilter.timeseries import models as m, LinearGaussianObservations, AffineJointStochasticProcesses
+from pyfilter.filters.particle import SISR, APF, proposals as props, ParticleFilter
 from pyfilter.filters.kalman import UKF
 from pykalman import KalmanFilter
 
@@ -63,6 +63,34 @@ def construct_filters(model, **kwargs):
         *(pt(model, 500, proposal=props.Linearized(n_steps=5), **kwargs) for pt in particle_types),
         *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
     )
+
+
+@pytest.fixture
+def sde():
+    sde_ = m.Verhulst(0.01, 2.0, 0.05, dt=0.2, num_steps=5)
+
+    return LinearGaussianObservations(sde_, 1.0, 0.05)
+
+
+@pytest.fixture
+def joint_timeseries():
+    rw1 = m.RandomWalk(0.05)
+    rw2 = m.RandomWalk(0.1)
+
+    joint = AffineJointStochasticProcesses(rw1=rw1, rw2=rw2)
+
+    obs = LinearGaussianObservations(joint, torch.eye(2), 0.15 * torch.ones(2))
+
+    state_cov = np.array([0.05, 0.1]) ** 2.0 * np.eye(2)
+    kalman = KalmanFilter(
+        transition_matrices=np.eye(2),
+        transition_covariance=state_cov,
+        observation_matrices=np.eye(2),
+        observation_covariance=obs.observable.parameter_1 ** 2.0 * np.eye(2),
+        initial_state_covariance=state_cov
+    )
+
+    return obs, kalman
 
 
 class TestFilters(object):
@@ -169,5 +197,27 @@ class TestFilters(object):
 
                 assert cb.calls % self.SERIES_LENGTH == 0
 
-    # TODO: Add SDE test
-    # TODO: Add joint test
+    def test_sde(self, sde):
+        x, y = sde.sample_path(self.SERIES_LENGTH)
+
+        for f in construct_filters(sde):
+            if not (isinstance(f, UKF) or (isinstance(f, ParticleFilter) and isinstance(f.proposal, props.Bootstrap))):
+                continue
+
+            result = f.longfilter(y)
+
+            filter_std = result.filter_variance ** 0.5
+
+            assert (filter_std <= sde.observable.parameter_1)[1:].all()
+
+    def test_joint_timeseries(self, joint_timeseries):
+        model, kalman = joint_timeseries
+
+        x, y = model.sample_path(self.SERIES_LENGTH)
+        kalman_mean, _ = kalman.filter(y.numpy())
+
+        for f in construct_filters(model):
+            result = f.longfilter(y)
+
+            means = result.filter_means[1:]
+            assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
