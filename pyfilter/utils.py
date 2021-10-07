@@ -1,5 +1,5 @@
 import torch
-from typing import Union, Iterable, Iterator
+from typing import Iterator
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataset import T_co
 from .constants import INFTY
@@ -79,7 +79,7 @@ def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
     if indices.dim() < 2:
         return array[indices]
 
-    return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
+    return array[torch.arange(array.shape[0], device=array.device).unsqueeze(-1), indices]
 
 
 def concater(*x: torch.Tensor) -> torch.Tensor:
@@ -135,8 +135,8 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     mask = torch.isfinite(weights)
     weights[~mask] = -INFTY
 
-    reweighed = torch.exp(weights - weights.max(-1)[0][..., None])
-    normalized = reweighed / reweighed.sum(-1)[..., None]
+    reweighed = torch.exp(weights - weights.max(-1)[0].unsqueeze(-1))
+    normalized = reweighed / reweighed.sum(-1).unsqueeze(-1)
 
     ax_sum = normalized.sum(1)
     normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
