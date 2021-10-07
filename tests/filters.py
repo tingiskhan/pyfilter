@@ -81,7 +81,7 @@ def joint_timeseries():
 
     obs = LinearGaussianObservations(joint, torch.eye(2), 0.15 * torch.ones(2))
 
-    state_cov = np.array([0.05, 0.1]) ** 2.0 * np.eye(2)
+    state_cov = torch.stack((rw1.parameter_0, rw2.parameter_0), dim=0) ** 2.0 * np.eye(2)
     kalman = KalmanFilter(
         transition_matrices=np.eye(2),
         transition_covariance=state_cov,
