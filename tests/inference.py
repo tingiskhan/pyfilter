@@ -9,7 +9,7 @@ from scipy.stats import gaussian_kde
 from pyfilter.inference.batch.variational import VariationalBayes, approximation as apx
 
 
-# @pytest.fixture
+@pytest.fixture
 def models():
     ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, dt=1.0)
     obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
@@ -86,5 +86,3 @@ class TestBatchAlgorithms(object):
 
 
 # TODO: Add test for PMMH with all available proposals
-# TODO: Add test for VariationalBayes
-TestBatchAlgorithms().test_variational_bayes(models())
