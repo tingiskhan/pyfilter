@@ -6,9 +6,10 @@ from tests.filters import construct_filters
 from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
 from pyfilter.inference.utils import parameters_and_priors_from_model
 from scipy.stats import gaussian_kde
+from pyfilter.inference.batch.variational import VariationalBayes, approximation as apx
 
 
-@pytest.fixture
+# @pytest.fixture
 def models():
     ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, dt=1.0)
     obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
@@ -63,5 +64,27 @@ class TestsSequentialAlgorithm(object):
 
                         assert (posterior_log_prob > prior_log_prob).all()
 
+
+class TestBatchAlgorithms(object):
+    def test_variational_bayes(self, models):
+        for prob_model, model in models:
+            x, y = model.sample_path(TestsSequentialAlgorithm.SERIES_LENGTH)
+
+            algorithm = VariationalBayes(
+                prob_model,
+                n_samples=6,
+                max_iter=50_000,
+                parameter_approximation=apx.ParameterMeanField(),
+                state_approximation=apx.StateMeanField()
+            )
+
+            result = algorithm.fit(y)
+
+            assert result.converged
+
+            # TODO: Add check for distribution
+
+
 # TODO: Add test for PMMH with all available proposals
 # TODO: Add test for VariationalBayes
+TestBatchAlgorithms().test_variational_bayes(models())
