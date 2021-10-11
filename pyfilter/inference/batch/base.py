@@ -90,6 +90,7 @@ class TQDMLossVisualiser(TQDMWrapper):
         self._tqdm_bar.update(1)
 
 
+# TODO: Should we really check convergence this way?
 class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
     """
     Abstract base class of batch type algorithms where an optimizer is used.
@@ -166,16 +167,17 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
             while not state.converged and state.iterations < self._max_iter:
                 old_loss = state.loss
 
-                elbo = self.loss(y, state)
+                loss = self.loss(y, state)
 
-                elbo.backward()
+                loss.backward()
                 self.optimizer.step()
 
-                state.loss = elbo.detach()
+                state.loss = loss.detach()
                 logging.do_log(state.iterations, state)
 
                 state.iterations += 1
                 state.converged = self.is_converged(old_loss, state.loss)
+
                 self.optimizer.zero_grad()
 
             return state
