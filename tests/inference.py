@@ -4,12 +4,11 @@ from pyfilter.distributions import Prior
 from torch.distributions import Normal, Exponential, LogNormal
 from tests.filters import construct_filters
 from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
-from pyfilter.inference.utils import parameters_and_priors_from_model
 from scipy.stats import gaussian_kde
 from pyfilter.inference.batch.variational import VariationalBayes, approximation as apx
 
 
-@pytest.fixture
+# @pytest.fixture
 def models():
     ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, dt=1.0)
     obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
@@ -36,6 +35,14 @@ def sequential_algorithms(filter_, **kwargs):
     )
 
 
+def get_prior(name, algorithm):
+    return next(o for n, o in algorithm.named_modules() if name.split(".")[-1] in n)
+
+
+def get_true_parameter(name, model):
+    return next(o for n, o in model.named_buffers() if n == name)
+
+
 class TestsSequentialAlgorithm(object):
     PARTICLES = 1000
     SERIES_LENGTH = 1000
@@ -50,11 +57,10 @@ class TestsSequentialAlgorithm(object):
 
                     w = result.normalized_weights()
 
-                    zipped = zip(
-                        parameters_and_priors_from_model(algorithm.filter.ssm), model.hidden.functional_parameters()
-                    )
+                    for name, parameter in algorithm.filter.ssm.named_parameters():
+                        prior = get_prior(name, algorithm)
+                        true_parameter = get_true_parameter(name, model)
 
-                    for (parameter, prior), true_parameter in zipped:
                         kde = gaussian_kde(prior.get_unconstrained(parameter).squeeze().numpy(), weights=w.numpy())
 
                         inverse_true_value = prior.bijection.inv(true_parameter)
@@ -72,8 +78,8 @@ class TestBatchAlgorithms(object):
 
             algorithm = VariationalBayes(
                 prob_model,
-                n_samples=6,
-                max_iter=50_000,
+                n_samples=12,
+                max_iter=100_000,
                 parameter_approximation=apx.ParameterMeanField(),
                 state_approximation=apx.StateMeanField()
             )
@@ -82,7 +88,11 @@ class TestBatchAlgorithms(object):
 
             assert result.converged
 
+            for name, parameter in algorithm._model.named_parameters():
+                prior = get_prior(name, algorithm)
+                true_parameter = get_true_parameter(name, model)
+
             # TODO: Add check for distribution
 
-
+TestBatchAlgorithms().test_variational_bayes(models())
 # TODO: Add test for PMMH with all available proposals
