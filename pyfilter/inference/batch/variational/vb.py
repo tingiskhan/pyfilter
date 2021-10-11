@@ -102,4 +102,4 @@ class VariationalBayes(OptimizationBasedAlgorithm):
 
         self.construct_optimizer(opt_params)
 
-        return VariationalResult(False, torch.tensor(float("inf")), 0, self._param_approx, self._state_approx)
+        return VariationalResult(False, torch.tensor(0.0), 0, self._param_approx, self._state_approx)
