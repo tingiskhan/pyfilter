@@ -8,7 +8,7 @@ from scipy.stats import gaussian_kde
 from pyfilter.inference.batch.variational import VariationalBayes, approximation as apx
 
 
-# @pytest.fixture
+@pytest.fixture
 def models():
     ou = m.OrnsteinUhlenbeck(0.01, 0.0, 0.05, dt=1.0)
     obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
@@ -68,7 +68,7 @@ class TestsSequentialAlgorithm(object):
                         posterior_log_prob = kde.logpdf(inverse_true_value)
                         prior_log_prob = prior.unconstrained_prior.log_prob(inverse_true_value).numpy()
 
-                        assert (posterior_log_prob > prior_log_prob).all()
+                        assert posterior_log_prob > prior_log_prob
 
 
 class TestBatchAlgorithms(object):
@@ -88,11 +88,9 @@ class TestBatchAlgorithms(object):
 
             assert result.converged
 
-            for name, parameter in algorithm._model.named_parameters():
-                prior = get_prior(name, algorithm)
+            posteriors = result.parameter_approximation.get_transformed_dists()
+            for (name, parameter), posterior in zip(algorithm._model.named_parameters(), posteriors):
+                prior = get_prior(name, algorithm).build_distribution()
                 true_parameter = get_true_parameter(name, model)
 
-            # TODO: Add check for distribution
-
-TestBatchAlgorithms().test_variational_bayes(models())
-# TODO: Add test for PMMH with all available proposals
+                assert posterior.log_prob(true_parameter) > prior.log_prob(true_parameter)
