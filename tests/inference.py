@@ -94,3 +94,5 @@ class TestBatchAlgorithms(object):
                 true_parameter = get_true_parameter(name, model)
 
                 assert posterior.log_prob(true_parameter) > prior.log_prob(true_parameter)
+
+# TODO: Fix PMMH tests
