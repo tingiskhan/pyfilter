@@ -15,7 +15,7 @@ def models():
     obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
 
     ou_priors = (
-        Prior(Exponential, rate=5.0),
+        Prior(Exponential, rate=1.0),
         Prior(Normal, loc=0.0, scale=1.0),
         Prior(LogNormal, loc=0.0, scale=1.0)
     )
