@@ -10,12 +10,22 @@ class ParticleFilterState(BaseFilterState):
     State object for particle based filters.
     """
 
-    def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_inds: Tensor):
+    def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_indices: Tensor):
+        """
+        Initializes the ``ParticleFilterState`` class.
+
+        Args:
+            x: The state particles of the timeseries.
+            w: The log weights associated with the state particles.
+            ll: The estimate log-likelihood, i.e. :math:`p(y_t)`.
+            prev_indices: The indices of the previous state particles that were used to propagate to this state.
+        """
+
         super().__init__()
         self.x = x
         self.register_buffer("w", w)
         self.register_buffer("ll", ll)
-        self.register_buffer("prev_inds", prev_inds)
+        self.register_buffer("prev_inds", prev_indices)
 
         mean, var = self._calc_mean_and_var()
         self.register_buffer("_mean", mean)

@@ -3,4 +3,9 @@ from math import sqrt
 
 
 INFTY = float("inf")
-EPS = sqrt(torch.finfo(torch.get_default_dtype()).eps)
+_info = torch.finfo(torch.get_default_dtype())
+
+EPS = sqrt(_info.eps)
+EPS2 = _info.eps
+
+MAX = _info.max

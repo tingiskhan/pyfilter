@@ -11,6 +11,15 @@ class UKF(BaseKalmanFilter):
     """
 
     def __init__(self, model, utf_kwargs: Dict[str, object] = None, **kwargs):
+        """
+        Initializes the ``UKF`` class.
+
+        Args:
+             model: See base.
+             utf_kwargs: Kwargs passed to ``pyfilter.filters.kalman.unscented.UnscentedFilterTransform``.
+             kwargs: Kwargs passed to base.
+        """
+
         super().__init__(model, **kwargs)
         self._ut = UnscentedFilterTransform(model, **(utf_kwargs or dict()))
 
@@ -18,7 +27,7 @@ class UKF(BaseKalmanFilter):
         res = self._ut.initialize(self.n_parallel)
         return KalmanFilterState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def predict_correct(self, y, state: KalmanFilterState):
+    def forward(self, y, state: KalmanFilterState):
         p = self._ut.predict(state.utf)
 
         if torch.isnan(y).any():

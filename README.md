@@ -27,7 +27,7 @@ parameters = 0.0, 1.0
 init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 inc_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
-sinus_diffusion = AffineEulerMaruyama(
+sine_diffusion = AffineEulerMaruyama(
     (drift, diffusion),
     parameters,
     init_dist,
@@ -35,7 +35,7 @@ sinus_diffusion = AffineEulerMaruyama(
     dt=dt,
     num_steps=int(1 / dt)
 )
-ssm = LinearGaussianObservations(sinus_diffusion, scale=0.1)
+ssm = LinearGaussianObservations(sine_diffusion, scale=0.1)
 
 x, y = ssm.sample_path(1000)
 
@@ -44,9 +44,9 @@ ax[0].plot(x.numpy(), label="True")
 ax[1].plot(y.numpy())
 
 filt = APF(ssm, 1000, proposal=p.Bootstrap())
-filter_result = filt.longfilter(y)
+result = filt.longfilter(y)
 
-ax[0].plot(filter_result.filter_means.numpy(), label="Filtered")
+ax[0].plot(result.filter_means.numpy(), label="Filtered")
 ax[0].legend()
 
 plt.show()

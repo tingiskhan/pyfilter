@@ -8,10 +8,17 @@ from ....utils import priors_from_model
 
 class StateMeanField(BaseApproximation):
     """
-    Mean field approximation for state.
+    Mean field approximation for states. Assumes that the state distributions can be approximated using independent
+    normal distributions parameterized using a mean and scale, i.e. in which we approximate the state distribution by
+        .. math::
+            p(x_0, x_1, \\dots, x_n) = \\prod_{i=0}^n \\mathcal{N}(x_i \\mid \\mu_i, \\sigma_i).
     """
 
     def __init__(self):
+        """
+        Initializes the ``StateMeanField`` class.
+        """
+
         super().__init__()
         self._dim = None
 
@@ -29,19 +36,31 @@ class StateMeanField(BaseApproximation):
 
         return self
 
-    def dist(self) -> Distribution:
+    def get_approximation(self) -> Distribution:
         return Independent(Normal(self.mean, self.log_std.exp()), self._dim + 1)
 
     def get_inferred_states(self) -> torch.Tensor:
+        """
+        Returns the mean of the inferred states, which corresponds to the mean of the variational approximation.
+        """
+
         return self.mean
 
 
 class ParameterMeanField(BaseApproximation):
     """
-    Mean field approximation for parameters.
+    Mean field approximation for parameters. Assumes that the `unconstrained` parameter distributions can be
+    approximated using normal distributions parameterized using a mean and scale, i.e.
+        .. math::
+            p(\\theta_1, \\dots, \\theta__n) = \\prod_{i=1}^n \\mathcal{N}(\\theta_i \\mid \\mu_i, \\sigma_i).
+
     """
 
     def __init__(self):
+        """
+        Initializes the ``ParameterMeanField`` class.
+        """
+
         super().__init__()
         self._bijections = None
         self._mask = None
@@ -79,10 +98,14 @@ class ParameterMeanField(BaseApproximation):
 
         return self
 
-    def dist(self) -> Distribution:
+    def get_approximation(self) -> Distribution:
         return Independent(Normal(self.mean, self.log_std.exp()), 1)
 
     def get_transformed_dists(self) -> Tuple[Distribution, ...]:
+        """
+        Returns the transformed distributions of the parameter approximations from unconstrained to constrained.
+        """
+
         res = tuple()
         for bij, msk in zip(self._bijections, self._mask):
             dist = TransformedDistribution(Normal(self.mean[msk], self.log_std[msk].exp()), bij)

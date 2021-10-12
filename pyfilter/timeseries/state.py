@@ -1,5 +1,5 @@
 import torch
-from typing import Union, Optional
+from typing import Union, Optional, Sequence
 from torch.distributions import Distribution
 from ..distributions import JointDistribution
 from ..state import BaseState
@@ -8,12 +8,22 @@ from ..state import BaseState
 # TODO: Rename to TimeseriesState/ProcessState
 class NewState(BaseState):
     """
-    The state object for timeseries.
+    State object for ``StochasticProcess``.
     """
 
     def __init__(
         self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None
     ):
+        """
+        Initializes the ``NewState`` class.
+
+        Args:
+            time_index: The time index of the state.
+            distribution: Optional parameter, the distribution of the state at ``time_index``.
+            values: Optional parameter, the values of the state at ``time_index``. If ``None`` and passing
+                ``distribution`` values will be sampled from ``distribution`` when accessing ``.values`` attribute.
+        """
+
         super().__init__()
 
         if distribution is None and values is None:
@@ -25,6 +35,10 @@ class NewState(BaseState):
 
     @property
     def values(self) -> torch.Tensor:
+        """
+        The values of the state.
+        """
+
         if self._values is not None:
             return self._values
 
@@ -37,38 +51,81 @@ class NewState(BaseState):
 
     @property
     def shape(self):
+        """
+        The shape of ``.values``.
+        """
+
         return self.values.shape
 
     @property
     def device(self):
+        """
+        The device of ``.values``.
+        """
+
         return self.values.device
 
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return NewState(self.time_index, dist, values)
+    def copy(self, dist: Distribution = None, values: torch.Tensor = None) -> "NewState":
+        """
+        Returns a new instance of ``NewState`` with specified ``dist`` and ``values`` but with ``time_index`` of
+        current instance.
+
+        Args:
+            dist: See ``__init__``.
+            values: See ``__init__``.
+        """
+
+        return self.propagate_from(dist, values, time_increment=0.0)
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
+        """
+        Returns a new instance of ``NewState`` with ``dist`` and ``values``, and ``time_index`` given by
+        ``.time_index + time_increment``.
+
+        Args:
+            dist: See ``__init__``.
+            values: See ``__init__``.
+            time_increment: Optional, specifies how much to increase ``.time_index`` with for new state.
+        """
+
         return NewState(self.time_index + time_increment, dist, values)
 
 
 class JointState(NewState):
     """
-    Implements an object for handling joint states.
+    State object for ``JointStochasticProcess``.
     """
 
-    def __init__(self, *args, mask=None, **kwargs):
+    def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, **kwargs):
+        """
+        Initializes the ``JointState`` class.
+
+        Args:
+            args: See base.
+            indices: See ``pyfilter.distributions.JointDistribution``.
+        """
+
         super().__init__(*args, **kwargs)
 
-        if mask is None and self.dist is None:
-            raise ValueError("Both `mask` and `dist` cannot be None!")
+        if indices is None and self.dist is None:
+            raise ValueError("Both ``mask`` and ``dist`` cannot be None!")
 
-        self.mask = mask or self.dist.masks
+        self.indices = indices or self.dist.indices
 
     @classmethod
-    def from_states(cls, *states, mask=None):
+    def from_states(cls, *states: NewState, indices: Sequence[Union[int, slice]] = None) -> "JointState":
+        """
+        Given a sequence of ``NewState`` construct a ``JointState`` object.
+
+        Args:
+            states: An iterable of states to combine into an instance of ``JointState``.
+            indices: See ``__init__``.
+        """
+
         return JointState(
             time_index=cls._join_timeindex(*states),
             values=cls._join_values(*states),
-            distribution=cls._join_distributions(*states, mask=mask),
+            distribution=cls._join_distributions(*states, indices=indices),
         )
 
     @staticmethod
@@ -80,11 +137,11 @@ class JointState(NewState):
         return torch.cat(to_concat)
 
     @staticmethod
-    def _join_distributions(*states, mask=None) -> Optional[JointDistribution]:
+    def _join_distributions(*states, indices=None) -> Optional[JointDistribution]:
         if all(s.dist is None for s in states):
             return None
 
-        return JointDistribution(*(s.dist for s in states), masks=mask)
+        return JointDistribution(*(s.dist for s in states), indices=indices)
 
     # TODO: Should perhaps be first available?
     @staticmethod
@@ -96,11 +153,13 @@ class JointState(NewState):
         return NewState(
             time_index=self.time_index[item],
             distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
-            values=self.values[..., self.mask[item]],
+            values=self.values[..., self.indices[item]],
         )
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
-        return JointState(time_index=self.time_index + time_increment, distribution=dist, values=values, mask=self.mask)
+        return JointState(
+            time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices
+        )
 
     def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return JointState(time_index=self.time_index, distribution=dist, values=values, mask=self.mask)
+        return JointState(time_index=self.time_index, distribution=dist, values=values, indices=self.indices)

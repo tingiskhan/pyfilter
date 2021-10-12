@@ -7,7 +7,8 @@ from .affine import AffineProcess
 
 class GeneralObservable(StructuralStochasticProcess, ABC):
     """
-    Implements a helper class for observations of general type.
+    Abstract base class constituting the observable dynamics of a state space model. Derived classes should override the
+    ``.build_density(...)`` method.
     """
 
     def __init__(self, dimension: Size, parameters, **kwargs):
@@ -25,10 +26,23 @@ class GeneralObservable(StructuralStochasticProcess, ABC):
 
 class AffineObservations(AffineProcess):
     """
-    Class for defining model with affine dynamics in the observable process.
+    Constitutes the observable dynamics of a state space model in which the dynamics are affine in terms of the latent
+    state, i.e. we have that
+        .. math::
+            Y_t = f_\\theta(X_t) + g_\\theta(X_t) W_t,
+
+    for some functions :math:`f, g` parameterized by :math:`\\theta`.
     """
 
     def __init__(self, funcs, parameters, increment_dist):
+        """
+        Initializes the ``AffineObservations`` class.
+
+        Args:
+            funcs: See base.
+            parameters: See base.
+            increment_dist: See base.
+        """
         super().__init__(funcs, parameters, None, increment_dist)
 
     def initial_sample(self, shape=None):

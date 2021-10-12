@@ -1,14 +1,24 @@
 import torch
 from torch.distributions import Distribution
 from typing import Callable
+from abc import ABC
 from .pre_weight_funcs import get_pre_weight_func
 from ....timeseries import StochasticProcess, StateSpaceModel, NewState
 
 
-class Proposal(object):
+class Proposal(ABC):
+    """
+    Abstract base class for proposal objects.
+    """
+
     def __init__(self, pre_weight_func: Callable[[StochasticProcess, NewState], NewState] = None):
         """
-        Defines a proposal object for how to draw the particles.
+        Initializes the proposal object.
+
+        Args:
+            pre_weight_func: Function used in the ``APF`` when weighing the particles to be propagated. A common choice
+                is :math:`p(y_t | E_t[x_{t-1}])`, where :math:`E_t[...}` denotes the expected value of the stochastic
+                process at time ``t`` using the values at ``t-1``.
         """
 
         super().__init__()
@@ -16,6 +26,13 @@ class Proposal(object):
         self._pre_weight_func = pre_weight_func
 
     def set_model(self, model: StateSpaceModel):
+        """
+        Sets the model to be used in the proposal.
+
+        Args:
+            model: The model to be used.
+        """
+
         self._model = model
         self._pre_weight_func = get_pre_weight_func(self._pre_weight_func, model.hidden)
 
@@ -26,15 +43,31 @@ class Proposal(object):
         return y_dist.log_prob(y) + x_new.dist.log_prob(x_new.values) - kernel.log_prob(x_new.values)
 
     def sample_and_weight(self, y: torch.Tensor, x: NewState) -> (NewState, torch.Tensor):
+        """
+        Method to be derived by inherited classes. Given the current observation ``y`` and previous state ``x``, this
+        method samples new state values and weighs them accordingly.
+
+        Args:
+            y: The current observation.
+            x: The previous state.
+
+        Returns:
+            The new state together with the associated weights.
+        """
+
         raise NotImplementedError()
 
-    def pre_weight(self, y: torch.Tensor, x: NewState):
+    def pre_weight(self, y: torch.Tensor, x: NewState) -> torch.Tensor:
         """
-        Pre-weights the sample, used in APF.
+        Pre-weights previous state ``x`` w.r.t. the current observation ``y``. Used in the ``APF`` when evaluating which
+        candidate particles to select for propagation.
 
-        :param y: The next observed value
-        :param x: The previous state
-        :return: The pre-weights
+        Args:
+            y: The current observation.
+            x: The previous state.
+
+        Returns:
+            Returns the log weights associated with the previous state particles.
         """
 
         new_state = self._pre_weight_func(self._model.hidden, x)

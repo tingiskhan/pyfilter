@@ -2,9 +2,5 @@ from torch.distributions import Distribution
 import torch
 from typing import Type, Callable, Sequence, Union
 
-
-DistributionOrBuilder = Union[
-    Type[Distribution], Callable[[Type[Distribution], Sequence[Union[torch.Tensor, float]]], Distribution]
-]
-
 HyperParameters = Union[torch.Tensor, float, int]
+DistributionOrBuilder = Union[Type[Distribution], Callable[[Sequence[HyperParameters]], Distribution]]

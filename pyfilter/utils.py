@@ -1,5 +1,5 @@
 import torch
-from typing import Union, Iterable, Iterator
+from typing import Iterator
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataset import T_co
 from .constants import INFTY
@@ -7,6 +7,13 @@ from .typing import ShapeLike
 
 
 def size_getter(shape: ShapeLike) -> torch.Size:
+    """
+    Utility function for aiding in generating a ``torch.Size`` object.
+
+    Args:
+        shape: The shape to use, can be ``None``, ``int`` or tuples.
+    """
+
     if shape is None:
         return torch.Size([])
     elif isinstance(shape, torch.Size):
@@ -39,15 +46,22 @@ class TensorTuple(IterableDataset):
         return torch.stack(self.tensors, dim=0)
 
     def append(self, tensor: torch.Tensor):
+        if not isinstance(tensor, torch.Tensor):
+            raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
+
         self.tensors += (tensor,)
 
     def apply(self, fn):
         self.tensors = tuple(fn(t) for t in self.tensors)
 
 
-def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:
+def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     """
-    Calculates the ESS from an array of log weights.
+    Calculates the ESS from an array of (log) weights.
+
+    Args:
+        weights: The (log) weights to calculate ESS for.
+        normalized: Optional parameter indicating whether the weights are normalized.
     """
 
     if not normalized:
@@ -57,24 +71,28 @@ def get_ess(weights: torch.Tensor, normalized=False) -> torch.Tensor:
 
 
 def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
+    """
+    Utility function for aiding in choosing along the first dimension of a tensor.
+
+    Args:
+        array: The tensor to choose from.
+        indices: The indices to select.
+    """
+
     if indices.dim() < 2:
         return array[indices]
 
-    return array[torch.arange(array.shape[0], device=array.device)[:, None], indices]
+    return array[torch.arange(array.shape[0], device=array.device).unsqueeze(-1), indices]
 
 
-def loglikelihood(w: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
-    maxw, _ = w.max(-1)
+def concater(*x: torch.Tensor) -> torch.Tensor:
+    """
+    Given an iterable of tensors, broadcast them to the same shape and stack along the last dimension.
 
-    if weights is None:
-        temp = torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw)).mean(-1).log()
-    else:
-        temp = (weights * torch.exp(w - (maxw.unsqueeze(-1) if maxw.dim() > 0 else maxw))).sum(-1).log()
+    Args:
+        x: The iterable of tensors to stack.
+    """
 
-    return maxw + temp
-
-
-def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
     if isinstance(x, torch.Tensor):
         return x
 
@@ -83,8 +101,16 @@ def concater(*x: Union[Iterable[torch.Tensor], torch.Tensor]) -> torch.Tensor:
 
 def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     """
-    Constructs a diagonal matrix based on batched data. Solution found here:
-    https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
+    Constructs a diagonal matrix based on ``x``. Solution found `here`_:
+
+    Args:
+        x: The diagonal of the matrix.
+        base_dim: The dimension of ``x``.
+
+    Example:
+        If ``x`` is of shape ``(100, 20)`` and the dimension is 0, then we get a tensor of shape ``(100, 20, 1)``.
+
+    .. _here: https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
     """
 
     if base_dim == 0:
@@ -99,6 +125,9 @@ def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
 def normalize(weights: torch.Tensor) -> torch.Tensor:
     """
     Normalizes a 1D or 2D array of log weights.
+
+    Args:
+        weights: The log weights to normalize.
     """
 
     is_1d = weights.dim() == 1
@@ -109,8 +138,8 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     mask = torch.isfinite(weights)
     weights[~mask] = -INFTY
 
-    reweighed = torch.exp(weights - weights.max(-1)[0][..., None])
-    normalized = reweighed / reweighed.sum(-1)[..., None]
+    reweighed = torch.exp(weights - weights.max(-1)[0].unsqueeze(-1))
+    normalized = reweighed / reweighed.sum(-1).unsqueeze(-1)
 
     ax_sum = normalized.sum(1)
     normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]

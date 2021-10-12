@@ -1,5 +1,6 @@
 from .base import ParticleFilter
-from ...utils import loglikelihood, choose
+from .utils import log_likelihood
+from ...utils import choose
 import torch
 from .state import ParticleFilterState
 
@@ -9,7 +10,7 @@ class SISR(ParticleFilter):
     Implements the SISR filter by Gordon et al.
     """
 
-    def predict_correct(self, y, state: ParticleFilterState) -> ParticleFilterState:
+    def forward(self, y, state: ParticleFilterState) -> ParticleFilterState:
         old_normalized_w = state.normalized_weights()
 
         indices, mask = self._resample_state(state.w)
@@ -26,4 +27,4 @@ class SISR(ParticleFilter):
 
         w = weights + tw
 
-        return ParticleFilterState(x, w, loglikelihood(weights, old_normalized_w), indices)
+        return ParticleFilterState(x, w, log_likelihood(weights, old_normalized_w), indices)

@@ -1,18 +1,42 @@
-from typing import Optional, Any, Dict, Union, Sequence
-from torch.distributions import Distribution, constraints
+from typing import Optional, Any, Tuple, Union, Sequence
+from torch.distributions import Distribution
 import torch
 
 
 class JointDistribution(Distribution):
     """
-    Defines an object for combining multiple distributions by assuming independence.
+    Defines an object for combining multiple distributions by assuming independence, i.e. we define:
+        .. math::
+            p(x_1, x_2, ..., x_n) = p(x_1) \\cdot p(x_2) ... \\cdot p(x_n)
+
+    Example:
+        A basic example can be seen below, where we combine a normal and and exponential distribution:
+
+            >>> from torch.distributions import Normal, Exponential
+            >>> import torch
+            >>>
+            >>> distribution = JointDistribution(Normal(0.0, 1.0), Exponential(1.0))
+            >>> y = distribution.sample((1000,))    # should be 1000 x 2
+            >>>
+            >>> log_prob = distribution.log_prob(y)
+
     """
 
     arg_constraints = {}
 
-    def __init__(self, *distributions: Distribution, masks: Sequence[Union[int, slice]] = None, **kwargs):
-        _masks = masks or self.get_mask(*distributions)
-        event_shape = torch.Size([(_masks[-1].stop if isinstance(_masks[-1], slice) else _masks[-1] + 1)])
+    def __init__(self, *distributions: Distribution, indices: Sequence[Union[int, slice]] = None, **kwargs):
+        """
+        Initializes the ``JointDistribution`` class.
+
+        Args:
+            distributions: Iterable of ``pytorch.distributions.Distribution`` objects.
+            indices: Optional parameter specifying which distribution corresponds to which column in input tensors. If
+                ``None``, then is inferred.
+            kwargs: Key-worded arguments passed to base class.
+        """
+
+        _indices = indices or self.infer_indices(*distributions)
+        event_shape = torch.Size([(_indices[-1].stop if isinstance(_indices[-1], slice) else _indices[-1] + 1)])
 
         batch_shape = distributions[0].batch_shape
         if any(d.batch_shape != batch_shape for d in distributions):
@@ -24,7 +48,7 @@ class JointDistribution(Distribution):
             raise NotImplementedError(f"Currently cannot handle matrix valued distributions!")
 
         self.distributions = distributions
-        self.masks = _masks
+        self.indices = _indices
 
     def expand(self, batch_shape, _instance=None):
         return JointDistribution(*(d.expand(batch_shape) for d in self.distributions))
@@ -43,7 +67,7 @@ class JointDistribution(Distribution):
 
     def cdf(self, value):
         res = 0.0
-        for d, m in zip(self.distributions, self.masks):
+        for d, m in zip(self.distributions, self.indices):
             res *= d.cdf(value[..., m])
 
         return res
@@ -58,7 +82,30 @@ class JointDistribution(Distribution):
         return sum(d.entropy() for d in self.distributions)
 
     @staticmethod
-    def get_mask(*distributions: Distribution):
+    def infer_indices(*distributions: Distribution) -> Tuple[Union[int, slice]]:
+        """
+        Given a sequence of ``pytorch.distributions.Distribution`` objects, this method infers the indices at which to
+        slice an input tensor.
+
+        Args:
+            distributions: Sequence of ``pytorch.distributions.Distribution`` objects.
+
+        Returns:
+            A tuple containing indices and/or slices.
+
+        Example:
+            >>> from torch.distributions import Normal, Exponential
+            >>> import torch
+            >>> from pyfilter.distributions import JointDistribution
+            >>>
+            >>> distributions = Normal(0.0, 1.0), Exponential(1.0)
+            >>> y = torch.stack([d.sample((1000,)) for d in distributions], dim=-1)
+            >>>
+            >>> slices = JointDistribution.infer_indices(*distributions)
+            >>> log_probs = [d.log_prob(y[..., s]) for d, s in zip(distributions, slices)]
+
+        """
+
         res = tuple()
 
         length = 0
@@ -80,7 +127,7 @@ class JointDistribution(Distribution):
 
     def log_prob(self, value):
         # TODO: Add check for wrong dimensions
-        return sum(d.log_prob(value[..., m]) for d, m in zip(self.distributions, self.masks))
+        return sum(d.log_prob(value[..., m]) for d, m in zip(self.distributions, self.indices))
 
     def rsample(self, sample_shape=torch.Size()):
         res = tuple(

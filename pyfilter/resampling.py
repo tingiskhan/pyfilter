@@ -3,14 +3,16 @@ import torch
 from typing import Union
 
 
-def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None):
+def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None) -> torch.Tensor:
     """
     Performs systematic resampling on either a 1D or 2D array.
 
-    :param w: The weights to use for resampling
-    :param normalized: Whether the weights are normalized
-    :param u: Parameter for overriding the sampled index, for testing
+    Args:
+        w: The (log) weights to use for resampling.
+        normalized: Whether the weights are normalized are not.
+        u: Parameter for overriding the sampled index, only used for testing.
     """
+
     is_1d = w.dim() == 1
 
     if is_1d:
@@ -32,24 +34,26 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     return res.squeeze(0) if is_1d else res
 
 
-def multinomial(w: torch.Tensor, normalized=False):
+def multinomial(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs multinomial sampling.
 
-    :param w: The weights to use for resampling
-    :param normalized: Whether the weights are normalized
+    Args:
+        w: See ``systematic``.
+        normalized: See ``systematic``.
     """
 
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
 
 
-def residual(w: torch.Tensor, normalized=False):
+def residual(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs residual resampling. Inspired by solution provided by the package "particles" on GitHub
     authored by the user "nchopin".
 
-    :param w: The weights to use for resampling
-    :param normalized: Whether the weights are normalized
+    Args:
+        w: See ``systematic``.
+        normalized: See ``systematic``.
     """
 
     if w.dim() > 1:

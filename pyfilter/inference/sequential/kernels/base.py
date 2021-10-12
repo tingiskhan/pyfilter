@@ -1,27 +1,34 @@
+from abc import ABC
 from ....resampling import systematic
-import torch
-from typing import Callable, Union
 from ....filters import BaseFilter
 from ..state import SequentialAlgorithmState
 
 
-class BaseKernel(object):
+class BaseKernel(ABC):
     """
-    Base object for mutating parameters in a sequential particle algorithms.
+    Abstract base class for kernels. Kernels are objects used by subclasses of ``SequentialParticleAlgorithm`` for
+    updating the particle approximation of the parameter posteriors.
     """
 
     def __init__(self, resampling=systematic):
+        """
+        Initializes the ``BaseKernel`` class.
+
+        Args:
+             resampling: The resampling function to use.
+        """
+
         self._resampler = resampling
 
-    def set_resampler(self, resampler: Callable[[torch.Tensor, bool, Union[float, torch.Tensor]], torch.Tensor]):
-        self._resampler = resampler
-
-        return self
-
-    def _update(self, filter_: BaseFilter, state: SequentialAlgorithmState, *args):
-        raise NotImplementedError()
-
     def update(self, filter_: BaseFilter, state: SequentialAlgorithmState, *args):
-        self._update(filter_, state, *args)
+        """
+        Method to be overridden by inherited classes. Specifies how to update the particle approximation of the
+        parameter posteriors.
 
-        return self
+        Args:
+            filter_: The filter used by the calling algorithm.
+            state: The current state of the algorithm.
+            args: Any class specific arguments required by the inherited classes.
+        """
+
+        raise NotImplementedError()

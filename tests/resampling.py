@@ -1,5 +1,5 @@
-from unittest import TestCase
 import numpy as np
+from pytest import fixture
 import torch
 from pyfilter.resampling import systematic
 from pyfilter.utils import normalize
@@ -28,24 +28,17 @@ def filterpy_systematic_resample(weights, u):
     return indexes
 
 
-class ResamplingTests(TestCase):
-    def test_SystematicVector(self):
-        weights = torch.tensor(np.random.normal(size=300))
+@fixture
+def weights():
+    return normalize(torch.randn((10, 300)))
 
-        u = np.random.uniform()
 
-        pyfilter_inds = systematic(weights, u=torch.tensor(u))
+class TestResampling(object):
+    def test_systematic(self, weights):
+        u = torch.rand(weights.shape)
 
-        filterpy_inds = filterpy_systematic_resample(normalize(weights), u)
-        assert (pyfilter_inds.numpy() == filterpy_inds).all()
-
-    def test_SystematicMatrix(self):
-        weights = torch.tensor(np.random.normal(size=(10, 300)))
-
-        u = np.random.uniform(size=(weights.shape[0], 1))
-
-        pyfilter_inds = systematic(weights, u=torch.tensor(u))
+        pyfilter_inds = systematic(weights, u=u, normalized=True).numpy()
 
         for i in range(weights.shape[0]):
-            filterpy_inds = filterpy_systematic_resample(normalize(weights[i]), u[i])
-            assert (pyfilter_inds[i].numpy() == filterpy_inds).all()
+            filterpy_inds = filterpy_systematic_resample(weights[i], u[i])
+            assert (pyfilter_inds[i] == filterpy_inds).all()

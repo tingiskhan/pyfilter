@@ -6,13 +6,28 @@ from .base import Proposal
 
 
 class Linearized(Proposal):
+    """
+    Given a state space model with dynamics
+        .. math::
+            Y_t \\sim p_\\theta(y_t \\mid X_t), \n
+            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+
+    where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`X_t`, and which is
+    continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
+    density :math:`p_\\theta(y_t \\mid x_t) \\cdot p_\\theta(x_t \\mid x_{t-1})` by linearizing it around
+    :math:`f_\\theta(x_t)` and approximate it using a normal distribution.
+    """
+
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Implements a linearized proposal using Normal distributions. Do note that this proposal should be used for
-        models that are log-concave in the observation density.
+        Initializes the ``Linearized`` proposal
 
-        :param n_steps: The number of steps to take when approximating the mean of the proposal density
-        :param alpha: Takes step proportional to `alpha` if `use_second_order` is False
+        Args:
+            n_steps: The number of steps to take when performing gradient descent
+            alpha: The step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+                ``False``, or when the Hessian is badly conditioned.
+            use_second_order: Whether to use second order information when constructing the proposal distribution.
+                Amounts to using the diagonal of the Hessian.
         """
         super().__init__()
         self._alpha = alpha
@@ -22,10 +37,10 @@ class Linearized(Proposal):
         self._is1d = None
 
     def set_model(self, model):
-        if not (isinstance(model.observable, AffineProcess) and isinstance(model.hidden, AffineProcess)):
-            raise ValueError(f"Both observable and hidden must be of type {AffineProcess.__class__.__name__}!")
+        if not isinstance(model.hidden, AffineProcess):
+            raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
 
-        self._model = model
+        super(Linearized, self).set_model(model)
         self._is1d = self._model.hidden.n_dim == 0
 
         return self

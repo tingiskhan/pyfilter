@@ -8,11 +8,23 @@ from ....utils import construct_diag_from_flat
 
 class LinearGaussianObservations(Proposal):
     """
-    Proposal designed for cases when the observation density is a linear combination of the states, and has a Gaussian
-    density. Note that your state space model must of type `LinearGaussianObservations` in order to use this proposal.
+    Implements the optimal proposal density whenever we have that both the latent and observation densities are
+    Gaussian, and that the mean of the observation density can be expressed as a linear combination of the latent
+    states. More specifically, we have that
+        .. math::
+            Y_t = A \\cdot X_t + V_t, \n
+            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+
+    where :math:`A` is a matrix of dimension ``(dimension of observation space, dimension of  latent space)``,
+    :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\\theta` denotes the
+    parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
     def __init__(self):
+        """
+        Initializes the ``LinearGaussianObservations`` class.
+        """
+
         super().__init__()
         self._hidden_is1d = None
         self._observable_is1d = None
@@ -39,23 +51,19 @@ class LinearGaussianObservations(Proposal):
         tc = c if not self._observable_is1d else c.unsqueeze(-2)
 
         ttc = tc.transpose(-2, -1)
-        diag_o_var_inv = construct_diag_from_flat(o_var_inv, self._model.observable.n_dim)
-        t2 = ttc.matmul(diag_o_var_inv).matmul(tc)
+        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.observable.n_dim)
+        t2 = ttc.matmul(o_inv_cov).matmul(tc)
 
         cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
         t1 = h_var_inv * loc
+        t2 = o_inv_cov.squeeze(-1) * y if self._observable_is1d else o_inv_cov.matmul(y)
 
-        if self._observable_is1d:
-            t2 = (diag_o_var_inv.squeeze(-1) * y).unsqueeze(-1)
-        else:
-            t2 = torch.matmul(diag_o_var_inv, y)
-
-        t3 = ttc.matmul(t2)[..., 0]
-        m = cov.matmul((t1 + t3).unsqueeze(-1))[..., 0]
+        t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
+        m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
 
         return MultivariateNormal(m, scale_tril=torch.cholesky(cov), validate_args=False)
 
-    def get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
+    def _get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
         return params[0], None
 
     def sample_and_weight(self, y, x):
@@ -68,7 +76,7 @@ class LinearGaussianObservations(Proposal):
         params = self._model.observable.functional_parameters()
 
         new_state.values = loc
-        c, offset = self.get_constant_and_offset(params, new_state)
+        c, offset = self._get_constant_and_offset(params, new_state)
 
         _, o_scale = self._model.observable.mean_scale(new_state)
         o_var_inv = 1 / o_scale ** 2
@@ -90,7 +98,7 @@ class LinearGaussianObservations(Proposal):
         h_var = h_scale ** 2
 
         params = self._model.observable.functional_parameters()
-        c, offset = self.get_constant_and_offset(params, new_state)
+        c, offset = self._get_constant_and_offset(params, new_state)
 
         if offset is not None:
             o_loc = offset

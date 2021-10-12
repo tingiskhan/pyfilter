@@ -1,6 +1,7 @@
 import torch
 from .base import ParticleFilter
-from ...utils import loglikelihood, choose
+from .utils import log_likelihood
+from ...utils import choose
 from .state import ParticleFilterState
 
 
@@ -9,7 +10,7 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def predict_correct(self, y, state: ParticleFilterState):
+    def forward(self, y, state: ParticleFilterState):
         normalized = state.normalized_weights()
 
         if torch.isnan(y).any():
@@ -30,6 +31,6 @@ class APF(ParticleFilter):
         x, weights = self._proposal.sample_and_weight(y, copied_x)
 
         w = weights - choose(pre_weights, indices)
-        ll = loglikelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
+        ll = log_likelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
 
         return ParticleFilterState(x, w, ll, indices)

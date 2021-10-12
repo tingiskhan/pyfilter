@@ -31,10 +31,25 @@ def initial_transform(model: "UCSV", base_dist: Distribution):
 
 class UCSV(AffineProcess):
     """
-    Implements a UCSV model.
+    Implements a UCSV model, i.e. a stochastic process with the dynamics
+        .. math::
+            L_{t+1} = L_t + V_t W_{t+1}, \n
+            \\log{V_{t+1}} = \\log{V_t} + \\sigma_v U_{t+1}, \n
+            L_0, \\log{V_0} \\sim \\mathcal{N}(x^i_0, \\sigma_v), \\: i \\in [L, V].
+
+    where :math:`\\sigma_v > 0`.
     """
 
     def __init__(self, sigma_volatility, initial_state_mean: ArrayType = None, **kwargs):
+        """
+        Inititalizes the ``UCSV`` class.
+
+        Args:
+            sigma_volatility: The volatility of the log volatility process, i.e. :math:`\\sigma_v`.
+            initial_state_mean: Optional, whether to use initial values other than 0 for both processes.
+            kwargs: See base.
+        """
+
         initial_dist = increment_dist = DistributionWrapper(
             lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
         )

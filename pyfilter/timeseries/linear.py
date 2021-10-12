@@ -2,24 +2,23 @@ from .model import StateSpaceModel
 from .observable import AffineObservations
 import torch
 from torch.distributions import Distribution, Normal, Independent
-from typing import Union
 from ..distributions import DistributionWrapper
 from ..typing import ArrayType
 
 
-def f_0d(x, a, scale):
+def _f_0d(x, a, scale):
     return a * x.values
 
 
-def f_1d(x, a, scale):
-    return f_2d(x, a.unsqueeze(-2), scale).squeeze(-1)
+def _f_1d(x, a, scale):
+    return _f_2d(x, a.unsqueeze(-2), scale).squeeze(-1)
 
 
-def f_2d(x, a, scale):
+def _f_2d(x, a, scale):
     return torch.matmul(a, x.values.unsqueeze(-1)).squeeze(-1)
 
 
-def g(x, a, *scale):
+def _g(x, a, *scale):
     return scale[-1] if len(scale) == 1 else scale
 
 
@@ -39,12 +38,24 @@ def _get_shape(a):
 
 class LinearObservations(StateSpaceModel):
     """
-    Defines a class of observation dynamics where the observed variable is a linear combination of the states, i.e.
+    Defines a state space model where the observation dynamics are given by a linear combination of the latent states
+        .. math::
+            Y_t = A \\cdot X_t + \\sigma W_t,
 
-        Y = a * x + scale * base_dist,
+    where :math:`A` is a matrix of size ``(dimension of observation space, dimension of latent space)``, :math:`W_t` is
+    a random variable with arbitrary density, and :math:`\\sigma` is a scaling parameter.
     """
 
-    def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist):
+    def __init__(self, hidden, a: ArrayType, scale: ArrayType, base_dist: DistributionWrapper):
+        """
+        Initializes the ``LinearObservations`` class.
+
+        Args:
+            hidden: The hidden process.
+            a: The matrix :math:`A`.
+            scale: The scale of the.
+            base_dist: The base distribution.
+        """
 
         dim, is_1d = _get_shape(a)
 
@@ -52,23 +63,33 @@ class LinearObservations(StateSpaceModel):
             raise ValueError("The distribution is not of correct shape!")
 
         if not is_1d:
-            f = f_2d
+            f = _f_2d
         elif is_1d and hidden.n_dim > 0:
-            f = f_1d
+            f = _f_1d
         else:
-            f = f_0d
+            f = _f_0d
 
-        observable = AffineObservations((f, g), (a, scale), base_dist)
+        observable = AffineObservations((f, _g), (a, scale), base_dist)
 
         super().__init__(hidden, observable)
 
 
 class LinearGaussianObservations(LinearObservations):
     """
-    Implements an SSM of type `LinearObservations` where the `base_dist` corresponds to a Gaussian distribution.
+    Same as ``LinearObservations`` but where the distribution :math:`W_t` is given by a Gaussian distribution with zero
+    mean and unit variance.
     """
 
-    def __init__(self, hidden, a=1.0, scale=1.0, **kwargs):
+    def __init__(self, hidden, a=1.0, scale=1.0):
+        """
+        Initializes the ``LinearGaussianObservations`` class.
+
+        Args:
+            hidden: See base.
+            a: See base.
+            scale: See base.
+        """
+
         dim, is_1d = _get_shape(a)
 
         if is_1d:
@@ -78,4 +99,4 @@ class LinearGaussianObservations(LinearObservations):
                 lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(dim), scale=torch.ones(dim)
             )
 
-        super().__init__(hidden, a, scale, n, **kwargs)
+        super().__init__(hidden, a, scale, n)

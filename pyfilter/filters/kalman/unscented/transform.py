@@ -8,19 +8,25 @@ from .result import UFTCorrectionResult, UFTPredictionResult
 from ....utils import construct_diag_from_flat, size_getter
 from ....typing import ShapeLike
 from ....timeseries import StateSpaceModel, NewState
-from ....parameter import ExtendedParameter
+from ....parameter import PriorBoundParameter
 
 
 class UnscentedFilterTransform(Module):
+    """
+    Implements the Unscented Transform for a state space model.
+    """
+
     MONTE_CARLO_ESTIMATES = 10_000
 
-    def __init__(self, model: StateSpaceModel, a=1.0, b=2.0, k=0.0):
+    def __init__(self, model: StateSpaceModel, alpha=1.0, beta=2.0, kappa=0.0):
         """
-        Implements the Unscented Transform for a state space model.
+        Initializes the ``UnscentedFilterTransform``.
 
-        :param a: The alpha parameter. Defined on the interval [0, 1]
-        :param b: The beta parameter. Optimal value for Gaussian models is 2
-        :param k: The kappa parameter. To control the semi-definiteness
+        Args:
+            model: The state space model for which to filter.
+            alpha: Defined on the interval [0, 1].
+            beta: Optimal value for Gaussian models is 2.
+            kappa: Controls the semi-definiteness of the covariance of the sigma points.
         """
 
         super().__init__()
@@ -37,10 +43,10 @@ class UnscentedFilterTransform(Module):
         self._model = model
         self._n_dim = model.hidden.num_vars + trans_dim + model.observable.num_vars
 
-        lam = a ** 2 * (self._n_dim + k) - self._n_dim
+        lam = alpha ** 2 * (self._n_dim + kappa) - self._n_dim
         self._cov_scale = sqrt(lam + self._n_dim)
 
-        self._set_weights(a, b, lam)
+        self._set_weights(alpha, beta, lam)
         self._set_slices(trans_dim)
 
         self._view_shape = None
@@ -62,7 +68,15 @@ class UnscentedFilterTransform(Module):
         self._wc[0] = self._wm[0] + (1 - a ** 2 + b)
         self._wm[1:] = self._wc[1:] = 1 / 2 / (self._n_dim + lamda)
 
-    def initialize(self, shape: ShapeLike = None):
+    def initialize(self, shape: ShapeLike = None) -> UFTCorrectionResult:
+        """
+        Initializes the ``UnscentedFilterTransform`` class by creating a state object.
+
+        Args:
+            shape: Optional parameter for whenever we need to perform transforms in parallel. Used whenever
+                ``pyfilter.filters.kalman.UKF`` has more than ``None`` parallel filters.
+        """
+
         shape = size_getter(shape)
         self._view_shape = (shape[0], *(1 for _ in shape)) if len(shape) > 0 else shape
 
@@ -104,7 +118,7 @@ class UnscentedFilterTransform(Module):
 
     def _get_params_as_view(self, module) -> Tuple[torch.Tensor, ...]:
         return module.functional_parameters(
-            f=lambda p: p.view(*self._view_shape, *p.shape[1:]) if isinstance(p, ExtendedParameter) else p
+            f=lambda p: p.view(*self._view_shape, *p.shape[1:]) if isinstance(p, PriorBoundParameter) else p
         )
 
     def update_state(
@@ -116,7 +130,24 @@ class UnscentedFilterTransform(Module):
         ym: torch.Tensor = None,
         yc: torch.Tensor = None,
         y_state: NewState = None,
-    ):
+    ) -> UFTCorrectionResult:
+        """
+        Creates a new state given the latest estimate of the means and covariances together with the previous correction
+        state object.
+
+        Args:
+            xm: The estimated mean of the latent process.
+            xc: The estimate covariance of the latent process.
+            x_state: The latest state of the latent process, contains the sigma points.
+            prev_corr: The previous correction state.
+            ym: The estimated mean of the observation process.
+            yc: THe estimate covariance of the observation process.
+            y_state: The latest state of the observation process, contains the sigma points.
+
+        Returns:
+            A new ``UTFCorrectionResult`` object with updated means and covariances.
+        """
+
         mean = prev_corr.x.dist.mean.clone()
         cov = prev_corr.x.dist.covariance_matrix.clone()
 
@@ -145,7 +176,17 @@ class UnscentedFilterTransform(Module):
 
         return UFTCorrectionResult(x_state, self._state_slc, y_state)
 
-    def predict(self, utf_corr: UFTCorrectionResult):
+    def predict(self, utf_corr: UFTCorrectionResult) -> UFTPredictionResult:
+        """
+        Given the latest ``UTFCorrectionResult`` do a one-step ahead prediction.
+
+        Args:
+            utf_corr: The latest ``UTFCorrectionResult``.
+
+        Returns:
+            The one-step ahead prediction.
+        """
+
         sps = utf_corr.calculate_sigma_points(self._cov_scale)
 
         hidden_state = utf_corr.x.copy(values=sps[..., self._state_slc])
@@ -155,7 +196,21 @@ class UnscentedFilterTransform(Module):
 
         return UFTPredictionResult(spx, spy)
 
-    def correct(self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult):
+    def correct(
+        self, y: torch.Tensor, uft_pred: UFTPredictionResult, prev_corr: UFTCorrectionResult
+    ) -> UFTCorrectionResult:
+        """
+        Corrects the prediction from ``.predict(...)`` using the latest observation ``y``.
+
+        Args:
+            y: The latest observation.
+            uft_pred: The latest prediction.
+            prev_corr: The previous correction result.
+
+        Returns:
+            The correction result for the latest observation.
+        """
+
         (x_m, x_c), (y_m, y_c) = uft_pred.get_mean_and_covariance(self._wm, self._wc)
 
         if x_m.dim() > 1:
