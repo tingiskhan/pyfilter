@@ -186,7 +186,7 @@ class Euler(AffineEulerMaruyama):
             )
 
         def g(x, *args):
-            return torch.zeros_like(x.values)
+            return torch.ones_like(x.values)
 
         super().__init__((dynamics, g), parameters, iv, dist, dt, **kwargs)
 
