@@ -13,7 +13,7 @@ class PMMH(BatchFilterAlgorithm):
     methods` by C. Andrieu et al.
     """
 
-    def __init__(self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None):
+    def __init__(self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"):
         """
         Initializes the ``PMMH`` class.
 
@@ -25,14 +25,26 @@ class PMMH(BatchFilterAlgorithm):
              proposal: Optional parameter specifying how to construct the proposal density for candidate
                 :math:`\\theta^*` given the previously accepted candidate :math:`\\theta_i`. If not specified, defaults
                 to ``pyfilter.inference.batch.mcmc.proposals.RandomWalk``.
+            initializer: Optional parameter specifying how to initialize the chain:
+                - ``seed``: Seeds the initial value by running several chains in parallel and choosing the one
+                    maximizing the total likelihood
+                - ``mean``: Sets the initial values as the means of the prior distributions.
         """
 
         super().__init__(filter_, samples)
         self._num_chains = num_chains
         self._proposal = proposal or RandomWalk()
+        self._initializer = initializer
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
-        self._filter = seed(self._filter, y, 50, self._num_chains)
+        if self._initializer == "seed":
+            self._filter = seed(self._filter, y, 50, self._num_chains)
+        elif self._initializer == "mean":
+            # TODO: Fix so that we may initialize with mean of prior
+            pass
+        else:
+            raise NotImplementedError(f"``{self._initializer}`` is not configured!")
+
         prev_res = self._filter.longfilter(y, bar=False)
 
         return PMMHResult(params_to_tensor(self._filter.ssm, constrained=True), prev_res)
