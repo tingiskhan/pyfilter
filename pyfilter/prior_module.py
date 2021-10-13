@@ -4,8 +4,8 @@ from torch.nn import Module, ModuleDict, ParameterDict
 from abc import ABC
 import torch
 from typing import Iterable, Tuple, Dict, Union
-from ..parameter import PriorBoundParameter
-from ..container import BufferDict
+from pyfilter.parameter import PriorBoundParameter
+from pyfilter.container import BufferDict
 
 
 class HasPriorsModule(Module, ABC):
