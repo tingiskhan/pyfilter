@@ -81,7 +81,7 @@ class HasPriorsModule(Module, ABC):
         for prior, parameter in zip(self._priors_dict, self._parameter_dict):
             yield prior, parameter
 
-        for module in filter(lambda u: isinstance(u, HasPriorsModule), self.modules()):
+        for module in filter(lambda u: isinstance(u, HasPriorsModule), self.children()):
             yield module.parameters_and_priors()
 
     def priors(self) -> Iterable["Prior"]:

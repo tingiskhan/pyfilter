@@ -27,7 +27,12 @@ class TestDistributions(object):
 
         dist = wrapper()
 
-        assert isinstance(dist, StudentT) and (dist.df > 0).all() and (dist.df == wrapper().df)
+        assert (
+                isinstance(dist, StudentT) and
+                (dist.df > 0).all() and
+                (dist.df == wrapper().df) and
+                len(tuple(wrapper.priors())) == 1
+        )
 
     def test_distribution_wrapper(self):
         wrapper = DistributionWrapper(Normal, loc=0.0, scale=1.0)
