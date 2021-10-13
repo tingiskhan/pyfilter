@@ -40,7 +40,7 @@ class HasPriorsModule(Module, ABC):
             p: The object to register.
         """
 
-        from ..distributions import Prior
+        from .distributions import Prior
 
         if isinstance(p, Prior):
             self.register_prior(name, p)
