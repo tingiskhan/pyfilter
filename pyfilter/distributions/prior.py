@@ -2,8 +2,9 @@ from torch.distributions import TransformedDistribution, biject_to, Transform
 import torch
 from typing import Tuple
 from torch.nn import Module
-from ..mixins import DistributionBuilderMixin
+from torch.distributions import Distribution
 from .typing import HyperParameters, DistributionOrBuilder
+from .mixin import DistributionBuilderMixin
 
 
 class Prior(DistributionBuilderMixin, Module):
@@ -135,6 +136,9 @@ class Prior(DistributionBuilderMixin, Module):
         """
 
         return (self().event_shape if not constrained else self.unconstrained_prior.event_shape).numel()
+
+    def forward(self) -> Distribution:
+        return self.base_dist(**self._buffers)
 
     def get_slice_for_parameter(self, prev_index, constrained=True) -> Tuple[slice, int]:
         numel = self.get_numel(constrained)

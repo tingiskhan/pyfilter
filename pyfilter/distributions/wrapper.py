@@ -1,12 +1,11 @@
 from typing import Union
-from torch.nn import Module
+from .mixin import DistributionBuilderMixin
 from .prior import Prior
-from ..mixins import AllowPriorMixin, DistributionBuilderMixin
-from ..mixins.register_parameter_prior import RegisterParameterAndPriorMixin
+from ..prior_module import HasPriorsModule
 from .typing import DistributionOrBuilder, HyperParameters
 
 
-class DistributionWrapper(DistributionBuilderMixin, AllowPriorMixin, RegisterParameterAndPriorMixin, Module):
+class DistributionWrapper(HasPriorsModule, DistributionBuilderMixin):
     """
     Implements a wrapper around ``pytorch.distributions.Distribution`` objects. It inherits from ``pytorch.nn.Module``
     in order to utilize all of the associated methods and attributes. One such is e.g. moving tensors between different
@@ -52,3 +51,6 @@ class DistributionWrapper(DistributionBuilderMixin, AllowPriorMixin, RegisterPar
 
         for k, v in parameters.items():
             self._register_parameter_or_prior(k, v)
+
+    def forward(self):
+        return self.base_dist(**self.get_parameters_and_buffers())

@@ -1,6 +1,5 @@
 from torch.distributions import Distribution
 import torch
-from typing import Dict
 
 
 class DistributionBuilderMixin(object):
@@ -9,27 +8,12 @@ class DistributionBuilderMixin(object):
     ``torch.nn.Module``.
     """
 
-    def get_parameters(self) -> Dict[str, torch.Tensor]:
-        """
-        Returns the a parameters as a dictionary.
-        """
-
-        res = dict()
-
-        res.update(self._parameters)
-        res.update(self._buffers)
-
-        return res
-
     def build_distribution(self) -> Distribution:
         """
         Constructs the distribution.
         """
 
-        return self.base_dist(**self.get_parameters())
-
-    def forward(self) -> Distribution:
-        return self.build_distribution()
+        return self.__call__()
 
     @property
     def shape(self) -> torch.Size:

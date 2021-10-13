@@ -9,8 +9,7 @@ from .state import NewState
 from ..distributions import DistributionWrapper
 from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
-from ..mixins import AllowPriorMixin
-from ..mixins.register_parameter_prior import RegisterParameterAndPriorMixin
+from ..prior_module import HasPriorsModule
 
 
 T = TypeVar("T")
@@ -189,7 +188,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
 
-class StructuralStochasticProcess(AllowPriorMixin, RegisterParameterAndPriorMixin, StochasticProcess, ABC):
+class StructuralStochasticProcess(StochasticProcess, HasPriorsModule, ABC):
     """
     While ``StochasticProcess`` allows for any type of parameterization of ``.build_density(...)`` this derived class
     implements the special case of "classical" timeseries modelling. I.e. in which there is an analytical expression for
@@ -219,8 +218,6 @@ class StructuralStochasticProcess(AllowPriorMixin, RegisterParameterAndPriorMixi
             f: Optional parameter, whether to apply some sort of transformation to the parameters prior to returning.
         """
 
-        res = dict()
-        res.update(self._parameters)
-        res.update(self._buffers)
+        res = self.get_parameters_and_buffers()
 
         return tuple(f(v) if f is not None else v for _, v in sorted(res.items(), key=lambda k: k[0]))
