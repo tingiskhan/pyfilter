@@ -78,7 +78,7 @@ class HasPriorsModule(Module, ABC):
             [(prior_parameter_0, parameter_0), ..., (prior_parameter_n, parameter_n)]
         """
 
-        for prior, parameter in zip(self._priors_dict, self._parameter_dict):
+        for prior, parameter in zip(self._priors_dict.values(), self._parameter_dict.values()):
             yield prior, parameter
 
         for module in filter(lambda u: isinstance(u, HasPriorsModule), self.children()):
