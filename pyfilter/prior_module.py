@@ -8,7 +8,7 @@ from pyfilter.parameter import PriorBoundParameter
 from pyfilter.container import BufferDict
 
 
-class HasPriorsModule(Module, ABC):
+class HasPriorsModule(Module):
     """
     Abstract base class that allows registering priors.
     """
