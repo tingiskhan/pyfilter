@@ -20,7 +20,7 @@ def models():
         Prior(LogNormal, loc=0.0, scale=1.0)
     )
     prob_ou = m.OrnsteinUhlenbeck(*ou_priors, dt=ou._dt.clone().detach())
-    prob_obs_1d = LinearGaussianObservations(prob_ou, obs_1d.observable.parameter_0, obs_1d.observable.parameter_1)
+    prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable._buffer_dict.values())
 
     return (
         [prob_obs_1d, obs_1d],
@@ -28,11 +28,21 @@ def models():
 
 
 def get_prior(name, algorithm):
-    return next(o for n, o in algorithm.named_modules() if name.split(".")[-1] in n)
+    if name.startswith("hidden"):
+        module = algorithm.filter.ssm.hidden
+    else:
+        module = algorithm.filter.ssm.observable
+
+    return module._prior_dict[name.split(".")[-1]]
 
 
 def get_true_parameter(name, model):
-    return next(o for n, o in model.named_buffers() if n == name)
+    if name.startswith("hidden"):
+        module = model.hidden
+    else:
+        module = model.observable
+
+    return module.get_parameters_and_buffers()[name.split(".")[-1]]
 
 
 class TestsSequentialAlgorithm(object):
@@ -93,6 +103,7 @@ class TestBatchAlgorithms(object):
             assert result.converged
 
             posteriors = result.parameter_approximation.get_transformed_dists()
+            # TODO: Fix
             for (name, parameter), posterior in zip(algorithm._model.named_parameters(), posteriors):
                 prior = get_prior(name, algorithm).build_distribution()
                 true_parameter = get_true_parameter(name, model)
@@ -116,6 +127,7 @@ class TestBatchAlgorithms(object):
                     result = algorithm.fit(y)
 
                     numel = 0
+                    # TODO: Fix
                     for name, _ in algorithm.filter.ssm.named_parameters():
                         prior = get_prior(name, algorithm)
                         true_parameter = get_true_parameter(name, model)
