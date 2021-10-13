@@ -22,6 +22,7 @@ class HasPriorsModule(Module, ABC):
 
         self._prior_dict = ModuleDict()
 
+        # Bug for ``torch.nn.ParameterDict`` as ``__setitem__`` is disallowed, but ``Module`` initializes training
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
