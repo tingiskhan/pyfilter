@@ -1,7 +1,7 @@
 import pytest
 from pyfilter.timeseries import models, AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, RungeKutta, Euler
 import torch
-from pyfilter.distributions import DistributionWrapper
+from pyfilter.distributions import DistributionWrapper, Prior
 from torch.distributions import Normal
 from math import sqrt
 
@@ -32,6 +32,7 @@ def custom_models():
         RungeKutta(lambda *u: f(*u, 0.0), reversion_params[:1], torch.tensor([5.0, 1.0]), dt=dt, tuning_std=1e-2)
     )
 
+
 @pytest.fixture
 def timeseries_models(custom_models):
     return custom_models + (
@@ -49,6 +50,23 @@ def timeseries_models(custom_models):
 
 class TestTimeseries(object):
     timesteps = 1000
+
+    def test_correct_order(self):
+        parameters = 0.0, 0.99, 0.05
+        model = models.AR(*parameters)
+
+        for p, true_p in zip(model.functional_parameters(), parameters):
+            assert p == true_p
+
+    def test_correct_order_with_prior(self):
+        parameters = 0.0, Prior(Normal, loc=0.0, scale=1.0), 0.05
+        model = models.AR(*parameters)
+
+        for i, (p, true_p) in enumerate(zip(model.functional_parameters(), parameters)):
+            if i == 1:
+                assert (true_p is parameters[1]) and (true_p in model.priors())
+            else:
+                assert p == true_p
 
     def test_sample_path(self, timeseries_models):
         for m in timeseries_models:
