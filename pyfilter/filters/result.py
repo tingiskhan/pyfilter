@@ -2,7 +2,7 @@ import torch
 from typing import List, Union, TypeVar, Generic
 from collections import deque
 from .state import BaseFilterState
-from ..utils import TensorTuple
+from ..container import TensorTuple
 from ..state import StateWithTensorTuples
 
 TState = TypeVar("TState", bound=BaseFilterState)

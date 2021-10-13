@@ -1,7 +1,7 @@
 import torch
 from ...state import FilterAlgorithmState
 from ....filters import FilterResult
-from ....utils import TensorTuple
+from ....container import TensorTuple
 
 
 class PMMHResult(FilterAlgorithmState):

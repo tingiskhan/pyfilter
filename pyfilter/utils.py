@@ -1,7 +1,4 @@
 import torch
-from typing import Iterator
-from torch.utils.data import IterableDataset
-from torch.utils.data.dataset import T_co
 from .constants import INFTY
 from .typing import ShapeLike
 
@@ -22,37 +19,6 @@ def size_getter(shape: ShapeLike) -> torch.Size:
         return torch.Size([shape])
 
     return torch.Size(shape)
-
-
-class TensorTuple(IterableDataset):
-    """
-    Implements a tuple like tensor storage.
-    """
-
-    def __init__(self, *tensors):
-        self.tensors = tensors
-
-    def __iter__(self) -> Iterator[T_co]:
-        for t in self.tensors:
-            yield t
-
-    def __getitem__(self, index) -> T_co:
-        return self.tensors[index]
-
-    def __add__(self, other: IterableDataset):
-        return TensorTuple(*self.tensors, *other.tensors)
-
-    def values(self) -> torch.Tensor:
-        return torch.stack(self.tensors, dim=0)
-
-    def append(self, tensor: torch.Tensor):
-        if not isinstance(tensor, torch.Tensor):
-            raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
-
-        self.tensors += (tensor,)
-
-    def apply(self, fn):
-        self.tensors = tuple(fn(t) for t in self.tensors)
 
 
 def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
