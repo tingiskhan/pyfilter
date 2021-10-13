@@ -20,7 +20,7 @@ class HasPriorsModule(Module):
 
         super().__init__()
 
-        self._priors_dict = ModuleDict()
+        self._prior_dict = ModuleDict()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -69,27 +69,28 @@ class HasPriorsModule(Module):
             prior: The prior of the parameter.
         """
 
-        self._priors_dict[name] = prior
+        self._prior_dict[name] = prior
         self._parameter_dict.update({name: PriorBoundParameter(prior().sample(), requires_grad=False)})
 
-    def parameters_and_priors(self) -> Iterable[Tuple["Prior", PriorBoundParameter]]:
+    def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "Prior"]]:
         """
         Returns the priors and parameters of the module as an iterable of tuples, i.e::
-            [(prior_parameter_0, parameter_0), ..., (prior_parameter_n, parameter_n)]
+            [(parameter_0, prior_parameter_0), ..., (prior_parameter_n, prior_parameter_n)]
         """
 
-        for prior, parameter in zip(self._priors_dict.values(), self._parameter_dict.values()):
-            yield prior, parameter
+        for prior, parameter in zip(self._prior_dict.values(), self._parameter_dict.values()):
+            yield parameter, prior
 
         for module in filter(lambda u: isinstance(u, HasPriorsModule), self.children()):
-            yield module.parameters_and_priors()
+            for prior, parameter in module.parameters_and_priors():
+                yield prior, parameter
 
     def priors(self) -> Iterable["Prior"]:
         """
         Same as ``.parameters_and_priors()`` but only returns the priors.
         """
 
-        for prior, _ in self.parameters_and_priors():
+        for _, prior in self.parameters_and_priors():
             yield prior
 
     def sample_params(self, shape: torch.Size):
@@ -104,3 +105,13 @@ class HasPriorsModule(Module):
             param.sample_(prior, shape)
 
         return self
+
+    def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
+        """
+        Calculates the prior log-likelihood of the current values of the parameters.
+
+        Args:
+            constrained: Optional parameter specifying whether to evaluate the original prior, or the bijected prior.
+        """
+
+        return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
