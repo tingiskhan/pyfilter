@@ -41,7 +41,7 @@ def get_true_parameter(name, model):
     else:
         module = model.observable
 
-    return module.get_parameters_and_buffers()[name.split(".")[-1]]
+    return module.parameters_and_buffers()[name.split(".")[-1]]
 
 
 class TestsSequentialAlgorithm(object):

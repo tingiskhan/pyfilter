@@ -53,4 +53,4 @@ class DistributionWrapper(HasPriorsModule, DistributionBuilderMixin):
             self._register_parameter_or_prior(k, v)
 
     def forward(self):
-        return self.base_dist(**self.get_parameters_and_buffers())
+        return self.base_dist(**self.parameters_and_buffers())

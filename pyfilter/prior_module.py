@@ -50,7 +50,7 @@ class HasPriorsModule(Module, ABC):
         else:
             self._buffer_dict.update({name: p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p)})
 
-    def get_parameters_and_buffers(self) -> Dict[str, Union[torch.Tensor, torch.nn.Parameter]]:
+    def parameters_and_buffers(self) -> Dict[str, Union[torch.Tensor, torch.nn.Parameter]]:
         """
         Returns the union of the parameters and buffers of the module.
         """
