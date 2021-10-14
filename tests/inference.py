@@ -18,8 +18,8 @@ def models():
         Prior(Normal, loc=0.0, scale=1.0),
         Prior(LogNormal, loc=0.0, scale=1.0)
     )
-    prob_ou = m.OrnsteinUhlenbeck(*ou_priors, dt=ou._dt.clone().detach())
-    prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable._buffer_dict.values())
+    prob_ou = m.OrnsteinUhlenbeck(*ou_priors, dt=ou._dt.clone())
+    prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable.buffer_dict.values())
 
     return (
         [prob_obs_1d, obs_1d],

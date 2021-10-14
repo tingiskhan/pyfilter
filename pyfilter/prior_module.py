@@ -46,9 +46,9 @@ class HasPriorsModule(Module, ABC):
         if isinstance(p, Prior):
             self.register_prior(name, p)
         elif isinstance(p, torch.nn.Parameter):
-            self.parameter_dict.update({name: p})
+            self.parameter_dict[name] = p
         else:
-            self.buffer_dict.update({name: p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p)})
+            self.buffer_dict[name] = (p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p))
 
     def parameters_and_buffers(self) -> Dict[str, Union[torch.Tensor, torch.nn.Parameter]]:
         """
@@ -71,7 +71,7 @@ class HasPriorsModule(Module, ABC):
         """
 
         self.prior_dict[name] = prior
-        self.parameter_dict.update({name: PriorBoundParameter(prior().sample(), requires_grad=False)})
+        self.parameter_dict[name] = PriorBoundParameter(prior().sample(), requires_grad=False)
 
     def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "Prior"]]:
         """
