@@ -32,7 +32,7 @@ def get_prior(name, algorithm):
     else:
         module = algorithm.filter.ssm.observable
 
-    return module._prior_dict[name.split(".")[-1]]
+    return module.prior_dict[name.split(".")[-1]]
 
 
 def get_true_parameter(name, model):

@@ -20,14 +20,14 @@ class HasPriorsModule(Module, ABC):
 
         super().__init__()
 
-        self._prior_dict = ModuleDict()
+        self.prior_dict = ModuleDict()
 
         # Bug for ``torch.nn.ParameterDict`` as ``__setitem__`` is disallowed, but ``Module`` initializes training
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            self._parameter_dict = ParameterDict()
-            self._buffer_dict = BufferDict()
+            self.parameter_dict = ParameterDict()
+            self.buffer_dict = BufferDict()
 
     def _register_parameter_or_prior(self, name: str, p):
         """
@@ -46,9 +46,9 @@ class HasPriorsModule(Module, ABC):
         if isinstance(p, Prior):
             self.register_prior(name, p)
         elif isinstance(p, torch.nn.Parameter):
-            self._parameter_dict.update({name: p})
+            self.parameter_dict.update({name: p})
         else:
-            self._buffer_dict.update({name: p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p)})
+            self.buffer_dict.update({name: p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p)})
 
     def parameters_and_buffers(self) -> Dict[str, Union[torch.Tensor, torch.nn.Parameter]]:
         """
@@ -56,8 +56,8 @@ class HasPriorsModule(Module, ABC):
         """
 
         res = dict()
-        res.update(self._parameter_dict)
-        res.update(self._buffer_dict)
+        res.update(self.parameter_dict)
+        res.update(self.buffer_dict)
 
         return res
 
@@ -70,8 +70,8 @@ class HasPriorsModule(Module, ABC):
             prior: The prior of the parameter.
         """
 
-        self._prior_dict[name] = prior
-        self._parameter_dict.update({name: PriorBoundParameter(prior().sample(), requires_grad=False)})
+        self.prior_dict[name] = prior
+        self.parameter_dict.update({name: PriorBoundParameter(prior().sample(), requires_grad=False)})
 
     def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "Prior"]]:
         """
@@ -79,7 +79,7 @@ class HasPriorsModule(Module, ABC):
             [(parameter_0, prior_parameter_0), ..., (prior_parameter_n, prior_parameter_n)]
         """
 
-        for prior, parameter in zip(self._prior_dict.values(), self._parameter_dict.values()):
+        for prior, parameter in zip(self.prior_dict.values(), self.parameter_dict.values()):
             yield parameter, prior
 
         for module in filter(lambda u: isinstance(u, HasPriorsModule), self.children()):
