@@ -13,7 +13,9 @@ class PMMH(BatchFilterAlgorithm):
     methods` by C. Andrieu et al.
     """
 
-    def __init__(self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"):
+    def __init__(
+        self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"
+    ):
         """
         Initializes the ``PMMH`` class.
 

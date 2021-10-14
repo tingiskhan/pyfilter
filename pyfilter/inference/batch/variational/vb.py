@@ -12,7 +12,15 @@ class VariationalBayes(OptimizationBasedAlgorithm):
     Implements the `Variational Bayes` algorithm.
     """
 
-    def __init__(self, model, parameter_approximation: ParameterMeanField, n_samples=4, max_iter=30e3, state_approximation : StateMeanField = None, **kwargs):
+    def __init__(
+        self,
+        model,
+        parameter_approximation: ParameterMeanField,
+        n_samples=4,
+        max_iter=30e3,
+        state_approximation: StateMeanField = None,
+        **kwargs,
+    ):
         """
         Initializes the ``VariationalBayes`` class.
 

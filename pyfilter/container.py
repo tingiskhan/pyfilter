@@ -15,15 +15,15 @@ class BufferDict(Module):
     this class basically copies ``torch.nn.ParameterDict``.
     """
 
-    def __init__(self, parameters: Optional[Mapping[str, 'Tensor']] = None) -> None:
+    def __init__(self, parameters: Optional[Mapping[str, "Tensor"]] = None) -> None:
         super(BufferDict, self).__init__()
         if parameters is not None:
             self.update(parameters)
 
-    def __getitem__(self, key: str) -> 'Tensor':
+    def __getitem__(self, key: str) -> "Tensor":
         return self._buffers[key]
 
-    def __setitem__(self, key: str, parameter: 'Tensor') -> None:
+    def __setitem__(self, key: str, parameter: "Tensor") -> None:
         self.register_buffer(key, parameter)
 
     def __delitem__(self, key: str) -> None:
@@ -49,7 +49,7 @@ class BufferDict(Module):
         """
         self._buffers.clear()
 
-    def pop(self, key: str) -> 'Tensor':
+    def pop(self, key: str) -> "Tensor":
         """
         See ``torch.nn.ParameterDict``.
         """
@@ -63,26 +63,27 @@ class BufferDict(Module):
         """
         return self._buffers.keys()
 
-    def items(self) -> Iterable[Tuple[str, 'Tensor']]:
+    def items(self) -> Iterable[Tuple[str, "Tensor"]]:
         """
         See ``torch.nn.ParameterDict``.
         """
         return self._buffers.items()
 
-    def values(self) -> Iterable['Tensor']:
+    def values(self) -> Iterable["Tensor"]:
         """
         See ``torch.nn.ParameterDict``.
         """
         return self._buffers.values()
 
-    def update(self, parameters: Mapping[str, 'Tensor']) -> None:
+    def update(self, parameters: Mapping[str, "Tensor"]) -> None:
         """
         See ``torch.nn.ParameterDict``.
         """
         if not isinstance(parameters, container_abcs.Iterable):
-            raise TypeError("ParametersDict.update should be called with an "
-                            "iterable of key/value pairs, but got " +
-                            type(parameters).__name__)
+            raise TypeError(
+                "ParametersDict.update should be called with an "
+                "iterable of key/value pairs, but got " + type(parameters).__name__
+            )
 
         if isinstance(parameters, (OrderedDict, BufferDict)):
             for key, parameter in parameters.items():
@@ -93,13 +94,15 @@ class BufferDict(Module):
         else:
             for j, p in enumerate(parameters):
                 if not isinstance(p, container_abcs.Iterable):
-                    raise TypeError("ParameterDict update sequence element "
-                                    "#" + str(j) + " should be Iterable; is" +
-                                    type(p).__name__)
+                    raise TypeError(
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " should be Iterable; is" + type(p).__name__
+                    )
                 if not len(p) == 2:
-                    raise ValueError("ParameterDict update sequence element "
-                                     "#" + str(j) + " has length " + str(len(p)) +
-                                     "; 2 is required")
+                    raise ValueError(
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
+                    )
                 self[p[0]] = p[1]
 
 

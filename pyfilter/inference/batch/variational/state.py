@@ -14,7 +14,7 @@ class VariationalResult(AlgorithmState):
         loss: torch.Tensor,
         iterations: int,
         parameter_approximation: BaseApproximation,
-        state_approximation: BaseApproximation = None
+        state_approximation: BaseApproximation = None,
     ):
         """
         Initializes the ``VariationalState`` class.
