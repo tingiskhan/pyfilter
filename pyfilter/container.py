@@ -2,8 +2,7 @@ import torch
 from torch.nn import Module
 from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple
 import warnings
-from torch._six import container_abcs
-from collections import OrderedDict
+from collections import OrderedDict, abc as container_abcs
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataset import T_co
 
