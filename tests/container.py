@@ -45,6 +45,3 @@ class TestContainers(object):
         buffer_dict["parameter_1"] = torch.tensor(0.0)
 
         assert (len(buffer_dict.values()) == 2) and ("parameter_1" in buffer_dict)
-
-
-TestContainers().test_bufferdict()
