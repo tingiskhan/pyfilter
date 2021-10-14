@@ -5,8 +5,7 @@ from torch.distributions import Normal, Exponential, LogNormal
 from tests.filters import construct_filters
 from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
 from scipy.stats import gaussian_kde
-from pyfilter.inference.batch.variational import VariationalBayes, approximation as apx
-from pyfilter.inference.batch.mcmc import PMMH, proposals as props
+from pyfilter.inference.batch import variational, mcmc
 
 
 @pytest.fixture
@@ -90,12 +89,12 @@ class TestBatchAlgorithms(object):
         for prob_model, model in models:
             x, y = model.sample_path(self.SERIES_LENGTH)
 
-            algorithm = VariationalBayes(
+            algorithm = variational.VariationalBayes(
                 prob_model,
                 n_samples=12,
                 max_iter=100_000,
-                parameter_approximation=apx.ParameterMeanField(),
-                state_approximation=apx.StateMeanField()
+                parameter_approximation=variational.approximation.ParameterMeanField(),
+                state_approximation=variational.approximation.StateMeanField()
             )
 
             result = algorithm.fit(y)
@@ -113,9 +112,9 @@ class TestBatchAlgorithms(object):
     @staticmethod
     def pmmh_proposals(filter_, **kwargs):
         return (
-            PMMH(filter_, proposal=props.RandomWalk(scale=0.05), **kwargs),
-            PMMH(filter_, proposal=props.GradientBasedProposal(scale=0.05), **kwargs),
-            PMMH(filter_, proposal=props.GradientBasedProposal(scale=0.025), **kwargs),
+            mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs),
+            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs),
+            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs),
         )
 
     def test_pmmh(self, models):
