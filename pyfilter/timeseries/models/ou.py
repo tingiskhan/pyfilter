@@ -13,6 +13,7 @@ def init_trans(module: "OrnsteinUhlenbeck", dist):
     return TransformedDistribution(dist, AffineTransform(initial_, sigma / (2 * kappa).sqrt()))
 
 
+# TODO: Should perhaps inherit from StochasticDifferentialEquation?
 class OrnsteinUhlenbeck(AffineProcess):
     """
     Implements the solved Ornstein-Uhlenbeck process, i.e. the solution to the SDE
@@ -64,7 +65,7 @@ class OrnsteinUhlenbeck(AffineProcess):
             initial_transform=init_trans,
             **kwargs
         )
-        self._dt = torch.tensor(dt)
+        self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
     def _f(self, x, k, g, s, _):
         return g + (x.values - g) * torch.exp(-k * self._dt)
