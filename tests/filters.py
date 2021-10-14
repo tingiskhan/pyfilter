@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 import torch
 from pyfilter.timeseries import models as m, LinearGaussianObservations, AffineJointStochasticProcesses
-from pyfilter.filters.particle import SISR, APF, proposals as props, ParticleFilter
-from pyfilter.filters.kalman import UKF
+from pyfilter.filters import particle as part, kalman
 from pykalman import KalmanFilter
 
 
@@ -54,14 +53,14 @@ def linear_models():
 
 
 def construct_filters(model, **kwargs):
-    particle_types = (SISR, APF)
+    particle_types = (part.SISR, part.APF)
 
     return (
-        *(pt(model, 500, proposal=props.LinearGaussianObservations(), **kwargs) for pt in particle_types),
-        UKF(model, **kwargs),
-        *(pt(model, 5000, proposal=props.Bootstrap(), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.LinearGaussianObservations(), **kwargs) for pt in particle_types),
+        kalman.UKF(model, **kwargs),
+        *(pt(model, 5000, proposal=part.proposals.Bootstrap(), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
     )
 
 
@@ -148,7 +147,7 @@ class TestFilters(object):
 
             for f in construct_filters(model, record_states=True):
                 # Currently UKF does not implement smoothing
-                if isinstance(f, UKF):
+                if isinstance(f, kalman.UKF):
                     continue
 
                 result = f.longfilter(y)
@@ -201,7 +200,7 @@ class TestFilters(object):
         x, y = sde.sample_path(self.SERIES_LENGTH)
 
         for f in construct_filters(sde):
-            if not (isinstance(f, UKF) or (isinstance(f, ParticleFilter) and isinstance(f.proposal, props.Bootstrap))):
+            if not (isinstance(f, kalman.UKF) or (isinstance(f, part.ParticleFilter) and isinstance(f.proposal, part.proposals.Bootstrap))):
                 continue
 
             result = f.longfilter(y)
