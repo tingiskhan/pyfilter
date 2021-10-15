@@ -6,6 +6,16 @@ from .stochasticprocess import StochasticProcess
 from ..prior_module import UpdateParametersMixin, HasPriorsModule
 
 
+def _check_has_priors_wrapper(f):
+    def _wrapper(obj: "StateSpaceModel", *args, **kwargs):
+        if len(obj._prior_mods) == 0:
+            raise Exception(f"No module is subclassed by {HasPriorsModule.__name__}")
+
+        return f(obj, *args, **kwargs)
+
+    return _wrapper
+
+
 # TODO: Add methods ``concat_parameters`` and ``update_parameters_from_tensor``
 class StateSpaceModel(Module, UpdateParametersMixin):
     """
@@ -28,6 +38,8 @@ class StateSpaceModel(Module, UpdateParametersMixin):
         super().__init__()
         self.hidden = hidden
         self.observable = observable
+
+        self._prior_mods = tuple(m for m in (self.hidden, self.observable) if issubclass(m.__class__, HasPriorsModule))
 
     def sample_path(self, steps, samples=None, x_s=None) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x_s if x_s is not None else self.hidden.initial_sample(shape=samples)
@@ -67,26 +79,21 @@ class StateSpaceModel(Module, UpdateParametersMixin):
 
         return deepcopy(self)
 
+    @_check_has_priors_wrapper
     def sample_params(self, shape: torch.Size = torch.Size([])):
-        # TODO: Convert this check to either a wrapper or on instantiation
-        for m in (self.hidden, self.observable):
-            if not issubclass(m.__class__, HasPriorsModule):
-                raise Exception(f"``{m}`` must be subclassed by {HasPriorsModule.__name__}!")
-
+        for m in self._prior_mods:
             m.sample_params(shape)
 
+    @_check_has_priors_wrapper
     def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
         res = tuple()
-        for m in (self.hidden, self.observable):
-            if not issubclass(m.__class__, HasPriorsModule):
-                raise Exception(f"``{m}`` must be subclassed by {HasPriorsModule.__name__}!")
-
+        for m in self._prior_mods:
             res += (m.concat_parameters(constrained, flatten),)
 
         return torch.cat(res, dim=-1)
 
+    @_check_has_priors_wrapper
     def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
-
         hidden_priors_elem = sum(prior.get_numel(constrained) for prior in self.hidden.priors())
 
         hidden_x = x[..., :hidden_priors_elem]
@@ -94,3 +101,7 @@ class StateSpaceModel(Module, UpdateParametersMixin):
 
         self.hidden.update_parameters_from_tensor(hidden_x, constrained)
         self.observable.update_parameters_from_tensor(observable_x, constrained)
+
+    @_check_has_priors_wrapper
+    def eval_prior_log_prob(self, constrained=True):
+        return sum(m.eval_prior_log_prob(constrained=constrained) for m in self._prior_mods)
