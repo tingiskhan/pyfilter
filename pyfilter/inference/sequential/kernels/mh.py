@@ -2,6 +2,7 @@ import torch
 from .base import BaseKernel
 from ...batch.mcmc.proposals import BaseProposal, SymmetricMH
 from ...batch.mcmc.utils import run_pmmh
+from ..state import SMC2State
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -25,10 +26,10 @@ class ParticleMetropolisHastings(BaseKernel):
         self._proposal = proposal or SymmetricMH()
         self.accepted = None
 
-    def update(self, filter_, state, y, *args):
+    def update(self, filter_, state: SMC2State):
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
-        dist = self._proposal.build(state, filter_, y)
+        dist = self._proposal.build(state, filter_, state.parsed_data.values())
 
         filter_.resample(indices)
         state.filter_state.resample(indices)

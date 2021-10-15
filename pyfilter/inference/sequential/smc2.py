@@ -72,7 +72,7 @@ class SMC2(SequentialParticleAlgorithm):
             The updated algorithm state.
         """
 
-        self._kernel.update(self.filter, state, state.parsed_data)
+        self._kernel.update(self.filter, state)
 
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
             state = self._increase_states(state)
