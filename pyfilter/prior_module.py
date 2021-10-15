@@ -150,9 +150,9 @@ class HasPriorsModule(Module, ABC):
             >>> beta_prior = dists.Prior(Uniform, low=-1.0, high=1.0)
             >>>
             >>> ar = ts.models.AR(alpha_prior, beta_prior, 0.05)
-            >>> ar.sample_params()
+            >>> ar.sample_params(torch.Size([1]))
             >>>
-            >>> new_values = torch.empty(2).randn()
+            >>> new_values = torch.empty(2).normal_()
             >>> ar.update_parameters_from_tensor(new_values, constrained=False)
             >>> assert (new_values == ar.concat_parameters(constrained=False)).all()
         """
