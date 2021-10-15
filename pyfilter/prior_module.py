@@ -8,7 +8,57 @@ from pyfilter.parameter import PriorBoundParameter
 from pyfilter.container import BufferDict
 
 
-class HasPriorsModule(Module, ABC):
+class UpdateParametersMixin(ABC):
+    def sample_params(self, shape: torch.Size = torch.Size([])):
+        """
+        Samples the parameters of the model in place.
+
+        Args:
+            shape: The shape of the parameters to use when sampling.
+        """
+
+        raise NotImplementedError()
+
+    def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
+        """
+        Concatenates the parameters into one tensor.
+
+        Args:
+            constrained: Optional parameter specifying whether to concatenate the original parameters, or bijected.
+            flatten: Optional parameter specifying whether to flatten the parameters.
+        """
+
+        raise NotImplementedError()
+
+    def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
+        """
+        Update the parameters of ``self`` with the last dimension of ``x``.
+
+        Args:
+            x: The tensor containing the new parameter values.
+            constrained: Optional parameter indicating whether values in ``x`` are considered constrained to the
+                parameters' original space.
+
+        Example:
+            >>> from pyfilter import timeseries as ts, distributions as dists
+            >>> from torch.distributions import Normal, Uniform
+            >>> import torch
+            >>>
+            >>> alpha_prior = dists.Prior(Normal, loc=0.0, scale=1.0)
+            >>> beta_prior = dists.Prior(Uniform, low=-1.0, high=1.0)
+            >>>
+            >>> ar = ts.models.AR(alpha_prior, beta_prior, 0.05)
+            >>> ar.sample_params(torch.Size([1]))
+            >>>
+            >>> new_values = torch.empty(2).normal_()
+            >>> ar.update_parameters_from_tensor(new_values, constrained=False)
+            >>> assert (new_values == ar.concat_parameters(constrained=False)).all()
+        """
+
+        raise NotImplementedError()
+
+
+class HasPriorsModule(Module, UpdateParametersMixin, ABC):
     """
     Abstract base class that allows registering priors.
     """
@@ -95,13 +145,6 @@ class HasPriorsModule(Module, ABC):
             yield prior
 
     def sample_params(self, shape: torch.Size = torch.Size([])):
-        """
-        Samples the parameters of the model in place.
-
-        Args:
-            shape: The shape of the parameters to use when sampling.
-        """
-
         for param, prior in self.parameters_and_priors():
             param.sample_(prior, shape)
 
@@ -118,14 +161,6 @@ class HasPriorsModule(Module, ABC):
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
     def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
-        """
-        Concatenates the parameters into one tensor.
-
-        Args:
-            constrained: Optional parameter specifying whether to concatenate the original parameters, or bijected.
-            flatten: Optional parameter specifying whether to flatten the parameters.
-        """
-
         def _first_dim(p: PriorBoundParameter, prior: "Prior"):
             return (-1,) if flatten else p.shape[:p.dim() - len(prior.shape)]
 
@@ -137,30 +172,6 @@ class HasPriorsModule(Module, ABC):
         return torch.cat(res, dim=-1)
 
     def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
-        """
-        Update the parameters of ``self`` with the last dimension of ``x``.
-
-        Args:
-            x: The tensor containing the new parameter values.
-            constrained: Optional parameter indicating whether values in ``x`` are considered constrained to the
-                parameters' original space.
-
-        Example:
-            >>> from pyfilter import timeseries as ts, distributions as dists
-            >>> from torch.distributions import Normal, Uniform
-            >>> import torch
-            >>>
-            >>> alpha_prior = dists.Prior(Normal, loc=0.0, scale=1.0)
-            >>> beta_prior = dists.Prior(Uniform, low=-1.0, high=1.0)
-            >>>
-            >>> ar = ts.models.AR(alpha_prior, beta_prior, 0.05)
-            >>> ar.sample_params(torch.Size([1]))
-            >>>
-            >>> new_values = torch.empty(2).normal_()
-            >>> ar.update_parameters_from_tensor(new_values, constrained=False)
-            >>> assert (new_values == ar.concat_parameters(constrained=False)).all()
-        """
-
         expected_shape = self.concat_parameters(constrained=constrained)
         if x.shape[-1] != expected_shape.shape[-1]:
             raise Exception(f"Shapes not congruent! Expected {expected_shape}, got {x.shape}")

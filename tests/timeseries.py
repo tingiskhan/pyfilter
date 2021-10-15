@@ -2,7 +2,7 @@ import pytest
 from pyfilter import timeseries as ts
 import torch
 from pyfilter.distributions import DistributionWrapper, Prior
-from torch.distributions import Normal, Independent
+from torch.distributions import Normal, Independent, Exponential
 from math import sqrt
 
 
@@ -57,6 +57,11 @@ def proc():
 
     dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
     return ts.AffineProcess((None, None), priors, dist, dist)
+
+
+@pytest.fixture
+def ssm(proc):
+    return ts.LinearGaussianObservations(proc, torch.tensor([1.0, 0.0, 0.0, 0.0]), Prior(Exponential, rate=5.0))
 
 
 class TestTimeseries(object):
@@ -123,4 +128,26 @@ class TestTimeseries(object):
 
                 proc.update_parameters_from_tensor(y, constrained=True)
 
-                assert (y == proc.concat_parameters(constrained=False, flatten=flatten)).all()
+                assert (y == proc.concat_parameters(constrained=True, flatten=flatten)).all()
+
+    def test_concat_parameters_ssm(self, ssm):
+        for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
+            ssm.sample_params(sample_shape)
+
+            x = ssm.concat_parameters(constrained=True, flatten=True)
+            assert x.shape == torch.Size([sample_shape.numel(), 5])
+
+            x = ssm.concat_parameters(constrained=True, flatten=False)
+            assert x.shape == torch.Size([*sample_shape, 5])
+
+    def test_parameter_from_tensor_ssm(self, ssm):
+        for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
+            ssm.sample_params(sample_shape)
+
+            for flatten in (True, False):
+                x = ssm.concat_parameters(constrained=True, flatten=flatten)
+                y = x + 1
+
+                ssm.update_parameters_from_tensor(y, constrained=True)
+
+                assert (y == ssm.concat_parameters(constrained=True, flatten=flatten)).all()

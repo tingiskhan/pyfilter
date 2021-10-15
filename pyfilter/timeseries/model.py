@@ -3,10 +3,11 @@ from torch.nn import Module
 from typing import Tuple
 from copy import deepcopy
 from .stochasticprocess import StochasticProcess
+from ..prior_module import UpdateParametersMixin, HasPriorsModule
 
 
 # TODO: Add methods ``concat_parameters`` and ``update_parameters_from_tensor``
-class StateSpaceModel(Module):
+class StateSpaceModel(Module, UpdateParametersMixin):
     """
     Class representing a state space model, i.e. a dynamical system given by the pair stochastic processes
     :math:`\\{X_t\\}` and :math:`\\{Y_t\\}`, where :math:`X_t` is independent from :math:`Y_t`, and :math:`Y_t`
@@ -65,3 +66,31 @@ class StateSpaceModel(Module):
         """
 
         return deepcopy(self)
+
+    def sample_params(self, shape: torch.Size = torch.Size([])):
+        # TODO: Convert this check to either a wrapper or on instantiation
+        for m in (self.hidden, self.observable):
+            if not issubclass(m.__class__, HasPriorsModule):
+                raise Exception(f"``{m}`` must be subclassed by {HasPriorsModule.__name__}!")
+
+            m.sample_params(shape)
+
+    def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
+        res = tuple()
+        for m in (self.hidden, self.observable):
+            if not issubclass(m.__class__, HasPriorsModule):
+                raise Exception(f"``{m}`` must be subclassed by {HasPriorsModule.__name__}!")
+
+            res += (m.concat_parameters(constrained, flatten),)
+
+        return torch.cat(res, dim=-1)
+
+    def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
+
+        hidden_priors_elem = sum(prior.get_numel(constrained) for prior in self.hidden.priors())
+
+        hidden_x = x[..., :hidden_priors_elem]
+        observable_x = x[..., hidden_priors_elem:]
+
+        self.hidden.update_parameters_from_tensor(hidden_x, constrained)
+        self.observable.update_parameters_from_tensor(observable_x, constrained)
