@@ -23,7 +23,7 @@ class OnlineKernel(BaseKernel):
         self._kernel = kernel or NonShrinkingKernel()
         self._disc = discrete
 
-    def update(self, filter_, state, *args):
+    def update(self, filter_, state):
         weights = state.normalized_weights()
 
         stacked = filter_.ssm.concat_parameters(constrained=False)
