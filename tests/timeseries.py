@@ -48,6 +48,17 @@ def timeseries_models(custom_models):
     )
 
 
+@pytest.fixture
+def proc():
+    priors = (
+        Prior(Normal, loc=0.0, scale=1.0),
+        Prior(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(3), scale=torch.ones(3)),
+    )
+
+    dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+    return AffineProcess((None, None), priors, dist, dist)
+
+
 class TestTimeseries(object):
     timesteps = 1000
 
@@ -92,25 +103,24 @@ class TestTimeseries(object):
 
             assert x.time_index == num_steps
 
-    def test_concat_parameters(self):
-        priors = (
-            Prior(Normal, loc=0.0, scale=1.0),
-            Prior(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(3), scale=torch.ones(3)),
-        )
+    def test_concat_parameters(self, proc: AffineProcess):
+        for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
+            proc.sample_params(sample_shape)
 
-        dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-        proc = AffineProcess((None, None), priors, dist, dist)
+            x = proc.concat_parameters(constrained=True, flatten=True)
+            assert x.shape == torch.Size([sample_shape.numel(), 4])
 
-        proc.sample_params()
+            x = proc.concat_parameters(constrained=True, flatten=False)
+            assert x.shape == torch.Size([*sample_shape, 4])
 
-        x = proc.concat_parameters(constrained=True)
-        assert x.shape == torch.Size([1, 4])
+    def test_parameter_from_tensor(self, proc: AffineProcess):
+        for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
+            proc.sample_params(sample_shape)
 
-        sample_shape = torch.Size([100, 10, 2])
-        proc.sample_params(sample_shape)
+            for flatten in (True, False):
+                x = proc.concat_parameters(constrained=True, flatten=flatten)
+                y = x + 1
 
-        x = proc.concat_parameters(constrained=True, flatten=True)
-        assert x.shape == torch.Size([sample_shape.numel(), 4])
+                proc.update_parameters_from_tensor(y, constrained=True)
 
-        x = proc.concat_parameters(constrained=True, flatten=False)
-        assert x.shape == torch.Size([*sample_shape, 4])
+                assert (y == proc.concat_parameters(constrained=False, flatten=flatten)).all()
