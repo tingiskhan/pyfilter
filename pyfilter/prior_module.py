@@ -117,16 +117,20 @@ class HasPriorsModule(Module, ABC):
 
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
-    def concat_parameters(self, constrained=False) -> torch.Tensor:
+    def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
         """
         Concatenates the parameters into one tensor.
 
         Args:
             constrained: Optional parameter specifying whether to concatenate the original parameters, or bijected.
+            flatten: Optional parameter specifying whether to flatten the parameters.
         """
 
+        def _first_dim(p: PriorBoundParameter, prior: "Prior"):
+            return (-1,) if flatten else p.shape[:p.dim() - len(prior.shape)]
+
         res = tuple(
-            (p if constrained else prior.get_unconstrained(p)).view(-1, prior.get_numel(constrained))
+            (p if constrained else prior.get_unconstrained(p)).view(*_first_dim(p, prior), prior.get_numel(constrained))
             for p, prior in self.parameters_and_priors()
         )
 

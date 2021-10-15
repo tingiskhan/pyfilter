@@ -2,7 +2,7 @@ import pytest
 from pyfilter.timeseries import models, AffineProcess, OneStepEulerMaruyma, AffineEulerMaruyama, RungeKutta, Euler
 import torch
 from pyfilter.distributions import DistributionWrapper, Prior
-from torch.distributions import Normal
+from torch.distributions import Normal, Independent
 from math import sqrt
 
 
@@ -91,3 +91,26 @@ class TestTimeseries(object):
             x = m.propagate(x)
 
             assert x.time_index == num_steps
+
+    def test_concat_parameters(self):
+        priors = (
+            Prior(Normal, loc=0.0, scale=1.0),
+            Prior(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(3), scale=torch.ones(3)),
+        )
+
+        dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+        proc = AffineProcess((None, None), priors, dist, dist)
+
+        proc.sample_params()
+
+        x = proc.concat_parameters(constrained=True)
+        assert x.shape == torch.Size([1, 4])
+
+        sample_shape = torch.Size([100, 10, 2])
+        proc.sample_params(sample_shape)
+
+        x = proc.concat_parameters(constrained=True, flatten=True)
+        assert x.shape == torch.Size([sample_shape.numel(), 4])
+
+        x = proc.concat_parameters(constrained=True, flatten=False)
+        assert x.shape == torch.Size([*sample_shape, 4])
