@@ -94,7 +94,7 @@ class HasPriorsModule(Module, ABC):
         for _, prior in self.parameters_and_priors():
             yield prior
 
-    def sample_params(self, shape: torch.Size):
+    def sample_params(self, shape: torch.Size = torch.Size([])):
         """
         Samples the parameters of the model in place.
 
@@ -116,3 +116,54 @@ class HasPriorsModule(Module, ABC):
         """
 
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
+
+    def concat_parameters(self, constrained=False) -> torch.Tensor:
+        """
+        Concatenates the parameters into one tensor.
+
+        Args:
+            constrained: Optional parameter specifying whether to concatenate the original parameters, or bijected.
+        """
+
+        res = tuple(
+            (p if constrained else prior.get_unconstrained(p)).view(-1, prior.get_numel(constrained))
+            for p, prior in self.parameters_and_priors()
+        )
+
+        return torch.cat(res, dim=-1)
+
+    def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
+        """
+        Update the parameters of ``self`` with the last dimension of ``x``.
+
+        Args:
+            x: The tensor containing the new parameter values.
+            constrained: Optional parameter indicating whether values in ``x`` are considered constrained to the
+                parameters' original space.
+
+        Example:
+            >>> from pyfilter import timeseries as ts, distributions as dists
+            >>> from torch.distributions import Normal, Uniform
+            >>> import torch
+            >>>
+            >>> alpha_prior = dists.Prior(Normal, loc=0.0, scale=1.0)
+            >>> beta_prior = dists.Prior(Uniform, low=-1.0, high=1.0)
+            >>>
+            >>> ar = ts.models.AR(alpha_prior, beta_prior, 0.05)
+            >>> ar.sample_params()
+            >>>
+            >>> new_values = torch.empty(2).randn()
+            >>> ar.update_parameters_from_tensor(new_values, constrained=False)
+            >>> assert (new_values == ar.concat_parameters(constrained=False)).all()
+        """
+
+        expected_shape = self.concat_parameters(constrained=constrained)
+        if x.shape[-1] != expected_shape.shape[-1]:
+            raise Exception(f"Shapes not congruent! Expected {expected_shape}, got {x.shape}")
+
+        left_index = 0
+        for p, prior in self.parameters_and_priors():
+            right_index = left_index + prior.get_numel(constrained=constrained)
+
+            p.update_values(x[..., left_index:right_index], prior, constrained=constrained)
+            left_index = right_index
