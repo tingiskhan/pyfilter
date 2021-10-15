@@ -5,6 +5,7 @@ from copy import deepcopy
 from .stochasticprocess import StochasticProcess
 
 
+# TODO: Add methods ``concat_parameters`` and ``update_parameters_from_tensor``
 class StateSpaceModel(Module):
     """
     Class representing a state space model, i.e. a dynamical system given by the pair stochastic processes
