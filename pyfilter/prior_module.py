@@ -57,6 +57,16 @@ class UpdateParametersMixin(ABC):
 
         raise NotImplementedError()
 
+    def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
+        """
+        Calculates the prior log-likelihood of the current values of the parameters.
+
+        Args:
+            constrained: Optional parameter specifying whether to evaluate the original prior, or the bijected prior.
+        """
+
+        raise NotImplementedError()
+
 
 class HasPriorsModule(Module, UpdateParametersMixin, ABC):
     """
@@ -151,13 +161,6 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
         return self
 
     def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
-        """
-        Calculates the prior log-likelihood of the current values of the parameters.
-
-        Args:
-            constrained: Optional parameter specifying whether to evaluate the original prior, or the bijected prior.
-        """
-
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
     def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
@@ -172,10 +175,6 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
         return torch.cat(res, dim=-1)
 
     def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
-        expected_shape = self.concat_parameters(constrained=constrained)
-        if x.shape[-1] != expected_shape.shape[-1]:
-            raise Exception(f"Shapes not congruent! Expected {expected_shape}, got {x.shape}")
-
         left_index = 0
         for p, prior in self.parameters_and_priors():
             right_index = left_index + prior.get_numel(constrained=constrained)
