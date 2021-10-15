@@ -172,6 +172,9 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
             for p, prior in self.parameters_and_priors()
         )
 
+        if not res:
+            return torch.empty(0)
+
         return torch.cat(res, dim=-1)
 
     def update_parameters_from_tensor(self, x: torch.Tensor, constrained=False):
