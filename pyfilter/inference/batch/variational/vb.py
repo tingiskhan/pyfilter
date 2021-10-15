@@ -3,7 +3,6 @@ from torch.distributions import Distribution
 from .approximation import StateMeanField, ParameterMeanField
 from .state import VariationalResult
 from ..base import OptimizationBasedAlgorithm
-from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
 from ....timeseries import StateSpaceModel, NewState
 
 
@@ -53,7 +52,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         for p in self._model.parameters():
             p.detach_()
 
-        params_from_tensor(self._model, params, constrained=False)
+        self._model.update_parameters_from_tensor(params, constrained=False)
 
         return param_dist
 
@@ -91,11 +90,11 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
         return -(
-            log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy
+            log_likelihood.mean(0) + self._model.eval_prior_log_prob(constrained=False).squeeze().mean() + entropy
         )
 
     def initialize(self, y):
-        sample_model(self._model, torch.Size([self._n_samples, 1]))
+        self._model.sample_params(torch.Size([self._n_samples, 1]))
         self._param_approx.initialize(y, self._model)
 
         opt_params = tuple(self._param_approx.parameters())

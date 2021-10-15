@@ -1,9 +1,8 @@
 import torch
-from torch.distributions import Independent, Normal, TransformedDistribution, Distribution, LogNormal
+from torch.distributions import Independent, Normal, TransformedDistribution, Distribution
 from torch.nn import Parameter
 from typing import Tuple
 from .base import BaseApproximation
-from ....utils import priors_from_model
 
 
 class StateMeanField(BaseApproximation):
@@ -71,6 +70,7 @@ class ParameterMeanField(BaseApproximation):
     def get_parameters(self):
         return self.mean, self.log_std
 
+    # TODO: Fix this such that it conforms to ``prior_module.py``
     def initialize(self, data, model):
         self._bijections = tuple()
         self._mask = tuple()
