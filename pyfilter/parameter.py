@@ -36,4 +36,5 @@ class PriorBoundParameter(Parameter):
         if not support.all():
             raise ValueError("Some of the values were out of bounds!")
 
-        self[:] = value.view(self.shape)
+        # Tries to set to self if congruent, else reshapes
+        self[:] = value.view(self.shape) if value.numel() == self.numel() else value
