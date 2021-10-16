@@ -1,3 +1,3 @@
-from .meanfield import StateMeanField, ParameterMeanField
+from .meanfield import MeanField
 from .base import BaseApproximation
-from .lowrank import StateLowRank
+
