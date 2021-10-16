@@ -5,7 +5,7 @@ from pyfilter.timeseries import models as m, LinearGaussianObservations, AffineJ
 from pyfilter.filters import particle as part, kalman
 from pykalman import KalmanFilter
 
-
+# TODO: We need to use ``parameters_and_buffers`` rather than ``parameter_x``...
 @pytest.fixture
 def linear_models():
     ar = m.AR(0.0, 0.99, 0.05)
