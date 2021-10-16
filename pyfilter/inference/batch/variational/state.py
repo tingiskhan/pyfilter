@@ -37,14 +37,14 @@ class VariationalResult(AlgorithmState):
         self.state_approximation = state_approximation
 
     # TODO: Not entirely correct with ``HasPriorsModule...``
-    def sample_and_update_parameters(self, model: HasPriorsModule, shape: torch.Size, re_sample=False) -> Distribution:
+    def sample_and_update_parameters(self, model: HasPriorsModule, shape: torch.Size, ignore_grad=False) -> Distribution:
         """
         Samples parameters from the posterior and updates the parameters of the model.
 
         Args:
             model: The model for which to sample parameters.
             shape: The sample shape to use.
-            re_sample: Optional parameter specifying whether to re-initialize the parameters. Necessary whenever
+            ignore_grad: Optional parameter specifying whether to re-initialize the parameters. Necessary whenever
                 ``shape`` is other than current shape.
 
         Returns:
@@ -57,8 +57,9 @@ class VariationalResult(AlgorithmState):
         for p in model.parameters():
             p.detach_()
 
-        if re_sample:
+        if ignore_grad:
             model.sample_params(shape)
+            params.detach_()
 
         model.update_parameters_from_tensor(params, constrained=False)
 
