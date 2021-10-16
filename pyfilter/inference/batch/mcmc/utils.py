@@ -91,7 +91,7 @@ def run_pmmh(
     diff_prior = (proposal_filter.ssm.eval_prior_log_prob(False) - filter_.ssm.eval_prior_log_prob(False)).squeeze()
 
     new_prop_kernel = proposal.build(state.replicate(new_res), proposal_filter, y)
-    params_as_tensor = filter_.ssm.concat_parameters(constrained=True, flatten=True)
+    params_as_tensor = filter_.ssm.concat_parameters(constrained=False, flatten=True)
 
     diff_prop = new_prop_kernel.log_prob(params_as_tensor) - proposal_kernel.log_prob(rvs)
 
