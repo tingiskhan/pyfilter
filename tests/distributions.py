@@ -40,7 +40,7 @@ class TestDistributions(object):
     def test_prior_sample_parameter(self, dist_with_prior):
         size = torch.Size([1000])
 
-        for prior, parameter in dist_with_prior.parameters_and_priors():
+        for parameter, prior in dist_with_prior.parameters_and_priors():
             parameter.sample_(prior, size)
 
         dist = dist_with_prior()
