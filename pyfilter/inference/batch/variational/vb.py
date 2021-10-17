@@ -88,7 +88,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         concat_params = self._model.concat_parameters(constrained=False, flatten=True)
 
         mean = concat_params.mean(dim=0)
-        log_std = (2.0 * concat_params.std(dim=0)).log()
+        log_std = concat_params.std(dim=0).log()
 
         self._model.sample_params(torch.Size([self._n_samples, 1]))
         self._param_approx.initialize(concat_params.shape[-1:])
