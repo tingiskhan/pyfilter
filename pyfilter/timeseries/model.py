@@ -87,10 +87,18 @@ class StateSpaceModel(Module, UpdateParametersMixin):
             m.sample_params(shape)
 
     @_check_has_priors_wrapper
-    def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
+    def concat_parameters(self, constrained=False, flatten=True):
         res = tuple()
         for m in self._prior_mods:
-            res += (m.concat_parameters(constrained, flatten),)
+            to_concat = m.concat_parameters(constrained, flatten)
+
+            if to_concat is None:
+                continue
+
+            res += (to_concat,)
+
+        if not res:
+            return None
 
         return torch.cat(res, dim=-1)
 

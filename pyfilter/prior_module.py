@@ -163,7 +163,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
     def eval_prior_log_prob(self, constrained=True) -> torch.Tensor:
         return sum((prior.eval_prior(p, constrained) for p, prior in self.parameters_and_priors()))
 
-    def concat_parameters(self, constrained=False, flatten=True) -> torch.Tensor:
+    def concat_parameters(self, constrained=False, flatten=True) -> Union[torch.Tensor, None]:
         def _first_dim(p: PriorBoundParameter, prior: "Prior"):
             return (-1,) if flatten else p.shape[:p.dim() - len(prior.shape)]
 
@@ -173,7 +173,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
         )
 
         if not res:
-            return torch.empty(0)
+            return None
 
         return torch.cat(res, dim=-1)
 
