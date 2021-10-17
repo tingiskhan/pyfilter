@@ -10,6 +10,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
     Implements `Variational Bayes`.
     """
 
+    MONTE_CARLO_SAMPLES = 5_000
+
     def __init__(
         self,
         model,
@@ -82,10 +84,17 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         )
 
     def initialize(self, y):
-        self._model.sample_params(torch.Size([self._n_samples, 1]))
+        self._model.sample_params(torch.Size([self.MONTE_CARLO_SAMPLES, 1]))
+        concat_params = self._model.concat_parameters(constrained=False, flatten=True)
 
-        param_shape = self._model.concat_parameters(constrained=True, flatten=True).shape[-1:]
-        self._param_approx.initialize(param_shape)
+        mean = concat_params.mean(dim=0)
+        log_std = 2.0 * concat_params.std(dim=0).log()
+
+        self._model.sample_params(torch.Size([self._n_samples, 1]))
+        self._param_approx.initialize(concat_params.shape[-1:])
+
+        self._param_approx.mean.data[:] = mean
+        self._param_approx.log_std.data[:] = log_std
 
         opt_params = tuple(self._param_approx.parameters())
 
