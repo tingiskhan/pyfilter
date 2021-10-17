@@ -7,7 +7,7 @@ from ....timeseries import StateSpaceModel, NewState
 
 class VariationalBayes(OptimizationBasedAlgorithm):
     """
-    Implements the `Variational Bayes` algorithm.
+    Implements `Variational Bayes`.
     """
 
     def __init__(
