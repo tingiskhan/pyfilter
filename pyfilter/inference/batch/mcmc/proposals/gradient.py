@@ -2,7 +2,6 @@ from torch.distributions import Independent, Normal
 import torch
 from torch.autograd import grad
 from .random_walk import RandomWalk
-from ....utils import params_to_tensor, eval_prior_log_prob, params_from_tensor
 from .....timeseries import NewState
 
 
@@ -37,10 +36,10 @@ class GradientBasedProposal(RandomWalk):
     def build(self, state, filter_, y):
         smoothed = filter_.smooth(state.filter_state.states)
 
-        params = params_to_tensor(filter_.ssm, constrained=False)
+        params = filter_.ssm.concat_parameters(constrained=False)
         params.requires_grad_(True)
 
-        params_from_tensor(filter_.ssm, params)
+        filter_.ssm.update_parameters_from_tensor(params, constrained=False)
 
         time = torch.stack(tuple(s.x.time_index for s in state.filter_state.states))
 
@@ -53,7 +52,7 @@ class GradientBasedProposal(RandomWalk):
         obs_dens = filter_.ssm.observable.build_density(xt)
 
         logl = filter_.ssm.hidden.initial_dist.log_prob(smoothed[0]).mean(-1)
-        logl += eval_prior_log_prob(filter_.ssm, constrained=False).squeeze(-1)
+        logl += filter_.ssm.eval_prior_log_prob(constrained=False).squeeze(-1)
         logl = (hidden_dens.log_prob(xt.values) + obs_dens.log_prob(y)).mean(-1).sum(0)
 
         g = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]

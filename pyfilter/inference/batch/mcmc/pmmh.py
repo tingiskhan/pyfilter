@@ -3,7 +3,6 @@ from .utils import seed, run_pmmh
 from .proposals import RandomWalk, BaseProposal
 from .state import PMMHResult
 from ..base import BatchFilterAlgorithm
-from ...utils import params_to_tensor
 from ...logging import TQDMWrapper
 
 
