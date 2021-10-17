@@ -94,7 +94,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._time_indices = torch.arange(0, t_end * self._num_steps)
 
         if self._is_ssm:
-            self._state_approx.initialize(torch.Size([t_end + 1, *self._model.hidden.initial_dist.event_shape]))
+            shape = torch.Size([self._time_indices[-1], *self._model.hidden.initial_dist.event_shape])
+            self._state_approx.initialize(shape)
             opt_params += tuple(self._state_approx.parameters())
 
         self.construct_optimizer(opt_params)
