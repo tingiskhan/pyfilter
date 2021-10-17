@@ -2,7 +2,6 @@ import torch
 from torch.distributions import Distribution
 from torch.nn import Module
 from abc import ABC
-from ....utils import Process
 
 
 class BaseApproximation(Module, ABC):
