@@ -1,18 +1,26 @@
 import torch
-from torch.distributions import Distribution
-from .approximation import StateMeanField, ParameterMeanField
+from .approximation import BaseApproximation
 from .state import VariationalResult
 from ..base import OptimizationBasedAlgorithm
-from ...utils import params_from_tensor, eval_prior_log_prob, sample_model
 from ....timeseries import StateSpaceModel, NewState
 
 
 class VariationalBayes(OptimizationBasedAlgorithm):
     """
-    Implements the `Variational Bayes` algorithm.
+    Implements `Variational Bayes`.
     """
 
-    def __init__(self, model, parameter_approximation: ParameterMeanField, n_samples=4, max_iter=30e3, state_approximation : StateMeanField = None, **kwargs):
+    MONTE_CARLO_SAMPLES = 5_000
+
+    def __init__(
+        self,
+        model,
+        parameter_approximation: BaseApproximation,
+        n_samples=4,
+        max_iter=30e3,
+        state_approximation: BaseApproximation = None,
+        **kwargs,
+    ):
         """
         Initializes the ``VariationalBayes`` class.
 
@@ -38,19 +46,8 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._param_approx = parameter_approximation
         self._state_approx = state_approximation
 
-    def _construct_and_sample(self, param_approximation: ParameterMeanField) -> Distribution:
-        param_dist = param_approximation.get_approximation()
-        params = param_dist.rsample((self._n_samples,))
-
-        for p in self._model.parameters():
-            p.detach_()
-
-        params_from_tensor(self._model, params, constrained=False)
-
-        return param_dist
-
-    def loss(self, y, state):
-        param_dist = self._construct_and_sample(self._param_approx)
+    def loss(self, y, state: VariationalResult):
+        param_dist = state.sample_and_update_parameters(self._model, (self._n_samples,))
         entropy = param_dist.entropy()
 
         if self._is_ssm:
@@ -82,22 +79,30 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood = dist.log_prob(y[1:]).sum(1)
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
-        return -(
-            log_likelihood.mean(0) + eval_prior_log_prob(self._model, constrained=False).squeeze().mean() + entropy
-        )
+        return -(log_likelihood.mean(0) + self._model.eval_prior_log_prob(constrained=False).squeeze().mean() + entropy)
 
     def initialize(self, y):
-        sample_model(self._model, torch.Size([self._n_samples, 1]))
-        self._param_approx.initialize(y, self._model)
+        self._model.sample_params(torch.Size([self.MONTE_CARLO_SAMPLES, 1]))
+        concat_params = self._model.concat_parameters(constrained=False, flatten=True)
+
+        mean = concat_params.mean(dim=0)
+        log_std = concat_params.std(dim=0).log()
+
+        self._model.sample_params(torch.Size([self._n_samples, 1]))
+        self._param_approx.initialize(concat_params.shape[-1:])
+
+        self._param_approx.mean.data[:] = mean
+        self._param_approx.log_std.data[:] = log_std
 
         opt_params = tuple(self._param_approx.parameters())
 
         t_end = y.shape[0]
         self._num_steps = self._model.hidden.num_steps if self._is_ssm else self._model.num_steps
-        self._time_indices = torch.arange(0, t_end * self._num_steps)
+        self._time_indices = torch.arange(0, t_end * self._num_steps + 1)
 
         if self._is_ssm:
-            self._state_approx.initialize(self._time_indices, self._model)
+            shape = torch.Size([self._time_indices.shape[-1], *self._model.hidden.initial_dist.event_shape])
+            self._state_approx.initialize(shape)
             opt_params += tuple(self._state_approx.parameters())
 
         self.construct_optimizer(opt_params)

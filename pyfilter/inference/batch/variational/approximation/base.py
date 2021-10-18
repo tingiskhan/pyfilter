@@ -2,7 +2,6 @@ import torch
 from torch.distributions import Distribution
 from torch.nn import Module
 from abc import ABC
-from ....utils import Process
 
 
 class BaseApproximation(Module, ABC):
@@ -13,14 +12,13 @@ class BaseApproximation(Module, ABC):
     def __init__(self):
         super().__init__()
 
-    def initialize(self, data: torch.Tensor, model: Process):
+    def initialize(self, shape: torch.Size):
         """
-        Method to be overridden by derived classes. Given the data to use for fitting, together with the model,
-        initialize the required parameters/attributes of ``self``.
+        Method to be overridden by derived classes. Initializes the required attributes of the approximation given the
+        shape and the model.
 
         Args:
-            data: The data to consider, of size ``(number of observations, [dimension of observation space])``.
-            model: The model to consider.
+            shape: The shape of the resulting approximation.
         """
 
         raise NotImplementedError()

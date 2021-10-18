@@ -37,6 +37,4 @@ class AR(AffineProcess):
         """
         inc_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
-        super().__init__(
-            (_f, _g), (alpha, beta, sigma), inc_dist, inc_dist, initial_transform=_init_trans, **kwargs
-        )
+        super().__init__((_f, _g), (alpha, beta, sigma), inc_dist, inc_dist, initial_transform=_init_trans, **kwargs)

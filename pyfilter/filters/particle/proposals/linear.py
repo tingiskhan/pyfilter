@@ -5,6 +5,11 @@ from torch.distributions import Normal, MultivariateNormal, AffineTransform
 from ....timeseries import LinearGaussianObservations as LGO, AffineProcess, NewState
 from ....utils import construct_diag_from_flat
 
+if torch.__version__ >= "1.9.0":
+    cholesky = torch.linalg.cholesky
+else:
+    cholesky = torch.cholesky
+
 
 class LinearGaussianObservations(Proposal):
     """
@@ -61,7 +66,7 @@ class LinearGaussianObservations(Proposal):
         t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
         m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
 
-        return MultivariateNormal(m, scale_tril=torch.cholesky(cov), validate_args=False)
+        return MultivariateNormal(m, scale_tril=cholesky(cov), validate_args=False)
 
     def _get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
         return params[0], None

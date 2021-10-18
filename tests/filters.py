@@ -2,46 +2,54 @@ import numpy as np
 import pytest
 import torch
 from pyfilter.timeseries import models as m, LinearGaussianObservations, AffineJointStochasticProcesses
-from pyfilter.filters.particle import SISR, APF, proposals as props, ParticleFilter
-from pyfilter.filters.kalman import UKF
+from pyfilter.filters import particle as part, kalman
 from pykalman import KalmanFilter
 
 
 @pytest.fixture
 def linear_models():
-    ar = m.AR(0.0, 0.99, 0.05)
-    obs_1d_1d = LinearGaussianObservations(ar, 1.0, 0.15)
+    alpha, beta, sigma = 0.0, 0.99, 0.05
+    a, s = 1.0, 0.15
+
+    ar = m.AR(alpha, beta, sigma)
+    obs_1d_1d = LinearGaussianObservations(ar, a, s)
 
     kalman_1d_1d = KalmanFilter(
-        transition_matrices=obs_1d_1d.hidden.parameter_1,
-        observation_matrices=obs_1d_1d.observable.parameter_0,
-        transition_covariance=obs_1d_1d.hidden.parameter_2 ** 2.0,
-        transition_offsets=obs_1d_1d.hidden.parameter_0,
-        observation_covariance=obs_1d_1d.observable.parameter_1 ** 2.0,
-        initial_state_covariance=(obs_1d_1d.hidden.parameter_2 / (1 - obs_1d_1d.hidden.parameter_1)) ** 2.0
+        transition_matrices=beta,
+        observation_matrices=a,
+        transition_covariance=sigma ** 2.0,
+        transition_offsets=alpha,
+        observation_covariance=s ** 2.0,
+        initial_state_covariance=(sigma / (1 - beta)) ** 2.0
     )
 
-    rw = m.RandomWalk(torch.tensor([0.05, 0.1]))
-    obs_2d2_d = LinearGaussianObservations(rw, torch.eye(2), 0.15 * torch.ones(2))
+    sigma = np.array([0.05, 0.1])
+    a, s = np.eye(2), 0.15 * np.ones(2)
 
-    state_covariance = rw.parameter_0 ** 2.0 * np.eye(2)
+    rw = m.RandomWalk(torch.from_numpy(sigma).float())
+    obs_2d2_d = LinearGaussianObservations(rw, torch.from_numpy(a).float(), torch.from_numpy(s).float())
+
+    state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
-        transition_matrices=np.eye(2),
-        observation_matrices=np.eye(2),
+        transition_matrices=a,
+        observation_matrices=a,
         transition_covariance=state_covariance,
-        observation_covariance=obs_2d2_d.observable.parameter_1 ** 2.0 * np.eye(2),
+        observation_covariance=s ** 2.0 * np.eye(2),
         initial_state_covariance=state_covariance
     )
 
-    llt = m.LocalLinearTrend(torch.tensor([0.01, 0.05]))
-    obs_2d_1d = LinearGaussianObservations(llt, torch.tensor([0.0, 1.0]), 0.15)
+    sigma = np.array([0.01, 0.05])
+    a, s = np.array([0.0, 1.0]), 0.15
 
-    state_covariance_2 = llt.parameter_1.pow(2.0).cumsum(0) * np.eye(2)
+    llt = m.LocalLinearTrend(torch.from_numpy(sigma).float())
+    obs_2d_1d = LinearGaussianObservations(llt, torch.from_numpy(a).float(), s)
+
+    state_covariance_2 = (sigma ** 2.0).cumsum(0) * np.eye(2)
     kalman_2d_1d = KalmanFilter(
-        transition_matrices=llt.parameter_0,
-        observation_matrices=obs_2d_1d.observable.parameter_0,
+        transition_matrices=np.array([[1.0, 0.0], [1.0, 1.0]]),
+        observation_matrices=a,
         transition_covariance=state_covariance_2,
-        observation_covariance=obs_2d_1d.observable.parameter_1 ** 2.0,
+        observation_covariance=s ** 2.0,
         initial_state_covariance=state_covariance_2
     )
 
@@ -54,14 +62,14 @@ def linear_models():
 
 
 def construct_filters(model, **kwargs):
-    particle_types = (SISR, APF)
+    particle_types = (part.SISR, part.APF)
 
     return (
-        *(pt(model, 500, proposal=props.LinearGaussianObservations(), **kwargs) for pt in particle_types),
-        UKF(model, **kwargs),
-        *(pt(model, 5000, proposal=props.Bootstrap(), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=props.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.LinearGaussianObservations(), **kwargs) for pt in particle_types),
+        kalman.UKF(model, **kwargs),
+        *(pt(model, 5000, proposal=part.proposals.Bootstrap(), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5), **kwargs) for pt in particle_types),
+        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in particle_types),
     )
 
 
@@ -148,7 +156,7 @@ class TestFilters(object):
 
             for f in construct_filters(model, record_states=True):
                 # Currently UKF does not implement smoothing
-                if isinstance(f, UKF):
+                if isinstance(f, kalman.UKF):
                     continue
 
                 result = f.longfilter(y)
@@ -201,14 +209,14 @@ class TestFilters(object):
         x, y = sde.sample_path(self.SERIES_LENGTH)
 
         for f in construct_filters(sde):
-            if not (isinstance(f, UKF) or (isinstance(f, ParticleFilter) and isinstance(f.proposal, props.Bootstrap))):
+            if not (isinstance(f, kalman.UKF) or (isinstance(f, part.ParticleFilter) and isinstance(f.proposal, part.proposals.Bootstrap))):
                 continue
 
             result = f.longfilter(y)
 
             filter_std = result.filter_variance ** 0.5
 
-            assert (filter_std <= sde.observable.parameter_1)[1:].all()
+            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_1"])[1:].all()
 
     def test_joint_timeseries(self, joint_timeseries):
         model, kalman = joint_timeseries

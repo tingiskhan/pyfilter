@@ -117,7 +117,8 @@ class ParticleFilter(BaseFilter, ABC):
         offset = -(2 + self.ssm.hidden.n_dim)
 
         for p in hidden_copy.parameters():
-            p.unsqueeze_(-2)
+            if p.dim() > 0:
+                p.unsqueeze_(-2)
 
         res = [choose(states[-1].x.values, self._resampler(states[-1].w))]
         for state in reversed(states[:-1]):

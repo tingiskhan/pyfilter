@@ -4,7 +4,6 @@ from typing import Dict, Any
 from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
-from ..utils import sample_model
 from ...filters import ParticleFilter
 
 
@@ -86,7 +85,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         """
 
         shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        sample_model(self.filter.ssm, shape)
+        self.filter.ssm.sample_params(shape)
 
     def initialize(self) -> SequentialAlgorithmState:
         self._sample_params()

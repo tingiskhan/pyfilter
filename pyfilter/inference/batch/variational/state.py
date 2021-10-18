@@ -1,6 +1,8 @@
 import torch
-from ...state import AlgorithmState
+from torch.distributions import Distribution
 from .approximation import BaseApproximation
+from ...state import AlgorithmState
+from ....prior_module import HasPriorsModule
 
 
 class VariationalResult(AlgorithmState):
@@ -14,7 +16,7 @@ class VariationalResult(AlgorithmState):
         loss: torch.Tensor,
         iterations: int,
         parameter_approximation: BaseApproximation,
-        state_approximation: BaseApproximation = None
+        state_approximation: BaseApproximation = None,
     ):
         """
         Initializes the ``VariationalState`` class.
@@ -33,3 +35,34 @@ class VariationalResult(AlgorithmState):
         self.iterations = iterations
         self.parameter_approximation = parameter_approximation
         self.state_approximation = state_approximation
+
+    # TODO: Not entirely correct with ``HasPriorsModule...``
+    def sample_and_update_parameters(
+        self, model: HasPriorsModule, shape: torch.Size, ignore_grad=False
+    ) -> Distribution:
+        """
+        Samples parameters from the posterior and updates the parameters of the model.
+
+        Args:
+            model: The model for which to sample parameters.
+            shape: The sample shape to use.
+            ignore_grad: Optional parameter specifying whether to re-initialize the parameters. Necessary whenever
+                ``shape`` is other than current shape.
+
+        Returns:
+            Returns the parameter approximation.
+        """
+
+        param_dist = self.parameter_approximation.get_approximation()
+        params = param_dist.rsample(shape)
+
+        for p in model.parameters():
+            p.detach_()
+
+        if ignore_grad:
+            model.sample_params(shape)
+            params.detach_()
+
+        model.update_parameters_from_tensor(params, constrained=False)
+
+        return param_dist

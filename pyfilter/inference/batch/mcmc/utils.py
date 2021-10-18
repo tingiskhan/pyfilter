@@ -3,13 +3,6 @@ from torch.distributions import Distribution
 from typing import TypeVar
 from .proposals import BaseProposal
 from ...state import FilterAlgorithmState
-from ...utils import (
-    params_to_tensor,
-    parameters_and_priors_from_model,
-    params_from_tensor,
-    sample_model,
-    eval_prior_log_prob,
-)
 from ....filters import BaseFilter
 from ....constants import INFTY
 
@@ -37,25 +30,20 @@ def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: int) -> 
     num_samples = num_chains * num_seeds
     seed_filter.set_num_parallel(num_samples)
 
-    sample_model(seed_filter.ssm, (num_samples, 1))
+    seed_filter.ssm.sample_params(torch.Size([num_samples, 1]))
 
     res = seed_filter.longfilter(y, bar=False)
 
-    params = params_to_tensor(seed_filter.ssm)
-    log_likelihood = res.loglikelihood + eval_prior_log_prob(seed_filter.ssm).squeeze()
-
-    log_likelihood = log_likelihood.view(-1)
+    params = seed_filter.ssm.concat_parameters(constrained=True)
+    log_likelihood = res.loglikelihood + seed_filter.ssm.eval_prior_log_prob(constrained=True).squeeze()
     log_likelihood[~torch.isfinite(log_likelihood)] = -INFTY
 
-    best_ll = log_likelihood.argmax()
-
-    num_params = sum(p.get_numel(constrained=True) for _, p in parameters_and_priors_from_model(filter_.ssm))
-    best_params = params[best_ll]
+    best_params = params[log_likelihood.argmax()]
 
     filter_.set_num_parallel(num_chains)
 
-    sample_model(filter_.ssm, (num_chains, 1))
-    params_from_tensor(filter_.ssm, best_params.expand(num_chains, num_params), constrained=False)
+    filter_.ssm.sample_params(torch.Size([num_chains, 1]))
+    filter_.ssm.update_parameters_from_tensor(best_params.unsqueeze(0), constrained=True)
 
     return filter_
 
@@ -95,17 +83,17 @@ def run_pmmh(
     proposal_filter = filter_.copy()
 
     rvs = proposal_kernel.sample(size)
-    params_from_tensor(proposal_filter.ssm, rvs, constrained=False)
+    proposal_filter.ssm.update_parameters_from_tensor(rvs, constrained=False)
 
     new_res = proposal_filter.longfilter(y, bar=False, **kwargs)
 
     diff_logl = new_res.loglikelihood - state.filter_state.loglikelihood
-    diff_prior = (eval_prior_log_prob(proposal_filter.ssm, False) - eval_prior_log_prob(filter_.ssm, False)).squeeze()
+    diff_prior = (proposal_filter.ssm.eval_prior_log_prob(False) - filter_.ssm.eval_prior_log_prob(False)).squeeze()
 
     new_prop_kernel = proposal.build(state.replicate(new_res), proposal_filter, y)
-    diff_prop = new_prop_kernel.log_prob(params_to_tensor(filter_.ssm, constrained=False)) - proposal_kernel.log_prob(
-        rvs
-    )
+    params_as_tensor = filter_.ssm.concat_parameters(constrained=False, flatten=True)
+
+    diff_prop = new_prop_kernel.log_prob(params_as_tensor) - proposal_kernel.log_prob(rvs)
 
     log_acc_prob = diff_prop + diff_prior + diff_logl
     accepted: torch.Tensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob

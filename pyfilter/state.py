@@ -1,6 +1,6 @@
 from torch.nn import Module
 from collections import OrderedDict
-from .utils import TensorTuple
+from .container import TensorTuple
 
 
 class BaseState(Module):

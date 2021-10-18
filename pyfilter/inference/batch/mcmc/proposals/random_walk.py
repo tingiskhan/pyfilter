@@ -2,7 +2,6 @@ from torch.distributions import Independent, Normal
 from torch import Tensor
 from typing import Union
 from .base import BaseProposal
-from ....utils import params_to_tensor
 
 
 class RandomWalk(BaseProposal):
@@ -27,7 +26,7 @@ class RandomWalk(BaseProposal):
         self._scale = scale
 
     def build(self, state, filter_, y):
-        return Independent(Normal(params_to_tensor(filter_.ssm, constrained=False), self._scale), 1)
+        return Independent(Normal(filter_.ssm.concat_parameters(constrained=False), self._scale), 1)
 
     def exchange(self, latest, candidate, indices):
         new_loc = latest.mean.clone()

@@ -1,7 +1,6 @@
 import torch
 from .base import BaseKernel
 from .jittering import JitterKernel, NonShrinkingKernel
-from ...utils import params_to_tensor, params_from_tensor
 
 
 class OnlineKernel(BaseKernel):
@@ -24,10 +23,10 @@ class OnlineKernel(BaseKernel):
         self._kernel = kernel or NonShrinkingKernel()
         self._disc = discrete
 
-    def update(self, filter_, state, *args):
+    def update(self, filter_, state):
         weights = state.normalized_weights()
 
-        stacked = params_to_tensor(filter_.ssm, constrained=False)
+        stacked = filter_.ssm.concat_parameters(constrained=False)
         indices = self._resampler(weights, normalized=True)
 
         jittered = self._kernel.jitter(stacked, weights, indices)
@@ -44,7 +43,7 @@ class OnlineKernel(BaseKernel):
 
             jittered = (1 - to_jitter) * stacked[indices] + to_jitter * jittered
 
-        params_from_tensor(filter_.ssm, jittered, constrained=False)
+        filter_.ssm.update_parameters_from_tensor(jittered, constrained=False)
         state.w[:] = 0.0
 
         return self

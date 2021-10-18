@@ -20,7 +20,7 @@ class BaseKernel(ABC):
 
         self._resampler = resampling
 
-    def update(self, filter_: BaseFilter, state: SequentialAlgorithmState, *args):
+    def update(self, filter_: BaseFilter, state: SequentialAlgorithmState):
         """
         Method to be overridden by inherited classes. Specifies how to update the particle approximation of the
         parameter posteriors.

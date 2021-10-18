@@ -13,6 +13,7 @@ from .diffusion import (
 )
 from .state import NewState, JointState
 from .joint import JointStochasticProcess, AffineJointStochasticProcesses
+from . import models
 
 
 # TODO: Remove TimeseriesState and BatchedState
@@ -36,4 +37,5 @@ __all__ = [
     "JointStochasticProcess",
     "AffineJointStochasticProcesses",
     "GeneralObservable",
+    "models",
 ]

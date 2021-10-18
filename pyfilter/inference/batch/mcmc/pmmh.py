@@ -3,7 +3,6 @@ from .utils import seed, run_pmmh
 from .proposals import RandomWalk, BaseProposal
 from .state import PMMHResult
 from ..base import BatchFilterAlgorithm
-from ...utils import params_to_tensor
 from ...logging import TQDMWrapper
 
 
@@ -13,7 +12,9 @@ class PMMH(BatchFilterAlgorithm):
     methods` by C. Andrieu et al.
     """
 
-    def __init__(self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"):
+    def __init__(
+        self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"
+    ):
         """
         Initializes the ``PMMH`` class.
 
@@ -47,7 +48,7 @@ class PMMH(BatchFilterAlgorithm):
 
         prev_res = self._filter.longfilter(y, bar=False)
 
-        return PMMHResult(params_to_tensor(self._filter.ssm, constrained=True), prev_res)
+        return PMMHResult(self._filter.ssm.concat_parameters(constrained=True, flatten=True), prev_res)
 
     def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y)
@@ -61,7 +62,7 @@ class PMMH(BatchFilterAlgorithm):
             for i in range(self._max_iter):
                 run_pmmh(self._filter, state, self._proposal, prop_dist, y, mutate_kernel=True)
 
-                state.update_chain(params_to_tensor(self._filter.ssm, constrained=True))
+                state.update_chain(self._filter.ssm.concat_parameters(constrained=True, flatten=True))
                 logging.do_log(i, state)
 
             return state

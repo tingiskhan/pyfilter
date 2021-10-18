@@ -31,9 +31,13 @@ class PriorBoundParameter(Parameter):
         """
 
         value = x if constrained else prior.get_constrained(x)
-        support = prior().support.check(value)
 
-        if not support.all():
-            raise ValueError("Some of the values were out of bounds!")
+        # We only the support if we're considering constrained parameters as the unconstrained by definition are fine
+        if constrained:
+            support = prior().support.check(value)
 
-        self[:] = value.view(self.shape)
+            if not support.all():
+                raise ValueError("Some of the values were out of bounds!")
+
+        # Tries to set to self if congruent, else reshapes
+        self[:] = value.view(self.shape) if value.numel() == self.numel() else value

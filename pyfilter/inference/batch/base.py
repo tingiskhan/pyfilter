@@ -1,12 +1,14 @@
 from abc import ABC
 import torch
-from typing import Type, Dict, Any, Sequence
+from typing import Type, Dict, Any, Sequence, TypeVar
 from torch.optim import Optimizer, Adam
 from ..base import BaseAlgorithm, BaseFilterAlgorithm
 from ..state import AlgorithmState
 from ..utils import Process
 from ..logging import TQDMWrapper
 from ...constants import EPS
+
+TModel = TypeVar("TModel", bound=Process)
 
 
 class BaseBatchAlgorithm(BaseAlgorithm, ABC):
@@ -96,7 +98,7 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
     Abstract base class of batch type algorithms where an optimizer is used.
     """
 
-    def __init__(self, model: Process, max_iter, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None):
+    def __init__(self, model: TModel, max_iter, optimizer: Type[Optimizer] = Adam, opt_kwargs: Dict[str, Any] = None):
         """
         Initializes the ``OptimizationBasedAlgorithm`` class.
 
@@ -115,6 +117,14 @@ class OptimizationBasedAlgorithm(BaseBatchAlgorithm, ABC):
         self._opt_type = optimizer
         self._opt_kwargs = opt_kwargs or dict()
         self.optimizer: Optimizer = None
+
+    @property
+    def model(self) -> TModel:
+        """
+        Returns the model used for fitting.
+        """
+
+        return self._model
 
     def is_converged(self, prev_loss: torch.Tensor, current_loss: torch.Tensor) -> bool:
         """

@@ -2,7 +2,8 @@ import torch
 from typing import List
 from ..state import FilterAlgorithmState
 from ...filters import FilterResult
-from ...utils import normalize, TensorTuple
+from ...utils import normalize
+from ...container import TensorTuple
 
 
 class SequentialAlgorithmState(FilterAlgorithmState):

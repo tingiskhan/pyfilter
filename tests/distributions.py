@@ -20,14 +20,32 @@ def joint_distribution():
     return JointDistribution(dist_1, dist_2)
 
 
+@pytest.fixture
+def dist_with_prior():
+    prior = Prior(Exponential, rate=0.1)
+    return DistributionWrapper(StudentT, df=prior)
+
+
 class TestDistributions(object):
-    def test_prior(self):
-        prior = Prior(Exponential, rate=0.1)
-        wrapper = DistributionWrapper(StudentT, df=prior)
+    def test_prior(self, dist_with_prior):
+        dist = dist_with_prior()
 
-        dist = wrapper()
+        assert (
+                isinstance(dist, StudentT) and
+                (dist.df > 0).all() and
+                (dist.df == dist_with_prior().df) and
+                len(tuple(dist_with_prior.priors())) == 1
+        )
 
-        assert isinstance(dist, StudentT) and (dist.df > 0).all()
+    def test_prior_sample_parameter(self, dist_with_prior):
+        size = torch.Size([1000])
+
+        for parameter, prior in dist_with_prior.parameters_and_priors():
+            parameter.sample_(prior, size)
+
+        dist = dist_with_prior()
+
+        assert dist.df.shape == size
 
     def test_distribution_wrapper(self):
         wrapper = DistributionWrapper(Normal, loc=0.0, scale=1.0)
