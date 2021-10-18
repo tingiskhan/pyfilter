@@ -216,7 +216,7 @@ class TestFilters(object):
 
             filter_std = result.filter_variance ** 0.5
 
-            assert (filter_std <= sde.observable.parameter_1)[1:].all()
+            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_1"])[1:].all()
 
     def test_joint_timeseries(self, joint_timeseries):
         model, kalman = joint_timeseries
