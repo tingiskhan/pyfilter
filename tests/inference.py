@@ -50,7 +50,11 @@ def check_posterior(model, true_model, **kde_kwargs):
         prior = get_prior(name, model)
         true_parameter = get_true_parameter(name, true_model)
 
-        kde = gaussian_kde(prior.get_unconstrained(parameter).squeeze(dim=1).numpy(), **kde_kwargs)
+        unconstrained = prior.get_unconstrained(parameter)
+        if parameter.dim() == 2:
+            unconstrained.squeeze_(1)
+
+        kde = gaussian_kde(unconstrained.numpy(), **kde_kwargs)
 
         inverse_true_value = prior.bijection.inv(true_parameter)
 
@@ -61,8 +65,8 @@ def check_posterior(model, true_model, **kde_kwargs):
 
 
 class TestsSequentialAlgorithm(object):
-    PARTICLES = 1000
-    SERIES_LENGTH = 1000
+    PARTICLES = 2_000
+    SERIES_LENGTH = 1_000
 
     @staticmethod
     def sequential_algorithms(filter_, **kwargs):
@@ -105,7 +109,7 @@ class TestBatchAlgorithms(object):
 
             assert result.converged
 
-            result.sample_and_update_parameters(algorithm.model, torch.Size([self.MONTE_CARLO_SAMPLES, 1]), ignore_grad=True)
+            result.sample_and_update_parameters(algorithm.model, torch.Size([self.MONTE_CARLO_SAMPLES]), ignore_grad=True)
             check_posterior(algorithm.model, model)
 
     @staticmethod
