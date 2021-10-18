@@ -173,11 +173,7 @@ class Euler(AffineEulerMaruyama):
             dist = DistributionWrapper(Normal, loc=0.0, scale=math.sqrt(dt) * tuning_std)
             iv = DistributionWrapper(Normal, loc=initial_values, scale=EPS * scale)
         else:
-            iv = DistributionWrapper(
-                lambda **u: Independent(Normal(**u), 1),
-                loc=initial_values,
-                scale=EPS * scale,
-            )
+            iv = DistributionWrapper(lambda **u: Independent(Normal(**u), 1), loc=initial_values, scale=EPS * scale,)
 
             dist = DistributionWrapper(
                 lambda **u: Independent(Normal(**u), 1),

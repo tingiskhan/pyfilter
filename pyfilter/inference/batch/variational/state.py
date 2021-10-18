@@ -37,7 +37,9 @@ class VariationalResult(AlgorithmState):
         self.state_approximation = state_approximation
 
     # TODO: Not entirely correct with ``HasPriorsModule...``
-    def sample_and_update_parameters(self, model: HasPriorsModule, shape: torch.Size, ignore_grad=False) -> Distribution:
+    def sample_and_update_parameters(
+        self, model: HasPriorsModule, shape: torch.Size, ignore_grad=False
+    ) -> Distribution:
         """
         Samples parameters from the posterior and updates the parameters of the model.
 

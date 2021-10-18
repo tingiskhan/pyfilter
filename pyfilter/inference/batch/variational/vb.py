@@ -79,9 +79,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
             log_likelihood = dist.log_prob(y[1:]).sum(1)
             log_likelihood += self._model.initial_dist.log_prob(y[0])
 
-        return -(
-            log_likelihood.mean(0) + self._model.eval_prior_log_prob(constrained=False).squeeze().mean() + entropy
-        )
+        return -(log_likelihood.mean(0) + self._model.eval_prior_log_prob(constrained=False).squeeze().mean() + entropy)
 
     def initialize(self, y):
         self._model.sample_params(torch.Size([self.MONTE_CARLO_SAMPLES, 1]))

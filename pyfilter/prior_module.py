@@ -108,7 +108,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
         elif isinstance(p, torch.nn.Parameter):
             self.parameter_dict[name] = p
         else:
-            self.buffer_dict[name] = (p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p))
+            self.buffer_dict[name] = p if (isinstance(p, torch.Tensor) or p is None) else torch.tensor(p)
 
     def parameters_and_buffers(self) -> Dict[str, Union[torch.Tensor, torch.nn.Parameter]]:
         """
@@ -165,7 +165,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
 
     def concat_parameters(self, constrained=False, flatten=True) -> Union[torch.Tensor, None]:
         def _first_dim(p: PriorBoundParameter, prior: "Prior"):
-            return (-1,) if flatten else p.shape[:p.dim() - len(prior.shape)]
+            return (-1,) if flatten else p.shape[: p.dim() - len(prior.shape)]
 
         res = tuple(
             (p if constrained else prior.get_unconstrained(p)).view(*_first_dim(p, prior), prior.get_numel(constrained))
