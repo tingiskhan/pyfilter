@@ -5,42 +5,51 @@ from pyfilter.timeseries import models as m, LinearGaussianObservations, AffineJ
 from pyfilter.filters import particle as part, kalman
 from pykalman import KalmanFilter
 
-# TODO: We need to use ``parameters_and_buffers`` rather than ``parameter_x``...
+
 @pytest.fixture
 def linear_models():
-    ar = m.AR(0.0, 0.99, 0.05)
-    obs_1d_1d = LinearGaussianObservations(ar, 1.0, 0.15)
+    alpha, beta, sigma = 0.0, 0.99, 0.05
+    a, s = 1.0, 0.15
+
+    ar = m.AR(alpha, beta, sigma)
+    obs_1d_1d = LinearGaussianObservations(ar, a, s)
 
     kalman_1d_1d = KalmanFilter(
-        transition_matrices=obs_1d_1d.hidden.parameter_1,
-        observation_matrices=obs_1d_1d.observable.parameter_0,
-        transition_covariance=obs_1d_1d.hidden.parameter_2 ** 2.0,
-        transition_offsets=obs_1d_1d.hidden.parameter_0,
-        observation_covariance=obs_1d_1d.observable.parameter_1 ** 2.0,
-        initial_state_covariance=(obs_1d_1d.hidden.parameter_2 / (1 - obs_1d_1d.hidden.parameter_1)) ** 2.0
+        transition_matrices=beta,
+        observation_matrices=a,
+        transition_covariance=sigma ** 2.0,
+        transition_offsets=alpha,
+        observation_covariance=s ** 2.0,
+        initial_state_covariance=(sigma / (1 - beta)) ** 2.0
     )
 
-    rw = m.RandomWalk(torch.tensor([0.05, 0.1]))
-    obs_2d2_d = LinearGaussianObservations(rw, torch.eye(2), 0.15 * torch.ones(2))
+    sigma = np.array([0.05, 0.1])
+    a, s = np.eye(2), 0.15 * np.ones(2)
 
-    state_covariance = rw.parameter_0 ** 2.0 * np.eye(2)
+    rw = m.RandomWalk(torch.from_numpy(sigma).float())
+    obs_2d2_d = LinearGaussianObservations(rw, torch.from_numpy(a).float(), torch.from_numpy(s).float())
+
+    state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
-        transition_matrices=np.eye(2),
-        observation_matrices=np.eye(2),
+        transition_matrices=a,
+        observation_matrices=a,
         transition_covariance=state_covariance,
-        observation_covariance=obs_2d2_d.observable.parameter_1 ** 2.0 * np.eye(2),
+        observation_covariance=s ** 2.0 * np.eye(2),
         initial_state_covariance=state_covariance
     )
 
-    llt = m.LocalLinearTrend(torch.tensor([0.01, 0.05]))
-    obs_2d_1d = LinearGaussianObservations(llt, torch.tensor([0.0, 1.0]), 0.15)
+    sigma = np.array([0.01, 0.05])
+    a, s = np.array([0.0, 1.0]), 0.15
 
-    state_covariance_2 = llt.parameter_1.pow(2.0).cumsum(0) * np.eye(2)
+    llt = m.LocalLinearTrend(torch.from_numpy(sigma).float())
+    obs_2d_1d = LinearGaussianObservations(llt, torch.from_numpy(a).float(), s)
+
+    state_covariance_2 = (sigma ** 2.0).cumsum(0) * np.eye(2)
     kalman_2d_1d = KalmanFilter(
-        transition_matrices=llt.parameter_0,
-        observation_matrices=obs_2d_1d.observable.parameter_0,
+        transition_matrices=np.array([[1.0, 0.0], [1.0, 1.0]]),
+        observation_matrices=a,
         transition_covariance=state_covariance_2,
-        observation_covariance=obs_2d_1d.observable.parameter_1 ** 2.0,
+        observation_covariance=s ** 2.0,
         initial_state_covariance=state_covariance_2
     )
 
