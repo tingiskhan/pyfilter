@@ -48,7 +48,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         """
 
         if ndim is None:
-            ndim = 1 if isinstance(sigma, float) else sigma.shape.numel()  # TODO: Not too sure about this one eh
+            ndim = 1 if isinstance(sigma, float) else len(sigma.shape)  # TODO: Not too sure about this one eh
 
         if ndim > 1:
             dist = DistributionWrapper(
