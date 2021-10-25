@@ -136,7 +136,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
     def parameters_and_priors(self) -> Iterable[Tuple[PriorBoundParameter, "Prior"]]:
         """
         Returns the priors and parameters of the module as an iterable of tuples, i.e::
-            [(parameter_0, prior_parameter_0), ..., (prior_parameter_n, prior_parameter_n)]
+            [(parameter_0, prior_parameter_0), ..., (parameter_n, prior_parameter_n)]
         """
 
         for prior, parameter in zip(self.prior_dict.values(), self.parameter_dict.values()):
