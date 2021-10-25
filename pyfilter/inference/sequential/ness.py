@@ -49,17 +49,14 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             self._kernel.update(self.filter, state)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
-        state.w += filter_state.get_loglikelihood()
-
-        state.append_ess(get_ess(state.w))
-        state.filter_state.append(filter_state)
+        state.update(filter_state)
 
         return state
 
 
 class NESS(BaseOnlineAlgorithm):
     """
-    Implements the NESS algorithm by Miguez and Crisan, with the slight modification of allowing dynamic
+    Implements the NESS algorithm by Miguez and Crisan, with the slight modification of allowing dynamically triggered
     particle updates with regards to the current ESS.
     """
 

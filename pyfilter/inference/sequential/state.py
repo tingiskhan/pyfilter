@@ -1,8 +1,7 @@
 import torch
-from typing import List
 from ..state import FilterAlgorithmState
-from ...filters import FilterResult
-from ...utils import normalize
+from ...filters import FilterResult, BaseFilterState
+from ...utils import normalize, get_ess
 from ...container import TensorTuple
 
 
@@ -11,7 +10,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     Base state for sequential particle algorithms.
     """
 
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: List[torch.Tensor] = None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: TensorTuple = None):
         """
         Initializes the ``SequentialAlgorithmState`` class.
 
@@ -24,16 +23,31 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.ess = ess or list()
+        self.tensor_tuples["ess"] = TensorTuple() or ess
+
+    @property
+    def ess(self) -> TensorTuple:
+        """
+        Returns the ESS.
+        """
+
+        return self.tensor_tuples["ess"]
+
+    def update(self, filter_state: BaseFilterState):
+        """
+        Updates ``self`` given a new filter state.
+
+        Args:
+            filter_state: The latest filter state.
+        """
+
+        self.w += filter_state.get_loglikelihood()
+        self.filter_state.append(filter_state)
+
+        self.ess.append(get_ess(self.w))
 
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
-
-    def get_ess(self) -> torch.Tensor:
-        return torch.stack(self.ess, 0)
-
-    def append_ess(self, ess: torch.Tensor):
-        self.ess.append(ess)
 
     def replicate(self, filter_state):
         return SequentialAlgorithmState(torch.zeros_like(self.w), filter_state)

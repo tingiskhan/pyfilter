@@ -49,14 +49,9 @@ class SMC2(SequentialParticleAlgorithm):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
-        state.w += filter_state.get_loglikelihood()
+        state.update(filter_state)
 
-        ess = get_ess(state.w)
-        state.append_ess(ess)
-
-        state.filter_state.append(filter_state)
-
-        if ess < self._threshold or (~torch.isfinite(state.w)).any():
+        if state.ess[-1] < self._threshold or (~torch.isfinite(state.w)).any():
             state = self.rejuvenate(state)
 
         return state
