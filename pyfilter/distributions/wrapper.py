@@ -1,11 +1,11 @@
 from typing import Union
-from .mixin import DistributionBuilderMixin
+from .base import DistributionBuilder
 from .prior import Prior
 from ..prior_module import HasPriorsModule
-from .typing import DistributionOrBuilder, HyperParameters
+from .typing import DistributionOrBuilder, HyperParameter
 
 
-class DistributionWrapper(HasPriorsModule, DistributionBuilderMixin):
+class DistributionWrapper(DistributionBuilder, HasPriorsModule):
     """
     Implements a wrapper around ``pytorch.distributions.Distribution`` objects. It inherits from ``pytorch.nn.Module``
     in order to utilize all of the associated methods and attributes. One such is e.g. moving tensors between different
@@ -22,7 +22,7 @@ class DistributionWrapper(HasPriorsModule, DistributionBuilderMixin):
         >>> cuda_samples = wrapped_normal_cuda.build_distribution().sample((1000,)) # device cuda
     """
 
-    def __init__(self, base_dist: DistributionOrBuilder, **parameters: Union[HyperParameters, Prior]):
+    def __init__(self, base_dist: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: Union[HyperParameter, Prior]):
         """
         Initializes the ``DistributionWrapper`` class.
 
@@ -44,13 +44,11 @@ class DistributionWrapper(HasPriorsModule, DistributionBuilderMixin):
                 >>> samples = wrapped_normal_with_prior.build_distribution().sample((1000,)) # should be 1000 x 1000
         """
 
-        super().__init__()
-
-        self.base_dist = base_dist
+        super(DistributionWrapper, self).__init__(base_dist=base_dist, reinterpreted_batch_ndims=reinterpreted_batch_ndims)
         parameters["validate_args"] = parameters.pop("validate_args", False)
 
         for k, v in parameters.items():
             self._register_parameter_or_prior(k, v)
 
-    def forward(self):
-        return self.base_dist(**self.parameters_and_buffers())
+    def _get_parameters(self):
+        return self.parameters_and_buffers()

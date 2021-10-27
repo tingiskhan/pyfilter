@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import Independent, Normal, TransformedDistribution, AffineTransform, Distribution
+from torch.distributions import Normal, TransformedDistribution, AffineTransform, Distribution
 from ...typing import ArrayType
 from ...distributions import DistributionWrapper
 from ..affine import AffineProcess
@@ -50,9 +50,7 @@ class UCSV(AffineProcess):
             kwargs: See base.
         """
 
-        initial_dist = increment_dist = DistributionWrapper(
-            lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(2), scale=torch.ones(2)
-        )
+        initial_dist = increment_dist = DistributionWrapper(Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
 
         super().__init__(
             (f, g),

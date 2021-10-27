@@ -1,13 +1,12 @@
 from torch.distributions import TransformedDistribution, biject_to, Transform
 import torch
 from typing import Tuple
-from torch.nn import Module
 from torch.distributions import Distribution
-from .typing import HyperParameters, DistributionOrBuilder
-from .mixin import DistributionBuilderMixin
+from .typing import HyperParameter, DistributionOrBuilder
+from .base import DistributionBuilder
 
 
-class Prior(DistributionBuilderMixin, Module):
+class Prior(DistributionBuilder):
     """
     Class representing a Bayesian prior on a parameter. Inherits from ``pytorch.nn.Module``.
 
@@ -36,7 +35,7 @@ class Prior(DistributionBuilderMixin, Module):
 
     """
 
-    def __init__(self, distribution: DistributionOrBuilder, **parameters: HyperParameters):
+    def __init__(self, distribution: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: HyperParameter):
         """
         Initializes the ``Prior`` class.
 
@@ -46,9 +45,7 @@ class Prior(DistributionBuilderMixin, Module):
             parameters: The parameters of the distribution.
         """
 
-        super().__init__()
-
-        self.base_dist = distribution
+        super().__init__(distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims)
         parameters["validate_args"] = parameters.pop("validate_args", False)
 
         for k, v in parameters.items():
@@ -137,8 +134,8 @@ class Prior(DistributionBuilderMixin, Module):
 
         return (self().event_shape if not constrained else self.unconstrained_prior.event_shape).numel()
 
-    def forward(self) -> Distribution:
-        return self.base_dist(**self._buffers)
+    def _get_parameters(self):
+        return self._buffers
 
     def get_slice_for_parameter(self, prev_index, constrained=True) -> Tuple[slice, int]:
         numel = self.get_numel(constrained)
