@@ -23,7 +23,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.tensor_tuples["ess"] = TensorTuple() or ess
+        self.tensor_tuples["ess"] = ess or TensorTuple()
 
     @property
     def ess(self) -> TensorTuple:
