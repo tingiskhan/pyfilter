@@ -43,9 +43,9 @@ class RandomWalk(AffineProcess):
         if isinstance(std, float):
             normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
-            shape = len(std.shape)
+            shape = std.shape
 
-            if shape == 0:
+            if len(shape) == 0:
                 normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
             else:
                 normal = DistributionWrapper(

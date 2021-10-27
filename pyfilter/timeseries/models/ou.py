@@ -1,4 +1,5 @@
 from torch.distributions import Normal, Independent, AffineTransform, TransformedDistribution
+from numbers import Number
 from ..affine import AffineProcess
 import torch
 from ...distributions import DistributionWrapper
@@ -29,7 +30,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         kappa: ArrayType,
         gamma: ArrayType,
         sigma: ArrayType,
-        ndim: int = None,
+        n_dim: int = None,
         dt: float = 1.0,
         initial_state_mean: ArrayType = None,
         **kwargs
@@ -41,18 +42,18 @@ class OrnsteinUhlenbeck(AffineProcess):
             kappa: The reversion parameter.
             gamma: The mean parameter.
             sigma: The volatility parameter.
-            ndim: Optional parameter controlling the dimension of the process. Inferred from ``sigma`` if ``None``.
+            n_dim: Optional parameter controlling the dimension of the process. Inferred from ``sigma`` if ``None``.
             dt: Optional, the timestep to use.
             initial_state_mean: Optional, whether to use another initial mean than ``gamma``.
             kwargs: See base.
         """
 
-        if ndim is None:
-            ndim = 1 if isinstance(sigma, float) else len(sigma.shape)  # TODO: Not too sure about this one eh
+        if n_dim is None:
+            n_dim = 0 if isinstance(sigma, Number) else len(sigma.shape)
 
-        if ndim > 1:
+        if n_dim > 0:
             dist = DistributionWrapper(
-                lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(ndim), scale=torch.ones(ndim)
+                lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape)
             )
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
