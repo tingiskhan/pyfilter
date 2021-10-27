@@ -49,6 +49,8 @@ class RandomWalk(AffineProcess):
             if len(shape) == 0:
                 normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
             else:
-                normal = DistributionWrapper(Normal, loc=torch.zeros(shape), scale=torch.ones(shape), reinterpreted_batch_ndims=1)
+                normal = DistributionWrapper(
+                    Normal, loc=torch.zeros(shape), scale=torch.ones(shape), reinterpreted_batch_ndims=1
+                )
 
         super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans, **kwargs)

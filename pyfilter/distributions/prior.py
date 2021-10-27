@@ -35,7 +35,9 @@ class Prior(DistributionBuilder):
 
     """
 
-    def __init__(self, distribution: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: HyperParameter):
+    def __init__(
+        self, distribution: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: HyperParameter
+    ):
         """
         Initializes the ``Prior`` class.
 

@@ -18,9 +18,9 @@ class DistributionBuilder(torch.nn.Module, ABC):
         Args:
             reinterpreted_batch_ndims: See ``torch.distributions.Independent``.
         """
-        
+
         super(DistributionBuilder, self).__init__()
-        
+
         self.base_dist = base_dist
         self._reinterpreted_batch_ndims = reinterpreted_batch_ndims
 

@@ -52,7 +52,9 @@ class OrnsteinUhlenbeck(AffineProcess):
             n_dim = 0 if isinstance(sigma, Number) else len(sigma.shape)
 
         if n_dim > 0:
-            dist = DistributionWrapper(Normal, loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape), reinterpreted_batch_ndims=1)
+            dist = DistributionWrapper(
+                Normal, loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape), reinterpreted_batch_ndims=1
+            )
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 

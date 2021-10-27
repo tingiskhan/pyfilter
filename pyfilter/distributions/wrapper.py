@@ -22,7 +22,12 @@ class DistributionWrapper(DistributionBuilder, HasPriorsModule):
         >>> cuda_samples = wrapped_normal_cuda.build_distribution().sample((1000,)) # device cuda
     """
 
-    def __init__(self, base_dist: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: Union[HyperParameter, Prior]):
+    def __init__(
+        self,
+        base_dist: DistributionOrBuilder,
+        reinterpreted_batch_ndims=None,
+        **parameters: Union[HyperParameter, Prior]
+    ):
         """
         Initializes the ``DistributionWrapper`` class.
 
@@ -44,7 +49,9 @@ class DistributionWrapper(DistributionBuilder, HasPriorsModule):
                 >>> samples = wrapped_normal_with_prior.build_distribution().sample((1000,)) # should be 1000 x 1000
         """
 
-        super(DistributionWrapper, self).__init__(base_dist=base_dist, reinterpreted_batch_ndims=reinterpreted_batch_ndims)
+        super(DistributionWrapper, self).__init__(
+            base_dist=base_dist, reinterpreted_batch_ndims=reinterpreted_batch_ndims
+        )
         parameters["validate_args"] = parameters.pop("validate_args", False)
 
         for k, v in parameters.items():

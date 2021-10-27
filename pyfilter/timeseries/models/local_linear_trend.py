@@ -43,7 +43,9 @@ class LocalLinearTrend(AffineProcess):
         """
 
         parameters = (torch.tensor([[1.0, 0.0], [1.0, 1.0]]), sigma, initial_mean)
-        initial_dist = increment_dist = DistributionWrapper(Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
+        initial_dist = increment_dist = DistributionWrapper(
+            Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
+        )
 
         super().__init__(
             (mean, scale), parameters, initial_dist, increment_dist, initial_transform=initial_transform, **kwargs
@@ -98,7 +100,9 @@ class SemiLocalLinearTrend(AffineProcess):
         """
 
         parameters = (mean_, coef_, sigma, initial_mean)
-        initial_dist = increment_dist = DistributionWrapper(Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
+        initial_dist = increment_dist = DistributionWrapper(
+            Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
+        )
 
         super(SemiLocalLinearTrend, self).__init__(
             (semi_mean, semi_scale),

@@ -50,7 +50,9 @@ class UCSV(AffineProcess):
             kwargs: See base.
         """
 
-        initial_dist = increment_dist = DistributionWrapper(Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
+        initial_dist = increment_dist = DistributionWrapper(
+            Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
+        )
 
         super().__init__(
             (f, g),
