@@ -1,5 +1,6 @@
 from torch.distributions import Distribution, Normal, Independent, AffineTransform, TransformedDistribution
 import torch
+from numbers import Number
 from ..affine import AffineProcess
 from ...distributions import DistributionWrapper
 from ...typing import ArrayType
@@ -40,7 +41,7 @@ class RandomWalk(AffineProcess):
             kwargs: See base.
         """
 
-        if isinstance(std, float):
+        if isinstance(std, Number):
             normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
             shape = std.shape
