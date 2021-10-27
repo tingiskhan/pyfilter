@@ -75,10 +75,9 @@ class Linearized(Proposal):
             mean = mean.detach() + step * g
             new_x = new_x.copy(new_x.dist, mean)
 
-        if self._is1d:
-            kernel = Normal(mean, std, validate_args=False)
-        else:
-            kernel = Independent(Normal(mean, std), self._model.hidden.n_dim, validate_args=False)
+        kernel = Normal(mean, std, validate_args=False)
+        if not self._is1d:
+            kernel = Independent(kernel, self._model.hidden.n_dim)
 
         new_x = new_x.copy(new_x.dist, kernel.sample())
 
