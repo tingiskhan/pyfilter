@@ -1,4 +1,4 @@
-from torch.distributions import Normal, Independent, AffineTransform, TransformedDistribution
+from torch.distributions import Normal, AffineTransform, TransformedDistribution
 from numbers import Number
 from ..affine import AffineProcess
 import torch
@@ -53,7 +53,7 @@ class OrnsteinUhlenbeck(AffineProcess):
 
         if n_dim > 0:
             dist = DistributionWrapper(
-                lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape)
+                Normal, loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape), reinterpreted_batch_ndims=1
             )
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)

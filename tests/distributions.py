@@ -106,6 +106,21 @@ class TestDistributions(object):
 
         assert (manual - transformed.log_prob(grid)).abs().max() <= EPS
 
+    def test_prior_multivariate(self):
+        loc = torch.zeros(3)
+        scale = torch.ones(3)
+
+        prior = Prior(Normal, loc=loc, scale=scale, reinterpreted_batch_ndims=1)
+
+        dist = prior.build_distribution()
+        assert (
+                isinstance(dist, Independent) and
+                isinstance(dist.base_dist, Normal) and
+                (dist.reinterpreted_batch_ndims == 1) and
+                (dist.base_dist.loc == loc).all() and
+                (dist.base_dist.scale == scale).all()
+        )
+
 
 class TestJointDistribution(object):
     def test_mask(self, joint_distribution):

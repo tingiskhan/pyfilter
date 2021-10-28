@@ -1,4 +1,4 @@
-from torch.distributions import Distribution, Normal, Independent, AffineTransform, TransformedDistribution
+from torch.distributions import Normal, AffineTransform, TransformedDistribution
 import torch
 from numbers import Number
 from ..affine import AffineProcess
@@ -50,7 +50,7 @@ class RandomWalk(AffineProcess):
                 normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
             else:
                 normal = DistributionWrapper(
-                    lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(shape), scale=torch.ones(shape)
+                    Normal, loc=torch.zeros(shape), scale=torch.ones(shape), reinterpreted_batch_ndims=1
                 )
 
         super().__init__((_f, _g), (std, initial_mean), normal, normal, initial_transform=init_trans, **kwargs)
