@@ -116,7 +116,7 @@ class JointDistribution(Distribution):
                 size = d.event_shape[-1]
                 slice_ = slice(length, size + 1)
 
-                length += slice_.stop
+                length += slice_.stop - 1
             else:
                 slice_ = length
                 length += 1
