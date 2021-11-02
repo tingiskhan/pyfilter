@@ -36,7 +36,7 @@ class JointDistribution(Distribution):
         """
 
         _indices = indices or self.infer_indices(*distributions)
-        event_shape = torch.Size([(_indices[-1].stop if isinstance(_indices[-1], slice) else _indices[-1] + 1)])
+        event_shape = torch.Size([(_indices[-1].stop if isinstance(_indices[-1], slice) else _indices[-1]) + 1])
 
         batch_shape = distributions[0].batch_shape
         if any(d.batch_shape != batch_shape for d in distributions):
