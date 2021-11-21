@@ -1,8 +1,6 @@
 import pytest
 import torch
-from pyfilter.distributions import (
-    Prior, DistributionWrapper, JointDistribution, SinhArcsinhTransform, AsymmetricLaplace
-)
+from pyfilter.distributions import Prior, DistributionWrapper, JointDistribution, SinhArcsinhTransform
 from torch.distributions import (
     Exponential,
     StudentT,
@@ -122,32 +120,6 @@ class TestDistributions(object):
                 (dist.base_dist.loc == loc).all() and
                 (dist.base_dist.scale == scale).all()
         )
-
-    def test_asymmetric_laplace_log_prob(self, grid):
-        # We use the mirror images
-        scale = 1.0
-        left_skew = 0.5
-
-        for loc in torch.empty((25,)).normal_():
-            left_skewed = AsymmetricLaplace(scale, left_skew, loc)
-            right_skewed = AsymmetricLaplace(scale, 1 / left_skew, loc)
-
-            ls_log_prob = left_skewed.log_prob(grid + loc)
-            rs_log_prob = right_skewed.log_prob(grid + loc)
-
-            assert (ls_log_prob - rs_log_prob.flip(0)).abs().max() < EPS
-
-    def test_asymmetric_laplace_sampling(self):
-        scale = 1.0
-        skew = 0.5
-        loc = 0.0
-
-        asl = AsymmetricLaplace(scale, skew, loc)
-
-        shape = torch.Size([1000, 100])
-        y = asl.sample(shape)
-
-        assert y.shape == shape
 
 
 class TestJointDistribution(object):
