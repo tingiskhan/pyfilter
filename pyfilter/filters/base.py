@@ -3,11 +3,12 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Sequence, TypeVar, Union, List, Callable
+from typing import Tuple, Sequence, TypeVar, List, Callable
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
 from .state import BaseFilterState
+from ..container import BoolOrInt
 
 
 TState = TypeVar("TState", bound=BaseFilterState)
@@ -21,8 +22,9 @@ class BaseFilter(Module, ABC):
     def __init__(
         self,
         model: StateSpaceModel,
-        record_states: Union[bool, int] = False,
+        record_states: BoolOrInt = False,
         pre_append_callbacks: List[Callable[[TState], None]] = None,
+        record_moments: BoolOrInt = True
     ):
         """
         Initializes the ``BaseFilter`` class.
@@ -32,6 +34,7 @@ class BaseFilter(Module, ABC):
             record_states: See ``pyfilter.timeseries.result.record_states``.
             pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
                 to appending the new state.
+            record_moments: See ``pyfilter.timeseries.result.record_moments``
         """
 
         super().__init__()
@@ -42,7 +45,9 @@ class BaseFilter(Module, ABC):
         self._model = model
         self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
         self._n_parallel = None
+
         self.record_states = record_states
+        self.record_moments = record_moments
 
         self._pre_append_callbacks = pre_append_callbacks or list()
 
@@ -87,7 +92,8 @@ class BaseFilter(Module, ABC):
 
     def initialize(self) -> TState:
         """
-        Initializes the filter.
+        Initializes the filter. This is mainly for internal use, consider using `.`initialize_with_result(...)``
+        instead.
         """
 
         raise NotImplementedError()
@@ -101,7 +107,7 @@ class BaseFilter(Module, ABC):
             state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
         """
 
-        res = FilterResult(state or self.initialize(), self.record_states)
+        res = FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
         for callback in self._pre_append_callbacks:
             res.register_forward_pre_hook(callback)

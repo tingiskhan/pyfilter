@@ -229,3 +229,12 @@ class TestFilters(object):
 
             means = result.filter_means[1:]
             assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
+
+    def test_record_moments(self, linear_models):
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            for f in construct_filters(model, record_moments=self.STATE_RECORD_LENGTH):
+                result = f.longfilter(y)
+
+                assert len(result.filter_means) == self.STATE_RECORD_LENGTH
