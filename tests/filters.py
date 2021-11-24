@@ -230,7 +230,7 @@ class TestFilters(object):
             means = result.filter_means[1:]
             assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
 
-    def test_record_moments(self, linear_models):
+    def test_partial_moment_history(self, linear_models):
         for model, _ in linear_models:
             x, y = model.sample_path(self.SERIES_LENGTH)
 
