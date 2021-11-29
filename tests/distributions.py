@@ -24,7 +24,7 @@ def joint_distribution():
 
 @pytest.fixture
 def joint_distribution_inverted(joint_distribution):
-    return JointDistribution(*joint_distribution.distributions[::-1])
+    return JointDistribution(*joint_distribution.distributions[::-1], *joint_distribution.distributions)
 
 
 @pytest.fixture
@@ -193,3 +193,5 @@ class TestJointDistribution(object):
         assert joint_distribution_inverted.indices[0] == slice(0, 2)
         assert joint_distribution_inverted.indices[1] == 2
 
+        assert joint_distribution_inverted.indices[2] == 3
+        assert joint_distribution_inverted.indices[3] == slice(4, 6)
