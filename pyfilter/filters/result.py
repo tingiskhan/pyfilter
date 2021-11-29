@@ -1,8 +1,7 @@
 import torch
-from typing import List, Union, TypeVar, Generic
-from collections import deque
+from typing import List, TypeVar, Generic
 from .state import BaseFilterState
-from ..container import TensorTuple
+from ..container import TensorTuple, make_dequeue, BoolOrInt
 from ..state import StateWithTensorTuples
 
 TState = TypeVar("TState", bound=BaseFilterState)
@@ -14,30 +13,26 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
     """
 
     # TODO: Add dump and load hook for all states instead of just last?
-    def __init__(self, init_state: TState, record_states: Union[bool, int] = False):
+    def __init__(self, init_state: TState, record_states: BoolOrInt, record_moments: BoolOrInt):
         """
         Initializes the ``FilterResult`` object.
 
         Args:
             init_state: The initial state.
-            record_states: Optional parameter for whether to record all, or some of the
-                ``pyfilter.filters.state.BaseFilterState`` objects. Can be either a ``bool``  or an ``int``, if ``int``
-                the ``pyfilter.filters.result.FilterResult`` object will retain ``record_states`` number of states. If
-                ``True`` will retain *all* states, and only the latest if ``False``. Do note that recording all states
-                will be very memory intensive for particle filters.
+            record_states: Parameter for whether to record all, or some of the states of the filter. Do note that
+                recording all states will be very memory intensive for particle filters. See
+                ``pyfilter.container.make_dequeue`` for more details.
+            record_moments: Same as ``record_states`` but for the filter means and variances.
         """
 
         super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self.tensor_tuples["filter_means"] = TensorTuple()
-        self.tensor_tuples["filter_variances"] = TensorTuple()
+        self.tensor_tuples["filter_means"] = TensorTuple(maxlen=record_moments)
+        self.tensor_tuples["filter_variances"] = TensorTuple(maxlen=record_moments)
 
-        self._states = deque(
-            maxlen=1 if record_states is False else (None if isinstance(record_states, bool) else record_states)
-        )
-
+        self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
 
         self._register_state_dict_hook(self._state_dump_hook)

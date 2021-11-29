@@ -28,7 +28,10 @@ class TestContainers(object):
         state_dict = state.state_dict()
 
         final_key = f"tensor_tuples.{key}"
-        assert (final_key in state_dict) and isinstance(state_dict[final_key], tuple)
+        assert (
+                (final_key in state_dict) and
+                isinstance(state_dict[final_key], state.tensor_tuples[key].tensors.__class__)
+        )
 
         new_state = StateWithTensorTuples()
         new_state.load_state_dict(state_dict)

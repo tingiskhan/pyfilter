@@ -1,10 +1,25 @@
 import torch
 from torch.nn import Module
-from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple
+from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union
 import warnings
 from collections import OrderedDict, abc as container_abcs
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataset import T_co
+from collections import deque
+
+BoolOrInt = Union[int, bool]
+
+
+def make_dequeue(maxlen: BoolOrInt = None) -> deque:
+    """
+    Creates a deque given ``maxlen``.
+
+    Args:
+        maxlen: The maximum length of the deque. Can be either a ``bool`` or an ``int``. If ``bool``, then it ``maxlen``
+        corresponds to 1 if ``False`` or ``None`` if ``True``. If an ``int``, then corresponds to the value.
+    """
+
+    return deque(maxlen=1 if maxlen is False else (None if isinstance(maxlen, bool) else maxlen))
 
 
 # TODO: Utilize torch's own BufferDict when available
@@ -110,8 +125,9 @@ class TensorTuple(IterableDataset):
     Implements a tuple like tensor storage.
     """
 
-    def __init__(self, *tensors):
-        self.tensors = tensors
+    def __init__(self, *tensors, maxlen=None):
+        self.tensors = make_dequeue(maxlen=maxlen)
+        self.tensors.extend(tensors)
 
     def __iter__(self) -> Iterator[T_co]:
         for t in self.tensors:
@@ -121,16 +137,22 @@ class TensorTuple(IterableDataset):
         return self.tensors[index]
 
     def __add__(self, other: IterableDataset):
-        return TensorTuple(*self.tensors, *other.tensors)
+        return TensorTuple(*self.tensors, *other.tensors, maxlen=max(self.tensors.maxlen, other.tensors.maxlen))
 
     def values(self) -> torch.Tensor:
-        return torch.stack(self.tensors, dim=0)
+        return torch.stack(tuple(self.tensors), dim=0)
 
     def append(self, tensor: torch.Tensor):
         if not isinstance(tensor, torch.Tensor):
             raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
 
-        self.tensors += (tensor,)
+        self.tensors.append(tensor)
 
     def apply(self, fn):
-        self.tensors = tuple(fn(t) for t in self.tensors)
+        new_deque = make_dequeue(maxlen=self.tensors.maxlen)
+
+        while self.tensors:
+            for t in self.tensors.popleft():
+                new_deque.append(fn(t))
+
+        self.tensors = new_deque
