@@ -116,9 +116,9 @@ class JointDistribution(Distribution):
 
             if multi_dimensional:
                 size = d.event_shape[-1]
-                slice_ = slice(length, size + 1)
+                slice_ = slice(length, size + length)
 
-                length += slice_.stop - 1
+                length += slice_.stop
             else:
                 slice_ = length
                 length += 1

@@ -14,13 +14,17 @@ from pyfilter.constants import EPS
 from math import pi
 
 
-
 @pytest.fixture
 def joint_distribution():
     dist_1 = Exponential(rate=1.0)
     dist_2 = Independent(StudentT(df=torch.ones(2)), 1)
 
     return JointDistribution(dist_1, dist_2)
+
+
+@pytest.fixture
+def joint_distribution_inverted(joint_distribution):
+    return JointDistribution(*joint_distribution.distributions[::-1])
 
 
 @pytest.fixture
@@ -184,3 +188,8 @@ class TestJointDistribution(object):
         samples = exp_transform.sample((1000,))
 
         assert (samples >= 0.0).all()
+
+    def test_joint_distribution_mask_1(self, joint_distribution_inverted):
+        assert joint_distribution_inverted.indices[0] == slice(0, 2)
+        assert joint_distribution_inverted.indices[1] == 2
+
