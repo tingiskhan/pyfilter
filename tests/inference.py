@@ -1,6 +1,6 @@
 import pytest
-from pyfilter.timeseries import LinearGaussianObservations, models as m
-from pyfilter.distributions import Prior
+from pyfilter.timeseries import LinearGaussianObservations, models as m, AffineObservations, StateSpaceModel
+from pyfilter.distributions import Prior, DistributionWrapper
 from torch.distributions import Normal, Exponential, LogNormal
 from tests.filters import construct_filters
 from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
@@ -10,9 +10,8 @@ import torch
 
 
 @pytest.fixture
-def models():
+def uhlenbecks():
     ou = m.OrnsteinUhlenbeck(0.025, 0.0, 0.05, dt=1.0)
-    obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
 
     ou_priors = (
         Prior(Exponential, rate=1.0),
@@ -20,11 +19,36 @@ def models():
         Prior(LogNormal, loc=0.0, scale=1.0)
     )
     prob_ou = m.OrnsteinUhlenbeck(*ou_priors, dt=ou._dt.clone())
+
+    return ou, prob_ou
+
+
+@pytest.fixture
+def models(uhlenbecks):
+    ou, prob_ou = uhlenbecks
+
+    obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
     prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable.buffer_dict.values())
 
     return (
         [prob_obs_1d, obs_1d],
     )
+
+
+@pytest.fixture
+def exog_model(uhlenbecks):
+    ou, ou_prob = uhlenbecks
+
+    def _f(x, sigma):
+        return x.exog + x.values
+
+    def _g(x, sigma):
+        return sigma
+
+    normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+    obs = AffineObservations((_f, _g), (0.15,), normal)
+
+    return StateSpaceModel(ou, obs), StateSpaceModel(ou_prob, obs)
 
 
 def get_prior(name, ssm):
@@ -77,7 +101,7 @@ class TestsSequentialAlgorithm(object):
             NESSMC2(filter_, **kwargs),
         )
 
-    def test_sequential_algorithms(self, models):
+    def test_algorithms(self, models):
         for prob_model, model in models:
             x, y = model.sample_path(self.SERIES_LENGTH)
 
@@ -86,6 +110,20 @@ class TestsSequentialAlgorithm(object):
                     result = algorithm.fit(y)
 
                     check_posterior(algorithm.filter.ssm, model, weights=result.normalized_weights().numpy())
+
+    def test_exog(self, exog_model):
+        model, prob_model = exog_model
+
+        model.observable.exog = prob_model.observable.exog = torch.arange(0, self.SERIES_LENGTH + 1)
+        x, y = model.sample_path(self.SERIES_LENGTH)
+
+        assert (y.diff() > 0.0).all()
+
+        for f in construct_filters(prob_model):
+            for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
+                result = algorithm.fit(y)
+
+                check_posterior(algorithm.filter.ssm, model, weights=result.normalized_weights().numpy())
 
 
 class TestBatchAlgorithms(object):
