@@ -1,7 +1,7 @@
 from torch.distributions import Distribution
 import torch
 from copy import deepcopy
-from typing import TypeVar, Callable, Union, Tuple
+from typing import TypeVar, Callable, Union, Tuple, Sequence
 from torch.nn import Module, Parameter
 from abc import ABC
 from functools import lru_cache
@@ -10,6 +10,7 @@ from ..distributions import DistributionWrapper
 from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
 from ..prior_module import HasPriorsModule
+from ..container import TensorTuple
 
 
 T = TypeVar("T")
@@ -28,6 +29,7 @@ class StochasticProcess(Module, ABC):
         initial_dist: DistributionWrapper,
         initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
         num_steps: int = 1,
+        exog: Sequence[torch.Tensor] = None
     ):
         """
         Initializes the ``StochasticProcess`` class.
@@ -42,12 +44,14 @@ class StochasticProcess(Module, ABC):
                 is defined by the three parameters governing the process.
             num_steps: Optional parameter allowing to skip time steps when sampling. E.g. if we set ``num_steps`` to 5,
                 we only return every fifth sample when propagating the process.
+            exog: Optional parameter specifying whether to include exogenous data.
         """
 
         super().__init__()
         self._initial_dist = initial_dist
         self._init_transform = initial_transform
         self.num_steps = num_steps
+        self.exog = None if exog is None else TensorTuple(*exog)
 
     @property
     @lru_cache(maxsize=None)
@@ -113,6 +117,9 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
+        if self.exog is not None:
+            x.add_exog(self.exog[x.time_index.int()])
+
         for _ in range(self.num_steps):
             density = self.build_density(x)
             x = x.propagate_from(dist=density, time_increment=time_increment)
@@ -186,6 +193,16 @@ class StochasticProcess(Module, ABC):
         """
 
         raise NotImplementedError()
+
+    def append_exog(self, exog: torch.Tensor):
+        """
+        Appends and exogenous variable.
+
+        Args:
+            exog: The new exogenous variable to add.
+        """
+
+        self.exog.append(exog)
 
 
 class StructuralStochasticProcess(StochasticProcess, HasPriorsModule, ABC):
