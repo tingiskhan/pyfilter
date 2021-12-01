@@ -6,6 +6,7 @@ from ..state import BaseState
 
 
 # TODO: Rename to TimeseriesState/ProcessState
+# TODO: Is this one really serializable...?
 class NewState(BaseState):
     """
     State object for ``StochasticProcess``.
@@ -32,6 +33,7 @@ class NewState(BaseState):
         self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
         self.dist = distribution
         self._values = values
+        self.exog = None
 
     @property
     def values(self) -> torch.Tensor:
@@ -75,7 +77,10 @@ class NewState(BaseState):
             values: See ``__init__``.
         """
 
-        return self.propagate_from(dist, values, time_increment=0.0)
+        res = self.propagate_from(dist, values, time_increment=0.0)
+        res.add_exog(self.exog)
+
+        return res
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
         """
@@ -89,6 +94,16 @@ class NewState(BaseState):
         """
 
         return NewState(self.time_index + time_increment, dist, values)
+
+    def add_exog(self, x: torch.Tensor):
+        """
+        Adds an exogenous variable to the state.
+
+        Args:
+            x: The exogenous variable.
+        """
+
+        self.exog = x
 
 
 class JointState(NewState):
@@ -160,6 +175,3 @@ class JointState(NewState):
         return JointState(
             time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices
         )
-
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return JointState(time_index=self.time_index, distribution=dist, values=values, indices=self.indices)
