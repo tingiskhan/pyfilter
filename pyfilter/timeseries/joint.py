@@ -1,7 +1,7 @@
 import torch
 from torch.distributions import Distribution
 from . import JointState
-from .stochasticprocess import StochasticProcess
+from .stochastic_process import StochasticProcess
 from .affine import AffineProcess
 from ..distributions import JointDistribution, DistributionWrapper
 

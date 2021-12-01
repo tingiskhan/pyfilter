@@ -4,7 +4,7 @@ from typing import Tuple
 from torch.distributions import Normal, Independent
 import math
 from .affine import AffineProcess, MeanOrScaleFun
-from .stochasticprocess import StructuralStochasticProcess
+from .stochastic_process import StructuralStochasticProcess
 from .typing import DiffusionFunction
 from ..distributions import DistributionWrapper
 from ..typing import ArrayType

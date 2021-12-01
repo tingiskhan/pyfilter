@@ -1,7 +1,7 @@
 from functools import lru_cache
 from abc import ABC
 from torch import Size
-from .stochasticprocess import StructuralStochasticProcess
+from .stochastic_process import StructuralStochasticProcess
 from .affine import AffineProcess
 
 

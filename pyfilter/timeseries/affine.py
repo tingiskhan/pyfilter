@@ -1,7 +1,7 @@
 from torch.distributions import Distribution, AffineTransform, TransformedDistribution
 import torch
 from typing import Tuple
-from .stochasticprocess import StructuralStochasticProcess
+from .stochastic_process import StructuralStochasticProcess
 from ..distributions import DistributionWrapper
 from .typing import MeanOrScaleFun
 from .state import NewState
