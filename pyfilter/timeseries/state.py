@@ -6,7 +6,8 @@ from ..state import BaseState
 
 
 # TODO: Rename to TimeseriesState/ProcessState
-# TODO: Is this one really serializable...?
+# TODO: Would be nice to serialize distributions...
+# TODO: Add step to ensure that ``values`` are serialized. Just sample on get perhaps and skip lazy eval?
 class NewState(BaseState):
     """
     State object for ``StochasticProcess``.
@@ -30,10 +31,21 @@ class NewState(BaseState):
         if distribution is None and values is None:
             raise Exception("Both `distribution` and `values` cannot be `None`!")
 
-        self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
         self.dist = distribution
-        self._values = values
-        self.exog = None
+
+        self.register_buffer(
+            "_time_index", time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
+        )
+        self.register_buffer("_values", values)
+        self.register_buffer("_exog", None)
+
+    @property
+    def time_index(self) -> torch.Tensor:
+        """
+        The time index of the state.
+        """
+
+        return self._time_index
 
     @property
     def values(self) -> torch.Tensor:
@@ -50,6 +62,18 @@ class NewState(BaseState):
     @values.setter
     def values(self, x):
         self._values = x
+
+    @property
+    def exog(self) -> torch.Tensor:
+        """
+        Returns the exogenous variable (if any).
+        """
+
+        return self._exog
+
+    @exog.setter
+    def exog(self, x: torch.Tensor):
+        self._exog = x
 
     @property
     def shape(self):
