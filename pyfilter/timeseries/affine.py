@@ -116,6 +116,8 @@ class AffineProcess(StructuralStochasticProcess):
         return self.f(x, *params), self.g(x, *params)
 
     def propagate_conditional(self, x: NewState, u: torch.Tensor, parameters=None, time_increment=1.0) -> NewState:
+        super(AffineProcess, self).propagate_conditional(x, u, parameters, time_increment)
+
         for _ in range(self.num_steps):
             loc, scale = self.mean_scale(x, parameters=parameters)
             x = x.propagate_from(values=loc + scale * u, time_increment=time_increment)

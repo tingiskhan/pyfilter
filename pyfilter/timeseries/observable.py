@@ -34,7 +34,7 @@ class AffineObservations(AffineProcess):
     for some functions :math:`f, g` parameterized by :math:`\\theta`.
     """
 
-    def __init__(self, funcs, parameters, increment_dist):
+    def __init__(self, funcs, parameters, increment_dist, **kwargs):
         """
         Initializes the ``AffineObservations`` class.
 
@@ -43,7 +43,7 @@ class AffineObservations(AffineProcess):
             parameters: See base.
             increment_dist: See base.
         """
-        super().__init__(funcs, parameters, None, increment_dist)
+        super().__init__(funcs, parameters, None, increment_dist, **kwargs)
 
     def initial_sample(self, shape=None):
         raise NotImplementedError("Cannot sample from Observable only!")

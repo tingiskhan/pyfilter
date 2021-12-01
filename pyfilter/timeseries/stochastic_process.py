@@ -116,9 +116,12 @@ class StochasticProcess(Module, ABC):
 
         raise NotImplementedError()
 
-    def forward(self, x: NewState, time_increment=1.0) -> NewState:
+    def _add_exog_to_state(self, x: NewState):
         if self.exog is not None:
             x.add_exog(self.exog[x.time_index.int()])
+
+    def forward(self, x: NewState, time_increment=1.0) -> NewState:
+        self._add_exog_to_state(x)
 
         for _ in range(self.num_steps):
             density = self.build_density(x)
@@ -192,7 +195,9 @@ class StochasticProcess(Module, ABC):
             time_increment: See ``.propagate(...)``.
         """
 
-        raise NotImplementedError()
+        self._add_exog_to_state(x)
+
+        return
 
     def append_exog(self, exog: torch.Tensor):
         """
