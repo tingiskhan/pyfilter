@@ -10,13 +10,13 @@ from ..distributions import DistributionWrapper
 from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
 from ..prior_module import HasPriorsModule
-from ..container import TensorTuple
+from ..container import TensorTuple, TensorTupleMixin
 
 
 T = TypeVar("T")
 
 
-class StochasticProcess(Module, ABC):
+class StochasticProcess(TensorTupleMixin, Module, ABC):
     """
     Abstract base class for stochastic processes. By "stochastic process" we mean a sequence of random variables,
     :math:`\\{X_t\\}_{t \\in T}`, defined on a common probability space. Derived classes should override the
@@ -51,7 +51,15 @@ class StochasticProcess(Module, ABC):
         self._initial_dist = initial_dist
         self._init_transform = initial_transform
         self.num_steps = num_steps
-        self.exog = None if exog is None else TensorTuple(*exog)
+        self.tensor_tuples["exog"] = TensorTuple(*(exog if exog is not None else ()))
+
+    @property
+    def exog(self) -> TensorTuple:
+        """
+        The exogenous variables.
+        """
+
+        return self.tensor_tuples["exog"]
 
     @property
     @lru_cache(maxsize=None)
@@ -117,7 +125,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
     def _add_exog_to_state(self, x: NewState):
-        if self.exog is not None:
+        if self.exog.tensors:
             x.add_exog(self.exog[x.time_index.int()])
 
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
