@@ -257,8 +257,8 @@ class TestFilters(object):
         def _g(x, sigma):
             return sigma
 
-        line = torch.arange(self.SERIES_LENGTH + 1)
-        obs = ts.AffineObservations((_f, _g), (0.05,), ou.increment_dist, exog=line - 1)
+        line = torch.arange(self.SERIES_LENGTH)
+        obs = ts.AffineObservations((_f, _g), (0.05,), ou.increment_dist, exog=line)
 
         model = ts.StateSpaceModel(ou, obs)
         x, y = model.sample_path(self.SERIES_LENGTH)
