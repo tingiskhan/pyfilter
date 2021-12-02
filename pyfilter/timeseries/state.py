@@ -189,7 +189,7 @@ class JointState(NewState):
     # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
     def __getitem__(self, item: int):
         return NewState(
-            time_index=self.time_index[item],
+            time_index=self.time_index,
             distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
             values=self.values[..., self.indices[item]],
         )
