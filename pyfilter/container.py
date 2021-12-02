@@ -152,8 +152,7 @@ class TensorTuple(IterableDataset):
         new_deque = make_dequeue(maxlen=self.tensors.maxlen)
 
         while self.tensors:
-            for t in self.tensors.popleft():
-                new_deque.append(fn(t))
+            new_deque.append(fn(self.tensors.popleft()))
 
         self.tensors = new_deque
 
