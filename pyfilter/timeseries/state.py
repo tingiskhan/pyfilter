@@ -168,7 +168,7 @@ class JointState(NewState):
         )
 
     @staticmethod
-    def _join_values(*states) -> Optional[torch.Tensor]:
+    def _join_values(*states: NewState) -> Optional[torch.Tensor]:
         if all(s._values is None for s in states):
             return None
 
@@ -176,16 +176,15 @@ class JointState(NewState):
         return torch.cat(to_concat)
 
     @staticmethod
-    def _join_distributions(*states, indices=None) -> Optional[JointDistribution]:
+    def _join_distributions(*states: NewState, indices=None) -> Optional[JointDistribution]:
         if all(s.dist is None for s in states):
             return None
 
         return JointDistribution(*(s.dist for s in states), indices=indices)
 
-    # TODO: Should perhaps be first available?
     @staticmethod
-    def _join_timeindex(*states) -> torch.Tensor:
-        return torch.stack(tuple(s.time_index for s in states), dim=-1)
+    def _join_timeindex(*states: NewState) -> torch.Tensor:
+        return states[0].time_index
 
     # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
     def __getitem__(self, item: int):
