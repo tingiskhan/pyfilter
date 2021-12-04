@@ -107,7 +107,8 @@ class TestTimeseries(object):
             x = m.initial_sample()
             x = m.propagate(x)
 
-            assert x.time_index == num_steps
+            is_sde = isinstance(m, (ts.StochasticDifferentialEquation, ts.OneStepEulerMaruyma))
+            assert x.time_index == (num_steps * (1 if not is_sde else m.dt))
 
     def test_concat_parameters(self, proc: ts.AffineProcess):
         for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
