@@ -35,7 +35,7 @@ class LinearGaussianObservations(Proposal):
         self._observable_is1d = None
 
     def set_model(self, model):
-        if not isinstance(model, LGO) and not isinstance(model.hidden, AffineProcess):
+        if not (isinstance(model, LGO) and isinstance(model.hidden, AffineProcess)):
             raise ValueError("Model combination not supported!")
 
         self._model = model

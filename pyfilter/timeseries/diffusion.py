@@ -4,7 +4,7 @@ from typing import Tuple
 from torch.distributions import Normal, Independent
 import math
 from .affine import AffineProcess, MeanOrScaleFun
-from .stochasticprocess import StructuralStochasticProcess
+from .stochastic_process import StructuralStochasticProcess
 from .typing import DiffusionFunction
 from ..distributions import DistributionWrapper
 from ..typing import ArrayType
@@ -40,6 +40,10 @@ class OneStepEulerMaruyma(AffineProcess):
 
         return x.values + drift * self.dt, diffusion
 
+    def forward(self, x, time_increment=1.0):
+        # TODO: Can we inherit from Discretized instead...?
+        return super(OneStepEulerMaruyma, self).forward(x, time_increment=self.dt)
+
 
 class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
     """
@@ -64,6 +68,10 @@ class StochasticDifferentialEquation(StructuralStochasticProcess, ABC):
         super().__init__(parameters=parameters, initial_dist=initial_dist, **kwargs)
 
         self.dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
+
+    def forward(self, x, time_increment=1.0):
+        # TODO: This is more correct, right?
+        return super(StochasticDifferentialEquation, self).forward(x, time_increment=self.dt)
 
 
 class DiscretizedStochasticDifferentialEquation(StochasticDifferentialEquation):

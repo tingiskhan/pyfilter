@@ -55,9 +55,9 @@ class Linearized(Proposal):
         for _ in range(self._n_steps):
             mean.requires_grad_(True)
 
-            y_dist = self._model.observable.build_density(new_x)
+            y_state = self._model.observable.propagate(new_x)
 
-            logl = y_dist.log_prob(y) + new_x.dist.log_prob(mean)
+            logl = y_state.dist.log_prob(y) + new_x.dist.log_prob(mean)
             g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
             step = self._alpha * torch.ones_like(g)

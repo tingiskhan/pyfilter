@@ -1,30 +1,57 @@
 from functools import lru_cache
-from abc import ABC
+from abc import ABC, abstractmethod
 from torch import Size
-from .stochasticprocess import StructuralStochasticProcess
+from .stochastic_process import StructuralStochasticProcess
 from .affine import AffineProcess
 
 
-class GeneralObservable(StructuralStochasticProcess, ABC):
+class Observable(StructuralStochasticProcess, ABC):
+    """
+    Abstract base class for observable processes.
+    """
+
+    def _add_exog_to_state(self, x):
+        # We subtract 1 as it's technically 1-indexed
+        if self.exog.tensors:
+            x.add_exog(self.exog[x.time_index.int() - 1])
+
+
+class GeneralObservable(Observable, ABC):
     """
     Abstract base class constituting the observable dynamics of a state space model. Derived classes should override the
     ``.build_density(...)`` method.
     """
 
-    def __init__(self, dimension: Size, parameters, **kwargs):
+    def __init__(self, parameters, **kwargs):
+        """
+        Initializes the ``GeneralObservable`` class.
+
+        Args:
+             parameters: See base.
+             kwargs: See base.
+        """
+
         super().__init__(parameters, initial_dist=None, **kwargs)
-        self._dim = dimension
 
     @property
     def n_dim(self) -> int:
-        return len(self._dim)
+        return len(self.dimension)
 
     @property
     def num_vars(self) -> int:
-        return self._dim.numel()
+        return self.dimension.numel()
+
+    @property
+    @abstractmethod
+    def dimension(self) -> Size:
+        """
+        The dimension of the process.
+        """
+
+        pass
 
 
-class AffineObservations(AffineProcess):
+class AffineObservations(AffineProcess, Observable):
     """
     Constitutes the observable dynamics of a state space model in which the dynamics are affine in terms of the latent
     state, i.e. we have that
@@ -34,7 +61,7 @@ class AffineObservations(AffineProcess):
     for some functions :math:`f, g` parameterized by :math:`\\theta`.
     """
 
-    def __init__(self, funcs, parameters, increment_dist):
+    def __init__(self, funcs, parameters, increment_dist, **kwargs):
         """
         Initializes the ``AffineObservations`` class.
 
@@ -43,7 +70,7 @@ class AffineObservations(AffineProcess):
             parameters: See base.
             increment_dist: See base.
         """
-        super().__init__(funcs, parameters, None, increment_dist)
+        super().__init__(funcs, parameters, None, increment_dist, **kwargs)
 
     def initial_sample(self, shape=None):
         raise NotImplementedError("Cannot sample from Observable only!")

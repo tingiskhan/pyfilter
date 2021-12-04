@@ -71,6 +71,6 @@ class Proposal(ABC):
         """
 
         new_state = self._pre_weight_func(self._model.hidden, x)
-        y_dist = self._model.observable.build_density(new_state)
+        y_state = self._model.observable.propagate(new_state)
 
-        return y_dist.log_prob(y)
+        return y_state.dist.log_prob(y)

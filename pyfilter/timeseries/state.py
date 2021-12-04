@@ -6,6 +6,8 @@ from ..state import BaseState
 
 
 # TODO: Rename to TimeseriesState/ProcessState
+# TODO: Would be nice to serialize distributions...
+# TODO: Add step to ensure that ``values`` are serialized. Just sample on get perhaps and skip lazy eval?
 class NewState(BaseState):
     """
     State object for ``StochasticProcess``.
@@ -29,9 +31,21 @@ class NewState(BaseState):
         if distribution is None and values is None:
             raise Exception("Both `distribution` and `values` cannot be `None`!")
 
-        self.time_index = time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
         self.dist = distribution
-        self._values = values
+
+        self.register_buffer(
+            "_time_index", time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
+        )
+        self.register_buffer("_values", values)
+        self.register_buffer("_exog", None)
+
+    @property
+    def time_index(self) -> torch.Tensor:
+        """
+        The time index of the state.
+        """
+
+        return self._time_index
 
     @property
     def values(self) -> torch.Tensor:
@@ -48,6 +62,18 @@ class NewState(BaseState):
     @values.setter
     def values(self, x):
         self._values = x
+
+    @property
+    def exog(self) -> torch.Tensor:
+        """
+        Returns the exogenous variable (if any).
+        """
+
+        return self._exog
+
+    @exog.setter
+    def exog(self, x: torch.Tensor):
+        self._exog = x
 
     @property
     def shape(self):
@@ -75,7 +101,10 @@ class NewState(BaseState):
             values: See ``__init__``.
         """
 
-        return self.propagate_from(dist, values, time_increment=0.0)
+        res = self.propagate_from(dist, values, time_increment=0.0)
+        res.add_exog(self.exog)
+
+        return res
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
         """
@@ -89,6 +118,16 @@ class NewState(BaseState):
         """
 
         return NewState(self.time_index + time_increment, dist, values)
+
+    def add_exog(self, x: torch.Tensor):
+        """
+        Adds an exogenous variable to the state.
+
+        Args:
+            x: The exogenous variable.
+        """
+
+        self.exog = x
 
 
 class JointState(NewState):
@@ -129,7 +168,7 @@ class JointState(NewState):
         )
 
     @staticmethod
-    def _join_values(*states) -> Optional[torch.Tensor]:
+    def _join_values(*states: NewState) -> Optional[torch.Tensor]:
         if all(s._values is None for s in states):
             return None
 
@@ -137,21 +176,20 @@ class JointState(NewState):
         return torch.cat(to_concat)
 
     @staticmethod
-    def _join_distributions(*states, indices=None) -> Optional[JointDistribution]:
+    def _join_distributions(*states: NewState, indices=None) -> Optional[JointDistribution]:
         if all(s.dist is None for s in states):
             return None
 
         return JointDistribution(*(s.dist for s in states), indices=indices)
 
-    # TODO: Should perhaps be first available?
     @staticmethod
-    def _join_timeindex(*states) -> torch.Tensor:
-        return torch.stack(tuple(s.time_index for s in states), dim=-1)
+    def _join_timeindex(*states: NewState) -> torch.Tensor:
+        return states[0].time_index
 
     # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
     def __getitem__(self, item: int):
         return NewState(
-            time_index=self.time_index[item],
+            time_index=self.time_index,
             distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
             values=self.values[..., self.indices[item]],
         )
@@ -160,6 +198,3 @@ class JointState(NewState):
         return JointState(
             time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices
         )
-
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None):
-        return JointState(time_index=self.time_index, distribution=dist, values=values, indices=self.indices)

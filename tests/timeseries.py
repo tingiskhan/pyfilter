@@ -50,13 +50,14 @@ def timeseries_models(custom_models):
 
 @pytest.fixture
 def proc():
+    dim = 4
     priors = (
-        Prior(Normal, loc=0.0, scale=1.0),
-        Prior(lambda **u: Independent(Normal(**u), 1), loc=torch.zeros(3), scale=torch.ones(3)),
+        Prior(Exponential, rate=5.0 * torch.ones(dim), reinterpreted_batch_ndims=1),
+        Prior(Normal, loc=torch.zeros(dim), scale=torch.ones(dim), reinterpreted_batch_ndims=1),
+        Prior(Exponential, rate=5.0 * torch.ones(dim), reinterpreted_batch_ndims=1)
     )
 
-    dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-    return ts.AffineProcess((None, None), priors, dist, dist)
+    return ts.models.OrnsteinUhlenbeck(*priors)
 
 
 @pytest.fixture
@@ -106,17 +107,18 @@ class TestTimeseries(object):
             x = m.initial_sample()
             x = m.propagate(x)
 
-            assert x.time_index == num_steps
+            is_sde = isinstance(m, (ts.StochasticDifferentialEquation, ts.OneStepEulerMaruyma))
+            assert x.time_index == (num_steps * (1 if not is_sde else m.dt))
 
     def test_concat_parameters(self, proc: ts.AffineProcess):
         for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
             proc.sample_params(sample_shape)
 
             x = proc.concat_parameters(constrained=True, flatten=True)
-            assert x.shape == torch.Size([sample_shape.numel(), 4])
+            assert x.shape == torch.Size([sample_shape.numel(), 12])
 
             x = proc.concat_parameters(constrained=True, flatten=False)
-            assert x.shape == torch.Size([*sample_shape, 4])
+            assert x.shape == torch.Size([*sample_shape, 12])
 
     def test_parameter_from_tensor(self, proc: ts.AffineProcess):
         for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
@@ -135,10 +137,10 @@ class TestTimeseries(object):
             ssm.sample_params(sample_shape)
 
             x = ssm.concat_parameters(constrained=True, flatten=True)
-            assert x.shape == torch.Size([sample_shape.numel(), 5])
+            assert x.shape == torch.Size([sample_shape.numel(), 13])
 
             x = ssm.concat_parameters(constrained=True, flatten=False)
-            assert x.shape == torch.Size([*sample_shape, 5])
+            assert x.shape == torch.Size([*sample_shape, 13])
 
     def test_parameter_from_tensor_ssm(self, ssm):
         for sample_shape in (torch.Size([1]), torch.Size([100, 10, 2])):
@@ -151,3 +153,27 @@ class TestTimeseries(object):
                 ssm.update_parameters_from_tensor(y, constrained=True)
 
                 assert (y == ssm.concat_parameters(constrained=True, flatten=flatten)).all()
+
+    def test_exogenous_variables(self):
+        reversion_params = 0.0, 0.0
+        normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
+
+        def _f(x, kappa, sigma):
+            return x.exog + f(x, kappa, sigma)
+
+        exog = torch.arange(0, self.timesteps)
+        model = ts.AffineProcess((_f, g), reversion_params, normal, normal, exog=exog)
+
+        x = model.sample_path(self.timesteps)
+
+        assert (x.shape[0] == self.timesteps) and (x - exog)[1:].abs().max() == 1.0
+
+        x = model.initial_sample()
+        for i in range(self.timesteps):
+            x = model.propagate(x)
+
+        with pytest.raises(IndexError):
+            x = model.propagate(x)
+
+        model.append_exog(exog[-1] + 1)
+        x = model.propagate(x)

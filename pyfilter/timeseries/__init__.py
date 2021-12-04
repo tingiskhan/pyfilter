@@ -1,4 +1,4 @@
-from .stochasticprocess import StochasticProcess, StructuralStochasticProcess
+from .stochastic_process import StochasticProcess, StructuralStochasticProcess
 from .affine import AffineProcess
 from .model import StateSpaceModel
 from .linear import LinearGaussianObservations, LinearObservations
