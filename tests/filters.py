@@ -96,12 +96,15 @@ def joint_timeseries():
 
     obs = ts.LinearGaussianObservations(joint, torch.eye(2), 0.15 * torch.ones(2))
 
-    state_cov = torch.stack((rw1.parameter_0, rw2.parameter_0), dim=0) ** 2.0 * np.eye(2)
+    param_1 = rw1.parameters_and_buffers()["parameter_0"]
+    param_2 = rw2.parameters_and_buffers()["parameter_0"]
+
+    state_cov = torch.stack((param_1, param_2), dim=0) ** 2.0 * np.eye(2)
     kalman = KalmanFilter(
         transition_matrices=np.eye(2),
         transition_covariance=state_cov,
         observation_matrices=np.eye(2),
-        observation_covariance=obs.observable.parameter_1 ** 2.0 * np.eye(2),
+        observation_covariance=obs.observable.parameters_and_buffers()["parameter_1"] ** 2.0 * np.eye(2),
         initial_state_covariance=state_cov
     )
 
@@ -225,7 +228,7 @@ class TestFilters(object):
 
             filter_std = result.filter_variance ** 0.5
 
-            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_1"])[1:].all()
+            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_1"] * 1.1)[1:].all()
 
     def test_joint_timeseries(self, joint_timeseries):
         model, kalman = joint_timeseries
