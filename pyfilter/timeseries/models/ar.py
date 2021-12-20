@@ -13,16 +13,16 @@ def _g(x, alpha, beta, sigma):
 
 def _init_trans(module: "AR", dist):
     alpha, beta, sigma = module.functional_parameters()
-    return TransformedDistribution(dist, AffineTransform(alpha, sigma / ((1 - beta) ** 2.0).sqrt()))
+    return TransformedDistribution(dist, AffineTransform(alpha, sigma / (1 - beta ** 2).sqrt()))
 
 
 # TODO: Implement lags
 class AR(AffineProcess):
     """
     Implements an AR(1) process, i.e. a process given by
-        .. math:
+        .. math::
             X_{t+1} = \\alpha + \\beta X_t + \\sigma W_t, \n
-            X_0 \\sim \\mathcal{N}(\\alpha, \\frac{\\sigma}{\\sqrt{(1 - \\beta)^2}).
+            X_0 \\sim \\mathcal{N}(\\alpha, \\frac{\\sigma}{\\sqrt{(1 - \\beta^2)})
     """
 
     def __init__(self, alpha, beta, sigma, **kwargs):
