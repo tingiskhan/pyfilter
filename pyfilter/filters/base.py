@@ -24,7 +24,7 @@ class BaseFilter(Module, ABC):
         model: StateSpaceModel,
         record_states: BoolOrInt = False,
         pre_append_callbacks: List[Callable[[TState], None]] = None,
-        record_moments: BoolOrInt = True
+        record_moments: BoolOrInt = True,
     ):
         """
         Initializes the ``BaseFilter`` class.

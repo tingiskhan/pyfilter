@@ -29,7 +29,7 @@ class StochasticProcess(TensorTupleMixin, Module, ABC):
         initial_dist: DistributionWrapper,
         initial_transform: Union[Callable[["StochasticProcess", Distribution], Distribution], None] = None,
         num_steps: int = 1,
-        exog: Sequence[torch.Tensor] = None
+        exog: Sequence[torch.Tensor] = None,
     ):
         """
         Initializes the ``StochasticProcess`` class.

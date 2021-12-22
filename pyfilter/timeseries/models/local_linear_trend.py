@@ -1,9 +1,12 @@
 import torch
 from torch.distributions import Normal, AffineTransform, TransformedDistribution
+from numbers import Number
 from ..affine import AffineProcess
 from ...typing import ArrayType
 from ...utils import concater
 from ...distributions import DistributionWrapper
+
+# TODO: Unify these classes?
 
 
 def mean(x, a, sigma, _):
@@ -110,5 +113,62 @@ class SemiLocalLinearTrend(AffineProcess):
             initial_dist=initial_dist,
             increment_dist=increment_dist,
             initial_transform=semi_initial_transform,
+            **kwargs
+        )
+
+
+def smooth_initial_transform(module, base_dist):
+    scale_, l_0, initial_mean = tuple(module.functional_parameters())[1:]
+
+    init_mean_ = concater(initial_mean, l_0)
+
+    l_0_scale = torch.zeros_like(scale_)
+    init_scale = concater(scale_, l_0_scale)
+
+    return TransformedDistribution(base_dist, AffineTransform(init_mean_, init_scale))
+
+
+def f_smooth(x, a, *args):
+    return mean(x, a, None, None)
+
+
+def g_smooth(x, a, sigma, *args):
+    l_0_scale = torch.zeros_like(sigma)
+    return concater(sigma, l_0_scale)
+
+
+class SmoothLinearTrend(AffineProcess):
+    """
+    Implements a "smooth trend model", defined as
+        .. math::
+            L_{t+1} = L_t + S_t, \n
+            S_{t+1} = S_t + \\sigma_s V_{t+1},
+
+    see docs of ``LocalLinearTrend`` for more information regarding parameters.
+    """
+
+    def __init__(self, sigma: ArrayType, l_0: Number = 0.0, initial_mean: ArrayType = 0.0, **kwargs):
+        """
+        Initializes the ``SmoothLinearTrend`` class.
+
+        Args:
+            sigma: Corresponds to :math:`\\sigma_s`.
+            l_0: The initial value of the level component.
+            initial_mean: Optional, specifies the initial mean of the slope.
+            kwargs: See base.
+        """
+
+        parameters = (torch.tensor([[1.0, 0.0], [1.0, 1.0]]), sigma, l_0, initial_mean)
+
+        initial_dist = increment_dist = DistributionWrapper(
+            Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
+        )
+
+        super().__init__(
+            (f_smooth, g_smooth),
+            parameters,
+            initial_dist,
+            increment_dist,
+            initial_transform=smooth_initial_transform,
             **kwargs
         )
