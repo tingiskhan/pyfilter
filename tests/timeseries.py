@@ -45,6 +45,7 @@ def timeseries_models(custom_models):
         ts.models.Verhulst(0.01, 1.0, 0.05, 1.0),
         ts.models.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([1e-3, 1e-2])),
         ts.models.UCSV(0.01, torch.tensor([0.0, 1.0])),
+        ts.models.SmoothLinearTrend(0.01, 0.0)
     )
 
 
