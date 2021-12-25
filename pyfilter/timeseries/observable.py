@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from torch import Size
 from .stochastic_process import StructuralStochasticProcess
 from .affine import AffineProcess
+from .linear_model import LinearModel
 
 
 class Observable(StructuralStochasticProcess, ABC):
@@ -14,6 +15,12 @@ class Observable(StructuralStochasticProcess, ABC):
         # We subtract 1 as it's technically 1-indexed
         if self.exog.tensors:
             x.add_exog(self.exog[x.time_index.int() - 1])
+
+    def initial_sample(self, shape=None):
+        raise Exception("Cannot sample from Observable only!")
+
+    def sample_path(self, steps, **kwargs):
+        raise Exception("Cannot sample from Observable only!")
 
 
 class GeneralObservable(Observable, ABC):
@@ -51,7 +58,27 @@ class GeneralObservable(Observable, ABC):
         pass
 
 
-class AffineObservations(AffineProcess, Observable):
+class Mixin(object):
+    @property
+    @lru_cache(maxsize=None)
+    def n_dim(self) -> int:
+        return len(self.increment_dist().event_shape)
+
+    @property
+    @lru_cache(maxsize=None)
+    def num_vars(self) -> int:
+        return self.increment_dist().event_shape.numel()
+
+    def forward(self, x, time_increment=1.0):
+        return super().forward(x, 0.0)
+
+    propagate = forward
+
+    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
+        return super().propagate_conditional(x, u, parameters, 0.0)
+
+
+class AffineObservations(AffineProcess, Mixin, Observable):
     """
     Constitutes the observable dynamics of a state space model in which the dynamics are affine in terms of the latent
     state, i.e. we have that
@@ -70,28 +97,21 @@ class AffineObservations(AffineProcess, Observable):
             parameters: See base.
             increment_dist: See base.
         """
+
         super().__init__(funcs, parameters, None, increment_dist, **kwargs)
 
-    def initial_sample(self, shape=None):
-        raise NotImplementedError("Cannot sample from Observable only!")
 
-    @property
-    @lru_cache(maxsize=None)
-    def n_dim(self) -> int:
-        return len(self.increment_dist().event_shape)
+class LinearObservations(LinearModel, Mixin, Observable):
+    # TODO: Docs
 
-    @property
-    @lru_cache(maxsize=None)
-    def num_vars(self) -> int:
-        return self.increment_dist().event_shape.numel()
+    def __init__(self, a, sigma, increment_dist, **kwargs):
+        """
+        Initializes the ``LinearObservations`` class.
 
-    def sample_path(self, steps, **kwargs):
-        raise NotImplementedError("Cannot sample from Observable only!")
+        Args:
+            a: See ``LinearModel``.
+            b: See ``LinearModel``.
+            increment_dist: See ``LinearModel``.
+        """
 
-    def forward(self, x, time_increment=1.0):
-        return super(AffineObservations, self).forward(x, 0.0)
-
-    propagate = forward
-
-    def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
-        return super(AffineObservations, self).propagate_conditional(x, u, parameters, 0.0)
+        super().__init__(a, sigma, increment_dist, initial_dist=None, **kwargs)
