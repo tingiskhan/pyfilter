@@ -20,11 +20,7 @@ def _g(x, a, b, s):
     return s
 
 
-_mapping = {
-    0: _f0d,
-    1: _f1d,
-    2: _f2d
-}
+_mapping = {0: _f0d, 1: _f1d, 2: _f2d}
 
 
 class LinearModel(AffineProcess):

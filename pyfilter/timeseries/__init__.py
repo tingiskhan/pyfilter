@@ -39,5 +39,5 @@ __all__ = [
     "AffineJointStochasticProcesses",
     "GeneralObservable",
     "models",
-    "LinearModel"
+    "LinearModel",
 ]

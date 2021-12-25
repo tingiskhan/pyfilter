@@ -24,13 +24,7 @@ class OrnsteinUhlenbeck(AffineProcess):
     """
 
     def __init__(
-        self,
-        kappa: ArrayType,
-        gamma: ArrayType,
-        sigma: ArrayType,
-        n_dim: int = None,
-        dt: float = 1.0,
-        **kwargs
+        self, kappa: ArrayType, gamma: ArrayType, sigma: ArrayType, n_dim: int = None, dt: float = 1.0, **kwargs
     ):
         """
         Initializes the ``OrnsteinUhlenbeck`` class.
@@ -53,14 +47,7 @@ class OrnsteinUhlenbeck(AffineProcess):
         else:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
-        super().__init__(
-            (self._f, self._g),
-            (kappa, gamma, sigma),
-            dist,
-            dist,
-            initial_transform=init_trans,
-            **kwargs
-        )
+        super().__init__((self._f, self._g), (kappa, gamma, sigma), dist, dist, initial_transform=init_trans, **kwargs)
         self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
     def _f(self, x, k, g, s):

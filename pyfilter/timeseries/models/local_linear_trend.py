@@ -17,7 +17,13 @@ class LocalLinearTrend(LinearModel):
     where :math:`\\sigma_i > 0``, and :math:`W_t, V_t` are two independent zero mean and unit variance Gaussians.
     """
 
-    def __init__(self, sigma: ArrayType, initial_mean: ArrayType = torch.zeros(2), initial_scale: ArrayType = torch.ones(2), **kwargs):
+    def __init__(
+        self,
+        sigma: ArrayType,
+        initial_mean: ArrayType = torch.zeros(2),
+        initial_scale: ArrayType = torch.ones(2),
+        **kwargs
+    ):
         """
         Initializes the ``LocalLinearTrend`` class.
 
@@ -31,9 +37,7 @@ class LocalLinearTrend(LinearModel):
             Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
         )
 
-        initial_dist = DistributionWrapper(
-            Normal, loc=initial_mean, scale=initial_scale, reinterpreted_batch_ndims=1
-        )
+        initial_dist = DistributionWrapper(Normal, loc=initial_mean, scale=initial_scale, reinterpreted_batch_ndims=1)
 
         a = torch.tensor([[1.0, 0.0], [1.0, 1.0]])
 
@@ -56,7 +60,14 @@ class SmoothLinearTrend(LinearModel):
     see docs of ``LocalLinearTrend`` for more information regarding parameters.
     """
 
-    def __init__(self, sigma: ArrayType, l_0: Number = 0.0, initial_mean: ArrayType = 0.0, initial_scale: ArrayType = 1.0, **kwargs):
+    def __init__(
+        self,
+        sigma: ArrayType,
+        l_0: Number = 0.0,
+        initial_mean: ArrayType = 0.0,
+        initial_scale: ArrayType = 1.0,
+        **kwargs
+    ):
         """
         Initializes the ``SmoothLinearTrend`` class.
 
@@ -67,13 +78,9 @@ class SmoothLinearTrend(LinearModel):
             kwargs: See base.
         """
 
-        initial_dist = DistributionWrapper(
-            _smooth_dist_builder, loc=initial_mean, l_0=l_0, scale=initial_scale
-        )
+        initial_dist = DistributionWrapper(_smooth_dist_builder, loc=initial_mean, l_0=l_0, scale=initial_scale)
 
-        increment_dist = DistributionWrapper(
-            _smooth_dist_builder, loc=0.0, scale=1.0, l_0=0.0,
-        )
+        increment_dist = DistributionWrapper(_smooth_dist_builder, loc=0.0, scale=1.0, l_0=0.0,)
 
         a = torch.tensor([[1.0, 0.0], [1.0, 1.0]])
 

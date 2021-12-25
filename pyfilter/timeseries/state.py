@@ -134,6 +134,7 @@ class JointState(NewState):
     """
     State object for ``JointStochasticProcess``.
     """
+
     # TODO: Add support for names of slices?
     def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, **kwargs):
         """
