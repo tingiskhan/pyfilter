@@ -54,7 +54,7 @@ class LinearGaussianObservations(LinearSSM):
         if len(a.shape) == 0:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
-            dim = a.shape[-1]
+            dim = a.shape[0]
             dist = DistributionWrapper(
                 Normal, loc=torch.zeros(dim), scale=torch.ones(dim), reinterpreted_batch_ndims=1
             )
