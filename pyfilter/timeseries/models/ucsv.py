@@ -1,32 +1,20 @@
 import torch
-from torch.distributions import Normal, TransformedDistribution, AffineTransform, Distribution
+from torch.distributions import Normal
 from ...typing import ArrayType
 from ...distributions import DistributionWrapper
 from ..affine import AffineProcess
 from ...utils import concater
 
 
-def f(x, sigma_volatility, _):
+def f(x, sigma_volatility):
     return x.values
 
 
-def g(x, sigma_volatility, _):
+def g(x, sigma_volatility):
     x1 = x.values[..., 1].exp()
     x2 = sigma_volatility
 
     return concater(x1, x2)
-
-
-# TODO: Figure out initial density?
-def initial_transform(model: "UCSV", base_dist: Distribution):
-    sigma_volatility, initial_state_mean = model.functional_parameters()
-
-    transform = AffineTransform(
-        initial_state_mean if initial_state_mean is not None else base_dist.mean,
-        concater(sigma_volatility, sigma_volatility),
-    )
-
-    return TransformedDistribution(base_dist, transform, validate_args=False)
 
 
 class UCSV(AffineProcess):
@@ -35,12 +23,12 @@ class UCSV(AffineProcess):
         .. math::
             L_{t+1} = L_t + V_t W_{t+1}, \n
             \\log{V_{t+1}} = \\log{V_t} + \\sigma_v U_{t+1}, \n
-            L_0, \\log{V_0} \\sim \\mathcal{N}(x^i_0, \\sigma_v), \\: i \\in [L, V].
+            L_0, \\log{V_0} \\sim \\mathcal{N}(x^i_0, \\sigma^i_0), \\: i \\in [L, V].
 
     where :math:`\\sigma_v > 0`.
     """
 
-    def __init__(self, sigma_volatility, initial_state_mean: ArrayType = None, **kwargs):
+    def __init__(self, sigma_volatility, initial_state_mean: ArrayType = torch.zeros(2), initial_state_scale: ArrayType = torch.ones(2), **kwargs):
         """
         Inititalizes the ``UCSV`` class.
 
@@ -50,15 +38,18 @@ class UCSV(AffineProcess):
             kwargs: See base.
         """
 
-        initial_dist = increment_dist = DistributionWrapper(
+        increment_dist = DistributionWrapper(
             Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1
+        )
+
+        initial_dist = DistributionWrapper(
+            Normal, loc=initial_state_mean, scale=initial_state_scale, reinterpreted_batch_ndims=1
         )
 
         super().__init__(
             (f, g),
-            (sigma_volatility, initial_state_mean),
+            (sigma_volatility,),
             initial_dist,
             increment_dist,
-            initial_transform=initial_transform,
             **kwargs
         )

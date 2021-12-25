@@ -1,17 +1,15 @@
-from torch.distributions import Normal, AffineTransform, TransformedDistribution
-from numbers import Number
-from ..affine import AffineProcess
 import torch
+from torch.distributions import Normal, AffineTransform, TransformedDistribution
+from ..affine import AffineProcess
 from ...distributions import DistributionWrapper
 from ...typing import ArrayType
+from ...utils import broadcast_all
 
 
 def init_trans(module: "OrnsteinUhlenbeck", dist):
-    kappa, gamma, sigma, initial = module.functional_parameters()
+    kappa, gamma, sigma = module.functional_parameters()
 
-    initial_ = gamma if initial is None else initial
-
-    return TransformedDistribution(dist, AffineTransform(initial_, sigma / (2 * kappa).sqrt()))
+    return TransformedDistribution(dist, AffineTransform(gamma, sigma / (2 * kappa).sqrt()))
 
 
 # TODO: Should perhaps inherit from StochasticDifferentialEquation?
@@ -32,7 +30,6 @@ class OrnsteinUhlenbeck(AffineProcess):
         sigma: ArrayType,
         n_dim: int = None,
         dt: float = 1.0,
-        initial_state_mean: ArrayType = None,
         **kwargs
     ):
         """
@@ -44,14 +41,12 @@ class OrnsteinUhlenbeck(AffineProcess):
             sigma: The volatility parameter.
             n_dim: Optional parameter controlling the dimension of the process. Inferred from ``sigma`` if ``None``.
             dt: Optional, the timestep to use.
-            initial_state_mean: Optional, whether to use another initial mean than ``gamma``.
             kwargs: See base.
         """
 
-        if n_dim is None:
-            n_dim = 0 if isinstance(sigma, Number) else len(sigma.shape)
+        kappa, gamma, sigma = broadcast_all(kappa, gamma, sigma)
 
-        if n_dim > 0:
+        if (n_dim or len(kappa.shape)) > 0:
             dist = DistributionWrapper(
                 Normal, loc=torch.zeros(sigma.shape), scale=torch.ones(sigma.shape), reinterpreted_batch_ndims=1
             )
@@ -60,7 +55,7 @@ class OrnsteinUhlenbeck(AffineProcess):
 
         super().__init__(
             (self._f, self._g),
-            (kappa, gamma, sigma, initial_state_mean),
+            (kappa, gamma, sigma),
             dist,
             dist,
             initial_transform=init_trans,
@@ -68,8 +63,8 @@ class OrnsteinUhlenbeck(AffineProcess):
         )
         self._dt = torch.tensor(dt) if not isinstance(dt, torch.Tensor) else dt
 
-    def _f(self, x, k, g, s, _):
-        return g + (x.values - g) * torch.exp(-k * self._dt)
+    def _f(self, x, k, g, s):
+        return g + (x.values - g) * (-k * self._dt).exp()
 
-    def _g(self, x, k, g, s, _):
-        return s / (2 * k).sqrt() * (1 - torch.exp(-2 * k * self._dt)).sqrt()
+    def _g(self, x, k, g, s):
+        return s / (2 * k).sqrt() * (1 - (-2 * k * self._dt).exp()).sqrt()
