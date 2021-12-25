@@ -134,7 +134,7 @@ class JointState(NewState):
     """
     State object for ``JointStochasticProcess``.
     """
-
+    # TODO: Add support for names of slices?
     def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, **kwargs):
         """
         Initializes the ``JointState`` class.
@@ -187,12 +187,24 @@ class JointState(NewState):
         return states[0].time_index
 
     # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
-    def __getitem__(self, item: int):
-        return NewState(
-            time_index=self.time_index,
-            distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
-            values=self.values[..., self.indices[item]],
-        )
+    def __getitem__(self, item: Union[int, slice]):
+        if isinstance(item, int):
+            return NewState(
+                time_index=self.time_index,
+                distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
+                values=self.values[..., self.indices[item]],
+            )
+
+        if not isinstance(item, slice):
+            raise ValueError(f"Expected type {slice.__name__}, got {item.__class__.__name__}")
+
+        items = range(item.start or 0, item.stop or len(self.indices), item.step or 1)
+        states = tuple(self.__getitem__(i) for i in items)
+
+        if len(states) == 1:
+            return states[0]
+
+        return self.from_states(*states, indices=self.indices[item])
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
         return JointState(
