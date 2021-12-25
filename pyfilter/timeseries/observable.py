@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from torch import Size
 from .stochastic_process import StructuralStochasticProcess
 from .affine import AffineProcess
-from .linear_model import LinearModel
+from .linear import LinearModel
 
 
 class Observable(StructuralStochasticProcess, ABC):

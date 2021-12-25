@@ -1,7 +1,8 @@
 from .stochastic_process import StochasticProcess, StructuralStochasticProcess
 from .affine import AffineProcess
 from .model import StateSpaceModel
-from .linear import LinearGaussianObservations, LinearObservations
+from .linear import LinearModel
+from .linear_ssm import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations, GeneralObservable
 from .diffusion import (
     AffineEulerMaruyama,
@@ -38,4 +39,5 @@ __all__ = [
     "AffineJointStochasticProcesses",
     "GeneralObservable",
     "models",
+    "LinearModel"
 ]

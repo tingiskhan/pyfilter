@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Normal
 from numbers import Number
 from pyro.distributions import Delta
-from ..linear_model import LinearModel
+from ..linear import LinearModel
 from ...typing import ArrayType
 from ...distributions import DistributionWrapper, JointDistribution
 

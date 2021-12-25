@@ -1,6 +1,6 @@
 from torch.distributions import Normal
 import torch
-from ..linear_model import LinearModel
+from ..linear import LinearModel
 from ...distributions import DistributionWrapper
 from ...typing import ArrayType
 from ...utils import broadcast_all
