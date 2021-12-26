@@ -59,14 +59,14 @@ class JointStochasticProcess(StochasticProcess):
         )
 
 
-class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
+class AffineJointStochasticProcess(AffineProcess, JointStochasticProcess):
     """
     Similar to ``JointStochasticProcess`` but with the exception that all processes are of type ``AffineProcess``.
     """
 
     def __init__(self, **processes: AffineProcess):
         """
-        Initializes the ``AffineJointStochasticProcesses`` class.
+        Initializes the ``AffineJointStochasticProcess`` class.
 
         Args:
             processes: See base.
@@ -75,7 +75,7 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
         if not all(isinstance(p, AffineProcess) for p in processes.values()):
             raise ValueError(f"All processes must be of type '{AffineProcess.__name__}'!")
 
-        super(AffineJointStochasticProcesses, self).__init__(
+        super(AffineJointStochasticProcess, self).__init__(
             (None, None), (), increment_dist=None, initial_dist=None, **processes
         )
 
@@ -88,7 +88,7 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
         scale = tuple()
 
         for i, (proc_name, p) in enumerate(zip(self._proc_names, parameters or len(self._proc_names) * [None])):
-            proc: AffineProcess = self._modules[proc_name]
+            proc = self._modules[proc_name]
             m, s = torch.broadcast_tensors(*proc.mean_scale(x[i], p))
 
             mean += (m.unsqueeze(-1) if proc.n_dim == 0 else m,)

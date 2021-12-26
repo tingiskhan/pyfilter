@@ -13,7 +13,7 @@ from .diffusion import (
     StochasticDifferentialEquation,
 )
 from .state import NewState, JointState
-from .joint import JointStochasticProcess, AffineJointStochasticProcesses
+from .joint import JointStochasticProcess, AffineJointStochasticProcess
 from . import models
 
 
@@ -36,7 +36,7 @@ __all__ = [
     "StochasticDifferentialEquation",
     "JointState",
     "JointStochasticProcess",
-    "AffineJointStochasticProcesses",
+    "AffineJointStochasticProcess",
     "GeneralObservable",
     "models",
     "LinearModel",
