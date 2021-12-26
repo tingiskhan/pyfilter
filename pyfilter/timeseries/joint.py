@@ -34,9 +34,6 @@ class JointStochasticProcess(StochasticProcess):
             processes: Key-worded processes, where the process will be registered as a module with key.
         """
 
-        if any(isinstance(p, JointStochasticProcess) for p in processes.values()):
-            raise NotImplementedError("Currently does not handle joint of joint!")
-
         # TODO: Feels kinda hacky?
         processes = {k: v for k, v in processes.items() if isinstance(v, StochasticProcess)}
 
