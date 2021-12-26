@@ -9,7 +9,7 @@ def _f0d(x, a, b, _):
 
 
 def _f1d(x, a, b, _):
-    return b + a.matmul(x.values)
+    return _f2d(x, a, b, _)
 
 
 def _f2d(x, a, b, _):
