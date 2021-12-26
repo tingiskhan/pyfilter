@@ -14,7 +14,7 @@ class NewState(BaseState):
     """
 
     def __init__(
-        self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None
+        self, time_index: Union[float, torch.Tensor], distribution: Distribution = None, values: torch.Tensor = None,
     ):
         """
         Initializes the ``NewState`` class.
@@ -27,9 +27,6 @@ class NewState(BaseState):
         """
 
         super().__init__()
-
-        if distribution is None and values is None:
-            raise Exception("Both `distribution` and `values` cannot be `None`!")
 
         self.dist = distribution
 
@@ -91,7 +88,7 @@ class NewState(BaseState):
 
         return self.values.device
 
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None) -> "NewState":
+    def copy(self, dist: Distribution = None, values: torch.Tensor = None, time_index=None) -> "NewState":
         """
         Returns a new instance of ``NewState`` with specified ``dist`` and ``values`` but with ``time_index`` of
         current instance.
@@ -99,9 +96,14 @@ class NewState(BaseState):
         Args:
             dist: See ``__init__``.
             values: See ``__init__``.
+            time_index: See ``__init__``.
         """
 
         res = self.propagate_from(dist, values, time_increment=0.0)
+
+        if time_index is not None:
+           res._time_index = time_index
+
         res.add_exog(self.exog)
 
         return res
@@ -136,7 +138,7 @@ class JointState(NewState):
     """
 
     # TODO: Add support for names of slices?
-    def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, **kwargs):
+    def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, original_states: Sequence[NewState] = None, **kwargs):
         """
         Initializes the ``JointState`` class.
 
@@ -151,6 +153,7 @@ class JointState(NewState):
             raise ValueError("Both ``mask`` and ``dist`` cannot be None!")
 
         self.indices = indices or self.dist.indices
+        self.original_states = tuple(s.copy() for s in original_states) or tuple()
 
     @classmethod
     def from_states(cls, *states: NewState, indices: Sequence[Union[int, slice]] = None) -> "JointState":
@@ -166,6 +169,8 @@ class JointState(NewState):
             time_index=cls._join_timeindex(*states),
             values=cls._join_values(*states),
             distribution=cls._join_distributions(*states, indices=indices),
+            indices=indices,
+            original_states=tuple(s.copy() for s in states)
         )
 
     @staticmethod
@@ -187,14 +192,13 @@ class JointState(NewState):
     def _join_timeindex(*states: NewState) -> torch.Tensor:
         return states[0].time_index
 
-    # TODO: Joint of joint states does not work (don't really see the use case, but might be worth fixing)
     def __getitem__(self, item: Union[int, slice]):
         if isinstance(item, int):
-            return NewState(
-                time_index=self.time_index,
-                distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else self.dist,
-                values=self.values[..., self.indices[item]],
-            )
+            dist = self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None
+            values = self.values[..., self.indices[item]]
+
+            # TODO: Do we need to enforce? Think so...
+            return self.original_states[item].copy(dist=dist, values=values, time_index=self.time_index)
 
         if not isinstance(item, slice):
             raise ValueError(f"Expected type {slice.__name__}, got {item.__class__.__name__}")
@@ -209,5 +213,9 @@ class JointState(NewState):
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
         return JointState(
-            time_index=self.time_index + time_increment, distribution=dist, values=values, indices=self.indices
+            time_index=self.time_index + time_increment,
+            distribution=dist,
+            values=values,
+            indices=self.indices,
+            original_states=self.original_states
         )
