@@ -2,7 +2,7 @@ import pytest
 from pyfilter import timeseries as ts, distributions as dists
 import torch
 from pyfilter.distributions import DistributionWrapper, Prior
-from torch.distributions import Normal, Independent, Exponential
+from torch.distributions import Normal, Exponential
 from math import sqrt
 
 
@@ -14,8 +14,30 @@ def g(x, kappa, sigma):
     return sigma
 
 
+@pytest.fixture()
+def joint():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+
+    scale = torch.ones(2)
+    second = ts.LinearModel(
+        torch.eye(2),
+        0.05 * scale,
+        DistributionWrapper(Normal, loc=0.0 * scale, scale=scale, reinterpreted_batch_ndims=1)
+    )
+
+    return (ts.AffineJointStochasticProcess(first=first, second=second),)
+
+
+@pytest.fixture()
+def chained():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+    second = ts.LinearModel(torch.tensor([1.0, 1.0]), 0.05, DistributionWrapper(Normal, loc=0.0, scale=1.0))
+
+    return (ts.AffineChainedStochasticProcess(first=first, second=second),)
+
+
 @pytest.fixture
-def custom_models():
+def custom_models(joint, chained):
     normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
     dt = 0.05
@@ -23,7 +45,7 @@ def custom_models():
 
     reversion_params = (0.01, 0.05)
 
-    return (
+    return joint + chained + (
         ts.AffineProcess((f, g), reversion_params, normal, normal),
         ts.AffineEulerMaruyama((f, g), reversion_params, normal, sde_normal, dt=dt),
         ts.OneStepEulerMaruyma((f, g), reversion_params, normal, sde_normal, dt=dt),
