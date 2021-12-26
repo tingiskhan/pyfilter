@@ -11,7 +11,7 @@ class RandomWalk(LinearModel):
     Defines a Gaussian random walk process, i.e. in which the dynamics are given by
         .. math::
             X_{t+1} \\sim \\mathcal{N}(X_t, \\sigma), \n
-            X_0 \\sim \\mathcal{N}(x_0, \\sigma),
+            X_0 \\sim \\mathcal{N}(x_0, \\sigma_0),
 
     where :math:`x_0` is the initial mean, defaulting to zero.
     """
@@ -31,8 +31,15 @@ class RandomWalk(LinearModel):
 
         # TODO: Check all instead, as they might share std?
         reinterpreted_batch_ndims = None if len(std.shape) == 0 else 1
-        dist = DistributionWrapper(
+        initial_dist = DistributionWrapper(
             Normal, loc=initial_mean, scale=initial_scale, reinterpreted_batch_ndims=reinterpreted_batch_ndims
         )
 
-        super().__init__(1.0, std, dist, **kwargs)
+        inc_dist = DistributionWrapper(
+            Normal,
+            loc=torch.zeros_like(initial_mean),
+            scale=torch.ones_like(initial_mean),
+            reinterpreted_batch_ndims=reinterpreted_batch_ndims
+        )
+
+        super().__init__(1.0, std, increment_dist=inc_dist, initial_dist=initial_dist, **kwargs)
