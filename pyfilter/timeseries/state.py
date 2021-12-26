@@ -173,8 +173,8 @@ class JointState(NewState):
         if all(s._values is None for s in states):
             return None
 
-        to_concat = tuple(s.values.unsqueeze(-1) if len(s.dist.event_shape) == 0 else s.values for s in states)
-        return torch.cat(to_concat)
+        to_concat = tuple(s.values for s in states)
+        return torch.stack(to_concat, dim=-1)
 
     @staticmethod
     def _join_distributions(*states: NewState, indices=None) -> Optional[JointDistribution]:
@@ -192,7 +192,7 @@ class JointState(NewState):
         if isinstance(item, int):
             return NewState(
                 time_index=self.time_index,
-                distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None,
+                distribution=self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else self.dist,
                 values=self.values[..., self.indices[item]],
             )
 
