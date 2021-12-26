@@ -2,7 +2,9 @@ import torch
 from torch.distributions import Normal
 from numbers import Number
 from pyro.distributions import Delta
+from .random_walk import RandomWalk
 from ..linear import LinearModel
+from ..chained import AffineChainedStochasticProcess
 from ...typing import ArrayType
 from ...distributions import DistributionWrapper, JointDistribution
 
@@ -50,7 +52,7 @@ def _smooth_dist_builder(loc, l_0, scale, validate_args=False):
     return JointDistribution(init_s, Delta(l_0), validate_args=validate_args)
 
 
-class SmoothLinearTrend(LinearModel):
+class SmoothLinearTrend(AffineChainedStochasticProcess):
     """
     Implements a "smooth trend model", defined as
         .. math::
@@ -78,10 +80,12 @@ class SmoothLinearTrend(LinearModel):
             kwargs: See base.
         """
 
-        initial_dist = DistributionWrapper(_smooth_dist_builder, loc=initial_mean, l_0=l_0, scale=initial_scale)
+        rw = RandomWalk(sigma, initial_mean, initial_scale, **kwargs)
+        smooth = LinearModel(
+            torch.ones(2),
+            0.0,
+            DistributionWrapper(Delta, v=0.0),
+            initial_dist=DistributionWrapper(Delta, v=l_0)
+        )
 
-        increment_dist = DistributionWrapper(_smooth_dist_builder, loc=0.0, scale=1.0, l_0=0.0,)
-
-        a = torch.tensor([[1.0, 0.0], [1.0, 1.0]])
-
-        super().__init__(a, sigma, increment_dist, initial_dist=initial_dist, **kwargs)
+        super(SmoothLinearTrend, self).__init__(rw=rw, smooth=smooth)
