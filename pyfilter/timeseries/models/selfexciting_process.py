@@ -1,15 +1,14 @@
-from torch.distributions import Poisson, constraints
-from torch.distributions import Distribution
-from torch.distributions.utils import broadcast_all
-
-from pyfilter.timeseries import StochasticDifferentialEquation, NewState
-from pyfilter.distributions import DistributionWrapper, JointDistribution
-from numbers import Number
 import torch
+
 from pyro.distributions import Delta
+from torch.distributions import Poisson
+from torch.distributions import Distribution
+from ...timeseries import StochasticDifferentialEquation, NewState
+from ...distributions import DistributionWrapper, JointDistribution
+from ...distributions.exponentials import DoubleExponential
+
 
 class LambdaProcess(StochasticDifferentialEquation):
-
 
     def __init__(self, alpha_, xi_, eta_, p, rho_minus, rho_plus, **kwargs):
         super().__init__(
@@ -23,12 +22,21 @@ class LambdaProcess(StochasticDifferentialEquation):
         self.de = DistributionWrapper(_de, p_=p, rho_plus_=rho_plus, rho_minus_=rho_minus)
 
     def det_func(self, x, alpha, xi, eta):
+        """
+        deterministic part defining the evolution of (\lambda_t)_t process
+        """
         return alpha * (xi - x)
 
     def stoch_func(self, x, alpha, xi, eta):
+        """
+        stochastic part defining the evolution of (\lambda_t)_t process
+        """
         return eta
 
     def build_density(self, x: NewState) -> Distribution:
+        """
+        Joint density for the realizations of \lambda_t, dN_t, \lambda_s, q
+        """
         alpha_, xi_, eta_ = self.functional_parameters()
         lambda_s = x.values[..., 0]
 
