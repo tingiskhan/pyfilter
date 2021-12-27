@@ -203,17 +203,14 @@ class TestTimeseries(object):
 
 @pytest.fixture()
 def joint_state():
-    joint_dist = dists.JointDistribution(
-        Normal(0.0, 1.0),
-        Normal(1.0, 2.0)
-    )
+    state_1 = ts.NewState(0.0, Normal(0.0, 1.0))
+    state_2 = ts.NewState(0.0, Normal(0.0, 1.0))
 
-    return ts.JointState(torch.tensor(0.0), distribution=joint_dist)
+    return ts.JointState(state_1, state_2)
 
 
 class TestState(object):
     def test_joint_state_slicing(self, joint_state):
-        assert joint_state.indices == (0, 1)
         assert isinstance(joint_state[0], ts.NewState) and isinstance(joint_state[0].dist, Normal)
 
         assert isinstance(joint_state[:2], ts.JointState) and isinstance(joint_state[:2].dist, dists.JointDistribution)

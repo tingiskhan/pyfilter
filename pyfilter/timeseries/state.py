@@ -1,6 +1,6 @@
 import torch
-from typing import Union, Optional, Sequence
-from torch.distributions import Distribution
+from typing import Union
+from torch.distributions import Distribution, TransformedDistribution, AffineTransform
 from ..distributions import JointDistribution
 from ..state import BaseState
 
@@ -28,7 +28,7 @@ class NewState(BaseState):
 
         super().__init__()
 
-        self.dist = distribution
+        self._dist = distribution
 
         self.register_buffer(
             "_time_index", time_index if isinstance(time_index, torch.Tensor) else torch.tensor(time_index)
@@ -61,6 +61,10 @@ class NewState(BaseState):
         self._values = x
 
     @property
+    def dist(self) -> Distribution:
+        return self._dist
+
+    @property
     def exog(self) -> torch.Tensor:
         """
         Returns the exogenous variable (if any).
@@ -88,7 +92,7 @@ class NewState(BaseState):
 
         return self.values.device
 
-    def copy(self, dist: Distribution = None, values: torch.Tensor = None, time_index=None) -> "NewState":
+    def copy(self, dist: Distribution = None, values: torch.Tensor = None) -> "NewState":
         """
         Returns a new instance of ``NewState`` with specified ``dist`` and ``values`` but with ``time_index`` of
         current instance.
@@ -96,14 +100,9 @@ class NewState(BaseState):
         Args:
             dist: See ``__init__``.
             values: See ``__init__``.
-            time_index: See ``__init__``.
         """
 
         res = self.propagate_from(dist, values, time_increment=0.0)
-
-        if time_index is not None:
-           res._time_index = time_index
-
         res.add_exog(self.exog)
 
         return res
@@ -132,90 +131,85 @@ class NewState(BaseState):
         self.exog = x
 
 
+# TODO: Might not be optimal as we construct -> deconstruct distributions and states all the time...
 class JointState(NewState):
     """
     State object for ``JointStochasticProcess``.
     """
 
-    # TODO: Add support for names of slices?
-    def __init__(self, *args, indices: Sequence[Union[int, slice]] = None, original_states: Sequence[NewState] = None, **kwargs):
+    def __init__(self, *states: Union[NewState, "JointState"], indices=None):
         """
         Initializes the ``JointState`` class.
 
         Args:
-            args: See base.
-            indices: See ``pyfilter.distributions.JointDistribution``.
+            states: The states to concatenate.
         """
 
-        super().__init__(*args, **kwargs)
+        super(JointState, self).__init__(states[0].time_index, None, None)
+        self.states = torch.nn.ModuleList(states)
+        self._indices = indices or self.dist.indices
 
-        if indices is None and self.dist is None:
-            raise ValueError("Both ``mask`` and ``dist`` cannot be None!")
+    @property
+    def dist(self) -> JointDistribution:
+        return JointDistribution(*(s.dist for s in self.states))
 
-        self.indices = indices or self.dist.indices
-        self.original_states = tuple(s.copy() for s in original_states) or tuple()
-
-    @classmethod
-    def from_states(cls, *states: NewState, indices: Sequence[Union[int, slice]] = None) -> "JointState":
-        """
-        Given a sequence of ``NewState`` construct a ``JointState`` object.
-
-        Args:
-            states: An iterable of states to combine into an instance of ``JointState``.
-            indices: See ``__init__``.
-        """
-
-        return JointState(
-            time_index=cls._join_timeindex(*states),
-            values=cls._join_values(*states),
-            distribution=cls._join_distributions(*states, indices=indices),
-            indices=indices,
-            original_states=tuple(s.copy() for s in states)
+    @property
+    def values(self) -> torch.Tensor:
+        values = tuple(
+            s.values.unsqueeze(-1) if isinstance(ind, int) else s.values for s, ind in zip(self.states, self._indices)
         )
 
-    @staticmethod
-    def _join_values(*states: NewState) -> Optional[torch.Tensor]:
-        if all(s._values is None for s in states):
-            return None
+        return torch.cat(values, dim=-1)
 
-        to_concat = tuple(s.values for s in states)
-        return torch.stack(to_concat, dim=-1)
+    @values.setter
+    def values(self, x):
+        for s, inds in zip(self.states, self._indices):
+            s.values = x[..., inds]
 
-    @staticmethod
-    def _join_distributions(*states: NewState, indices=None) -> Optional[JointDistribution]:
-        if all(s.dist is None for s in states):
-            return None
+    def _select_dist(self, dist: Distribution, index: int) -> Distribution:
+        if isinstance(dist, JointDistribution):
+            return dist.distributions[index]
 
-        return JointDistribution(*(s.dist for s in states), indices=indices)
+        if isinstance(dist, TransformedDistribution):
+            assert isinstance(dist.base_dist, JointDistribution), "Cannot handle non-joint distributions!"
 
-    @staticmethod
-    def _join_timeindex(*states: NewState) -> torch.Tensor:
-        return states[0].time_index
+            transforms = list()
+            # TODO: Might have to make this better...?
+            for t in dist.transforms:
+                inds = self._indices[index]
+
+                to_add = t
+                if isinstance(t, AffineTransform):
+                    to_add = AffineTransform(t.loc[..., inds], t.scale[..., inds])
+
+                transforms.append(to_add)
+
+            return TransformedDistribution(dist.base_dist.distributions[index], transforms)
+
+        raise Exception(f"Cannot handle {dist.__class__.__name__}")
+
+    def propagate_from(self, dist: JointDistribution = None, values: torch.Tensor = None, time_increment=1.0):
+        states = tuple()
+
+        for i, (s, inds) in enumerate(zip(self.states, self._indices)):
+            i_dist = self._select_dist(dist, i)
+            i_values = values[..., inds] if values is not None else None
+
+            states += (s.propagate_from(i_dist, i_values, time_increment=time_increment),)
+
+        return JointState(*states, indices=self._indices)
 
     def __getitem__(self, item: Union[int, slice]):
         if isinstance(item, int):
-            dist = self.dist.distributions[item] if isinstance(self.dist, JointDistribution) else None
-            values = self.values[..., self.indices[item]]
-
-            # TODO: Do we need to enforce? Think so...
-            return self.original_states[item].copy(dist=dist, values=values, time_index=self.time_index)
+            return self.states[item]
 
         if not isinstance(item, slice):
             raise ValueError(f"Expected type {slice.__name__}, got {item.__class__.__name__}")
 
-        items = range(item.start or 0, item.stop or len(self.indices), item.step or 1)
+        items = range(item.start or 0, item.stop or len(self.states), item.step or 1)
         states = tuple(self.__getitem__(i) for i in items)
 
         if len(states) == 1:
             return states[0]
 
-        return self.from_states(*states, indices=self.indices[item])
-
-    def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
-        return JointState(
-            time_index=self.time_index + time_increment,
-            distribution=dist,
-            values=values,
-            indices=self.indices,
-            original_states=self.original_states
-        )
+        return JointState(*states, indices=self._indices[item])
