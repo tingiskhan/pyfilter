@@ -4,6 +4,7 @@ from torch import Size
 from .stochastic_process import StructuralStochasticProcess
 from .affine import AffineProcess
 from .linear import LinearModel
+from .state import NewState
 
 
 class Observable(StructuralStochasticProcess, ABC):
@@ -11,10 +12,16 @@ class Observable(StructuralStochasticProcess, ABC):
     Abstract base class for observable processes.
     """
 
-    def _add_exog_to_state(self, x):
-        # We subtract 1 as it's technically 1-indexed
-        if self.exog.tensors:
-            x.add_exog(self.exog[x.time_index.int() - 1])
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the ``Observable`` class.
+        """
+        num_steps = kwargs.pop("num_steps", 1)
+
+        if num_steps != 1:
+            raise Exception("Cannot handle observable processes with ``num_steps`` != 1")
+
+        super(Observable, self).__init__(*args, num_steps=num_steps, **kwargs)
 
     def initial_sample(self, shape=None):
         raise Exception("Cannot sample from Observable only!")
@@ -70,12 +77,17 @@ class Mixin(object):
         return self.increment_dist().event_shape.numel()
 
     def forward(self, x, time_increment=1.0):
-        return super().forward(x, 0.0)
+        self._add_exog_to_state(x)
+
+        return NewState(x.time_index, distribution=self.build_density(x))
 
     propagate = forward
 
     def propagate_conditional(self, x, u, parameters=None, time_increment=1.0):
-        return super().propagate_conditional(x, u, parameters, 0.0)
+        super().propagate_conditional(x, u, parameters, time_increment)
+        loc, scale = self.mean_scale(x, parameters=parameters)
+
+        return NewState(x.time_index, values=loc + scale * u)
 
 
 class AffineObservations(AffineProcess, Mixin, Observable):
