@@ -36,8 +36,15 @@ def chained():
     return (ts.AffineChainedStochasticProcess(first=first, second=second),)
 
 
+@pytest.fixture()
+def nested():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+
+    return (ts.AffineJointStochasticProcess(first=first, second=ts.models.SmoothLinearTrend(0.05)),)
+
+
 @pytest.fixture
-def custom_models(joint, chained):
+def custom_models(joint, chained, nested):
     normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
     dt = 0.05
@@ -45,7 +52,7 @@ def custom_models(joint, chained):
 
     reversion_params = (0.01, 0.05)
 
-    return joint + chained + (
+    return joint + chained + nested + (
         ts.AffineProcess((f, g), reversion_params, normal, normal),
         ts.AffineEulerMaruyama((f, g), reversion_params, normal, sde_normal, dt=dt),
         ts.OneStepEulerMaruyma((f, g), reversion_params, normal, sde_normal, dt=dt),
