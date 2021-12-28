@@ -157,7 +157,7 @@ class JointState(NewState):
             return None
 
         to_concat = tuple(s.values.unsqueeze(-1) if len(s.dist.event_shape) == 0 else s.values for s in states)
-        return torch.cat(to_concat)
+        return torch.cat(to_concat, dim=-1)
 
     @staticmethod
     def _join_distributions(*states: NewState, indices=None) -> Optional[JointDistribution]:
