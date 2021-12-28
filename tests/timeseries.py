@@ -213,8 +213,18 @@ class TestState(object):
     def test_joint_state_slicing(self, joint_state):
         assert isinstance(joint_state[0], ts.NewState) and isinstance(joint_state[0].dist, Normal)
 
-        assert isinstance(joint_state[:2], ts.JointState) and isinstance(joint_state[:2].dist, dists.JointDistribution)
-        assert isinstance(joint_state[:1], ts.NewState) and isinstance(joint_state[1:], ts.NewState)
+        sliced = joint_state[:2]
+
+        assert (
+                isinstance(sliced, ts.JointState) and
+                isinstance(sliced.dist, dists.JointDistribution) and
+                (sliced.values == joint_state.values[..., :2]).all()
+        )
+        assert (
+                isinstance(joint_state[:1], ts.NewState) and
+                isinstance(joint_state[1:], ts.NewState) and
+                (joint_state[:1].values == joint_state.values[..., :1]).all()
+        )
 
         with pytest.raises(ValueError):
             joint_state[(0, 1)]
