@@ -38,6 +38,8 @@ class JointStochasticProcess(StochasticProcess):
         processes = {k: v for k, v in processes.items() if isinstance(v, StochasticProcess)}
 
         joint_dist = JointDistribution(*(p.initial_dist for p in processes.values()))
+        self.indices = joint_dist.indices
+
         super().__init__(DistributionWrapper(lambda **u: joint_dist))
 
         self._proc_names = tuple(processes.keys())
@@ -46,7 +48,7 @@ class JointStochasticProcess(StochasticProcess):
 
     def initial_sample(self, shape=None) -> JointState:
         return JointState(
-            *(self._modules[name].initial_sample(shape) for name in self._proc_names)
+            *(self._modules[name].initial_sample(shape) for name in self._proc_names), indices=self.indices
         )
 
     def build_density(self, x: JointState) -> Distribution:
