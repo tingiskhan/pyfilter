@@ -202,7 +202,7 @@ class JointState(NewState):
 
         return res
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Union[int, slice]):
         if isinstance(item, int):
             return self.states[item].copy(
                 dist=self._select_dist(self.dist, item), values=self._select_values(self.values, item)
