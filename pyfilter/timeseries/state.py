@@ -146,17 +146,19 @@ class JointState(NewState):
         """
 
         dist = self._join_distributions(*states, indices=indices)
-        super(JointState, self).__init__(states[0].time_index, dist, self._join_values(*states))
-
-        self.states = torch.nn.ModuleList(states)
         self._indices = indices or dist.indices
 
-    @staticmethod
-    def _join_values(*states: NewState) -> Optional[torch.Tensor]:
+        super(JointState, self).__init__(states[0].time_index, dist, self._join_values(*states))
+        self.states = torch.nn.ModuleList(states)
+
+    def _join_values(self, *states: NewState) -> Optional[torch.Tensor]:
         if all(s._values is None for s in states):
             return None
 
-        to_concat = tuple(s.values.unsqueeze(-1) if len(s.dist.event_shape) == 0 else s.values for s in states)
+        to_concat = tuple(
+            s.values.unsqueeze(-1) if isinstance(self._indices[i], int) else s.values for i, s in enumerate(states)
+        )
+
         return torch.cat(to_concat, dim=-1)
 
     @staticmethod
