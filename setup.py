@@ -23,4 +23,5 @@ setup(
     description="Package for performing Bayesian inference in state space models",
     packages=find_packages(),
     install_requires=["torch>1.5.0", "tqdm>=4.26", "numpy", "pytest"],
+    python_requires=">=3.6.0"
 )

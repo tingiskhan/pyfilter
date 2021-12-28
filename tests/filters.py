@@ -92,9 +92,9 @@ def joint_timeseries():
     rw1 = ts.models.RandomWalk(0.05)
     rw2 = ts.models.RandomWalk(0.1)
 
-    joint = ts.AffineJointStochasticProcesses(rw1=rw1, rw2=rw2)
+    joint = ts.AffineJointStochasticProcess(rw1=rw1, rw2=rw2)
 
-    obs = ts.LinearGaussianObservations(joint, torch.eye(2), 0.15 * torch.ones(2))
+    obs = ts.LinearGaussianObservations(joint, torch.eye(2), 0.05 * torch.ones(2))
 
     param_1 = rw1.parameters_and_buffers()["parameter_0"]
     param_2 = rw2.parameters_and_buffers()["parameter_0"]

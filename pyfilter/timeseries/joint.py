@@ -34,22 +34,20 @@ class JointStochasticProcess(StochasticProcess):
             processes: Key-worded processes, where the process will be registered as a module with key.
         """
 
-        if any(isinstance(p, JointStochasticProcess) for p in processes.values()):
-            raise NotImplementedError("Currently does not handle joint of joint!")
-
         # TODO: Feels kinda hacky?
         processes = {k: v for k, v in processes.items() if isinstance(v, StochasticProcess)}
 
         joint_dist = JointDistribution(*(p.initial_dist for p in processes.values()))
+        self.indices = joint_dist.indices
+
         super().__init__(DistributionWrapper(lambda **u: joint_dist))
 
-        self.indices = joint_dist.indices
         self._proc_names = tuple(processes.keys())
         for name, proc in processes.items():
             self.add_module(name, proc)
 
     def initial_sample(self, shape=None) -> JointState:
-        return JointState.from_states(
+        return JointState(
             *(self._modules[name].initial_sample(shape) for name in self._proc_names), indices=self.indices
         )
 
@@ -59,14 +57,14 @@ class JointStochasticProcess(StochasticProcess):
         )
 
 
-class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
+class AffineJointStochasticProcess(AffineProcess, JointStochasticProcess):
     """
     Similar to ``JointStochasticProcess`` but with the exception that all processes are of type ``AffineProcess``.
     """
 
     def __init__(self, **processes: AffineProcess):
         """
-        Initializes the ``AffineJointStochasticProcesses`` class.
+        Initializes the ``AffineJointStochasticProcess`` class.
 
         Args:
             processes: See base.
@@ -75,7 +73,7 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
         if not all(isinstance(p, AffineProcess) for p in processes.values()):
             raise ValueError(f"All processes must be of type '{AffineProcess.__name__}'!")
 
-        super(AffineJointStochasticProcesses, self).__init__(
+        super(AffineJointStochasticProcess, self).__init__(
             (None, None), (), increment_dist=None, initial_dist=None, **processes
         )
 
@@ -88,7 +86,7 @@ class AffineJointStochasticProcesses(AffineProcess, JointStochasticProcess):
         scale = tuple()
 
         for i, (proc_name, p) in enumerate(zip(self._proc_names, parameters or len(self._proc_names) * [None])):
-            proc: AffineProcess = self._modules[proc_name]
+            proc = self._modules[proc_name]
             m, s = torch.broadcast_tensors(*proc.mean_scale(x[i], p))
 
             mean += (m.unsqueeze(-1) if proc.n_dim == 0 else m,)

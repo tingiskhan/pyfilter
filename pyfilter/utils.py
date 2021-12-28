@@ -1,4 +1,5 @@
 import torch
+from torch.distributions import utils
 from .constants import INFTY
 from .typing import ShapeLike
 
@@ -111,3 +112,26 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
 
     return normalized.squeeze(0) if is_1d else normalized
+
+
+def broadcast_all(*values):
+    """
+    Wrapper around ``torch.distributions.utils.broadcast_all`` for unifying tensors.
+
+    Args:
+        values: Iterable of tensors.
+    """
+
+    from .distributions.base import DistributionBuilder
+
+    broadcast_tensors = utils.broadcast_all(*(v for v in values if not issubclass(v.__class__, DistributionBuilder)))
+
+    res = tuple()
+    i = 0
+    for v in values:
+        is_dist_subclass = issubclass(v.__class__, DistributionBuilder)
+        res += (values[i] if is_dist_subclass else broadcast_tensors[i],)
+
+        i += int(not is_dist_subclass)
+
+    return res

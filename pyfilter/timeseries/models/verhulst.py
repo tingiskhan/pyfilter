@@ -6,11 +6,11 @@ from ...distributions import DistributionWrapper
 from ...typing import ArrayType
 
 
-def f(x, k, g, s, _):
+def f(x, k, g, s):
     return k * (g - x.values) * x.values
 
 
-def g_(x, k, g, s, _):
+def g_(x, k, g, s):
     return s * x.values
 
 
@@ -30,7 +30,7 @@ class Verhulst(AffineEulerMaruyama):
     where :math:`\\kappa, \\gamma, \\sigma > 0`.
     """
 
-    def __init__(self, reversion, mean, vol, dt, initial_state_mean: ArrayType = None, **kwargs):
+    def __init__(self, reversion, mean, vol, dt, **kwargs):
         """
         Initializes the ``Verhulst`` class.
 
@@ -38,13 +38,12 @@ class Verhulst(AffineEulerMaruyama):
             reversion: Corresponds to :math:`\\kappa`.
             mean: Corresponds to :math:`\\gamma`.
             vol: Corresponds to :math:`\\sigma`.
-            initial_state_mean: See ``OrnsteinUhlenbeck``.
             kwargs: See base.
         """
 
         super().__init__(
             (f, g_),
-            (reversion, mean, vol, initial_state_mean),
+            (reversion, mean, vol),
             DistributionWrapper(Normal, loc=0.0, scale=1.0),
             DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt)),
             dt=dt,
