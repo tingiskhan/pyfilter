@@ -119,7 +119,12 @@ class AffineObservations(AffineProcess, Mixin, Observable):
 
 
 class LinearObservations(LinearModel, Mixin, Observable):
-    # TODO: Docs
+    """
+    Defines an observable process in which the dynamics are given by a linear combination of the states, i.e.
+        .. math::
+            X_t = A \\cdot X_t + \\sigma \\epsilon_t,
+    where :math:`A \\in \\mathbb{R}^{n \\times n}`, :math:`X_t \\in \\mathbb{R}^n`.
+    """
 
     def __init__(self, a, sigma, increment_dist, **kwargs):
         """
