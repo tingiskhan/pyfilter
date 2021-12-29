@@ -15,6 +15,11 @@ def mixed(tensors):
     return tensors + [Prior(Normal, loc=0.0, scale=1.0), torch.tensor(2.0)]
 
 
+@pytest.fixture()
+def only_priors(tensors):
+    return [Prior(Normal, loc=i, scale=1.0) for i in range(3)]
+
+
 class TestUtils(object):
     def test_broadcast_all_tensors(self, tensors):
         torch_broadcast = utils.broadcast_all(*tensors)
@@ -33,3 +38,9 @@ class TestUtils(object):
             assert (correct == value).all()
 
         assert mixed[-2] in broadcast
+
+    def test_broadcast_all_same(self, only_priors):
+        torch_broadcast = broadcast_all(*only_priors)
+
+        for i, p in enumerate(torch_broadcast):
+            assert p.loc == i

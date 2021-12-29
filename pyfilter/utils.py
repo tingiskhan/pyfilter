@@ -127,11 +127,11 @@ def broadcast_all(*values):
     broadcast_tensors = utils.broadcast_all(*(v for v in values if not issubclass(v.__class__, DistributionBuilder)))
 
     res = tuple()
-    i = 0
-    for v in values:
+    torch_index = 0
+    for i, v in enumerate(values):
         is_dist_subclass = issubclass(v.__class__, DistributionBuilder)
-        res += (values[i] if is_dist_subclass else broadcast_tensors[i],)
+        res += (values[i] if is_dist_subclass else broadcast_tensors[torch_index],)
 
-        i += int(not is_dist_subclass)
+        torch_index += int(not is_dist_subclass)
 
     return res
