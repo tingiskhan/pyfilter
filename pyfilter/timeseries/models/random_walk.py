@@ -37,8 +37,8 @@ class RandomWalk(LinearModel):
 
         inc_dist = DistributionWrapper(
             Normal,
-            loc=torch.zeros_like(initial_mean),
-            scale=torch.ones_like(initial_mean),
+            loc=torch.zeros(initial_mean.shape),
+            scale=torch.ones(initial_mean.shape),
             reinterpreted_batch_ndims=reinterpreted_batch_ndims
         )
 

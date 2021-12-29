@@ -97,19 +97,15 @@ def ssm(proc):
 class TestTimeseries(object):
     timesteps = 1000
 
-    def test_correct_order(self):
-        parameters = 0.0, 0.99, 0.05
-        model = ts.models.AR(*parameters)
-
-        for p, true_p in zip(model.functional_parameters(), parameters):
-            assert p == true_p
-
     def test_correct_order_with_prior(self):
         parameters = 0.0, Prior(Normal, loc=0.0, scale=1.0), 0.05
         model = ts.models.AR(*parameters)
 
-        for i, (p, true_p) in enumerate(zip(model.functional_parameters(), parameters)):
-            if i == 1:
+        # Order is reversed for AR...
+        expected = parameters[1], parameters[0], parameters[2]
+
+        for i, (p, true_p) in enumerate(zip(model.functional_parameters(), expected)):
+            if i == 0:
                 assert (true_p is parameters[1]) and (true_p in model.priors())
             else:
                 assert p == true_p
