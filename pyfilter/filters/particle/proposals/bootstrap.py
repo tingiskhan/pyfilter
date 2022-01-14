@@ -8,7 +8,6 @@ class Bootstrap(Proposal):
     """
 
     def sample_and_weight(self, y, x):
-        new_x = self._model.hidden.propagate(x)
-        y_state = self._model.observable.propagate(new_x)
+        y_state = self._model.observable.propagate(x)
 
-        return new_x, y_state.dist.log_prob(y)
+        return x, y_state.dist.log_prob(y)

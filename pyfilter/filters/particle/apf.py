@@ -2,7 +2,7 @@ import torch
 from .base import ParticleFilter
 from .utils import log_likelihood
 from ...utils import choose
-from .state import ParticleFilterState
+from .state import ParticleFilterState, ParticleFilterPrediction
 
 
 class APF(ParticleFilter):
@@ -10,27 +10,22 @@ class APF(ParticleFilter):
     Implements the Auxiliary Particle Filter of Pitt and Shephard.
     """
 
-    def forward(self, y, state: ParticleFilterState):
+    def predict(self, state: ParticleFilterState):
         normalized = state.normalized_weights()
 
-        if torch.isnan(y).any():
-            indices = self._resampler(normalized, normalized=True)
-            copied_x = state.x.copy(values=choose(state.x.values, indices))
+        return ParticleFilterPrediction(lambda: self._model.hidden.propagate(state.x), normalized, None, None)
 
-            x = self.ssm.hidden.forward(copied_x)
-
-            return ParticleFilterState(x, torch.zeros_like(normalized), 0.0 * state.get_loglikelihood(), indices)
-
+    def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction):
         pre_weights = self.proposal.pre_weight(y, state.x)
 
         resample_weights = pre_weights + state.w
 
         indices = self._resampler(resample_weights)
-        copied_x = state.x.copy(values=choose(state.x.values, indices))
+        resampled_x = state.x.copy(values=choose(state.x.values, indices))
 
-        x, weights = self._proposal.sample_and_weight(y, copied_x)
+        x, weights = self._proposal.sample_and_weight(y, self._model.hidden.propagate(resampled_x))
 
         w = weights - choose(pre_weights, indices)
-        ll = log_likelihood(w) + torch.log((normalized * pre_weights.exp()).sum(-1))
+        ll = log_likelihood(w) + (prediction.old_weights * pre_weights.exp()).sum(-1).log()
 
         return ParticleFilterState(x, w, ll, indices)
