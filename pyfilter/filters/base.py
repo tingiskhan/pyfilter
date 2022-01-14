@@ -136,7 +136,7 @@ class BaseFilter(Module, ABC):
         Args:
             y: Data set to filter.
             bar: Whether to display a ``tqdm`` progress bar.
-            init_state: Optional parameter for whether to pass an initial state
+            init_state: Optional parameter for whether to pass an initial state.
         """
 
         iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
