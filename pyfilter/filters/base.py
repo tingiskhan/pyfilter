@@ -7,11 +7,11 @@ from typing import Tuple, Sequence, TypeVar, List, Callable
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
-from .state import BaseFilterState
+from .state import FilterState, PredictionState
 from ..container import BoolOrInt
 
 
-TState = TypeVar("TState", bound=BaseFilterState)
+TState = TypeVar("TState", bound=FilterState)
 
 
 class BaseFilter(Module, ABC):
@@ -167,7 +167,7 @@ class BaseFilter(Module, ABC):
 
         return copy.deepcopy(self)
 
-    def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_path(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given the previous ``state``, predict ``steps`` steps into the future.
 
@@ -184,6 +184,28 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
+    def predict(self, state: TState):
+        """
+        Corresponds to the predict step of the given filter.
+
+        Args:
+            state: The previous state of the algorithm.
+        """
+
+        raise NotImplementedError()
+
+    def correct(self, y: torch.Tensor, state: TState, prediction: PredictionState) -> TState:
+        """
+        Corresponds to the correct step of the given filter.
+
+        Args:
+            y: The observation.
+            state: The previous state of the algorithm.
+            prediction: The predicted state.
+        """
+
+        raise NotImplementedError()
+
     def forward(self, y: torch.Tensor, state: TState) -> TState:
         """
         Method to be overridden by derived filters.
@@ -193,7 +215,9 @@ class BaseFilter(Module, ABC):
             state: See ``self.filter(...)``.
         """
 
-        raise NotImplementedError()
+        prediction = self.predict(state)
+
+        return self.correct(y, state, prediction)
 
     def resample(self, indices: torch.Tensor) -> "BaseFilter":
         """
@@ -229,7 +253,7 @@ class BaseFilter(Module, ABC):
 
         return self
 
-    def smooth(self, states: Sequence[BaseFilterState]) -> torch.Tensor:
+    def smooth(self, states: Sequence[FilterState]) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 
