@@ -184,7 +184,7 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def predict(self, state: TState):
+    def predict(self, state: TState) -> PredictionState:
         """
         Corresponds to the predict step of the given filter.
 
