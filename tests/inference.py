@@ -27,8 +27,11 @@ def uhlenbecks():
 def models(uhlenbecks):
     ou, prob_ou = uhlenbecks
 
-    obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
-    prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable.buffer_dict.values())
+    a = 1.0
+    s = 0.05
+
+    obs_1d = LinearGaussianObservations(ou, a, s)
+    prob_obs_1d = LinearGaussianObservations(prob_ou, a, s)
 
     return (
         [prob_obs_1d, obs_1d],
@@ -94,12 +97,10 @@ class TestsSequentialAlgorithm(object):
 
     @staticmethod
     def sequential_algorithms(filter_, **kwargs):
-        return (
-            NESS(filter_, **kwargs),
-            SMC2(filter_, **kwargs),
-            SMC2FW(filter_, **kwargs),
-            NESSMC2(filter_, **kwargs),
-        )
+        yield NESS(filter_, **kwargs)
+        yield SMC2(filter_, **kwargs)
+        yield SMC2FW(filter_, **kwargs)
+        yield NESSMC2(filter_, **kwargs)
 
     def test_algorithms(self, models):
         for prob_model, model in models:
@@ -152,11 +153,9 @@ class TestBatchAlgorithms(object):
 
     @staticmethod
     def pmmh_proposals(filter_, **kwargs):
-        return (
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs),
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs),
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs),
-        )
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs)
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs)
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs)
 
     def test_pmmh(self, models):
         for prob_model, model in models:
