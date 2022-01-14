@@ -4,7 +4,13 @@ from ..timeseries import NewState
 from ..state import BaseState
 
 
-class BaseFilterState(BaseState, ABC):
+class PredictionState(ABC):
+    """
+    Base class for filter predictions.
+    """
+
+
+class FilterState(BaseState, ABC):
     """
     Abstract base class for all filter states.
     """
@@ -40,7 +46,7 @@ class BaseFilterState(BaseState, ABC):
 
         raise NotImplementedError()
 
-    def exchange(self, state: "BaseFilterState", indices: Tensor):
+    def exchange(self, state: "FilterState", indices: Tensor):
         """
         Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
 

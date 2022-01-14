@@ -1,6 +1,6 @@
 import torch
 from ..state import FilterAlgorithmState
-from ...filters import FilterResult, BaseFilterState
+from ...filters import FilterResult, FilterState
 from ...utils import normalize, get_ess
 from ...container import TensorTuple
 
@@ -33,7 +33,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return self.tensor_tuples["ess"]
 
-    def update(self, filter_state: BaseFilterState):
+    def update(self, filter_state: FilterState):
         """
         Updates ``self`` given a new filter state.
 

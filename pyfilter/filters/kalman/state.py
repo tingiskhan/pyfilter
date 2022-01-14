@@ -1,10 +1,26 @@
 from torch import Tensor
-from ..state import BaseFilterState
-from .unscented.result import UFTCorrectionResult
+from ..state import FilterState, PredictionState
+from .unscented.result import UFTCorrectionResult, UFTPredictionResult
 from ...utils import choose
 
 
-class KalmanFilterState(BaseFilterState):
+class KalmanFilterPrediction(PredictionState):
+    """
+    Prediction state for particle filters.
+    """
+
+    def __init__(self, prediction: UFTPredictionResult):
+        """
+        Initializes the ``KalmanFilterPrediction`` class.
+
+        Args:
+            prediction: The Kalman prediction.
+        """
+
+        self.p = prediction
+
+
+class KalmanFilterState(FilterState):
     """
     State object for Kalman type filters.
     """
