@@ -157,23 +157,23 @@ class UFTCorrectionResult(Module):
             if bad_matrix.all():
                 raise Exception("All batches were singular or nan!")
 
-            xc[bad_matrix, self._state_slc, self._state_slc] = _EPS * torch.eye(xc.shape[-1], device=xc.device)
-            xm[bad_matrix, self._state_slc] = 0.0
+            xc[bad_matrix, self._state_slice, self._state_slice] = _EPS * torch.eye(xc.shape[-1], device=xc.device)
+            xm[bad_matrix, self._state_slice] = 0.0
 
             yc[bad_matrix] = _EPS * torch.eye(yc.shape[-1], device=yc.device)
             ym[bad_matrix] = 0.0
 
-        mean[..., self._state_slc] = xm
-        cov[..., self._state_slc, self._state_slc] = xc
+        mean[..., self._state_slice] = xm
+        cov[..., self._state_slice, self._state_slice] = xc
 
         x_state = x_state.copy(dist=MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False))
 
-        if self._model.observable.n_dim > 0:
+        if ym.shape[-1] > 1:
             y_state = y_state.copy(dist=MultivariateNormal(loc=ym, covariance_matrix=yc, validate_args=False))
         else:
             y_state = y_state.copy(dist=Normal(loc=ym[..., 0], scale=yc[..., 0, 0].sqrt(), validate_args=False))
 
-        return UFTCorrectionResult(x_state, self._state_slc, y_state)
+        return UFTCorrectionResult(x_state, self._state_slice, y_state)
 
 
 class UFTPredictionResult(Module):
