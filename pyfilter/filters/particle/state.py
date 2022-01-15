@@ -35,6 +35,14 @@ class ParticleFilterPrediction(PredictionState):
 
         return self._x
 
+    def create_state_from_prediction(self) -> "FilterState":
+        return ParticleFilterState(
+            self.x,
+            torch.zeros_like(self.old_weights),
+            torch.zeros(self.old_weights.shape[0]),
+            prev_indices=self.indices
+        )
+
 
 class ParticleFilterState(FilterState):
     """

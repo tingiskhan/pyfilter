@@ -28,7 +28,7 @@ class UKF(BaseKalmanFilter):
         return KalmanFilterState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
     def predict(self, state):
-        return KalmanFilterPrediction(self._ut.predict(state.utf))
+        return KalmanFilterPrediction(self._ut.predict(state.utf), state, self._ut._wm, self._ut._wc)
 
     def correct(self, y: torch.Tensor, state, prediction: KalmanFilterPrediction):
         res = self._ut.correct(y, prediction.p, state.utf)

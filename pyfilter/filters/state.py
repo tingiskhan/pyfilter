@@ -9,6 +9,13 @@ class PredictionState(ABC):
     Base class for filter predictions.
     """
 
+    def create_state_from_prediction(self) -> "FilterState":
+        """
+        Method for creating an instance of ``FilterState``.
+        """
+
+        raise NotImplementedError()
+
 
 class FilterState(BaseState, ABC):
     """
