@@ -32,7 +32,7 @@ class KalmanFilterPrediction(PredictionState):
 
     def create_state_from_prediction(self) -> "FilterState":
         (x_m, x_c), (y_m, y_c) = self.p.get_mean_and_covariance(self.wm, self.wc)
-        res = self.utf.update_state(x_m, x_c, self.p.spx, self.utf, y_m, y_c, self.p.spy)
+        res = self.utf.update(x_m, x_c, self.p.spx, self.utf, y_m, y_c, self.p.spy)
 
         return KalmanFilterState(res, zeros_like(self.old_ll))
 

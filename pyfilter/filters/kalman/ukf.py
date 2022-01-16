@@ -41,7 +41,7 @@ class UKF(BaseKalmanFilter):
         p = self._ut.predict(state.utf)
         (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-        utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
+        utf_state = utf_state.update(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
         x_res = torch.empty((steps, *x_m.shape))
         y_res = torch.empty((steps, *y_m.shape))
@@ -53,7 +53,7 @@ class UKF(BaseKalmanFilter):
             p = self._ut.predict(utf_state)
             (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-            utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
+            utf_state = utf_state.update(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
             x_res[i + 1] = x_m
             y_res[i + 1] = y_m
