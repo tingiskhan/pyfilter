@@ -8,7 +8,7 @@ from ...timeseries import LinearGaussianObservations as LGO
 from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 from ...utils import get_ess, choose
 from ..utils import _construct_empty_index
-from .state import ParticleFilterState
+from .state import ParticleFilterState, ParticleFilterPrediction
 
 
 _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
@@ -130,3 +130,6 @@ class ParticleFilter(BaseFilter, ABC):
             res.append(choose(state.x.values, cat.sample()))
 
         return torch.stack(res[::-1], dim=0)
+
+    def _get_observation_dist_from_prediction(self, prediction: ParticleFilterPrediction):
+        return self.ssm.observable.propagate(prediction.x).dist

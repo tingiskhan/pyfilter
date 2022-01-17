@@ -59,3 +59,6 @@ class UKF(BaseKalmanFilter):
             y_res[i + 1] = y_m
 
         return x_res, y_res
+
+    def _get_observation_dist_from_prediction(self, prediction: KalmanFilterPrediction):
+        return prediction.create_state_from_prediction().utf.y.dist

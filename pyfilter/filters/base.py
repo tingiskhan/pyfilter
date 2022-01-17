@@ -4,6 +4,8 @@ from tqdm import tqdm
 import torch
 from torch.nn import Module
 from typing import Tuple, Sequence, TypeVar, List, Callable
+from torch.distributions import Distribution
+from .utils import select_mean_of_dist
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
@@ -25,6 +27,7 @@ class BaseFilter(Module, ABC):
         record_states: BoolOrInt = False,
         pre_append_callbacks: List[Callable[[TState], None]] = None,
         record_moments: BoolOrInt = True,
+        nan_strategy: str = "skip"
     ):
         """
         Initializes the ``BaseFilter`` class.
@@ -35,6 +38,10 @@ class BaseFilter(Module, ABC):
             pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
                 to appending the new state.
             record_moments: See ``pyfilter.timeseries.result.record_moments``
+            nan_strategy: How to handle ``nan``s in observation data. Can be
+                * "skip" - skips the observation.
+                * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
+                    median of mean.
         """
 
         super().__init__()
@@ -50,6 +57,11 @@ class BaseFilter(Module, ABC):
         self.record_moments = record_moments
 
         self._pre_append_callbacks = pre_append_callbacks or list()
+
+        if nan_strategy not in ["skip", "impute"]:
+            raise NotImplementedError(f"Currently cannot handle strategy '{nan_strategy}'!")
+
+        self._nan_strategy = nan_strategy
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -184,6 +196,16 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
+    def _get_observation_dist_from_prediction(self, prediction: PredictionState) -> Distribution:
+        """
+        Method for generating an observation distribution from the predicted latent distribution.
+
+        Args:
+            prediction: The prediction to use for creating the distribution.
+        """
+
+        raise NotImplementedError()
+
     def predict(self, state: TState) -> PredictionState:
         """
         Corresponds to the predict step of the given filter.
@@ -216,6 +238,23 @@ class BaseFilter(Module, ABC):
         """
 
         prediction = self.predict(state)
+
+        nan_mask = torch.isnan(y)
+        if nan_mask.any():
+            # TODO: Perhaps handle switching in __init__ instead?
+            if self._nan_strategy == "skip":
+                return prediction.create_state_from_prediction()
+            elif self._nan_strategy == "impute":
+                dist = self._get_observation_dist_from_prediction(prediction)
+
+                # NB: Might be better to reshape `y` to the number of parallel filters instead of using global mean?
+                mean = select_mean_of_dist(dist)
+                if len(dist.batch_shape) > 0:
+                    for d in reversed(range(0, len(dist.batch_shape))):
+                        mean = mean.median(dim=d)[0]
+
+                y = y.clone()
+                y[nan_mask] = mean[nan_mask]
 
         return self.correct(y, state, prediction)
 
