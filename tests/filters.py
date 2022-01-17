@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pytest
 import torch
@@ -107,12 +108,25 @@ def joint_timeseries():
     return obs, kalman
 
 
+def add_nan(y, number_of_nans):
+    rand_ints = torch.randint(0, y.shape[0], size=(number_of_nans,))
+
+    if y.dim() == 1:
+        y[rand_ints] = float("nan")
+    else:
+        rand_col = random.randint(0, y.shape[-1] - 1)
+        y[rand_ints, rand_col] = float("nan")
+
+    return y
+
+
 class TestFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     PARALLEL_FILTERS = 20
     SERIES_LENGTH = 100
     PREDICTION_STEPS = 5
     STATE_RECORD_LENGTH = 5
+    NUMBER_OF_NANS = 10
 
     def _compare_kalman_mean(self, kalman_mean, means):
         assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
@@ -282,3 +296,33 @@ class TestFilters(object):
                 means.unsqueeze_(-1)
 
             self._compare_kalman_mean(kalman_mean, means)
+
+    def test_missing_data(self, linear_models):
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+            y = add_nan(y, self.NUMBER_OF_NANS)
+
+            for strat in ["impute", "skip"]:
+                for parallel in [0, 10]:
+                    for f in construct_filters(model, nan_strategy=strat):
+                        if parallel > 0:
+                            f.set_num_parallel(parallel)
+
+                        res = f.longfilter(y)
+
+                        assert not torch.isnan(res.filter_means).any()
+
+    def test_missing_data_smooth(self, linear_models):
+        for model, kalman_model in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+            y = add_nan(y, self.NUMBER_OF_NANS)
+
+            for f in construct_filters(model, record_states=True):
+                # Currently UKF does not implement smoothing
+                if isinstance(f, kalman.UKF):
+                    continue
+
+                result = f.longfilter(y)
+                smoothed_x = f.smooth(result.states)
+
+                assert not smoothed_x.isnan().any()
