@@ -1,10 +1,10 @@
 import torch
 from typing import List, TypeVar, Generic
-from .state import BaseFilterState
+from .state import FilterState
 from ..container import TensorTuple, make_dequeue, BoolOrInt
 from ..state import StateWithTensorTuples
 
-TState = TypeVar("TState", bound=BaseFilterState)
+TState = TypeVar("TState", bound=FilterState)
 
 
 class FilterResult(StateWithTensorTuples, Generic[TState]):

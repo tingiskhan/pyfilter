@@ -51,7 +51,7 @@ class LinearGaussianObservations(LinearSSM):
         a = broadcast_all(a)[0]
         scale = broadcast_all(scale)[0]
 
-        if len(a.shape) == 0:
+        if len(a.shape) < 2:
             dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
         else:
             dim = a.shape[0]

@@ -1,11 +1,50 @@
 import torch
 from torch import Tensor
-from ..state import BaseFilterState
+from typing import Callable, Union
+from ..state import FilterState, PredictionState
 from ...utils import choose, normalize
 from ...timeseries import NewState
 
 
-class ParticleFilterState(BaseFilterState):
+class ParticleFilterPrediction(PredictionState):
+    """
+    Prediction state for particle filters.
+    """
+
+    def __init__(self, x: Union[NewState, Callable], old_weights: Tensor, indices: Tensor, mask: Tensor = None):
+        """
+        Initializes the ``ParticleFilterPrediction`` class.
+
+        Args:
+            x: The new state of the latent process. We allow callable to enable deferring computation if it's necessary
+                to avoid incurring unnecessary computations.
+            old_weights: The previous normalized weights.
+            indices: The selected indices
+            mask: Mask for which batch to resample, only relevant for filters in parallel.
+        """
+
+        self._x = x
+        self.old_weights = old_weights
+        self.indices = indices
+        self.mask = mask
+
+    @property
+    def x(self) -> NewState:
+        if not isinstance(self._x, NewState) and callable(self._x):
+            self._x = self._x()
+
+        return self._x
+
+    def create_state_from_prediction(self) -> "FilterState":
+        return ParticleFilterState(
+            self.x,
+            torch.zeros_like(self.old_weights),
+            torch.zeros(self.old_weights.shape[0]),
+            prev_indices=self.indices
+        )
+
+
+class ParticleFilterState(FilterState):
     """
     State object for particle based filters.
     """

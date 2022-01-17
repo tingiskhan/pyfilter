@@ -8,7 +8,7 @@ from ...timeseries import LinearGaussianObservations as LGO
 from .proposals import Bootstrap, Proposal, LinearGaussianObservations
 from ...utils import get_ess, choose
 from ..utils import _construct_empty_index
-from .state import ParticleFilterState
+from .state import ParticleFilterState, ParticleFilterPrediction
 
 
 _PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
@@ -62,19 +62,17 @@ class ParticleFilter(BaseFilter, ABC):
 
     @property
     def proposal(self) -> Proposal:
+        """
+        Returns the proposal used by the filter.
+        """
+
         return self._proposal
 
-    def _resample_state(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
+    def _resample_parallel(self, w: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
         ess = get_ess(w) / w.shape[-1]
         mask = ess < self._resample_threshold
 
         out = _construct_empty_index(w)
-
-        if not mask.any():
-            return out, mask
-        elif not isinstance(self._particles, tuple):
-            return self._resampler(w), mask
-
         out[mask] = self._resampler(w[mask])
 
         return out, mask
@@ -82,7 +80,8 @@ class ParticleFilter(BaseFilter, ABC):
     def set_num_parallel(self, num_filters: int):
         self._n_parallel = torch.tensor(num_filters)
         self._particles = torch.tensor(
-            (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])), dtype=torch.int
+            (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])),
+            dtype=torch.int
         )
 
         return self
@@ -94,7 +93,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return ParticleFilterState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
 
-    def predict(self, state: ParticleFilterState, steps, aggregate: bool = True, **kwargs):
+    def predict_path(self, state: ParticleFilterState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
 
         x = x[1:]
@@ -131,3 +130,6 @@ class ParticleFilter(BaseFilter, ABC):
             res.append(choose(state.x.values, cat.sample()))
 
         return torch.stack(res[::-1], dim=0)
+
+    def _get_observation_dist_from_prediction(self, prediction: ParticleFilterPrediction):
+        return self.ssm.observable.propagate(prediction.x).dist

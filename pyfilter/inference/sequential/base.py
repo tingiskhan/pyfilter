@@ -96,7 +96,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
 
     def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
+        px, py = self.filter.predict_path(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py

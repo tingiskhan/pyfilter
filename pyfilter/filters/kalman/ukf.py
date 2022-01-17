@@ -2,7 +2,7 @@ import torch
 from typing import Dict
 from .base import BaseKalmanFilter
 from .unscented import UnscentedFilterTransform
-from .state import KalmanFilterState
+from .state import KalmanFilterState, KalmanFilterPrediction
 
 
 class UKF(BaseKalmanFilter):
@@ -27,26 +27,21 @@ class UKF(BaseKalmanFilter):
         res = self._ut.initialize(self.n_parallel)
         return KalmanFilterState(res, torch.zeros(self.n_parallel, device=res.x.device))
 
-    def forward(self, y, state: KalmanFilterState):
-        p = self._ut.predict(state.utf)
+    def predict(self, state):
+        return KalmanFilterPrediction(self._ut.predict(state.utf), state, self._ut._wm, self._ut._wc)
 
-        if torch.isnan(y).any():
-            (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
-            res = self._ut.update_state(x_m, x_c, p.spx, state.utf, y_m, y_c, p.spy)
-
-            return KalmanFilterState(res, torch.zeros_like(state.ll))
-
-        res = self._ut.correct(y, p, state.utf)
+    def correct(self, y: torch.Tensor, state, prediction: KalmanFilterPrediction):
+        res = self._ut.correct(y, prediction.p, state.utf)
 
         return KalmanFilterState(res, res.y.dist.log_prob(y))
 
-    def predict(self, state: KalmanFilterState, steps, *args, **kwargs):
+    def predict_path(self, state: KalmanFilterState, steps, *args, **kwargs):
         utf_state = state.utf
 
         p = self._ut.predict(state.utf)
         (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-        utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
+        utf_state = utf_state.update(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
         x_res = torch.empty((steps, *x_m.shape))
         y_res = torch.empty((steps, *y_m.shape))
@@ -58,9 +53,12 @@ class UKF(BaseKalmanFilter):
             p = self._ut.predict(utf_state)
             (x_m, x_c), (y_m, y_c) = p.get_mean_and_covariance(self._ut._wm, self._ut._wc)
 
-            utf_state = self._ut.update_state(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
+            utf_state = utf_state.update(x_m, x_c, p.spx, utf_state, y_m, y_c, p.spy)
 
             x_res[i + 1] = x_m
             y_res[i + 1] = y_m
 
         return x_res, y_res
+
+    def _get_observation_dist_from_prediction(self, prediction: KalmanFilterPrediction):
+        return prediction.create_state_from_prediction().utf.y.dist

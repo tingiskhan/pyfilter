@@ -4,7 +4,7 @@ from ...distributions import DistributionWrapper
 
 
 def _init_trans(module: "AR", dist):
-    alpha, beta, sigma = module.functional_parameters()
+    beta, alpha, sigma = module.functional_parameters()
     return TransformedDistribution(dist, AffineTransform(alpha, sigma / (1 - beta ** 2).sqrt()))
 
 

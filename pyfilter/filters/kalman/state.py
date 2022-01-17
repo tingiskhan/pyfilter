@@ -1,10 +1,43 @@
-from torch import Tensor
-from ..state import BaseFilterState
-from .unscented.result import UFTCorrectionResult
+import torch
+from torch import Tensor, zeros_like
+from ..state import FilterState, PredictionState
+from .unscented.result import UFTCorrectionResult, UFTPredictionResult
 from ...utils import choose
 
 
-class KalmanFilterState(BaseFilterState):
+class KalmanFilterPrediction(PredictionState):
+    """
+    Prediction state for particle filters.
+    """
+
+    def __init__(
+            self,
+            prediction: UFTPredictionResult,
+            prev_corr: "KalmanFilterState",
+            wm: torch.Tensor,
+            wc: torch.Tensor
+    ):
+        """
+        Initializes the ``KalmanFilterPrediction`` class.
+
+        Args:
+            prediction: The Kalman prediction.
+        """
+
+        self.p = prediction
+        self.utf = prev_corr.utf
+        self.old_ll = prev_corr.get_loglikelihood()
+        self.wm = wm
+        self.wc = wc
+
+    def create_state_from_prediction(self) -> "FilterState":
+        (x_m, x_c), (y_m, y_c) = self.p.get_mean_and_covariance(self.wm, self.wc)
+        res = self.utf.update(x_m, x_c, self.p.spx, self.utf, y_m, y_c, self.p.spy)
+
+        return KalmanFilterState(res, zeros_like(self.old_ll))
+
+
+class KalmanFilterState(FilterState):
     """
     State object for Kalman type filters.
     """

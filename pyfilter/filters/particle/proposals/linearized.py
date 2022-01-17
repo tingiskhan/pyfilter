@@ -31,6 +31,9 @@ class Linearized(Proposal):
         """
         super().__init__()
         self._alpha = alpha
+
+        assert n_steps > 0, "``n_steps`` must be >= 1"
+
         self._n_steps = n_steps
         self._use_second_order = use_second_order
 
@@ -46,23 +49,23 @@ class Linearized(Proposal):
         return self
 
     def sample_and_weight(self, y, x):
-        new_x = self._model.hidden.propagate(x)
-        affine_transform = next(trans for trans in new_x.dist.transforms if isinstance(trans, AffineTransform))
+        x_copy = x.copy(dist=x.dist, values=x.values)
+        affine_transform = next(trans for trans in x_copy.dist.transforms if isinstance(trans, AffineTransform))
 
-        mean, h_scale = affine_transform.loc[:], affine_transform.scale[:]
-        new_x.values = mean
+        mean = affine_transform.loc.clone()
+        std = affine_transform.scale.clone()
+
+        x_copy.values = mean
 
         for _ in range(self._n_steps):
             mean.requires_grad_(True)
 
-            y_state = self._model.observable.propagate(new_x)
+            y_state = self._model.observable.propagate(x_copy)
 
-            logl = y_state.dist.log_prob(y) + new_x.dist.log_prob(mean)
+            logl = y_state.dist.log_prob(y) + x_copy.dist.log_prob(mean)
             g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
             step = self._alpha * torch.ones_like(g)
-            std = h_scale.clone()
-
             if self._use_second_order:
                 neg_inv_hess = -1.0 / grad(g, mean, grad_outputs=torch.ones_like(g))[-1]
                 mask = neg_inv_hess > 0.0
@@ -73,12 +76,12 @@ class Linearized(Proposal):
                 g.detach_()
 
             mean = mean.detach() + step * g
-            new_x = new_x.copy(new_x.dist, mean)
+            x_copy = x_copy.copy(x_copy.dist, mean)
 
         kernel = Normal(mean, std, validate_args=False)
         if not self._is1d:
             kernel = Independent(kernel, self._model.hidden.n_dim)
 
-        new_x = new_x.copy(new_x.dist, kernel.sample())
+        x_result = x_copy.copy(dist=x_copy.dist, values=kernel.sample())
 
-        return new_x, self._weight_with_kernel(y, new_x, kernel)
+        return x_result, self._weight_with_kernel(y, x_result, kernel)
