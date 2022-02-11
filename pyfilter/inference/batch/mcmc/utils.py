@@ -3,7 +3,7 @@ from torch.distributions import Distribution
 from typing import TypeVar
 from .proposals import BaseProposal
 from ...state import FilterAlgorithmState
-from ....filters import BaseFilter
+from ....filters import BaseFilter, ParticleFilter
 from ....constants import INFTY
 
 TFilter = TypeVar("TFilter", bound=BaseFilter)
@@ -30,7 +30,8 @@ def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: int) -> 
     num_samples = num_chains * num_seeds
     seed_filter.set_num_parallel(num_samples)
 
-    seed_filter.ssm.sample_params(torch.Size([num_samples, 1]))
+    size = torch.Size([num_samples, 1] if isinstance(filter_, ParticleFilter) else [num_samples])
+    seed_filter.ssm.sample_params(size)
 
     res = seed_filter.longfilter(y, bar=False)
 
@@ -38,14 +39,7 @@ def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: int) -> 
     log_likelihood = res.loglikelihood + seed_filter.ssm.eval_prior_log_prob(constrained=True).squeeze()
     log_likelihood[~torch.isfinite(log_likelihood)] = -INFTY
 
-    best_params = params[log_likelihood.argmax()]
-
-    filter_.set_num_parallel(num_chains)
-
-    filter_.ssm.sample_params(torch.Size([num_chains, 1]))
-    filter_.ssm.update_parameters_from_tensor(best_params.unsqueeze(0), constrained=True)
-
-    return filter_
+    return params[log_likelihood.argmax()]
 
 
 def run_pmmh(
