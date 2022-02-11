@@ -16,7 +16,7 @@ def make_dequeue(maxlen: BoolOrInt = None) -> deque:
 
     Args:
         maxlen: The maximum length of the deque. Can be either a ``bool`` or an ``int``. If ``bool``, then it ``maxlen``
-        corresponds to 1 if ``False`` or ``None`` if ``True``. If an ``int``, then corresponds to the value.
+            corresponds to 1 if ``False`` or ``None`` if ``True``. If an ``int``, then corresponds to the value.
     """
 
     return deque(maxlen=1 if maxlen is False else (None if isinstance(maxlen, bool) else maxlen))
