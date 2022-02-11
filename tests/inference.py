@@ -154,6 +154,7 @@ class TestBatchAlgorithms(object):
 
     @staticmethod
     def pmmh_proposals(filter_, **kwargs):
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), initializer="mean", **kwargs)
         yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs)
 
         if isinstance(filter_, ParticleFilter):
