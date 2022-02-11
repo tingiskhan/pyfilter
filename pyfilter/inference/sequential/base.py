@@ -5,6 +5,7 @@ from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
 from ...filters import ParticleFilter
+from ...utils import is_documented_by
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
@@ -19,7 +20,7 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def update(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
+    def forward(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Updates the algorithm and filter state given the latest observation ``y``.
 
@@ -32,6 +33,10 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
         """
 
         raise NotImplementedError()
+
+    @is_documented_by(forward)
+    def update(self, y: torch.Tensor, state: SequentialAlgorithmState):
+        return self.__call__(y, state)
 
     def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
@@ -168,7 +173,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def update(self, y: torch.Tensor, state):
+    def forward(self, y: torch.Tensor, state):
         self._num_iters += 1
 
         if not self._is_switched:
