@@ -1,5 +1,4 @@
 from .base import SequentialParticleAlgorithm
-from ...utils import get_ess
 from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
 from torch import isfinite
 from abc import ABC
@@ -44,7 +43,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def update(self, y, state):
+    def forward(self, y, state):
         if self.do_update_particles(state):
             self._kernel.update(self.filter, state)
 

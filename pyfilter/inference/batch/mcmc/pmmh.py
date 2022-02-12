@@ -4,6 +4,7 @@ from .proposals import RandomWalk, BaseProposal
 from .state import PMMHResult
 from ..base import BatchFilterAlgorithm
 from ...logging import TQDMWrapper
+from ....filters import ParticleFilter
 
 
 class PMMH(BatchFilterAlgorithm):
@@ -29,7 +30,8 @@ class PMMH(BatchFilterAlgorithm):
             initializer: Optional parameter specifying how to initialize the chain:
                 - ``seed``: Seeds the initial value by running several chains in parallel and choosing the one
                     maximizing the total likelihood
-                - ``mean``: Sets the initial values as the means of the prior distributions.
+                - ``mean``: Sets the initial values as the means of the prior distributions. Uses MC sampling for
+                    determining the mean.
         """
 
         super().__init__(filter_, samples)
@@ -39,12 +41,19 @@ class PMMH(BatchFilterAlgorithm):
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         if self._initializer == "seed":
-            self._filter = seed(self._filter, y, 50, self._num_chains)
+            init_params = seed(self.filter.copy(), y, 50, self._num_chains)
         elif self._initializer == "mean":
-            # TODO: Fix so that we may initialize with mean of prior
-            pass
+            self.filter.ssm.sample_params(torch.Size([5_000]))
+            init_params = self.filter.ssm.concat_parameters(constrained=True).mean(0)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
+
+        self.filter.set_num_parallel(self._num_chains)
+
+        size = torch.Size([self._num_chains, 1] if isinstance(self.filter, ParticleFilter) else [self._num_chains])
+
+        self.filter.ssm.sample_params(size)
+        self.filter.ssm.update_parameters_from_tensor(init_params.unsqueeze(0), constrained=True)
 
         prev_res = self._filter.longfilter(y, bar=False)
 

@@ -7,6 +7,7 @@ from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
 from scipy.stats import gaussian_kde
 from pyfilter.inference.batch import variational, mcmc
 import torch
+from pyfilter.filters import ParticleFilter
 
 
 @pytest.fixture
@@ -153,9 +154,12 @@ class TestBatchAlgorithms(object):
 
     @staticmethod
     def pmmh_proposals(filter_, **kwargs):
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), initializer="mean", **kwargs)
         yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs)
-        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs)
-        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs)
+
+        if isinstance(filter_, ParticleFilter):
+            yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs)
+            yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs)
 
     def test_pmmh(self, models):
         for prob_model, model in models:

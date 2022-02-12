@@ -12,3 +12,7 @@ class BaseKalmanFilter(BaseFilter, ABC):
         self._n_parallel = torch.tensor(num_filters)
 
         return self
+
+    def smooth(self, states):
+        # TODO: https://jwmi.github.io/ASM/6-KalmanFilter.pdf
+        raise NotImplementedError()

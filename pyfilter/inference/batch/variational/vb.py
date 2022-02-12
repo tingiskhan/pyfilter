@@ -47,7 +47,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
         self._state_approx = state_approximation
 
     def loss(self, y, state: VariationalResult):
-        param_dist = state.sample_and_update_parameters(self._model, (self._n_samples,))
+        param_dist = state.sample_and_update_parameters(self._model, torch.Size([self._n_samples]))
         entropy = param_dist.entropy()
 
         if self._is_ssm:
@@ -61,7 +61,7 @@ class VariationalBayes(OptimizationBasedAlgorithm):
                 x_t.squeeze_(-1)
                 x_tm1.squeeze_(-1)
 
-            y_state = NewState(self._time_indices[1 :: self._num_steps], values=x_t[:, :: self._num_steps])
+            y_state = NewState(self._time_indices[1:: self._num_steps], values=x_t[:, ::self._num_steps])
             x_state = NewState(self._time_indices[:-1], values=x_tm1)
 
             x_dist = self._model.hidden.build_density(x_state)

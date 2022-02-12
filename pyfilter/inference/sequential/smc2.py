@@ -45,7 +45,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         return SMC2State(state.w, state.filter_state, state.ess)
 
-    def update(self, y, state: SMC2State):
+    def forward(self, y, state: SMC2State):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
