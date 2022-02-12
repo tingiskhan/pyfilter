@@ -42,15 +42,8 @@ class PMMH(BatchFilterAlgorithm):
         if self._initializer == "seed":
             init_params = seed(self.filter, y, 50, self._num_chains)
         elif self._initializer == "mean":
-            samples = torch.Size([5_000])
-
-            def sample_params(module):
-                return tuple(p().sample(samples).mean() for p in module.priors())
-
-            hidden_samples = sample_params(self.filter.ssm.hidden)
-            obs_samples = sample_params(self.filter.ssm.observable)
-
-            init_params = torch.stack(hidden_samples + obs_samples)
+            self.filter.ssm.sample_params(torch.Size([5_000]))
+            init_params = self.filter.ssm.concat_parameters(constrained=True).mean(0)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
