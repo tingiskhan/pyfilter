@@ -25,18 +25,16 @@ def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: int) -> 
         Returns ``filter_`` with the best parameters.
     """
 
-    seed_filter = filter_.copy()
-
     num_samples = num_chains * num_seeds
-    seed_filter.set_num_parallel(num_samples)
+    filter_.set_num_parallel(num_samples)
 
     size = torch.Size([num_samples, 1] if isinstance(filter_, ParticleFilter) else [num_samples])
-    seed_filter.ssm.sample_params(size)
+    filter_.ssm.sample_params(size)
 
-    res = seed_filter.longfilter(y, bar=False)
+    res = filter_.longfilter(y, bar=False)
 
-    params = seed_filter.ssm.concat_parameters(constrained=True)
-    log_likelihood = res.loglikelihood + seed_filter.ssm.eval_prior_log_prob(constrained=True).squeeze()
+    params = filter_.ssm.concat_parameters(constrained=True)
+    log_likelihood = res.loglikelihood + filter_.ssm.eval_prior_log_prob(constrained=True).squeeze()
     log_likelihood[~torch.isfinite(log_likelihood)] = -INFTY
 
     return params[log_likelihood.argmax()]

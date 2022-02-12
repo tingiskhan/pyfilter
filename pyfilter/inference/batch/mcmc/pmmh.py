@@ -30,7 +30,8 @@ class PMMH(BatchFilterAlgorithm):
             initializer: Optional parameter specifying how to initialize the chain:
                 - ``seed``: Seeds the initial value by running several chains in parallel and choosing the one
                     maximizing the total likelihood
-                - ``mean``: Sets the initial values as the means of the prior distributions.
+                - ``mean``: Sets the initial values as the means of the prior distributions. Uses MC sampling for
+                    determining the mean.
         """
 
         super().__init__(filter_, samples)
@@ -40,7 +41,7 @@ class PMMH(BatchFilterAlgorithm):
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         if self._initializer == "seed":
-            init_params = seed(self.filter, y, 50, self._num_chains)
+            init_params = seed(self.filter.copy(), y, 50, self._num_chains)
         elif self._initializer == "mean":
             self.filter.ssm.sample_params(torch.Size([5_000]))
             init_params = self.filter.ssm.concat_parameters(constrained=True).mean(0)
