@@ -1,6 +1,6 @@
 import torch
 from torch.distributions import Normal
-from .model import StateSpaceModel
+from .ssm import StateSpaceModel
 from .observable import LinearObservations
 from ..distributions import DistributionWrapper
 from ..typing import ArrayType
