@@ -15,13 +15,19 @@ def _get_version():
     return version.strip()
 
 
+with open("requirements.txt", "r") as f:
+    install_requires = [p.strip() for p in f.readlines()]
+
+
 setup(
     name=NAME,
     version=_get_version(),
     author="Victor Gruselius",
     author_email="victor.gruselius@gmail.com",
-    description="Package for performing Bayesian inference in state space models",
-    packages=find_packages(),
-    install_requires=["torch>1.5.0", "tqdm>=4.26", "numpy", "pytest"],
-    python_requires=">=3.6.0"
+    description="Library for performing Bayesian inference in state space models",
+    packages=find_packages(include="pyfilter.*"),
+    install_requires=install_requires,
+    python_requires=">=3.6.0",
+    license_files=("LICENSE",),
+    license="MIT"
 )
