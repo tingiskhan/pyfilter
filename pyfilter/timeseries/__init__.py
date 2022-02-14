@@ -1,6 +1,6 @@
 from .stochastic_process import StochasticProcess, StructuralStochasticProcess
 from .affine import AffineProcess
-from .model import StateSpaceModel
+from .ssm import StateSpaceModel
 from .linear import LinearModel
 from .linear_ssm import LinearGaussianObservations, LinearObservations
 from .observable import AffineObservations, GeneralObservable

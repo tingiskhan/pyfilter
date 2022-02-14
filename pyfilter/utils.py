@@ -1,5 +1,6 @@
 import torch
 from torch.distributions import utils
+from functools import wraps
 from .constants import INFTY
 from .typing import ShapeLike
 
@@ -135,3 +136,22 @@ def broadcast_all(*values):
         torch_index += int(not is_dist_subclass)
 
     return res
+
+
+def is_documented_by(original):
+    """
+    Wrapper for function for copying doc strings of functions. See `this`_ reference.
+
+    Args:
+        original: The original function to copy the docs from.
+
+    .. _this: https://softwareengineering.stackexchange.com/questions/386755/sharing-docstrings-between-similar-functions
+    """
+
+    @wraps(original)
+    def wrapper(target):
+        target.__doc__ = original.__doc__
+
+        return target
+
+    return wrapper

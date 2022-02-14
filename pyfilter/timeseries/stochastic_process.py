@@ -61,6 +61,10 @@ class StochasticProcess(TensorTupleMixin, Module, ABC):
 
         return self.tensor_tuples["exog"]
 
+    @exog.setter
+    def exog(self, x: torch.Tensor):
+        self.tensor_tuples["exog"] = TensorTuple(*x)
+
     @property
     @lru_cache(maxsize=None)
     def n_dim(self) -> int:
