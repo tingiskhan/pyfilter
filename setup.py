@@ -25,7 +25,7 @@ setup(
     author="Victor Gruselius",
     author_email="victor.gruselius@gmail.com",
     description="Library for performing Bayesian inference in state space models",
-    packages=find_packages(include="pyfilter.*"),
+    packages=find_packages(include=f"{NAME}.*"),
     install_requires=install_requires,
     python_requires=">=3.6.0",
     license_files=("LICENSE",),
