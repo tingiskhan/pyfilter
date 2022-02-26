@@ -39,7 +39,7 @@ class RandomWalk(LinearModel):
             Normal,
             loc=torch.zeros(initial_mean.shape),
             scale=torch.ones(initial_mean.shape),
-            reinterpreted_batch_ndims=reinterpreted_batch_ndims
+            reinterpreted_batch_ndims=reinterpreted_batch_ndims,
         )
 
         super().__init__(1.0, std, increment_dist=inc_dist, initial_dist=initial_dist, **kwargs)

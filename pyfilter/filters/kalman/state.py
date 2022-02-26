@@ -11,11 +11,7 @@ class KalmanFilterPrediction(PredictionState):
     """
 
     def __init__(
-            self,
-            prediction: UFTPredictionResult,
-            prev_corr: "KalmanFilterState",
-            wm: torch.Tensor,
-            wc: torch.Tensor
+        self, prediction: UFTPredictionResult, prev_corr: "KalmanFilterState", wm: torch.Tensor, wc: torch.Tensor
     ):
         """
         Initializes the ``KalmanFilterPrediction`` class.

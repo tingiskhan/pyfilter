@@ -27,7 +27,7 @@ class BaseFilter(Module, ABC):
         record_states: BoolOrInt = False,
         pre_append_callbacks: List[Callable[[TState], None]] = None,
         record_moments: BoolOrInt = True,
-        nan_strategy: str = "skip"
+        nan_strategy: str = "skip",
     ):
         """
         Initializes the ``BaseFilter`` class.

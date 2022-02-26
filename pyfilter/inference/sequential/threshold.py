@@ -37,7 +37,7 @@ class ConstantThreshold(Thresholder):
     """
     Defines a constant threshold.
     """
-    
+
     def __init__(self, threshold: float):
         super(ConstantThreshold, self).__init__(threshold, threshold)
 

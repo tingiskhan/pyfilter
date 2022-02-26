@@ -194,9 +194,7 @@ class JointState(NewState):
         return values[..., self._indices[index]]
 
     def propagate_from(self, dist: Distribution = None, values: torch.Tensor = None, time_increment=1.0):
-        new_sub_states = map(
-            lambda u: u.propagate_from(None, None, time_increment=time_increment), self.states
-        )
+        new_sub_states = map(lambda u: u.propagate_from(None, None, time_increment=time_increment), self.states)
 
         res = JointState(*new_sub_states, indices=self._indices)
         res._dist = dist
