@@ -3,7 +3,7 @@ from pyfilter.timeseries import LinearGaussianObservations, models as m, AffineO
 from pyfilter.distributions import Prior, DistributionWrapper
 from torch.distributions import Normal, Exponential, LogNormal
 from tests.filters import construct_filters
-from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
+from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2, threshold
 from scipy.stats import gaussian_kde
 from pyfilter.inference.batch import variational, mcmc
 import torch
@@ -96,12 +96,34 @@ class TestsSequentialAlgorithm(object):
     PARTICLES = 2_000
     SERIES_LENGTH = 1_000
 
-    @staticmethod
-    def sequential_algorithms(filter_, **kwargs):
+    def sequential_algorithms(self, filter_, **kwargs):
         yield NESS(filter_, **kwargs)
         yield SMC2(filter_, **kwargs)
+
+        thresh = threshold.DecayingThreshold(half_life=self.SERIES_LENGTH // 2, start_thresh=0.5, min_thresh=0.2)
+        yield SMC2(filter_, **kwargs, threshold=thresh)
+
         yield SMC2FW(filter_, **kwargs)
         yield NESSMC2(filter_, **kwargs)
+
+    def test_constant_threshold(self):
+        thresh = 0.5
+        t = threshold.ConstantThreshold(thresh)
+
+        for _ in range(500):
+            assert t.get_threshold() == thresh
+
+    def test_decaying_threshold(self):
+        start_thresh = 0.5
+        min_thresh = 0.1
+
+        half_life = 50
+        t = threshold.DecayingThreshold(min_thresh, start_thresh, half_life)
+
+        for i in range(100):
+            thresh = t.get_threshold()
+            if (i + 1) == half_life:
+                assert thresh == (start_thresh / 2.0)
 
     def test_algorithms(self, models):
         for prob_model, model in models:
