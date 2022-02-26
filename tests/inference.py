@@ -110,8 +110,8 @@ class TestsSequentialAlgorithm(object):
         thresh = 0.5
         t = threshold.ConstantThreshold(thresh)
 
-        for _ in range(500):
-            assert t.get_threshold() == thresh
+        for i in range(500):
+            assert t.get_threshold(i) == thresh
 
     def test_decaying_threshold(self):
         start_thresh = 0.5
@@ -121,9 +121,8 @@ class TestsSequentialAlgorithm(object):
         t = threshold.DecayingThreshold(min_thresh, start_thresh, half_life)
 
         for i in range(100):
-            thresh = t.get_threshold()
-            if (i + 1) == half_life:
-                assert thresh == (start_thresh / 2.0)
+            if i == half_life:
+                assert t.get_threshold(i) == (start_thresh / 2.0)
 
     def test_algorithms(self, models):
         for prob_model, model in models:

@@ -61,7 +61,8 @@ class SMC2(SequentialParticleAlgorithm):
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
         state.update(filter_state)
 
-        if state.ess[-1] < (self._threshold.get_threshold() * self._particles) or (~torch.isfinite(state.w)).any():
+        any_nans = (~torch.isfinite(state.w)).any()
+        if state.ess[-1] < (self._threshold.get_threshold(len(state.parsed_data)) * self._particles) or any_nans:
             state = self.rejuvenate(state)
 
         return state

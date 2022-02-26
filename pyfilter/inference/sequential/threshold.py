@@ -18,19 +18,18 @@ class Thresholder(object):
         self._min = min_thresh
         self._start = start_thresh
 
-        self._iter = 0
-
     def _mutate_thresh(self, iteration: int, starting_threshold: float) -> float:
         raise NotImplementedError()
 
-    def get_threshold(self) -> float:
+    def get_threshold(self, iteration: int) -> float:
         """
         Returns the threshold of the current iteration.
+
+        Args:
+            iteration: The current iteration.
         """
 
-        self._iter += 1
-
-        return max(self._mutate_thresh(self._iter, self._start), self._min)
+        return max(self._mutate_thresh(iteration, self._start), self._min)
 
 
 class ConstantThreshold(Thresholder):
