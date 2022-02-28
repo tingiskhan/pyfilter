@@ -29,7 +29,7 @@ class SMC2(SequentialParticleAlgorithm):
             filter_: See base.
             particles: See base.
             threshold: The threshold of the relative ESS at which to perform a rejuvenation of the particles. Note that
-                using anything other than an ``int`` is experimental and is not supported in any literature.
+                using anything other than an ``float`` is experimental and is not supported in any literature.
             kernel: Optional parameter. The kernel to use for mutating the particles.
             max_increases: Whenever the acceptance rate of the rejuvenation step falls below 20% we double the amount
                 of state particles (as recommended in the original article). However, to avoid cases where there is such
