@@ -136,6 +136,9 @@ class TensorTuple(IterableDataset):
     def __getitem__(self, index) -> T_co:
         return self.tensors[index]
 
+    def __len__(self):
+        return len(self.tensors)
+
     def __add__(self, other: IterableDataset):
         return TensorTuple(*self.tensors, *other.tensors, maxlen=max(self.tensors.maxlen, other.tensors.maxlen))
 

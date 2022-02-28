@@ -40,7 +40,7 @@ class ParticleFilterPrediction(PredictionState):
             self.x,
             torch.zeros_like(self.old_weights),
             torch.zeros(self.old_weights.shape[0], device=self.old_weights.device, dtype=self.old_weights.dtype),
-            prev_indices=self.indices
+            prev_indices=self.indices,
         )
 
 

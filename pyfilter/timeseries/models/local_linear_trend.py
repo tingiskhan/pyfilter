@@ -82,10 +82,7 @@ class SmoothLinearTrend(AffineChainedStochasticProcess):
 
         rw = RandomWalk(sigma, initial_mean, initial_scale, **kwargs)
         smooth = LinearModel(
-            torch.ones(2),
-            0.0,
-            DistributionWrapper(Delta, v=0.0),
-            initial_dist=DistributionWrapper(Delta, v=l_0)
+            torch.ones(2), 0.0, DistributionWrapper(Delta, v=0.0), initial_dist=DistributionWrapper(Delta, v=l_0)
         )
 
         super(SmoothLinearTrend, self).__init__(rw=rw, smooth=smooth)

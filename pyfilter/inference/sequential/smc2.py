@@ -1,10 +1,11 @@
+from typing import Union
 import torch
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings
-from ...utils import get_ess
 from ...filters import ParticleFilter
 from .state import SMC2State
 from ..batch.mcmc.proposals import BaseProposal
+from .threshold import Thresholder, ConstantThreshold
 
 
 class SMC2(SequentialParticleAlgorithm):
@@ -12,14 +13,23 @@ class SMC2(SequentialParticleAlgorithm):
     Implements the ``SMC2`` algorithm by Chopin et al.
     """
 
-    def __init__(self, filter_, particles, threshold=0.2, kernel: BaseProposal = None, max_increases=5, **kwargs):
+    def __init__(
+        self,
+        filter_,
+        particles,
+        threshold: Union[float, Thresholder] = 0.2,
+        kernel: BaseProposal = None,
+        max_increases=5,
+        **kwargs,
+    ):
         """
         Initializes the ``SMC2`` class.
 
         Args:
             filter_: See base.
             particles: See base.
-            threshold: The threshold of the relative ESS at which to perform a rejuvenation of the particles.
+            threshold: The threshold of the relative ESS at which to perform a rejuvenation of the particles. Note that
+                using anything other than an ``float`` is experimental and is not supported in any literature.
             kernel: Optional parameter. The kernel to use for mutating the particles.
             max_increases: Whenever the acceptance rate of the rejuvenation step falls below 20% we double the amount
                 of state particles (as recommended in the original article). However, to avoid cases where there is such
@@ -31,7 +41,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         super().__init__(filter_, particles)
 
-        self.register_buffer("_threshold", torch.tensor(threshold * particles))
+        self._threshold = threshold if isinstance(threshold, Thresholder) else ConstantThreshold(threshold)
         self._kernel = ParticleMetropolisHastings(proposal=kernel, **kwargs)
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
@@ -51,7 +61,8 @@ class SMC2(SequentialParticleAlgorithm):
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
         state.update(filter_state)
 
-        if state.ess[-1] < self._threshold or (~torch.isfinite(state.w)).any():
+        any_nans = (~torch.isfinite(state.w)).any()
+        if state.ess[-1] < (self._threshold.get_threshold(len(state.parsed_data)) * self._particles) or any_nans:
             state = self.rejuvenate(state)
 
         return state

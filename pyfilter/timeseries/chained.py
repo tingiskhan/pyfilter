@@ -30,7 +30,7 @@ class AffineChainedStochasticProcess(AffineJointStochasticProcess):
 
         for i, (proc_name, p) in enumerate(zip(self._proc_names, parameters or len(self._proc_names) * [None])):
             proc = self._modules[proc_name]
-            m, s = torch.broadcast_tensors(*proc.mean_scale(x[:i + 1], p))
+            m, s = torch.broadcast_tensors(*proc.mean_scale(x[: i + 1], p))
 
             mean += (m.unsqueeze(-1) if proc.n_dim == 0 else m,)
             scale += (s.unsqueeze(-1) if proc.n_dim == 0 else s,)
