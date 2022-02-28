@@ -92,20 +92,7 @@ def check_posterior(model, true_model, **kde_kwargs):
         assert posterior_log_prob > prior_log_prob
 
 
-class TestsSequentialAlgorithm(object):
-    PARTICLES = 2_000
-    SERIES_LENGTH = 1_000
-
-    def sequential_algorithms(self, filter_, **kwargs):
-        yield NESS(filter_, **kwargs)
-        yield SMC2(filter_, **kwargs)
-
-        thresh = threshold.DecayingThreshold(half_life=self.SERIES_LENGTH // 2, start_thresh=0.5, min_thresh=0.2)
-        yield SMC2(filter_, **kwargs, threshold=thresh)
-
-        yield SMC2FW(filter_, **kwargs)
-        yield NESSMC2(filter_, **kwargs)
-
+class TestThresholds(object):
     def test_constant_threshold(self):
         thresh = 0.5
         t = threshold.ConstantThreshold(thresh)
@@ -123,6 +110,43 @@ class TestsSequentialAlgorithm(object):
         for i in range(100):
             if i == half_life:
                 assert t.get_threshold(i) == (start_thresh / 2.0)
+
+    def test_interval_threshold(self):
+        min_thresh = 0.1
+
+        thresholds = {10: 0.5, 50: 0.2, 100: 0.15}
+        t = threshold.IntervalThreshold(thresholds, min_thresh)
+
+        for i in range(105):
+            thresh = t.get_threshold(i)
+
+            if i <= 10:
+                assert thresh == thresholds[10]
+            elif i <= 50:
+                assert thresh == thresholds[50]
+            elif i <= 100:
+                assert thresh == thresholds[100]
+            else:
+                assert thresh == min_thresh
+
+
+class TestsSequentialAlgorithm(object):
+    PARTICLES = 2_000
+    SERIES_LENGTH = 1_000
+
+    def sequential_algorithms(self, filter_, **kwargs):
+        yield NESS(filter_, **kwargs)
+        yield SMC2(filter_, **kwargs)
+
+        decay_thresh = threshold.DecayingThreshold(half_life=self.SERIES_LENGTH // 2, start_thresh=0.5, min_thresh=0.2)
+        yield SMC2(filter_, **kwargs, threshold=decay_thresh)
+
+        thresholds = {100: 0.5, 500: 0.25}
+        interval_thresh = threshold.IntervalThreshold(thresholds, ending_threshold=0.2)
+        yield SMC2(filter_, **kwargs, threshold=interval_thresh)
+
+        yield SMC2FW(filter_, **kwargs)
+        yield NESSMC2(filter_, **kwargs)
 
     def test_algorithms(self, models):
         for prob_model, model in models:
