@@ -1,4 +1,5 @@
 from math import log, exp
+from typing import Dict, Tuple, List
 
 
 class Thresholder(object):
@@ -62,3 +63,24 @@ class DecayingThreshold(Thresholder):
 
     def _mutate_thresh(self, iteration, starting_threshold):
         return exp(-self._alpha * iteration) * starting_threshold
+
+
+class IntervalThreshold(Thresholder):
+    """
+    Defines an interval based threshold.
+    """
+
+    def _mutate_thresh(self, iteration: int, starting_threshold: float) -> float:
+        return next((u[1] for u in self._thresholds if iteration <= u[0]), self._min)
+
+    def __init__(self, thresholds: Dict[int, float], ending_threshold: float):
+        """
+        Initializes the ``IntervalThreshold`` class.
+
+        Args:
+            thresholds: A dictionary specifying the thresholds and the ending numer of samples.
+            ending_threshold: The end threshold.
+        """
+
+        super(IntervalThreshold, self).__init__(ending_threshold, ending_threshold)
+        self._thresholds: List[Tuple[int, float]] = sorted(thresholds.items(), key=lambda u: u[0])
