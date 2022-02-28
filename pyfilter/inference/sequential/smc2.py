@@ -17,7 +17,7 @@ class SMC2(SequentialParticleAlgorithm):
         self,
         filter_,
         particles,
-        threshold: Union[int, Thresholder] = 0.2,
+        threshold: Union[float, Thresholder] = 0.2,
         kernel: BaseProposal = None,
         max_increases=5,
         **kwargs,
