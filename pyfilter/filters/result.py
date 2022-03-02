@@ -1,13 +1,13 @@
 import torch
 from typing import List, TypeVar, Generic
 from .state import FilterState
-from ..container import TensorTuple, make_dequeue, BoolOrInt
-from ..state import StateWithTensorTuples
+from ..container import make_dequeue, BoolOrInt, add_right
+from ..state import BaseState
 
 TState = TypeVar("TState", bound=FilterState)
 
 
-class FilterResult(StateWithTensorTuples, Generic[TState]):
+class FilterResult(BaseState, Generic[TState]):
     """
     Implements an object for storing results when running filters.
     """
@@ -29,8 +29,10 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self.tensor_tuples["filter_means"] = TensorTuple(maxlen=record_moments)
-        self.tensor_tuples["filter_variances"] = TensorTuple(maxlen=record_moments)
+        self.tensor_tuples["filter_means"] = torch.tensor([])
+        self.tensor_tuples["filter_variances"] = torch.tensor([])
+
+        self._record_moments = record_moments
 
         self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
@@ -53,7 +55,7 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_means"].values()
+        return self.tensor_tuples["filter_means"]
 
     @property
     def filter_variance(self) -> torch.Tensor:
@@ -62,7 +64,7 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_variances"].values()
+        return self.tensor_tuples["filter_variances"]
 
     @property
     def states(self) -> List[TState]:
@@ -116,8 +118,9 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         return self
 
     def forward(self, state: TState):
-        self.tensor_tuples["filter_means"].append(state.get_mean())
-        self.tensor_tuples["filter_variances"].append(state.get_variance())
+        with torch.no_grad():
+            add_right(self.tensor_tuples["filter_means"], state.get_mean())
+            add_right(self.tensor_tuples["filter_variances"], state.get_variance())
 
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
@@ -138,9 +141,8 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
 
     @staticmethod
     def _state_dump_hook(self: "FilterResult[TState]", state_dict, prefix, local_metadata):
-        # TODO: Might have use prefix?
         state_dict["latest_state"] = self.latest_state.state_dict(prefix=prefix)
 
     def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         # TODO: Might have use prefix?
-        self.latest_state.load_state_dict(state_dict.pop("latest_state"))
+        self.latest_state.load_state_dict(state_dict.pop(prefix + "latest_state"))

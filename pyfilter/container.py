@@ -3,11 +3,32 @@ from torch.nn import Module
 from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union
 import warnings
 from collections import OrderedDict, abc as container_abcs
-from torch.utils.data import IterableDataset
-from torch.utils.data.dataset import T_co
 from collections import deque
 
 BoolOrInt = Union[int, bool]
+
+
+def add_right(x: torch.Tensor, y: torch.Tensor, max_len: int = None):
+    """
+    Expands ``x`` to include ``y``
+
+    Args:
+        x: The tensor to expand.
+        y: The tensor to append.
+        max_len: The maximum length of the tensor ``x``, acts as deque if specified.
+    """
+
+    with torch.no_grad():
+        y_shape = 1 if y.dim() == 0 else y.shape[0]
+        index = torch.arange(x.shape[0], x.shape[0] + y_shape, device=x.device)
+
+        x.resize_(x.shape[0] + y_shape)
+        x.index_copy_(0, index, y)
+
+        if max_len:
+            x = x[-max_len:]
+
+        return x
 
 
 def make_dequeue(maxlen: BoolOrInt = None) -> deque:
@@ -118,84 +139,3 @@ class BufferDict(Module):
                         "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
                     )
                 self[p[0]] = p[1]
-
-
-class TensorTuple(IterableDataset):
-    """
-    Implements a tuple like tensor storage.
-    """
-
-    def __init__(self, *tensors, maxlen=None):
-        self.tensors = make_dequeue(maxlen=maxlen)
-        self.tensors.extend(tensors)
-
-    def __iter__(self) -> Iterator[T_co]:
-        for t in self.tensors:
-            yield t
-
-    def __getitem__(self, index) -> T_co:
-        return self.tensors[index]
-
-    def __len__(self):
-        return len(self.tensors)
-
-    def __add__(self, other: IterableDataset):
-        return TensorTuple(*self.tensors, *other.tensors, maxlen=max(self.tensors.maxlen, other.tensors.maxlen))
-
-    def values(self) -> torch.Tensor:
-        return torch.stack(tuple(self.tensors), dim=0)
-
-    def append(self, tensor: torch.Tensor):
-        if not isinstance(tensor, torch.Tensor):
-            raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
-
-        self.tensors.append(tensor)
-
-    def apply(self, fn):
-        new_deque = make_dequeue(maxlen=self.tensors.maxlen)
-
-        while self.tensors:
-            new_deque.append(fn(self.tensors.popleft()))
-
-        self.tensors = new_deque
-
-
-class TensorTupleMixin(object):
-    """
-    Mixin for objects that need to store tensor tuples.
-    """
-
-    _TENSOR_TUPLE_PREFIX = "tensor_tuples"
-
-    def __init__(self):
-        super().__init__()
-
-        self._register_state_dict_hook(self.dump_hook)
-        self._register_load_state_dict_pre_hook(self.load_hook)
-
-        self.tensor_tuples: OrderedDict[str, TensorTuple] = OrderedDict()
-
-    def _apply(self, fn):
-        super()._apply(fn)
-
-        for k, v in self.tensor_tuples.items():
-            v.apply(fn)
-
-        return self
-
-    @staticmethod
-    def dump_hook(self, state_dict, prefix, local_metadata):
-        # TODO: Might have use prefix?
-        for k, v in self.tensor_tuples.items():
-            state_dict[f"{self._TENSOR_TUPLE_PREFIX}.{k}"] = v.tensors
-
-    def load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        to_pop = list()
-        # TODO: Might have use prefix?
-        # TODO: Correct to only check startswith?
-        for k, v in filter(lambda x: x[0].startswith(self._TENSOR_TUPLE_PREFIX), state_dict.items()):
-            self.tensor_tuples[k.replace(f"{self._TENSOR_TUPLE_PREFIX}.", "")] = TensorTuple(*v)
-            to_pop.append(k)
-
-        for tp in to_pop:
-            state_dict.pop(tp)
