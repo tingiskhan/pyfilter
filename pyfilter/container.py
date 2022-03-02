@@ -10,7 +10,7 @@ BoolOrInt = Union[int, bool]
 
 def add_right(x: torch.Tensor, y: torch.Tensor, max_len: int = None):
     """
-    Expands ``x`` to include ``y``
+    Expands ``x`` to include ``y``.
 
     Args:
         x: The tensor to expand.
@@ -19,11 +19,8 @@ def add_right(x: torch.Tensor, y: torch.Tensor, max_len: int = None):
     """
 
     with torch.no_grad():
-        y_shape = 1 if y.dim() == 0 else y.shape[0]
-        index = torch.arange(x.shape[0], x.shape[0] + y_shape, device=x.device)
-
-        x.resize_(x.shape[0] + y_shape)
-        x.index_copy_(0, index, y)
+        x.resize_((x.shape[0] + 1, *x.shape[1:]))
+        x[-1] = y
 
         if max_len:
             x = x[-max_len:]

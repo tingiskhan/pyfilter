@@ -29,10 +29,11 @@ class FilterResult(BaseState, Generic[TState]):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self.tensor_tuples["filter_means"] = torch.tensor([])
-        self.tensor_tuples["filter_variances"] = torch.tensor([])
+        shape = (0, *init_state.get_mean().shape)
+        self.tensor_tuples["filter_means"] = torch.empty(shape, device=self._loglikelihood.device)
+        self.tensor_tuples["filter_variances"] = torch.empty(shape, device=self._loglikelihood.device)
 
-        self._record_moments = record_moments
+        self._record_moments = None if record_moments else int(record_moments)
 
         self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
@@ -87,7 +88,7 @@ class FilterResult(BaseState, Generic[TState]):
         self._loglikelihood[indices] = res.loglikelihood[indices]
 
         for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
-            for old_tensor, new_tensor in zip(old_tt.tensors, new_tt.tensors):
+            for old_tensor, new_tensor in zip(old_tt, new_tt):
                 old_tensor[indices] = new_tensor[indices]
 
         for ns, os in zip(res.states, self.states):
@@ -109,8 +110,7 @@ class FilterResult(BaseState, Generic[TState]):
 
         if entire_history:
             for tt in self.tensor_tuples.values():
-                for tensor in tt.tensors:
-                    tensor[:] = tensor[indices]
+                tt[:, :] = tt[:, indices]
 
         for s in self.states:
             s.resample(indices)
@@ -118,9 +118,8 @@ class FilterResult(BaseState, Generic[TState]):
         return self
 
     def forward(self, state: TState):
-        with torch.no_grad():
-            add_right(self.tensor_tuples["filter_means"], state.get_mean())
-            add_right(self.tensor_tuples["filter_variances"], state.get_variance())
+        add_right(self.tensor_tuples["filter_means"], state.get_mean(), self._record_moments)
+        add_right(self.tensor_tuples["filter_variances"], state.get_variance(), self._record_moments)
 
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()

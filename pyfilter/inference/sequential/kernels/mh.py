@@ -35,8 +35,7 @@ class ParticleMetropolisHastings(BaseKernel):
     def update(self, filter_, state: SMC2State):
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
-        y = state.parsed_data.values()
-        dist = self._proposal.build(state, filter_, y)
+        dist = self._proposal.build(state, filter_, state.parsed_data)
 
         filter_.resample(indices)
         state.filter_state.resample(indices)

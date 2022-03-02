@@ -70,7 +70,7 @@ class SMC2State(SequentialAlgorithmState):
         """
 
         super().__init__(weights, filter_state, ess)
-        self.tensor_tuples["parsed_data"] = parsed_data or torch.Tensor
+        self.tensor_tuples["parsed_data"] = parsed_data or torch.tensor([], device=ess.device)
 
     @property
     def parsed_data(self) -> torch.Tensor:
