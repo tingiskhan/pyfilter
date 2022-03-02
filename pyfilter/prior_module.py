@@ -144,7 +144,7 @@ class HasPriorsModule(Module, UpdateParametersMixin, ABC):
 
         for module in filter(lambda u: isinstance(u, HasPriorsModule), self.children()):
             for prior, parameter in module.parameters_and_priors():
-                yield prior, parameter
+                yield parameter, prior
 
     def priors(self) -> Iterable["Prior"]:
         """
