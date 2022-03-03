@@ -52,6 +52,7 @@ class StochasticProcess(Module, ABC):
         self._init_transform = initial_transform
         self.num_steps = num_steps
 
+        # TODO: REmove and use buffer
         self.register_buffer("_exog", torch.tensor([]) if exog is None else exog)
 
     @property

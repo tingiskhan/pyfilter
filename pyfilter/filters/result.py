@@ -29,9 +29,8 @@ class FilterResult(BaseState, Generic[TState]):
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        shape = (0, *init_state.get_mean().shape)
-        self.tensor_tuples["filter_means"] = torch.empty(shape, device=self._loglikelihood.device)
-        self.tensor_tuples["filter_variances"] = torch.empty(shape, device=self._loglikelihood.device)
+        self.tensor_tuples["filter_means"] = tuple()
+        self.tensor_tuples["filter_variances"] = tuple()
 
         self._record_moments = None if record_moments else int(record_moments)
 
@@ -56,7 +55,7 @@ class FilterResult(BaseState, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_means"]
+        return torch.stack(self.tensor_tuples["filter_means"], dim=0)
 
     @property
     def filter_variance(self) -> torch.Tensor:
@@ -65,7 +64,7 @@ class FilterResult(BaseState, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_variances"]
+        return torch.stack(self.tensor_tuples["filter_variances"], dim=0)
 
     @property
     def states(self) -> List[TState]:
@@ -87,8 +86,9 @@ class FilterResult(BaseState, Generic[TState]):
 
         self._loglikelihood[indices] = res.loglikelihood[indices]
 
-        for old_tensor, new_tensor in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
-            old_tensor[:, indices] = new_tensor[:, indices]
+        for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
+            for old, new in zip(old_tt, new_tt):
+                old[:, indices] = new[:, indices]
 
         for ns, os in zip(res.states, self.states):
             os.exchange(ns, indices)
@@ -109,7 +109,8 @@ class FilterResult(BaseState, Generic[TState]):
 
         if entire_history:
             for tt in self.tensor_tuples.values():
-                tt[:] = tt[:, indices]
+                for tens in tt:
+                    tens[:] = tens[:, indices]
 
         for s in self.states:
             s.resample(indices)
@@ -117,8 +118,8 @@ class FilterResult(BaseState, Generic[TState]):
         return self
 
     def forward(self, state: TState):
-        add_right(self.tensor_tuples["filter_means"], state.get_mean(), self._record_moments)
-        add_right(self.tensor_tuples["filter_variances"], state.get_variance(), self._record_moments)
+        self.tensor_tuples["filter_means"] += (state.get_mean(),)
+        self.tensor_tuples["filter_variances"] += (state.get_variance(),)
 
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()

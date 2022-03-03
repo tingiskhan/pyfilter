@@ -2,7 +2,6 @@ import torch
 from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
 from ...utils import normalize, get_ess
-from ...container import add_right
 
 
 class SequentialAlgorithmState(FilterAlgorithmState):
@@ -23,7 +22,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.tensor_tuples["ess"] = ess or get_ess(weights).unsqueeze(0)
+        self.tensor_tuples["ess"] = get_ess(weights) if ess is None else tuple(ess)
 
     @property
     def ess(self) -> torch.Tensor:
@@ -31,7 +30,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         Returns the ESS.
         """
 
-        return self.tensor_tuples["ess"]
+        return torch.stack(self.tensor_tuples["ess"], dim=0)
 
     def update(self, filter_state: FilterState):
         """
@@ -44,7 +43,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         self.w += filter_state.get_loglikelihood()
         self.filter_state.append(filter_state)
 
-        add_right(self.ess, get_ess(self.w))
+        self.tensor_tuples["ess"] += (get_ess(self.w),)
 
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
@@ -70,11 +69,11 @@ class SMC2State(SequentialAlgorithmState):
         """
 
         super().__init__(weights, filter_state, ess)
-        self.tensor_tuples["parsed_data"] = parsed_data or torch.tensor([], device=ess.device)
+        self.tensor_tuples["parsed_data"] = tuple() if parsed_data is None else tuple(parsed_data)
 
     @property
     def parsed_data(self) -> torch.Tensor:
-        return self.tensor_tuples["parsed_data"]
+        return torch.stack(self.tensor_tuples["parsed_data"], dim=0)
 
     def append_data(self, y: torch.Tensor):
-        add_right(self.parsed_data, y)
+        self.tensor_tuples["parsed_data"] += (y,)

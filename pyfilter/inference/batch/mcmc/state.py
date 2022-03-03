@@ -20,11 +20,11 @@ class PMMHResult(FilterAlgorithmState):
         """
 
         super().__init__(filter_result)
-        self.tensor_tuples["samples"] = initial_sample.unsqueeze(0)
+        self.tensor_tuples["samples"] = initial_sample
 
     @property
     def samples(self) -> torch.Tensor:
-        return self.tensor_tuples["samples"]
+        return torch.stack(self.tensor_tuples["samples"], dim=0)
 
     def update_chain(self, sample: torch.Tensor):
         """
@@ -34,7 +34,7 @@ class PMMHResult(FilterAlgorithmState):
             sample: The next accepted sample of the chain.
         """
 
-        add_right(self.samples, sample)
+        self.tensor_tuples["samples"] += (sample,)
 
     def update_parameters_from_chain(self, model: StateSpaceModel, burn_in: int, constrained=True):
         """

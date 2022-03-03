@@ -73,7 +73,8 @@ class NESS(BaseOnlineAlgorithm):
         self._threshold = threshold * particles
 
     def do_update_particles(self, state):
-        return (any(state.ess) and state.ess[-1] < self._threshold) or (~isfinite(state.w)).any()
+        ess = state.tensor_tuples["ess"]
+        return (any(ess) and ess[-1] < self._threshold) or (~isfinite(state.w)).any()
 
 
 class FixedWidthNESS(BaseOnlineAlgorithm):

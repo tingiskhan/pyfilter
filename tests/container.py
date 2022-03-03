@@ -1,5 +1,5 @@
-from pyfilter.container import TensorTuple, BufferDict
-from pyfilter.state import StateWithTensorTuples
+from pyfilter.container import BufferTuples, BufferDict
+from pyfilter.state import BaseState
 import pytest
 import torch
 
@@ -11,32 +11,32 @@ def tensors():
 
 class TestContainers(object):
     def test_tensor_tuple(self, tensors):
-        tt = TensorTuple(*tensors[:-1])
+        buffer_tuples = BufferTuples()
+        buffer_tuples["temp"] = tensors
 
-        assert len(tt.tensors) == 49
+        state_dict = buffer_tuples.state_dict()
 
-        tt.append(tensors[-1])
+        new_tuples = BufferTuples()
+        new_tuples.load_state_dict(state_dict)
 
-        assert (len(tt.tensors) == 50) and (tt.tensors[-1] is tensors[-1])
+        for v1, v2 in zip(buffer_tuples["temp"], new_tuples["temp"]):
+            assert (v1 == v2).all()
 
-    def test_persisting_state_with_tensor(self, tensors):
-        state = StateWithTensorTuples()
+        assert len(buffer_tuples["temp"]) == len(new_tuples["temp"])
 
-        key = "temp"
-        state.tensor_tuples[key] = TensorTuple(*tensors)
+    def test_serialize_state(self, tensors):
+        state = BaseState()
+        state.tensor_tuples["temp"] = tensors
 
         state_dict = state.state_dict()
 
-        final_key = f"tensor_tuples.{key}"
-        assert (
-                (final_key in state_dict) and
-                isinstance(state_dict[final_key], state.tensor_tuples[key].tensors.__class__)
-        )
-
-        new_state = StateWithTensorTuples()
+        new_state = BaseState()
         new_state.load_state_dict(state_dict)
 
-        assert (new_state.tensor_tuples[key].values() == state.tensor_tuples[key].values()).all()
+        for v1, v2 in zip(state.tensor_tuples["temp"], new_state.tensor_tuples["temp"]):
+            assert (v1 == v2).all()
+
+        assert len(state.tensor_tuples["temp"]) == len(new_state.tensor_tuples["temp"])
 
     def test_bufferdict(self):
         buffer_dict = BufferDict(

@@ -1,5 +1,5 @@
 from torch.nn import Module
-from .container import BufferDict
+from .container import BufferTuples
 
 
 class BaseState(Module):
@@ -13,4 +13,4 @@ class BaseState(Module):
         """
 
         super(BaseState, self).__init__()
-        self.tensor_tuples = BufferDict()
+        self.tensor_tuples = BufferTuples()

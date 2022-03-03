@@ -1,6 +1,6 @@
 import torch
 from torch.nn import Module
-from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union
+from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union, Dict
 import warnings
 from collections import OrderedDict, abc as container_abcs
 from collections import deque
@@ -19,7 +19,7 @@ def add_right(x: torch.Tensor, y: torch.Tensor, max_len: int = None):
     """
 
     with torch.no_grad():
-        x.resize_((x.shape[0] + 1, *x.shape[1:]))
+        x.resize_((x.shape[0] + 1, *y.shape))
         x[-1] = y
 
         if max_len:
@@ -136,3 +136,66 @@ class BufferDict(Module):
                         "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
                     )
                 self[p[0]] = p[1]
+
+
+class BufferTuples(BufferDict):
+    """
+    Implements a container for storing tuples that serialized/deserialize as tensors.
+    """
+
+    _PREFIX = "tensor_tuple__"
+
+    def __init__(self):
+        """
+        Initializes the ``BufferTuples`` class.
+        """
+
+        super().__init__()
+        self._tuples: Dict[str, Tuple[torch.Tensor, ...]] = OrderedDict([])
+
+        self._register_state_dict_hook(self._dump_hook)
+        self._register_load_state_dict_pre_hook(self._load_hook)
+
+    def __getitem__(self, key: str) -> Tuple[torch.Tensor, ...]:
+        return self._tuples[key]
+
+    def __setitem__(self, key: str, parameter: "Tensor") -> None:
+        if isinstance(parameter, torch.Tensor):
+            self._tuples[key] = (parameter,)
+        elif isinstance(parameter, Iterable):
+            self._tuples[key] = tuple(parameter)
+        else:
+            raise NotImplementedError(f"Currently does not support '{parameter.__class__.__name__}'")
+
+    def __delitem__(self, key: str) -> None:
+        del self._tuples[key]
+
+    def __setattr__(self, key: Any, value: Any) -> None:
+        if isinstance(value, torch.nn.Parameter):
+            warnings.warn("Setting attributes on ParameterDict is not supported.")
+        super(BufferDict, self).__setattr__(key, value)
+
+    def __len__(self) -> int:
+        return len(self._tuples)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._tuples.keys())
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._tuples
+
+    @classmethod
+    def _dump_hook(cls, self, state_dict, prefix, local_metadata):
+        for key, values in self._tuples.items():
+            state_dict[prefix + cls._PREFIX + key] = torch.stack(values, dim=0)
+
+        return
+
+    def _load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        p = prefix + self._PREFIX
+        keys = [u for u in state_dict.keys() if u.startswith(p)]
+        for k in keys:
+            v = state_dict.pop(k)
+            self.__setitem__(k.replace(p, ""), tuple(v))
+
+        return
