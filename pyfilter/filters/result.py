@@ -139,7 +139,7 @@ class FilterResult(BaseState, Generic[TState]):
 
     @staticmethod
     def _state_dump_hook(self: "FilterResult[TState]", state_dict, prefix, local_metadata):
-        state_dict["latest_state"] = self.latest_state.state_dict(prefix=prefix)
+        state_dict[prefix + "latest_state"] = self.latest_state.state_dict()
 
     def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         # TODO: Might have use prefix?
