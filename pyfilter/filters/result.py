@@ -87,9 +87,8 @@ class FilterResult(BaseState, Generic[TState]):
 
         self._loglikelihood[indices] = res.loglikelihood[indices]
 
-        for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
-            for old_tensor, new_tensor in zip(old_tt, new_tt):
-                old_tensor[indices] = new_tensor[indices]
+        for old_tensor, new_tensor in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
+            old_tensor[:, indices] = new_tensor[:, indices]
 
         for ns, os in zip(res.states, self.states):
             os.exchange(ns, indices)
@@ -110,7 +109,7 @@ class FilterResult(BaseState, Generic[TState]):
 
         if entire_history:
             for tt in self.tensor_tuples.values():
-                tt[:, :] = tt[:, indices]
+                tt[:] = tt[:, indices]
 
         for s in self.states:
             s.resample(indices)

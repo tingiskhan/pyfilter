@@ -48,7 +48,7 @@ class ParticleMetropolisHastings(BaseKernel):
         previous_distance = 0.0
 
         for _ in range(self._n_steps):
-            to_accept = run_pmmh(filter_, state, self._proposal, dist, y, shape, mutate_kernel=False)
+            to_accept = run_pmmh(filter_, state, self._proposal, dist, state.parsed_data, shape, mutate_kernel=False)
             accepted |= to_accept
 
             if not self._is_adaptive:
