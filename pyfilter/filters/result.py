@@ -88,7 +88,7 @@ class FilterResult(BaseState, Generic[TState]):
 
         for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
             for old, new in zip(old_tt, new_tt):
-                old[:, indices] = new[:, indices]
+                old[indices] = new[indices]
 
         for ns, os in zip(res.states, self.states):
             os.exchange(ns, indices)
@@ -110,7 +110,7 @@ class FilterResult(BaseState, Generic[TState]):
         if entire_history:
             for tt in self.tensor_tuples.values():
                 for tens in tt:
-                    tens[:] = tens[:, indices]
+                    tens[:] = tens[indices]
 
         for s in self.states:
             s.resample(indices)

@@ -184,6 +184,15 @@ class BufferTuples(BufferDict):
     def __contains__(self, key: str) -> bool:
         return key in self._tuples
 
+    def values(self) -> Iterable[Tuple["Tensor", ...]]:
+        return self._tuples.values()
+
+    def keys(self):
+        return self._tuples.keys()
+
+    def items(self) -> Iterable[Tuple[str, Tuple["Tensor", ...]]]:
+        return self._tuples.items()
+
     @classmethod
     def _dump_hook(cls, self, state_dict, prefix, local_metadata):
         for key, values in self._tuples.items():
