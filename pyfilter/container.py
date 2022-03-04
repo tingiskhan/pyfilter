@@ -138,7 +138,7 @@ class BufferDict(Module):
                 self[p[0]] = p[1]
 
 
-class BufferTuples(BufferDict):
+class BufferIterable(BufferDict):
     """
     Implements a container for storing tuples that serialized/deserialize as tensors.
     """
@@ -147,28 +147,31 @@ class BufferTuples(BufferDict):
 
     def __init__(self):
         """
-        Initializes the ``BufferTuples`` class.
+        Initializes the ``BufferIterable`` class.
         """
 
         super().__init__()
-        self._tuples: Dict[str, Tuple[torch.Tensor, ...]] = OrderedDict([])
+        self._iterables: Dict[str, Iterable[torch.Tensor]] = OrderedDict([])
 
         self._register_state_dict_hook(self._dump_hook)
         self._register_load_state_dict_pre_hook(self._load_hook)
 
-    def __getitem__(self, key: str) -> Tuple[torch.Tensor, ...]:
-        return self._tuples[key]
+    def get_as_tensor(self, key: str) -> torch.Tensor:
+        return torch.stack(tuple(self.__getitem__(key)), dim=0)
+
+    def __getitem__(self, key: str) -> Iterable[torch.Tensor]:
+        return self._iterables[key]
 
     def __setitem__(self, key: str, parameter: "Tensor") -> None:
         if isinstance(parameter, torch.Tensor):
-            self._tuples[key] = (parameter,)
+            self._iterables[key] = (parameter,)
         elif isinstance(parameter, Iterable):
-            self._tuples[key] = tuple(parameter)
+            self._iterables[key] = parameter
         else:
             raise NotImplementedError(f"Currently does not support '{parameter.__class__.__name__}'")
 
     def __delitem__(self, key: str) -> None:
-        del self._tuples[key]
+        del self._iterables[key]
 
     def __setattr__(self, key: Any, value: Any) -> None:
         if isinstance(value, torch.nn.Parameter):
@@ -176,27 +179,27 @@ class BufferTuples(BufferDict):
         super(BufferDict, self).__setattr__(key, value)
 
     def __len__(self) -> int:
-        return len(self._tuples)
+        return len(self._iterables)
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._tuples.keys())
+        return iter(self._iterables.keys())
 
     def __contains__(self, key: str) -> bool:
-        return key in self._tuples
+        return key in self._iterables
 
-    def values(self) -> Iterable[Tuple["Tensor", ...]]:
-        return self._tuples.values()
+    def values(self) -> Iterable[Iterable["Tensor"]]:
+        return self._iterables.values()
 
     def keys(self):
-        return self._tuples.keys()
+        return self._iterables.keys()
 
-    def items(self) -> Iterable[Tuple[str, Tuple["Tensor", ...]]]:
-        return self._tuples.items()
+    def items(self) -> Iterable[Tuple[str, Iterable["Tensor"]]]:
+        return self._iterables.items()
 
     @classmethod
     def _dump_hook(cls, self, state_dict, prefix, local_metadata):
-        for key, values in self._tuples.items():
-            state_dict[prefix + cls._PREFIX + key] = torch.stack(values, dim=0)
+        for key, values in self._iterables.items():
+            state_dict[prefix + cls._PREFIX + key] = self.get_as_tensor(key)
 
         return
 
@@ -205,6 +208,18 @@ class BufferTuples(BufferDict):
         keys = [u for u in state_dict.keys() if u.startswith(p)]
         for k in keys:
             v = state_dict.pop(k)
-            self.__setitem__(k.replace(p, ""), tuple(v))
+
+            key = k.replace(p, "")
+            item_to_add_to = self.__getitem__(key) if key in self else tuple()
+
+            if isinstance(item_to_add_to, tuple):
+                item_to_add_to += tuple(v)
+            elif isinstance(item_to_add_to, list):
+                item_to_add_to.extend(list(v))
+            elif isinstance(item_to_add_to, deque):
+                for item in v:
+                    item_to_add_to.append(item)
+
+            self.__setitem__(key, item_to_add_to)
 
         return

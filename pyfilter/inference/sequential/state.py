@@ -30,7 +30,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         Returns the ESS.
         """
 
-        return torch.stack(self.tensor_tuples["ess"], dim=0)
+        return self.tensor_tuples.get_as_tensor("ess")
 
     def update(self, filter_state: FilterState):
         """
@@ -43,7 +43,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         self.w += filter_state.get_loglikelihood()
         self.filter_state.append(filter_state)
 
-        self.tensor_tuples["ess"] += (get_ess(self.w),)
+        self.tensor_tuples["ess"].append(get_ess(self.w))
 
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
@@ -73,7 +73,7 @@ class SMC2State(SequentialAlgorithmState):
 
     @property
     def parsed_data(self) -> torch.Tensor:
-        return torch.stack(self.tensor_tuples["parsed_data"], dim=0)
+        return self.tensor_tuples.get_as_tensor("parsed_data")
 
     def append_data(self, y: torch.Tensor):
-        self.tensor_tuples["parsed_data"] += (y,)
+        self.tensor_tuples["parsed_data"].append(y)

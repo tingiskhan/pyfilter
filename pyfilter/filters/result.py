@@ -25,14 +25,12 @@ class FilterResult(BaseState, Generic[TState]):
             record_moments: Same as ``record_states`` but for the filter means and variances.
         """
 
-        super().__init__()
+        super().__init__(maxlen=record_moments)
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self.tensor_tuples["filter_means"] = tuple()
-        self.tensor_tuples["filter_variances"] = tuple()
-
-        self._record_moments = None if record_moments else int(record_moments)
+        self.tensor_tuples["filter_means"] = make_dequeue(maxlen=record_moments)
+        self.tensor_tuples["filter_variances"] = make_dequeue(maxlen=record_moments)
 
         self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
@@ -55,7 +53,7 @@ class FilterResult(BaseState, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return torch.stack(self.tensor_tuples["filter_means"], dim=0)
+        return self.tensor_tuples.get_as_tensor("filter_means")
 
     @property
     def filter_variance(self) -> torch.Tensor:
@@ -64,7 +62,7 @@ class FilterResult(BaseState, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return torch.stack(self.tensor_tuples["filter_variances"], dim=0)
+        return self.tensor_tuples.get_as_tensor("filter_variances")
 
     @property
     def states(self) -> List[TState]:
@@ -118,8 +116,8 @@ class FilterResult(BaseState, Generic[TState]):
         return self
 
     def forward(self, state: TState):
-        self.tensor_tuples["filter_means"] += (state.get_mean(),)
-        self.tensor_tuples["filter_variances"] += (state.get_variance(),)
+        self.tensor_tuples["filter_means"].append(state.get_mean())
+        self.tensor_tuples["filter_variances"].append(state.get_variance())
 
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()

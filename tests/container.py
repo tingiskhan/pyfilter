@@ -1,4 +1,4 @@
-from pyfilter.container import BufferTuples, BufferDict
+from pyfilter.container import BufferIterable, BufferDict
 from pyfilter.state import BaseState
 import pytest
 import torch
@@ -11,12 +11,13 @@ def tensors():
 
 class TestContainers(object):
     def test_tensor_tuple(self, tensors):
-        buffer_tuples = BufferTuples()
+        buffer_tuples = BufferIterable()
         buffer_tuples["temp"] = tensors
 
+        assert isinstance(buffer_tuples["temp"], list)
         state_dict = buffer_tuples.state_dict()
 
-        new_tuples = BufferTuples()
+        new_tuples = BufferIterable()
         new_tuples.load_state_dict(state_dict)
 
         for v1, v2 in zip(buffer_tuples["temp"], new_tuples["temp"]):
