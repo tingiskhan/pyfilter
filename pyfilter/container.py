@@ -196,6 +196,26 @@ class BufferIterable(BufferDict):
     def items(self) -> Iterable[Tuple[str, Iterable["Tensor"]]]:
         return self._iterables.items()
 
+    def _apply(self, fn):
+        super()._apply(fn)
+
+        for key, item in self.items():
+            as_tensor = self.get_as_tensor(key)
+            new_tensor = fn(as_tensor)
+
+            if isinstance(item, list):
+                iterable = list(new_tensor)
+            elif isinstance(item, tuple):
+                iterable = tuple(new_tensor)
+            elif isinstance(item, deque):
+                iterable = deque(new_tensor, maxlen=item.maxlen)
+            else:
+                raise NotImplementedError(f"Does not support '{item.__class__.__name__}'")
+
+            self.__setitem__(key, iterable)
+
+        return self
+
     @classmethod
     def _dump_hook(cls, self, state_dict, prefix, local_metadata):
         for key, values in self._iterables.items():

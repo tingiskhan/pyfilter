@@ -39,6 +39,18 @@ class TestContainers(object):
 
         assert len(state.tensor_tuples["temp"]) == len(new_state.tensor_tuples["temp"])
 
+    def test_apply(self, tensors):
+        buffer_tuples = BufferIterable()
+        buffer_tuples["temp"] = tensors
+
+        if not torch.cuda.is_available():
+            return
+
+        buffer_tuples = buffer_tuples.cuda()
+
+        for k in buffer_tuples.keys():
+            assert buffer_tuples.get_as_tensor(k).device.type == "cuda"
+
     def test_bufferdict(self):
         buffer_dict = BufferDict(
             {"parameter_0": torch.empty((200,)).normal_()}
