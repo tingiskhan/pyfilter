@@ -180,6 +180,7 @@ class TestsSequentialAlgorithm(object):
             for f in construct_filters(prob_model, particles=250):
                 for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
                     algorithm.register_forward_hook(colls.MeanCollector())
+                    algorithm.register_forward_hook(colls.ParameterPosterior())
 
                     is_particle_filter = isinstance(f, ParticleFilter)
                     if is_particle_filter:

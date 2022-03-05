@@ -36,6 +36,10 @@ class Collector(Generic[T]):
         self._name = name
         self._f = f
 
+    @property
+    def name(self) -> str:
+        return self._name
+
     def __call__(self, module: torch.nn.Module, inp: Tuple[torch.Tensor, T], out: T):
         if self._name not in out.tensor_tuples:
             out.tensor_tuples[self._name] = tuple()
@@ -87,3 +91,26 @@ class Standardizer(Collector[SequentialAlgorithmState]):
 
     def __init__(self):
         super().__init__(name="standardized", f=self._fun)
+
+
+class ParameterPosterior(Collector[SequentialAlgorithmState]):
+    """
+    Collects the first moment of the parameter posterior.
+    """
+
+    def _mean_var(self, algorithm, y, _: SequentialAlgorithmState, new_state: SequentialAlgorithmState):
+        parameters = algorithm.filter.ssm.concat_parameters(constrained=self._constrained)
+
+        return new_state.normalized_weights() @ parameters
+
+    def __init__(self, constrained=True):
+        """
+        Initializes the ``ParameterPosterior`` collector.
+
+        Args:
+            constrained: Whether to record constrained or non-constrained.
+        """
+        
+        super(ParameterPosterior, self).__init__(name="parameter_means", f=self._mean_var)
+        self._constrained = constrained
+        
