@@ -8,6 +8,7 @@ from scipy.stats import gaussian_kde
 from pyfilter.inference.batch import variational, mcmc
 import torch
 from pyfilter.filters import ParticleFilter
+from pyfilter import collectors as colls
 
 
 @pytest.fixture
@@ -152,7 +153,7 @@ class TestsSequentialAlgorithm(object):
         for prob_model, model in models:
             x, y = model.sample_path(self.SERIES_LENGTH)
 
-            for f in construct_filters(prob_model):
+            for f in construct_filters(prob_model, particles=250):
                 for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
                     result = algorithm.fit(y)
 
@@ -171,6 +172,24 @@ class TestsSequentialAlgorithm(object):
                 result = algorithm.fit(y)
 
                 check_posterior(algorithm.filter.ssm, model, weights=result.normalized_weights().numpy())
+
+    def test_collectors(self, models):
+        for prob_model, model in models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            for f in construct_filters(prob_model, particles=250):
+                for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
+                    algorithm.register_forward_hook(colls.MeanCollector())
+
+                    is_particle_filter = isinstance(f, ParticleFilter)
+                    if is_particle_filter:
+                        algorithm.register_forward_hook(colls.Standardizer())
+
+                    result = algorithm.fit(y)
+
+                    assert "filter_means" in result.tensor_tuples
+                    if is_particle_filter:
+                        assert "standardized" in result.tensor_tuples
 
 
 class TestBatchAlgorithms(object):
