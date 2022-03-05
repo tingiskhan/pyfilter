@@ -62,19 +62,19 @@ def linear_models():
     )
 
 
-def construct_filters(model, **kwargs):
+def construct_filters(model, particles=500, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     if not isinstance(model.hidden, ts.models.LocalLinearTrend):
         yield kalman.UKF(model, **kwargs)
 
     for pt in particle_types:
-        yield pt(model, 5000, proposal=part.proposals.Bootstrap(), **kwargs)
-        yield pt(model, 500, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
-        yield pt(model, 500, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
+        yield pt(model, particles, proposal=part.proposals.Bootstrap(), **kwargs)
+        yield pt(model, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
+        yield pt(model, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
         if isinstance(model, ts.LinearGaussianObservations):
-            yield pt(model, 500, proposal=part.proposals.LinearGaussianObservations(), **kwargs)
+            yield pt(model, particles, proposal=part.proposals.LinearGaussianObservations(), **kwargs)
 
 
 @pytest.fixture
