@@ -15,16 +15,18 @@ T = TypeVar("T", bound=BaseState)
 __all__ = [
     "Collector",
     "MeanCollector",
-    "Standardizer"
+    "Standardizer",
+    "ParameterPosterior"
 ]
 
 
 class Collector(Generic[T]):
     """
-    Defines a collector that calculates some weighted calculations and saves to ``.tensor_tuples``.
+    Defines a collector object that is registered as a hook on a ``torch.nn.Module`` and calculates some quantity
+    that is saved to the state object's ``.tensor_tuples`` attribute.
     """
 
-    def __init__(self, name: str, f: Callable[[torch.nn.Module, torch.Tensor, T, T], None]):
+    def __init__(self, name: str, f: Callable[[torch.nn.Module, torch.Tensor, T], None]):
         """
         Initializes the ``Collector`` class.
 
@@ -44,7 +46,7 @@ class Collector(Generic[T]):
         if self._name not in out.tensor_tuples:
             out.tensor_tuples[self._name] = tuple()
 
-        out.tensor_tuples[self._name] += (self._f(module, *inp, out),)
+        out.tensor_tuples[self._name] += (self._f(module, inp[0], out),)
 
 
 class MeanCollector(Collector[SequentialAlgorithmState]):
@@ -53,7 +55,7 @@ class MeanCollector(Collector[SequentialAlgorithmState]):
     """
 
     @staticmethod
-    def _mean(algorithm, y, _: SequentialAlgorithmState, new_state: SequentialAlgorithmState):
+    def _mean(algorithm, y, new_state: SequentialAlgorithmState):
         latest_means = new_state.filter_state.latest_state.get_mean()
 
         return new_state.normalized_weights() @ latest_means
@@ -80,7 +82,7 @@ class Standardizer(Collector[SequentialAlgorithmState]):
 
         return y_std
 
-    def _fun(self, algorithm, y, _: SequentialAlgorithmState, new_state: SequentialAlgorithmState):
+    def _fun(self, algorithm, y, new_state: SequentialAlgorithmState):
         filter_state = new_state.filter_state.latest_state
 
         residuals = self._standardize(algorithm.filter.ssm, y, filter_state.get_timeseries_state())
@@ -98,7 +100,7 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
     Collects the first moment of the parameter posterior.
     """
 
-    def _mean_var(self, algorithm, y, _: SequentialAlgorithmState, new_state: SequentialAlgorithmState):
+    def _mean_var(self, algorithm, y, new_state: SequentialAlgorithmState):
         parameters = algorithm.filter.ssm.concat_parameters(constrained=self._constrained)
 
         return new_state.normalized_weights() @ parameters
