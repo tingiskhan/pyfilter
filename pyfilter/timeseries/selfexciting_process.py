@@ -34,13 +34,13 @@ class LambdaProcess(StochasticDifferentialEquation):
 
         dN_t = Poisson(rate=lambda_s * self.dt, validate_args=False).sample()
         de = self.de.build_distribution().expand(lambda_s.shape)
-        q = de.sample()
+        dL_t = de.sample() * dN_t
 
         deterministic = self.det_func(lambda_s, alpha_, xi_, eta_) * self.dt
 
-        diffusion = self.stoch_func(lambda_s, alpha_, xi_, eta_) * q.abs() * dN_t
+        diffusion = self.stoch_func(lambda_s, alpha_, xi_, eta_) * dL_t.abs() 
         lambda_t = (lambda_s + deterministic + diffusion).clip(0.0, float("inf"))
 
         lambda_t[~torch.isfinite(lambda_t)] = lambda_s.max()  # 0.0
 
-        return JointDistribution(Delta(lambda_t), Delta(dN_t), Delta(lambda_s), Delta(q))
+        return JointDistribution(Delta(lambda_t), Delta(dN_t), Delta(lambda_s), Delta(dL_t))
