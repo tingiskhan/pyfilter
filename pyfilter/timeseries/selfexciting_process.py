@@ -1,4 +1,4 @@
-from torch.distributions import Poisson, constraints
+from torch.distributions import Poisson, constraints, Bernoulli
 from torch.distributions import Distribution
 from torch.distributions.utils import broadcast_all
 
@@ -32,7 +32,7 @@ class LambdaProcess(StochasticDifferentialEquation):
         alpha_, xi_, eta_ = self.functional_parameters()
         lambda_s = x.values[..., 0]
 
-        dN_t = Poisson(rate=lambda_s * self.dt, validate_args=False).sample()
+        dN_t = Bernoulli(probs=(lambda_s * self.dt).clip(0.0,1.0), validate_args=False).sample()
         de = self.de.build_distribution().expand(lambda_s.shape)
         dL_t = de.sample() * dN_t
 
