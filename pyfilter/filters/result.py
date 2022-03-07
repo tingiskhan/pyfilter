@@ -1,7 +1,7 @@
 import torch
 from typing import List, TypeVar, Generic
 from .state import FilterState
-from ..container import make_dequeue, BoolOrInt, add_right
+from ..container import make_dequeue, BoolOrInt
 from ..state import BaseState
 
 TState = TypeVar("TState", bound=FilterState)
