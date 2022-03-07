@@ -119,6 +119,13 @@ class FilterResult(BaseState, Generic[TState]):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
 
+        # TODO: Assumes tuples...
+        for k, v in state.tensor_tuples.items():
+            if k not in self.tensor_tuples:
+                self.tensor_tuples[k] = tuple()
+
+            self.tensor_tuples[k] += v
+
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
 
