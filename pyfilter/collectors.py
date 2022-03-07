@@ -12,12 +12,7 @@ from .timeseries import StateSpaceModel
 T = TypeVar("T", bound=BaseState)
 
 
-__all__ = [
-    "Collector",
-    "MeanCollector",
-    "Standardizer",
-    "ParameterPosterior"
-]
+__all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 
 class Collector(Generic[T]):
@@ -112,7 +107,6 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
         Args:
             constrained: Whether to record constrained or non-constrained.
         """
-        
+
         super(ParameterPosterior, self).__init__(name="parameter_means", f=self._mean_var)
         self._constrained = constrained
-        
