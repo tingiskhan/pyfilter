@@ -39,6 +39,15 @@ class TestContainers(object):
 
         assert len(state.tensor_tuples["temp"]) == len(new_state.tensor_tuples["temp"])
 
+    def test_serialize_empty(self):
+        state = BaseState()
+        state.tensor_tuples["temp"] = tuple()
+
+        state_dict = state.state_dict()
+
+        new_state = BaseState()
+        new_state.load_state_dict(state_dict)
+
     def test_apply(self, tensors):
         buffer_tuples = BufferIterable()
         buffer_tuples["temp"] = tensors
