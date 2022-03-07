@@ -33,8 +33,8 @@ class BaseFilter(Module, ABC):
 
         Args:
             model: The state space model to use for filtering.
-            record_states: See ``pyfilter.timeseries.result.record_states``.
-            record_moments: See ``pyfilter.timeseries.result.record_moments``
+            record_states: See ``pyfilter.filters.FilterResult.record_states``.
+            record_moments: See ``pyfilter.filters.FilterResult.record_moments``.
             nan_strategy: How to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
