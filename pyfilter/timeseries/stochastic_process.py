@@ -10,7 +10,7 @@ from ..distributions import DistributionWrapper
 from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
 from ..prior_module import HasPriorsModule
-from ..container import add_right
+from ..container import BufferIterable
 
 
 T = TypeVar("T")
@@ -52,8 +52,7 @@ class StochasticProcess(Module, ABC):
         self._init_transform = initial_transform
         self.num_steps = num_steps
 
-        # TODO: REmove and use buffer
-        self.register_buffer("_exog", torch.tensor([]) if exog is None else exog)
+        self._tensor_tuples = BufferIterable(exog=tuple(exog) if isinstance(exog, torch.Tensor) else (exog or ()))
 
     @property
     def exog(self) -> torch.Tensor:
@@ -61,11 +60,11 @@ class StochasticProcess(Module, ABC):
         The exogenous variables.
         """
 
-        return self._exog
+        return self._tensor_tuples.get_as_tensor("exog")
 
     @exog.setter
     def exog(self, x: torch.Tensor):
-        self._exog = x
+        self._tensor_tuples["exog"] = tuple(x)
 
     @property
     @lru_cache(maxsize=None)
@@ -131,7 +130,7 @@ class StochasticProcess(Module, ABC):
         raise NotImplementedError()
 
     def _add_exog_to_state(self, x: NewState):
-        if self.exog.numel() > 0:
+        if any(self._tensor_tuples["exog"]):
             x.add_exog(self.exog[x.time_index.int()])
 
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
@@ -221,7 +220,7 @@ class StochasticProcess(Module, ABC):
             exog: The new exogenous variable to add.
         """
 
-        add_right(self.exog, exog)
+        self._tensor_tuples["exog"] += (exog,)
 
 
 class StructuralStochasticProcess(StochasticProcess, HasPriorsModule, ABC):
