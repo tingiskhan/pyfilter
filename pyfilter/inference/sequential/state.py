@@ -22,7 +22,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.tensor_tuples["ess"] = get_ess(weights) if ess is None else tuple(ess)
+        self.tensor_tuples["ess"] = (get_ess(weights),) if ess is None else tuple(ess)
 
     @property
     def ess(self) -> torch.Tensor:
