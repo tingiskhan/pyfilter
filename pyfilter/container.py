@@ -8,26 +8,6 @@ from collections import deque
 BoolOrInt = Union[int, bool]
 
 
-def add_right(x: torch.Tensor, y: torch.Tensor, max_len: int = None):
-    """
-    Expands ``x`` to include ``y``.
-
-    Args:
-        x: The tensor to expand.
-        y: The tensor to append.
-        max_len: The maximum length of the tensor ``x``, acts as deque if specified.
-    """
-
-    with torch.no_grad():
-        x.resize_((x.shape[0] + 1, *y.shape))
-        x[-1] = y
-
-        if max_len:
-            x = x[-max_len:]
-
-        return x
-
-
 def make_dequeue(maxlen: BoolOrInt = None) -> deque:
     """
     Creates a deque given ``maxlen``.
@@ -63,7 +43,7 @@ class BufferDict(Module):
 
     def __setattr__(self, key: Any, value: Any) -> None:
         if isinstance(value, torch.nn.Parameter):
-            warnings.warn("Setting attributes on ParameterDict is not supported.")
+            warnings.warn(f"Setting attributes on '{self.__class__.__name__}' is not supported.")
         super(BufferDict, self).__setattr__(key, value)
 
     def __len__(self) -> int:
@@ -113,7 +93,7 @@ class BufferDict(Module):
         """
         if not isinstance(parameters, container_abcs.Iterable):
             raise TypeError(
-                "ParametersDict.update should be called with an "
+                f"'{self.__class__.__name__}'.update should be called with an "
                 "iterable of key/value pairs, but got " + type(parameters).__name__
             )
 
@@ -127,12 +107,12 @@ class BufferDict(Module):
             for j, p in enumerate(parameters):
                 if not isinstance(p, container_abcs.Iterable):
                     raise TypeError(
-                        "ParameterDict update sequence element "
+                        f"'{self.__class__.__name__}' update sequence element "
                         "#" + str(j) + " should be Iterable; is" + type(p).__name__
                     )
                 if not len(p) == 2:
                     raise ValueError(
-                        "ParameterDict update sequence element "
+                        f"'{self.__class__.__name__}' update sequence element "
                         "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
                     )
                 self[p[0]] = p[1]
@@ -160,25 +140,30 @@ class BufferIterable(BufferDict):
             self.__setitem__(k, v)
 
     def get_as_tensor(self, key: str) -> torch.Tensor:
-        return torch.stack(tuple(self.__getitem__(key)), dim=0)
+        to_stack = self.__getitem__(key)
+
+        if any(to_stack):
+            return torch.stack(tuple(to_stack), dim=0)
+
+        return torch.empty([])
 
     def __getitem__(self, key: str) -> Iterable[torch.Tensor]:
         return self._iterables[key]
 
-    def __setitem__(self, key: str, parameter: "Tensor") -> None:
+    def __setitem__(self, key: str, parameter: Iterable["Tensor"]) -> None:
         if isinstance(parameter, torch.Tensor):
-            self._iterables[key] = (parameter,)
-        elif isinstance(parameter, Iterable):
-            self._iterables[key] = parameter
-        else:
             raise NotImplementedError(f"Currently does not support '{parameter.__class__.__name__}'")
+        elif not isinstance(parameter, Iterable):
+            raise ValueError(f"Must be of type {Iterable.__name__}!")
+
+        self._iterables[key] = parameter
 
     def __delitem__(self, key: str) -> None:
         del self._iterables[key]
 
     def __setattr__(self, key: Any, value: Any) -> None:
         if isinstance(value, torch.nn.Parameter):
-            warnings.warn("Setting attributes on ParameterDict is not supported.")
+            warnings.warn(f"Setting attributes on '{self.__class__.__name__}' is not supported.")
         super(BufferDict, self).__setattr__(key, value)
 
     def __len__(self) -> int:
@@ -203,6 +188,9 @@ class BufferIterable(BufferDict):
         super()._apply(fn)
 
         for key, item in self.items():
+            if not any(item):
+                continue
+
             as_tensor = self.get_as_tensor(key)
             new_tensor = fn(as_tensor)
 
