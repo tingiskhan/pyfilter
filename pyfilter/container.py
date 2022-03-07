@@ -145,7 +145,7 @@ class BufferIterable(BufferDict):
 
     _PREFIX = "tensor_tuple__"
 
-    def __init__(self):
+    def __init__(self, **kwargs: Iterable[torch.Tensor]):
         """
         Initializes the ``BufferIterable`` class.
         """
@@ -155,6 +155,9 @@ class BufferIterable(BufferDict):
 
         self._register_state_dict_hook(self._dump_hook)
         self._register_load_state_dict_pre_hook(self._load_hook)
+
+        for k, v in kwargs.items():
+            self.__setitem__(k, v)
 
     def get_as_tensor(self, key: str) -> torch.Tensor:
         return torch.stack(tuple(self.__getitem__(key)), dim=0)
