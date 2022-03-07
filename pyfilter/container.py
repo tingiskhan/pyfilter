@@ -223,6 +223,10 @@ class BufferIterable(BufferDict):
             key = k.replace(p, "")
             item_to_add_to = self.__getitem__(key) if key in self else tuple()
 
+            if v.numel() == 0:
+                self.__setitem__(key, item_to_add_to)
+                continue
+
             if isinstance(item_to_add_to, tuple):
                 item_to_add_to += tuple(v)
             elif isinstance(item_to_add_to, list):
