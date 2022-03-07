@@ -142,7 +142,7 @@ class BufferIterable(BufferDict):
     def get_as_tensor(self, key: str) -> torch.Tensor:
         to_stack = self.__getitem__(key)
 
-        if any(to_stack):
+        if to_stack:
             return torch.stack(tuple(to_stack), dim=0)
 
         return torch.empty([])
@@ -188,7 +188,7 @@ class BufferIterable(BufferDict):
         super()._apply(fn)
 
         for key, item in self.items():
-            if not any(item):
+            if not item:
                 continue
 
             as_tensor = self.get_as_tensor(key)
