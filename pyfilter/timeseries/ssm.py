@@ -10,7 +10,7 @@ from ..prior_module import UpdateParametersMixin, HasPriorsModule
 def _check_has_priors_wrapper(f):
     @wraps(f)
     def _wrapper(obj: "StateSpaceModel", *args, **kwargs):
-        if len(obj._prior_mods) == 0:
+        if not any(obj._prior_mods):
             raise Exception(f"No module is subclassed by {HasPriorsModule.__name__}")
 
         return f(obj, *args, **kwargs)
