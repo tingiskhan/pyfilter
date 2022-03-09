@@ -35,8 +35,7 @@ class ParticleMetropolisHastings(BaseKernel):
     def update(self, filter_, state: SMC2State):
         indices = self._resampler(state.normalized_weights(), normalized=True)
 
-        y = state.parsed_data.values()
-        dist = self._proposal.build(state, filter_, y)
+        dist = self._proposal.build(state, filter_, state.parsed_data)
 
         filter_.resample(indices)
         state.filter_state.resample(indices)
@@ -49,7 +48,7 @@ class ParticleMetropolisHastings(BaseKernel):
         previous_distance = 0.0
 
         for _ in range(self._n_steps):
-            to_accept = run_pmmh(filter_, state, self._proposal, dist, y, shape, mutate_kernel=False)
+            to_accept = run_pmmh(filter_, state, self._proposal, dist, state.parsed_data, shape, mutate_kernel=False)
             accepted |= to_accept
 
             if not self._is_adaptive:

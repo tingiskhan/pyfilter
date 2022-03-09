@@ -75,6 +75,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self.filter.set_num_parallel(particles)
+        self._sample_params()
 
     @property
     def particles(self) -> torch.Size:
@@ -93,8 +94,6 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         self.filter.ssm.sample_params(shape)
 
     def initialize(self) -> SequentialAlgorithmState:
-        self._sample_params()
-
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 

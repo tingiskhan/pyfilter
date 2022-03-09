@@ -10,7 +10,7 @@ from ..prior_module import UpdateParametersMixin, HasPriorsModule
 def _check_has_priors_wrapper(f):
     @wraps(f)
     def _wrapper(obj: "StateSpaceModel", *args, **kwargs):
-        if len(obj._prior_mods) == 0:
+        if not any(obj._prior_mods):
             raise Exception(f"No module is subclassed by {HasPriorsModule.__name__}")
 
         return f(obj, *args, **kwargs)
@@ -58,21 +58,6 @@ class StateSpaceModel(Module, UpdateParametersMixin):
             hidden += (x,)
 
         return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
-
-    def exchange(self, indices: torch.Tensor, other: "StateSpaceModel") -> "StateSpaceModel":
-        """
-        Exchanges the parameters of ``self`` with ``other`` at ``indices``.
-
-        Args:
-            indices: The indices at which exchange parameters.
-            other: The other model to exchange parameters with.
-        """
-
-        for self_proc, new_proc in [(self.hidden, other.hidden), (self.observable, other.observable)]:
-            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
-                self_param[indices] = new_param[indices]
-
-        return self
 
     def copy(self) -> "StateSpaceModel":
         """

@@ -1,10 +1,8 @@
 import torch
 from torch.nn import Module
-from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union
+from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union, Dict
 import warnings
 from collections import OrderedDict, abc as container_abcs
-from torch.utils.data import IterableDataset
-from torch.utils.data.dataset import T_co
 from collections import deque
 
 BoolOrInt = Union[int, bool]
@@ -45,7 +43,7 @@ class BufferDict(Module):
 
     def __setattr__(self, key: Any, value: Any) -> None:
         if isinstance(value, torch.nn.Parameter):
-            warnings.warn("Setting attributes on ParameterDict is not supported.")
+            warnings.warn(f"Setting attributes on '{self.__class__.__name__}' is not supported.")
         super(BufferDict, self).__setattr__(key, value)
 
     def __len__(self) -> int:
@@ -95,7 +93,7 @@ class BufferDict(Module):
         """
         if not isinstance(parameters, container_abcs.Iterable):
             raise TypeError(
-                "ParametersDict.update should be called with an "
+                f"'{self.__class__.__name__}'.update should be called with an "
                 "iterable of key/value pairs, but got " + type(parameters).__name__
             )
 
@@ -109,93 +107,127 @@ class BufferDict(Module):
             for j, p in enumerate(parameters):
                 if not isinstance(p, container_abcs.Iterable):
                     raise TypeError(
-                        "ParameterDict update sequence element "
+                        f"'{self.__class__.__name__}' update sequence element "
                         "#" + str(j) + " should be Iterable; is" + type(p).__name__
                     )
                 if not len(p) == 2:
                     raise ValueError(
-                        "ParameterDict update sequence element "
+                        f"'{self.__class__.__name__}' update sequence element "
                         "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
                     )
                 self[p[0]] = p[1]
 
 
-class TensorTuple(IterableDataset):
+class BufferIterable(BufferDict):
     """
-    Implements a tuple like tensor storage.
-    """
-
-    def __init__(self, *tensors, maxlen=None):
-        self.tensors = make_dequeue(maxlen=maxlen)
-        self.tensors.extend(tensors)
-
-    def __iter__(self) -> Iterator[T_co]:
-        for t in self.tensors:
-            yield t
-
-    def __getitem__(self, index) -> T_co:
-        return self.tensors[index]
-
-    def __len__(self):
-        return len(self.tensors)
-
-    def __add__(self, other: IterableDataset):
-        return TensorTuple(*self.tensors, *other.tensors, maxlen=max(self.tensors.maxlen, other.tensors.maxlen))
-
-    def values(self) -> torch.Tensor:
-        return torch.stack(tuple(self.tensors), dim=0)
-
-    def append(self, tensor: torch.Tensor):
-        if not isinstance(tensor, torch.Tensor):
-            raise ValueError(f"Can only concatenate tensors, not {tensor.__class__.__name__}!")
-
-        self.tensors.append(tensor)
-
-    def apply(self, fn):
-        new_deque = make_dequeue(maxlen=self.tensors.maxlen)
-
-        while self.tensors:
-            new_deque.append(fn(self.tensors.popleft()))
-
-        self.tensors = new_deque
-
-
-class TensorTupleMixin(object):
-    """
-    Mixin for objects that need to store tensor tuples.
+    Implements a container for storing tuples that serialized/deserialize as tensors.
     """
 
-    _TENSOR_TUPLE_PREFIX = "tensor_tuples"
+    _PREFIX = "tensor_tuple__"
 
-    def __init__(self):
+    def __init__(self, **kwargs: Iterable[torch.Tensor]):
+        """
+        Initializes the ``BufferIterable`` class.
+        """
+
         super().__init__()
+        self._iterables: Dict[str, Iterable[torch.Tensor]] = OrderedDict([])
 
-        self._register_state_dict_hook(self.dump_hook)
-        self._register_load_state_dict_pre_hook(self.load_hook)
+        self._register_state_dict_hook(self._dump_hook)
+        self._register_load_state_dict_pre_hook(self._load_hook)
 
-        self.tensor_tuples: OrderedDict[str, TensorTuple] = OrderedDict()
+        for k, v in kwargs.items():
+            self.__setitem__(k, v)
+
+    def get_as_tensor(self, key: str) -> torch.Tensor:
+        to_stack = self.__getitem__(key)
+
+        if to_stack:
+            return torch.stack(tuple(to_stack), dim=0)
+
+        return torch.tensor([])
+
+    def __getitem__(self, key: str) -> Iterable[torch.Tensor]:
+        return self._iterables[key]
+
+    def __setitem__(self, key: str, parameter: Iterable["Tensor"]) -> None:
+        if isinstance(parameter, torch.Tensor):
+            raise NotImplementedError(f"Currently does not support '{parameter.__class__.__name__}'")
+        elif not isinstance(parameter, Iterable):
+            raise ValueError(f"Must be of type {Iterable.__name__}!")
+
+        self._iterables[key] = parameter
+
+    def __delitem__(self, key: str) -> None:
+        del self._iterables[key]
+
+    def __setattr__(self, key: Any, value: Any) -> None:
+        if isinstance(value, torch.nn.Parameter):
+            warnings.warn(f"Setting attributes on '{self.__class__.__name__}' is not supported.")
+        super(BufferDict, self).__setattr__(key, value)
+
+    def __len__(self) -> int:
+        return len(self._iterables)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._iterables.keys())
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._iterables
+
+    def values(self) -> Iterable[Iterable["Tensor"]]:
+        return self._iterables.values()
+
+    def keys(self):
+        return self._iterables.keys()
+
+    def items(self) -> Iterable[Tuple[str, Iterable["Tensor"]]]:
+        return self._iterables.items()
 
     def _apply(self, fn):
         super()._apply(fn)
 
-        for k, v in self.tensor_tuples.items():
-            v.apply(fn)
+        for key, item in self.items():
+            as_tensor = self.get_as_tensor(key)
+            new_tensor = fn(as_tensor)
+
+            if isinstance(item, list):
+                iterable = list(new_tensor)
+            elif isinstance(item, tuple):
+                iterable = tuple(new_tensor)
+            elif isinstance(item, deque):
+                iterable = deque(new_tensor, maxlen=item.maxlen)
+            else:
+                raise NotImplementedError(f"Does not support '{item.__class__.__name__}'")
+
+            self.__setitem__(key, iterable)
 
         return self
 
-    @staticmethod
-    def dump_hook(self, state_dict, prefix, local_metadata):
-        # TODO: Might have use prefix?
-        for k, v in self.tensor_tuples.items():
-            state_dict[f"{self._TENSOR_TUPLE_PREFIX}.{k}"] = v.tensors
+    @classmethod
+    def _dump_hook(cls, self, state_dict, prefix, local_metadata):
+        for key, values in self._iterables.items():
+            state_dict[prefix + cls._PREFIX + key] = self.get_as_tensor(key)
 
-    def load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        to_pop = list()
-        # TODO: Might have use prefix?
-        # TODO: Correct to only check startswith?
-        for k, v in filter(lambda x: x[0].startswith(self._TENSOR_TUPLE_PREFIX), state_dict.items()):
-            self.tensor_tuples[k.replace(f"{self._TENSOR_TUPLE_PREFIX}.", "")] = TensorTuple(*v)
-            to_pop.append(k)
+        return
 
-        for tp in to_pop:
-            state_dict.pop(tp)
+    def _load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        p = prefix + self._PREFIX
+        keys = [u for u in state_dict.keys() if u.startswith(p)]
+        for k in keys:
+            v = state_dict.pop(k)
+
+            key = k.replace(p, "")
+            item_to_add_to = self.__getitem__(key) if key in self else tuple()
+
+            if isinstance(item_to_add_to, tuple):
+                item_to_add_to += tuple(v)
+            elif isinstance(item_to_add_to, list):
+                item_to_add_to.extend(list(v))
+            elif isinstance(item_to_add_to, deque):
+                for item in v:
+                    item_to_add_to.append(item)
+
+            self.__setitem__(key, item_to_add_to)
+
+        return

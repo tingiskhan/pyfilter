@@ -10,13 +10,13 @@ from ..distributions import DistributionWrapper
 from ..typing import ShapeLike, ArrayType
 from ..utils import size_getter
 from ..prior_module import HasPriorsModule
-from ..container import TensorTuple, TensorTupleMixin
+from ..container import BufferIterable
 
 
 T = TypeVar("T")
 
 
-class StochasticProcess(TensorTupleMixin, Module, ABC):
+class StochasticProcess(Module, ABC):
     """
     Abstract base class for stochastic processes. By "stochastic process" we mean a sequence of random variables,
     :math:`\\{X_t\\}_{t \\in T}`, defined on a common probability space. Derived classes should override the
@@ -51,19 +51,20 @@ class StochasticProcess(TensorTupleMixin, Module, ABC):
         self._initial_dist = initial_dist
         self._init_transform = initial_transform
         self.num_steps = num_steps
-        self.tensor_tuples["exog"] = TensorTuple(*(exog if exog is not None else ()))
+
+        self._tensor_tuples = BufferIterable(exog=tuple(exog) if isinstance(exog, torch.Tensor) else (exog or ()))
 
     @property
-    def exog(self) -> TensorTuple:
+    def exog(self) -> torch.Tensor:
         """
         The exogenous variables.
         """
 
-        return self.tensor_tuples["exog"]
+        return self._tensor_tuples.get_as_tensor("exog")
 
     @exog.setter
     def exog(self, x: torch.Tensor):
-        self.tensor_tuples["exog"] = TensorTuple(*x)
+        self._tensor_tuples["exog"] = tuple(x)
 
     @property
     @lru_cache(maxsize=None)
@@ -129,7 +130,7 @@ class StochasticProcess(TensorTupleMixin, Module, ABC):
         raise NotImplementedError()
 
     def _add_exog_to_state(self, x: NewState):
-        if self.exog.tensors:
+        if any(self._tensor_tuples["exog"]):
             x.add_exog(self.exog[x.time_index.int()])
 
     def forward(self, x: NewState, time_increment=1.0) -> NewState:
@@ -219,7 +220,7 @@ class StochasticProcess(TensorTupleMixin, Module, ABC):
             exog: The new exogenous variable to add.
         """
 
-        self.exog.append(exog)
+        self._tensor_tuples["exog"] += (exog,)
 
 
 class StructuralStochasticProcess(StochasticProcess, HasPriorsModule, ABC):

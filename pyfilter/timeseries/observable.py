@@ -24,7 +24,7 @@ class Observable(StructuralStochasticProcess, ABC):
         super(Observable, self).__init__(*args, num_steps=num_steps, **kwargs)
 
     def _add_exog_to_state(self, x: NewState):
-        if self.exog.tensors:
+        if any(self._tensor_tuples["exog"]):
             # We subtract 1 as it's technically 1-indexed
             x.add_exog(self.exog[x.time_index.int() - 1])
 

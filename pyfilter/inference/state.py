@@ -1,8 +1,8 @@
-from ..state import StateWithTensorTuples
+from ..state import BaseState
 from ..filters import FilterResult
 
 
-class AlgorithmState(StateWithTensorTuples):
+class AlgorithmState(BaseState):
     """
     Base state class for algorithms.
     """

@@ -25,7 +25,6 @@ class BaseFilter(Module, ABC):
         self,
         model: StateSpaceModel,
         record_states: BoolOrInt = False,
-        pre_append_callbacks: List[Callable[[TState], None]] = None,
         record_moments: BoolOrInt = True,
         nan_strategy: str = "skip",
     ):
@@ -34,11 +33,9 @@ class BaseFilter(Module, ABC):
 
         Args:
             model: The state space model to use for filtering.
-            record_states: See ``pyfilter.timeseries.result.record_states``.
-            pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
-                to appending the new state.
-            record_moments: See ``pyfilter.timeseries.result.record_moments``
-            nan_strategy: How to handle ``nan``s in observation data. Can be
+            record_states: See ``pyfilter.filters.FilterResult.record_states``.
+            record_moments: See ``pyfilter.filters.FilterResult.record_moments``.
+            nan_strategy: How to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
@@ -55,8 +52,6 @@ class BaseFilter(Module, ABC):
 
         self.record_states = record_states
         self.record_moments = record_moments
-
-        self._pre_append_callbacks = pre_append_callbacks or list()
 
         if nan_strategy not in ["skip", "impute"]:
             raise NotImplementedError(f"Currently cannot handle strategy '{nan_strategy}'!")
@@ -119,12 +114,7 @@ class BaseFilter(Module, ABC):
             state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
         """
 
-        res = FilterResult(state or self.initialize(), self.record_states, self.record_moments)
-
-        for callback in self._pre_append_callbacks:
-            res.register_forward_pre_hook(callback)
-
-        return res
+        return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
@@ -271,7 +261,7 @@ class BaseFilter(Module, ABC):
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
-                p[:] = choose(p, indices)
+                p.copy_(choose(p, indices))
 
         return self
 
@@ -288,7 +278,9 @@ class BaseFilter(Module, ABC):
         if self.n_parallel.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
 
-        self._model.exchange(indices, filter_.ssm)
+        for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
+            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
+                self_param[indices] = new_param[indices]
 
         return self
 

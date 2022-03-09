@@ -1,13 +1,13 @@
 import torch
 from typing import List, TypeVar, Generic
 from .state import FilterState
-from ..container import TensorTuple, make_dequeue, BoolOrInt
-from ..state import StateWithTensorTuples
+from ..container import make_dequeue, BoolOrInt
+from ..state import BaseState
 
 TState = TypeVar("TState", bound=FilterState)
 
 
-class FilterResult(StateWithTensorTuples, Generic[TState]):
+class FilterResult(BaseState, Generic[TState]):
     """
     Implements an object for storing results when running filters.
     """
@@ -25,12 +25,12 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
             record_moments: Same as ``record_states`` but for the filter means and variances.
         """
 
-        super().__init__()
+        super().__init__(maxlen=record_moments)
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
-        self.tensor_tuples["filter_means"] = TensorTuple(maxlen=record_moments)
-        self.tensor_tuples["filter_variances"] = TensorTuple(maxlen=record_moments)
+        self.tensor_tuples["filter_means"] = make_dequeue(maxlen=record_moments)
+        self.tensor_tuples["filter_variances"] = make_dequeue(maxlen=record_moments)
 
         self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
@@ -53,7 +53,7 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_means"].values()
+        return self.tensor_tuples.get_as_tensor("filter_means")
 
     @property
     def filter_variance(self) -> torch.Tensor:
@@ -62,7 +62,7 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
         """
 
-        return self.tensor_tuples["filter_variances"].values()
+        return self.tensor_tuples.get_as_tensor("filter_variances")
 
     @property
     def states(self) -> List[TState]:
@@ -85,8 +85,8 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
         self._loglikelihood[indices] = res.loglikelihood[indices]
 
         for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
-            for old_tensor, new_tensor in zip(old_tt.tensors, new_tt.tensors):
-                old_tensor[indices] = new_tensor[indices]
+            for old, new in zip(old_tt, new_tt):
+                old[indices] = new[indices]
 
         for ns, os in zip(res.states, self.states):
             os.exchange(ns, indices)
@@ -107,8 +107,8 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
 
         if entire_history:
             for tt in self.tensor_tuples.values():
-                for tensor in tt.tensors:
-                    tensor[:] = tensor[indices]
+                for tens in tt:
+                    tens[:] = tens[indices]
 
         for s in self.states:
             s.resample(indices)
@@ -118,6 +118,13 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
     def forward(self, state: TState):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
+
+        # TODO: Assumes tuples...
+        for k, v in state.tensor_tuples.items():
+            if k not in self.tensor_tuples:
+                self.tensor_tuples[k] = tuple()
+
+            self.tensor_tuples[k] += v
 
         # TODO: Might be able to do this better?
         self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
@@ -138,9 +145,8 @@ class FilterResult(StateWithTensorTuples, Generic[TState]):
 
     @staticmethod
     def _state_dump_hook(self: "FilterResult[TState]", state_dict, prefix, local_metadata):
-        # TODO: Might have use prefix?
-        state_dict["latest_state"] = self.latest_state.state_dict(prefix=prefix)
+        state_dict[prefix + "latest_state"] = self.latest_state.state_dict()
 
     def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         # TODO: Might have use prefix?
-        self.latest_state.load_state_dict(state_dict.pop("latest_state"))
+        self.latest_state.load_state_dict(state_dict.pop(prefix + "latest_state"))
