@@ -261,7 +261,7 @@ class BaseFilter(Module, ABC):
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
-                p.index_copy_(0, indices, p.clone())
+                p.copy_(choose(p, indices))
 
         return self
 
