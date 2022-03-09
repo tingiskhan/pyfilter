@@ -59,21 +59,6 @@ class StateSpaceModel(Module, UpdateParametersMixin):
 
         return torch.stack([t.values for t in hidden]), torch.stack([t.values for t in obs])
 
-    def exchange(self, indices: torch.Tensor, other: "StateSpaceModel") -> "StateSpaceModel":
-        """
-        Exchanges the parameters of ``self`` with ``other`` at ``indices``.
-
-        Args:
-            indices: The indices at which exchange parameters.
-            other: The other model to exchange parameters with.
-        """
-
-        for self_proc, new_proc in [(self.hidden, other.hidden), (self.observable, other.observable)]:
-            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
-                self_param[indices] = new_param[indices]
-
-        return self
-
     def copy(self) -> "StateSpaceModel":
         """
         Creates a deep copy of ``self``.

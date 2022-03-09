@@ -261,7 +261,7 @@ class BaseFilter(Module, ABC):
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
-                p[:] = choose(p, indices)
+                p.index_copy_(0, indices, p.clone())
 
         return self
 
@@ -278,7 +278,9 @@ class BaseFilter(Module, ABC):
         if self.n_parallel.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
 
-        self._model.exchange(indices, filter_.ssm)
+        for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
+            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
+                self_param[indices] = new_param[indices]
 
         return self
 
