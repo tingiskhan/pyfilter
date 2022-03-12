@@ -71,7 +71,7 @@ def get_mean_and_cov(sp: torch.Tensor, wm: torch.Tensor, wc: torch.Tensor) -> (t
     return x, covariance(centered, centered, wc)
 
 
-def get_bad_inds(*covs: Tuple[torch.Tensor, ...]) -> torch.Tensor:
+def get_bad_inds(*covs: torch.Tensor) -> torch.Tensor:
     """
     Given one or more batched covariance matrices, find the batches that are badly conditioned and return the
     "aggregated" indices.

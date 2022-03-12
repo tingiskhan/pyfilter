@@ -5,6 +5,7 @@ from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
 from ..base import BaseFilterAlgorithm
 from ...filters import ParticleFilter
+from ...utils import is_documented_by
 
 
 class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
@@ -19,7 +20,7 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def update(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
+    def forward(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Updates the algorithm and filter state given the latest observation ``y``.
 
@@ -32,6 +33,10 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
         """
 
         raise NotImplementedError()
+
+    @is_documented_by(forward)
+    def update(self, y: torch.Tensor, state: SequentialAlgorithmState):
+        return self.__call__(y, state)
 
     def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
@@ -70,6 +75,7 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
 
         self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
         self.filter.set_num_parallel(particles)
+        self._sample_params()
 
     @property
     def particles(self) -> torch.Size:
@@ -88,15 +94,13 @@ class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
         self.filter.ssm.sample_params(shape)
 
     def initialize(self) -> SequentialAlgorithmState:
-        self._sample_params()
-
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
         return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
 
     def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
+        px, py = self.filter.predict_path(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
 
         if not aggregate:
             return px, py
@@ -168,7 +172,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def update(self, y: torch.Tensor, state):
+    def forward(self, y: torch.Tensor, state):
         self._num_iters += 1
 
         if not self._is_switched:

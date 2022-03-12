@@ -3,10 +3,12 @@ from pyfilter.timeseries import LinearGaussianObservations, models as m, AffineO
 from pyfilter.distributions import Prior, DistributionWrapper
 from torch.distributions import Normal, Exponential, LogNormal
 from tests.filters import construct_filters
-from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2
+from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2, threshold
 from scipy.stats import gaussian_kde
 from pyfilter.inference.batch import variational, mcmc
 import torch
+from pyfilter.filters import ParticleFilter
+from pyfilter import collectors as colls
 
 
 @pytest.fixture
@@ -27,8 +29,11 @@ def uhlenbecks():
 def models(uhlenbecks):
     ou, prob_ou = uhlenbecks
 
-    obs_1d = LinearGaussianObservations(ou, 1.0, 0.05)
-    prob_obs_1d = LinearGaussianObservations(prob_ou, *obs_1d.observable.buffer_dict.values())
+    a = 1.0
+    s = 0.05
+
+    obs_1d = LinearGaussianObservations(ou, a, s)
+    prob_obs_1d = LinearGaussianObservations(prob_ou, a, s)
 
     return (
         [prob_obs_1d, obs_1d],
@@ -88,24 +93,67 @@ def check_posterior(model, true_model, **kde_kwargs):
         assert posterior_log_prob > prior_log_prob
 
 
+class TestThresholds(object):
+    def test_constant_threshold(self):
+        thresh = 0.5
+        t = threshold.ConstantThreshold(thresh)
+
+        for i in range(500):
+            assert t.get_threshold(i) == thresh
+
+    def test_decaying_threshold(self):
+        start_thresh = 0.5
+        min_thresh = 0.1
+
+        half_life = 50
+        t = threshold.DecayingThreshold(min_thresh, start_thresh, half_life)
+
+        for i in range(100):
+            if i == half_life:
+                assert t.get_threshold(i) == (start_thresh / 2.0)
+
+    def test_interval_threshold(self):
+        min_thresh = 0.1
+
+        thresholds = {10: 0.5, 50: 0.2, 100: 0.15}
+        t = threshold.IntervalThreshold(thresholds, min_thresh)
+
+        for i in range(105):
+            thresh = t.get_threshold(i)
+
+            if i <= 10:
+                assert thresh == thresholds[10]
+            elif i <= 50:
+                assert thresh == thresholds[50]
+            elif i <= 100:
+                assert thresh == thresholds[100]
+            else:
+                assert thresh == min_thresh
+
+
 class TestsSequentialAlgorithm(object):
     PARTICLES = 2_000
     SERIES_LENGTH = 1_000
 
-    @staticmethod
-    def sequential_algorithms(filter_, **kwargs):
-        return (
-            NESS(filter_, **kwargs),
-            SMC2(filter_, **kwargs),
-            SMC2FW(filter_, **kwargs),
-            NESSMC2(filter_, **kwargs),
-        )
+    def sequential_algorithms(self, filter_, **kwargs):
+        yield NESS(filter_, **kwargs)
+        yield SMC2(filter_, **kwargs)
+
+        decay_thresh = threshold.DecayingThreshold(half_life=self.SERIES_LENGTH // 2, start_thresh=0.5, min_thresh=0.2)
+        yield SMC2(filter_, **kwargs, threshold=decay_thresh)
+
+        thresholds = {100: 0.5, 500: 0.25}
+        interval_thresh = threshold.IntervalThreshold(thresholds, ending_threshold=0.2)
+        yield SMC2(filter_, **kwargs, threshold=interval_thresh)
+
+        yield SMC2FW(filter_, **kwargs)
+        yield NESSMC2(filter_, **kwargs)
 
     def test_algorithms(self, models):
         for prob_model, model in models:
             x, y = model.sample_path(self.SERIES_LENGTH)
 
-            for f in construct_filters(prob_model):
+            for f in construct_filters(prob_model, particles=250):
                 for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
                     result = algorithm.fit(y)
 
@@ -124,6 +172,25 @@ class TestsSequentialAlgorithm(object):
                 result = algorithm.fit(y)
 
                 check_posterior(algorithm.filter.ssm, model, weights=result.normalized_weights().numpy())
+
+    def test_collectors(self, models):
+        for prob_model, model in models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+
+            for f in construct_filters(prob_model, particles=250):
+                for algorithm in self.sequential_algorithms(f.copy(), particles=self.PARTICLES):
+                    algorithm.register_forward_hook(colls.MeanCollector())
+                    algorithm.register_forward_hook(colls.ParameterPosterior())
+
+                    is_particle_filter = isinstance(f, ParticleFilter)
+                    if is_particle_filter:
+                        algorithm.register_forward_hook(colls.Standardizer())
+
+                    result = algorithm.fit(y)
+
+                    assert "filter_means" in result.tensor_tuples
+                    if is_particle_filter:
+                        assert "standardized" in result.tensor_tuples
 
 
 class TestBatchAlgorithms(object):
@@ -152,11 +219,12 @@ class TestBatchAlgorithms(object):
 
     @staticmethod
     def pmmh_proposals(filter_, **kwargs):
-        return (
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs),
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs),
-            mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs),
-        )
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), initializer="mean", **kwargs)
+        yield mcmc.PMMH(filter_, proposal=mcmc.proposals.RandomWalk(scale=0.05), **kwargs)
+
+        if isinstance(filter_, ParticleFilter):
+            yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.05), **kwargs)
+            yield mcmc.PMMH(filter_, proposal=mcmc.proposals.GradientBasedProposal(scale=0.025), **kwargs)
 
     def test_pmmh(self, models):
         for prob_model, model in models:

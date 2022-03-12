@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pytest
 import torch
@@ -20,14 +21,15 @@ def linear_models():
         transition_covariance=sigma ** 2.0,
         transition_offsets=alpha,
         observation_covariance=s ** 2.0,
-        initial_state_covariance=(sigma / (1 - beta)) ** 2.0
+        initial_state_mean=alpha,
+        initial_state_covariance=sigma ** 2 / (1 - beta ** 2.0)
     )
 
     sigma = np.array([0.05, 0.1])
     a, s = np.eye(2), 0.15 * np.ones(2)
 
     rw = ts.models.RandomWalk(torch.from_numpy(sigma).float())
-    obs_2d2_d = ts.LinearGaussianObservations(rw, torch.from_numpy(a).float(), torch.from_numpy(s).float())
+    obs_2d_2d = ts.LinearGaussianObservations(rw, torch.from_numpy(a).float(), torch.from_numpy(s).float())
 
     state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
@@ -35,18 +37,17 @@ def linear_models():
         observation_matrices=a,
         transition_covariance=state_covariance,
         observation_covariance=s ** 2.0 * np.eye(2),
-        initial_state_covariance=state_covariance
     )
 
-    sigma = np.array([0.01, 0.05])
+    sigma = np.array([0.005, 0.02])
     a, s = np.array([0.0, 1.0]), 0.15
 
-    llt = ts.models.LocalLinearTrend(torch.from_numpy(sigma).float())
+    llt = ts.models.LocalLinearTrend(torch.from_numpy(sigma).float(), initial_scale=sigma)
     obs_2d_1d = ts.LinearGaussianObservations(llt, torch.from_numpy(a).float(), s)
 
-    state_covariance_2 = (sigma ** 2.0).cumsum(0) * np.eye(2)
+    state_covariance_2 = sigma ** 2.0 * np.eye(2)
     kalman_2d_1d = KalmanFilter(
-        transition_matrices=np.array([[1.0, 0.0], [1.0, 1.0]]),
+        transition_matrices=llt.parameters_and_buffers()["parameter_0"].numpy(),
         observation_matrices=a,
         transition_covariance=state_covariance_2,
         observation_covariance=s ** 2.0,
@@ -56,28 +57,24 @@ def linear_models():
     # TODO: Add more models
     return (
         [obs_1d_1d, kalman_1d_1d],
-        [obs_2d2_d, kalman_2d_2d],
+        [obs_2d_2d, kalman_2d_2d],
         [obs_2d_1d, kalman_2d_1d],
     )
 
 
-def construct_filters(model, **kwargs):
+def construct_filters(model, particles=500, **kwargs):
     particle_types = (part.SISR, part.APF)
 
-    filters = [
-        kalman.UKF(model, **kwargs),
-        *(pt(model, 5000, proposal=part.proposals.Bootstrap(), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5), **kwargs) for pt in particle_types),
-        *(pt(model, 500, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs) for pt in
-          particle_types),
-    ]
+    if not isinstance(model.hidden, ts.models.LocalLinearTrend):
+        yield kalman.UKF(model, **kwargs)
 
-    if isinstance(model, ts.LinearGaussianObservations):
-        filters.extend(
-            pt(model, 500, proposal=part.proposals.LinearGaussianObservations(), **kwargs) for pt in particle_types
-        )
+    for pt in particle_types:
+        yield pt(model, particles, proposal=part.proposals.Bootstrap(), **kwargs)
+        yield pt(model, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
+        yield pt(model, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
-    return filters
+        if isinstance(model, ts.LinearGaussianObservations):
+            yield pt(model, particles, proposal=part.proposals.LinearGaussianObservations(), **kwargs)
 
 
 @pytest.fixture
@@ -92,9 +89,9 @@ def joint_timeseries():
     rw1 = ts.models.RandomWalk(0.05)
     rw2 = ts.models.RandomWalk(0.1)
 
-    joint = ts.AffineJointStochasticProcesses(rw1=rw1, rw2=rw2)
+    joint = ts.AffineJointStochasticProcess(rw1=rw1, rw2=rw2)
 
-    obs = ts.LinearGaussianObservations(joint, torch.eye(2), 0.15 * torch.ones(2))
+    obs = ts.LinearGaussianObservations(joint, torch.eye(2), 0.05 * torch.ones(2))
 
     param_1 = rw1.parameters_and_buffers()["parameter_0"]
     param_2 = rw2.parameters_and_buffers()["parameter_0"]
@@ -111,25 +108,38 @@ def joint_timeseries():
     return obs, kalman
 
 
+def add_nan(y, number_of_nans):
+    rand_ints = torch.randint(0, y.shape[0], size=(number_of_nans,))
+
+    if y.dim() == 1:
+        y[rand_ints] = float("nan")
+    else:
+        rand_col = random.randint(0, y.shape[-1] - 1)
+        y[rand_ints, rand_col] = float("nan")
+
+    return y
+
+
 class TestFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     PARALLEL_FILTERS = 20
     SERIES_LENGTH = 100
     PREDICTION_STEPS = 5
     STATE_RECORD_LENGTH = 5
+    NUMBER_OF_NANS = 10
 
     def _compare_kalman_mean(self, kalman_mean, means):
         assert ((means - kalman_mean) / kalman_mean).abs().median() < self.RELATIVE_TOLERANCE
 
     def test_compare_with_kalman_filter(self, linear_models):
         for model, kalman_model in linear_models:
-            x, y = model.sample_path(self.SERIES_LENGTH)
+            x, y = kalman_model.sample(self.SERIES_LENGTH)
 
-            kalman_mean, _ = kalman_model.filter(y.numpy())
-            kalman_ll = kalman_model.loglikelihood(y.numpy())
+            kalman_mean, _ = kalman_model.filter(y)
+            kalman_ll = kalman_model.loglikelihood(y)
 
             for f in construct_filters(model):
-                result = f.longfilter(y)
+                result = f.longfilter(torch.from_numpy(y).float())
 
                 assert len(result.states) == 1
                 assert ((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE
@@ -187,7 +197,7 @@ class TestFilters(object):
             for f in construct_filters(model):
                 result = f.longfilter(y)
 
-                x_pred, y_pred = f.predict(result.latest_state, self.PREDICTION_STEPS)
+                x_pred, y_pred = f.predict_path(result.latest_state, self.PREDICTION_STEPS)
 
                 assert x_pred.shape[:1] == y_pred.shape[:1] == torch.Size([self.PREDICTION_STEPS])
 
@@ -228,7 +238,7 @@ class TestFilters(object):
 
             filter_std = result.filter_variance ** 0.5
 
-            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_1"] * 1.1)[1:].all()
+            assert (filter_std <= sde.observable.parameters_and_buffers()["parameter_2"] * 1.2)[1:].float().mean() > 0.95
 
     def test_joint_timeseries(self, joint_timeseries):
         model, kalman = joint_timeseries
@@ -252,7 +262,7 @@ class TestFilters(object):
                 assert len(result.filter_means) == self.STATE_RECORD_LENGTH
 
     def test_exogenous_variables(self):
-        ou = ts.models.AR(0.0, 0.99, 0.05)
+        ar = ts.models.AR(0.0, 0.99, 0.05)
 
         def _f(x, sigma):
             return x.exog + x.values
@@ -261,18 +271,19 @@ class TestFilters(object):
             return sigma
 
         line = torch.arange(self.SERIES_LENGTH)
-        obs = ts.AffineObservations((_f, _g), (0.05,), ou.increment_dist, exog=line)
+        obs = ts.AffineObservations((_f, _g), (0.05,), ar.increment_dist, exog=line)
 
-        model = ts.StateSpaceModel(ou, obs)
+        model = ts.StateSpaceModel(ar, obs)
         x, y = model.sample_path(self.SERIES_LENGTH)
 
-        params = ou.parameters_and_buffers()
+        params = ar.parameters_and_buffers()
         kf = KalmanFilter(
-            transition_matrices=params["parameter_1"],
+            transition_matrices=params["parameter_0"],
             transition_covariance=params["parameter_2"] ** 2,
             observation_matrices=1.0,
             observation_offsets=line.unsqueeze(-1).numpy(),
-            observation_covariance=obs.parameters_and_buffers()["parameter_0"] ** 2
+            observation_covariance=obs.parameters_and_buffers()["parameter_0"] ** 2,
+            initial_state_covariance=params["parameter_2"] ** 2 / (1 - params["parameter_0"] ** 2)
         )
 
         kalman_mean, _ = kf.filter(y.numpy())
@@ -285,3 +296,33 @@ class TestFilters(object):
                 means.unsqueeze_(-1)
 
             self._compare_kalman_mean(kalman_mean, means)
+
+    def test_missing_data(self, linear_models):
+        for model, _ in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+            y = add_nan(y, self.NUMBER_OF_NANS)
+
+            for strat in ["impute", "skip"]:
+                for parallel in [0, 10]:
+                    for f in construct_filters(model, nan_strategy=strat):
+                        if parallel > 0:
+                            f.set_num_parallel(parallel)
+
+                        res = f.longfilter(y)
+
+                        assert not torch.isnan(res.filter_means).any()
+
+    def test_missing_data_smooth(self, linear_models):
+        for model, kalman_model in linear_models:
+            x, y = model.sample_path(self.SERIES_LENGTH)
+            y = add_nan(y, self.NUMBER_OF_NANS)
+
+            for f in construct_filters(model, record_states=True):
+                # Currently UKF does not implement smoothing
+                if isinstance(f, kalman.UKF):
+                    continue
+
+                result = f.longfilter(y)
+                smoothed_x = f.smooth(result.states)
+
+                assert not smoothed_x.isnan().any()

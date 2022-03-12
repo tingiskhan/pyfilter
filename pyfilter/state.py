@@ -1,5 +1,5 @@
 from torch.nn import Module
-from .container import TensorTupleMixin
+from .container import BufferIterable
 
 
 class BaseState(Module):
@@ -7,8 +7,10 @@ class BaseState(Module):
     Base class for state like objects.
     """
 
+    def __init__(self, maxlen: int = None):
+        """
+        Initializes the ``BaseState`` class.
+        """
 
-class StateWithTensorTuples(TensorTupleMixin, BaseState):
-    """
-    States with tensor tuples require some special handling, they should inherit from this base class instead.
-    """
+        super(BaseState, self).__init__()
+        self.tensor_tuples = BufferIterable()

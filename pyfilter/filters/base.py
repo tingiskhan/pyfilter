@@ -4,14 +4,16 @@ from tqdm import tqdm
 import torch
 from torch.nn import Module
 from typing import Tuple, Sequence, TypeVar, List, Callable
+from torch.distributions import Distribution
+from .utils import select_mean_of_dist
 from ..timeseries import StateSpaceModel
 from ..utils import choose
 from .result import FilterResult
-from .state import BaseFilterState
+from .state import FilterState, PredictionState
 from ..container import BoolOrInt
 
 
-TState = TypeVar("TState", bound=BaseFilterState)
+TState = TypeVar("TState", bound=FilterState)
 
 
 class BaseFilter(Module, ABC):
@@ -23,18 +25,20 @@ class BaseFilter(Module, ABC):
         self,
         model: StateSpaceModel,
         record_states: BoolOrInt = False,
-        pre_append_callbacks: List[Callable[[TState], None]] = None,
-        record_moments: BoolOrInt = True
+        record_moments: BoolOrInt = True,
+        nan_strategy: str = "skip",
     ):
         """
         Initializes the ``BaseFilter`` class.
 
         Args:
             model: The state space model to use for filtering.
-            record_states: See ``pyfilter.timeseries.result.record_states``.
-            pre_append_callbacks: Any callbacks that will be executed by ``pyfilter.filters.result.FilterResult`` prior
-                to appending the new state.
-            record_moments: See ``pyfilter.timeseries.result.record_moments``
+            record_states: See ``pyfilter.filters.FilterResult.record_states``.
+            record_moments: See ``pyfilter.filters.FilterResult.record_moments``.
+            nan_strategy: How to handle ``nan``s in observation data. Can be:
+                * "skip" - skips the observation.
+                * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
+                    median of mean.
         """
 
         super().__init__()
@@ -49,7 +53,10 @@ class BaseFilter(Module, ABC):
         self.record_states = record_states
         self.record_moments = record_moments
 
-        self._pre_append_callbacks = pre_append_callbacks or list()
+        if nan_strategy not in ["skip", "impute"]:
+            raise NotImplementedError(f"Currently cannot handle strategy '{nan_strategy}'!")
+
+        self._nan_strategy = nan_strategy
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -107,12 +114,7 @@ class BaseFilter(Module, ABC):
             state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
         """
 
-        res = FilterResult(state or self.initialize(), self.record_states, self.record_moments)
-
-        for callback in self._pre_append_callbacks:
-            res.register_forward_pre_hook(callback)
-
-        return res
+        return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
@@ -136,7 +138,7 @@ class BaseFilter(Module, ABC):
         Args:
             y: Data set to filter.
             bar: Whether to display a ``tqdm`` progress bar.
-            init_state: Optional parameter for whether to pass an initial state
+            init_state: Optional parameter for whether to pass an initial state.
         """
 
         iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
@@ -167,7 +169,7 @@ class BaseFilter(Module, ABC):
 
         return copy.deepcopy(self)
 
-    def predict(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_path(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Given the previous ``state``, predict ``steps`` steps into the future.
 
@@ -184,6 +186,38 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
+    def _get_observation_dist_from_prediction(self, prediction: PredictionState) -> Distribution:
+        """
+        Method for generating an observation distribution from the predicted latent distribution.
+
+        Args:
+            prediction: The prediction to use for creating the distribution.
+        """
+
+        raise NotImplementedError()
+
+    def predict(self, state: TState) -> PredictionState:
+        """
+        Corresponds to the predict step of the given filter.
+
+        Args:
+            state: The previous state of the algorithm.
+        """
+
+        raise NotImplementedError()
+
+    def correct(self, y: torch.Tensor, state: TState, prediction: PredictionState) -> TState:
+        """
+        Corresponds to the correct step of the given filter.
+
+        Args:
+            y: The observation.
+            state: The previous state of the algorithm.
+            prediction: The predicted state.
+        """
+
+        raise NotImplementedError()
+
     def forward(self, y: torch.Tensor, state: TState) -> TState:
         """
         Method to be overridden by derived filters.
@@ -193,7 +227,26 @@ class BaseFilter(Module, ABC):
             state: See ``self.filter(...)``.
         """
 
-        raise NotImplementedError()
+        prediction = self.predict(state)
+
+        nan_mask = torch.isnan(y)
+        if nan_mask.any():
+            # TODO: Perhaps handle switching in __init__ instead?
+            if self._nan_strategy == "skip":
+                return prediction.create_state_from_prediction()
+            elif self._nan_strategy == "impute":
+                dist = self._get_observation_dist_from_prediction(prediction)
+
+                # NB: Might be better to reshape `y` to the number of parallel filters instead of using global mean?
+                mean = select_mean_of_dist(dist)
+                if len(dist.batch_shape) > 0:
+                    for d in reversed(range(0, len(dist.batch_shape))):
+                        mean = mean.median(dim=d)[0]
+
+                y = y.clone()
+                y[nan_mask] = mean[nan_mask]
+
+        return self.correct(y, state, prediction)
 
     def resample(self, indices: torch.Tensor) -> "BaseFilter":
         """
@@ -208,7 +261,7 @@ class BaseFilter(Module, ABC):
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
-                p[:] = choose(p, indices)
+                p.copy_(choose(p, indices))
 
         return self
 
@@ -225,11 +278,13 @@ class BaseFilter(Module, ABC):
         if self.n_parallel.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
 
-        self._model.exchange(indices, filter_.ssm)
+        for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
+            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
+                self_param[indices] = new_param[indices]
 
         return self
 
-    def smooth(self, states: Sequence[BaseFilterState]) -> torch.Tensor:
+    def smooth(self, states: Sequence[FilterState]) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 

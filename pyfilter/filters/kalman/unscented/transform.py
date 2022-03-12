@@ -2,12 +2,12 @@ import torch
 from math import sqrt
 from torch.nn import Module
 from typing import Tuple
-from torch.distributions import MultivariateNormal, Normal
-from .utils import propagate_sps, covariance, get_bad_inds, _EPS
+from torch.distributions import MultivariateNormal
+from .utils import propagate_sps, covariance
 from .result import UFTCorrectionResult, UFTPredictionResult
 from ....utils import construct_diag_from_flat, size_getter
 from ....typing import ShapeLike
-from ....timeseries import StateSpaceModel, NewState
+from ....timeseries import StateSpaceModel
 from ....parameter import PriorBoundParameter
 
 
@@ -121,61 +121,6 @@ class UnscentedFilterTransform(Module):
             f=lambda p: p.view(*self._view_shape, *p.shape[1:]) if isinstance(p, PriorBoundParameter) else p
         )
 
-    def update_state(
-        self,
-        xm: torch.Tensor,
-        xc: torch.Tensor,
-        x_state: NewState,
-        prev_corr: UFTCorrectionResult,
-        ym: torch.Tensor = None,
-        yc: torch.Tensor = None,
-        y_state: NewState = None,
-    ) -> UFTCorrectionResult:
-        """
-        Creates a new state given the latest estimate of the means and covariances together with the previous correction
-        state object.
-
-        Args:
-            xm: The estimated mean of the latent process.
-            xc: The estimate covariance of the latent process.
-            x_state: The latest state of the latent process, contains the sigma points.
-            prev_corr: The previous correction state.
-            ym: The estimated mean of the observation process.
-            yc: THe estimate covariance of the observation process.
-            y_state: The latest state of the observation process, contains the sigma points.
-
-        Returns:
-            A new ``UTFCorrectionResult`` object with updated means and covariances.
-        """
-
-        mean = prev_corr.x.dist.mean.clone()
-        cov = prev_corr.x.dist.covariance_matrix.clone()
-
-        # We only allow fixing bad matrices when we're running batched mode
-        if cov.dim() > 2:
-            bad_matrix = get_bad_inds(xc, yc)
-
-            if bad_matrix.all():
-                raise Exception("All batches were singular or nan!")
-
-            xc[bad_matrix, self._state_slc, self._state_slc] = _EPS * torch.eye(xc.shape[-1], device=xc.device)
-            xm[bad_matrix, self._state_slc] = 0.0
-
-            yc[bad_matrix] = _EPS * torch.eye(yc.shape[-1], device=yc.device)
-            ym[bad_matrix] = 0.0
-
-        mean[..., self._state_slc] = xm
-        cov[..., self._state_slc, self._state_slc] = xc
-
-        x_state = x_state.copy(dist=MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False))
-
-        if self._model.observable.n_dim > 0:
-            y_state = y_state.copy(dist=MultivariateNormal(loc=ym, covariance_matrix=yc, validate_args=False))
-        else:
-            y_state = y_state.copy(dist=Normal(loc=ym[..., 0], scale=yc[..., 0, 0].sqrt(), validate_args=False))
-
-        return UFTCorrectionResult(x_state, self._state_slc, y_state)
-
     def predict(self, utf_corr: UFTCorrectionResult) -> UFTPredictionResult:
         """
         Given the latest ``UTFCorrectionResult`` do a one-step ahead prediction.
@@ -232,4 +177,4 @@ class UnscentedFilterTransform(Module):
         temp = torch.matmul(y_c, gain.transpose(-1, -2))
         txcov = x_c - torch.matmul(gain, temp)
 
-        return self.update_state(txmean, txcov, uft_pred.spx, prev_corr, y_m, y_c, uft_pred.spy)
+        return prev_corr.update(txmean, txcov, uft_pred.spx, prev_corr, y_m, y_c, uft_pred.spy)

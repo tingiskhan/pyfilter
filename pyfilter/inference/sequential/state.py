@@ -1,8 +1,7 @@
 import torch
 from ..state import FilterAlgorithmState
-from ...filters import FilterResult, BaseFilterState
+from ...filters import FilterResult, FilterState
 from ...utils import normalize, get_ess
-from ...container import TensorTuple
 
 
 class SequentialAlgorithmState(FilterAlgorithmState):
@@ -10,7 +9,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     Base state for sequential particle algorithms.
     """
 
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: TensorTuple = None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: torch.Tensor = None):
         """
         Initializes the ``SequentialAlgorithmState`` class.
 
@@ -23,17 +22,17 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         super().__init__(filter_state)
         self.register_buffer("w", weights)
-        self.tensor_tuples["ess"] = ess or TensorTuple()
+        self.tensor_tuples["ess"] = (get_ess(weights),) if ess is None else tuple(ess)
 
     @property
-    def ess(self) -> TensorTuple:
+    def ess(self) -> torch.Tensor:
         """
         Returns the ESS.
         """
 
-        return self.tensor_tuples["ess"]
+        return self.tensor_tuples.get_as_tensor("ess")
 
-    def update(self, filter_state: BaseFilterState):
+    def update(self, filter_state: FilterState):
         """
         Updates ``self`` given a new filter state.
 
@@ -44,7 +43,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         self.w += filter_state.get_loglikelihood()
         self.filter_state.append(filter_state)
 
-        self.ess.append(get_ess(self.w))
+        self.tensor_tuples["ess"] += (get_ess(self.w),)
 
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
@@ -58,7 +57,7 @@ class SMC2State(SequentialAlgorithmState):
     Custom state class for ``SMC2``, as it requires keeping a history of the parsed observations.
     """
 
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: TensorTuple = None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: torch.Tensor = None):
         """
         Initializes the ``SMC2State`` class.
 
@@ -70,11 +69,11 @@ class SMC2State(SequentialAlgorithmState):
         """
 
         super().__init__(weights, filter_state, ess)
-        self.tensor_tuples["parsed_data"] = parsed_data or TensorTuple()
+        self.tensor_tuples["parsed_data"] = tuple() if parsed_data is None else tuple(parsed_data)
 
     @property
-    def parsed_data(self) -> TensorTuple:
-        return self.tensor_tuples["parsed_data"]
+    def parsed_data(self) -> torch.Tensor:
+        return self.tensor_tuples.get_as_tensor("parsed_data")
 
     def append_data(self, y: torch.Tensor):
-        self.parsed_data.append(y)
+        self.tensor_tuples["parsed_data"] += (y,)

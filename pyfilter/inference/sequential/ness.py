@@ -1,5 +1,4 @@
 from .base import SequentialParticleAlgorithm
-from ...utils import get_ess
 from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
 from torch import isfinite
 from abc import ABC
@@ -44,7 +43,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def update(self, y, state):
+    def forward(self, y, state):
         if self.do_update_particles(state):
             self._kernel.update(self.filter, state)
 
@@ -74,7 +73,8 @@ class NESS(BaseOnlineAlgorithm):
         self._threshold = threshold * particles
 
     def do_update_particles(self, state):
-        return (any(state.ess) and state.ess[-1] < self._threshold) or (~isfinite(state.w)).any()
+        ess = state.tensor_tuples["ess"]
+        return (any(ess) and ess[-1] < self._threshold) or (~isfinite(state.w)).any()
 
 
 class FixedWidthNESS(BaseOnlineAlgorithm):

@@ -2,7 +2,7 @@ import torch
 from torch.distributions import MultivariateNormal, Normal
 from torch.nn import Module
 from typing import Union
-from .utils import get_mean_and_cov
+from .utils import get_mean_and_cov, get_bad_inds, _EPS
 from ....timeseries import NewState
 
 
@@ -119,6 +119,61 @@ class UFTCorrectionResult(Module):
 
         self.x = self.x.copy(dist=x_dist)
         self.y = self.y.copy(dist=y_dist)
+
+    def update(
+        self,
+        xm: torch.Tensor,
+        xc: torch.Tensor,
+        x_state: NewState,
+        prev_corr: "UFTCorrectionResult",
+        ym: torch.Tensor = None,
+        yc: torch.Tensor = None,
+        y_state: NewState = None,
+    ) -> "UFTCorrectionResult":
+        """
+        Creates a new state given the latest estimate of the means and covariances together with the previous correction
+        state object.
+
+        Args:
+            xm: The estimated mean of the latent process.
+            xc: The estimate covariance of the latent process.
+            x_state: The latest state of the latent process, contains the sigma points.
+            prev_corr: The previous correction state.
+            ym: The estimated mean of the observation process.
+            yc: THe estimate covariance of the observation process.
+            y_state: The latest state of the observation process, contains the sigma points.
+
+        Returns:
+            A new ``UTFCorrectionResult`` object with updated means and covariances.
+        """
+
+        mean = prev_corr.x.dist.mean.clone()
+        cov = prev_corr.x.dist.covariance_matrix.clone()
+
+        # We only allow fixing bad matrices when we're running batched mode
+        if cov.dim() > 2:
+            bad_matrix = get_bad_inds(xc, yc)
+
+            if bad_matrix.all():
+                raise Exception("All batches were singular or nan!")
+
+            xc[bad_matrix, self._state_slice, self._state_slice] = _EPS * torch.eye(xc.shape[-1], device=xc.device)
+            xm[bad_matrix, self._state_slice] = 0.0
+
+            yc[bad_matrix] = _EPS * torch.eye(yc.shape[-1], device=yc.device)
+            ym[bad_matrix] = 0.0
+
+        mean[..., self._state_slice] = xm
+        cov[..., self._state_slice, self._state_slice] = xc
+
+        x_state = x_state.copy(dist=MultivariateNormal(loc=mean, covariance_matrix=cov, validate_args=False))
+
+        if ym.shape[-1] > 1:
+            y_state = y_state.copy(dist=MultivariateNormal(loc=ym, covariance_matrix=yc, validate_args=False))
+        else:
+            y_state = y_state.copy(dist=Normal(loc=ym[..., 0], scale=yc[..., 0, 0].sqrt(), validate_args=False))
+
+        return UFTCorrectionResult(x_state, self._state_slice, y_state)
 
 
 class UFTPredictionResult(Module):

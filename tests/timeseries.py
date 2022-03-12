@@ -1,8 +1,8 @@
 import pytest
-from pyfilter import timeseries as ts
+from pyfilter import timeseries as ts, distributions as dists
 import torch
 from pyfilter.distributions import DistributionWrapper, Prior
-from torch.distributions import Normal, Independent, Exponential
+from torch.distributions import Normal, Exponential
 from math import sqrt
 
 
@@ -14,8 +14,37 @@ def g(x, kappa, sigma):
     return sigma
 
 
+@pytest.fixture()
+def joint():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+
+    scale = torch.ones(2)
+    second = ts.LinearModel(
+        torch.eye(2),
+        0.05 * scale,
+        DistributionWrapper(Normal, loc=0.0 * scale, scale=scale, reinterpreted_batch_ndims=1)
+    )
+
+    return (ts.AffineJointStochasticProcess(first=first, second=second),)
+
+
+@pytest.fixture()
+def chained():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+    second = ts.LinearModel(torch.tensor([1.0, 1.0]), 0.05, DistributionWrapper(Normal, loc=0.0, scale=1.0))
+
+    return (ts.AffineChainedStochasticProcess(first=first, second=second),)
+
+
+@pytest.fixture()
+def nested():
+    first = ts.models.AR(0.0, 0.99, 0.05)
+
+    return (ts.AffineJointStochasticProcess(first=first, second=ts.models.SmoothLinearTrend(0.05)),)
+
+
 @pytest.fixture
-def custom_models():
+def custom_models(joint, chained, nested):
     normal = DistributionWrapper(Normal, loc=0.0, scale=1.0)
 
     dt = 0.05
@@ -23,7 +52,7 @@ def custom_models():
 
     reversion_params = (0.01, 0.05)
 
-    return (
+    return joint + chained + nested + (
         ts.AffineProcess((f, g), reversion_params, normal, normal),
         ts.AffineEulerMaruyama((f, g), reversion_params, normal, sde_normal, dt=dt),
         ts.OneStepEulerMaruyma((f, g), reversion_params, normal, sde_normal, dt=dt),
@@ -43,8 +72,8 @@ def timeseries_models(custom_models):
         ts.models.RandomWalk(0.05),
         ts.models.RandomWalk(0.05 * torch.ones(2)),
         ts.models.Verhulst(0.01, 1.0, 0.05, 1.0),
-        ts.models.SemiLocalLinearTrend(0.0, 0.99, torch.tensor([1e-3, 1e-2])),
         ts.models.UCSV(0.01, torch.tensor([0.0, 1.0])),
+        ts.models.SmoothLinearTrend(0.01, 0.0)
     )
 
 
@@ -68,19 +97,15 @@ def ssm(proc):
 class TestTimeseries(object):
     timesteps = 1000
 
-    def test_correct_order(self):
-        parameters = 0.0, 0.99, 0.05
-        model = ts.models.AR(*parameters)
-
-        for p, true_p in zip(model.functional_parameters(), parameters):
-            assert p == true_p
-
     def test_correct_order_with_prior(self):
         parameters = 0.0, Prior(Normal, loc=0.0, scale=1.0), 0.05
         model = ts.models.AR(*parameters)
 
-        for i, (p, true_p) in enumerate(zip(model.functional_parameters(), parameters)):
-            if i == 1:
+        # Order is reversed for AR...
+        expected = parameters[1], parameters[0], parameters[2]
+
+        for i, (p, true_p) in enumerate(zip(model.functional_parameters(), expected)):
+            if i == 0:
                 assert (true_p is parameters[1]) and (true_p in model.priors())
             else:
                 assert p == true_p
@@ -177,3 +202,32 @@ class TestTimeseries(object):
 
         model.append_exog(exog[-1] + 1)
         x = model.propagate(x)
+
+
+@pytest.fixture()
+def joint_state():
+    state_1 = ts.NewState(0.0, Normal(0.0, 1.0))
+    state_2 = ts.NewState(0.0, Normal(0.0, 1.0))
+
+    return ts.JointState(state_1, state_2)
+
+
+class TestState(object):
+    def test_joint_state_slicing(self, joint_state):
+        assert isinstance(joint_state[0], ts.NewState) and isinstance(joint_state[0].dist, Normal)
+
+        sliced = joint_state[:2]
+
+        assert (
+                isinstance(sliced, ts.JointState) and
+                isinstance(sliced.dist, dists.JointDistribution) and
+                (sliced.values == joint_state.values[..., :2]).all()
+        )
+        assert (
+                isinstance(joint_state[:1], ts.NewState) and
+                isinstance(joint_state[1:], ts.NewState) and
+                (joint_state[:1].values == joint_state.values[..., :1]).all()
+        )
+
+        with pytest.raises(ValueError):
+            joint_state[(0, 1)]

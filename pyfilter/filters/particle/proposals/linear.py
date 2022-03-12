@@ -72,27 +72,27 @@ class LinearGaussianObservations(Proposal):
         return params[0], None
 
     def sample_and_weight(self, y, x):
-        new_state = self._model.hidden.propagate(x)
-        affine_transform = next(trans for trans in new_state.dist.transforms if isinstance(trans, AffineTransform))
+        x_copy = x.copy(dist=x.dist, values=x.values)
+        affine_transform = next(trans for trans in x_copy.dist.transforms if isinstance(trans, AffineTransform))
 
         loc, scale = affine_transform.loc, affine_transform.scale
-        h_var_inv = 1 / scale ** 2
+        h_var_inv = scale.pow(-2.0)
 
         params = self._model.observable.functional_parameters()
 
-        new_state.values = loc
-        c, offset = self._get_constant_and_offset(params, new_state)
+        x_copy.values = loc
+        c, offset = self._get_constant_and_offset(params, x_copy)
 
-        _, o_scale = self._model.observable.mean_scale(new_state)
-        o_var_inv = 1 / o_scale ** 2
+        _, o_scale = self._model.observable.mean_scale(x_copy)
+        o_var_inv = o_scale.pow(-2.0)
 
         y_offset = y - (offset if offset is not None else 0.0)
         kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
         kernel = kernel_func(y_offset, loc, h_var_inv, o_var_inv, c)
 
-        new_x = new_state.copy(new_state.dist, kernel.sample())
+        x_result = x_copy.copy(dist=x_copy.dist, values=kernel.sample())
 
-        return new_x, self._weight_with_kernel(y, new_x, kernel)
+        return x_result, self._weight_with_kernel(y, x_result, kernel)
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
