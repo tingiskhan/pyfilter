@@ -7,3 +7,4 @@ from .distributions import Prior
 
 ArrayType = Union[Number, np.ndarray, Prior, torch.Tensor]
 ShapeLike = Union[int, Tuple[int, ...], torch.Size]
+NumberOrTensor = Union[Number, np.ndarray, torch.Tensor]

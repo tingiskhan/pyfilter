@@ -1,6 +1,6 @@
 import pytest
 import torch
-from pyfilter.distributions import Prior, DistributionWrapper, JointDistribution, SinhArcsinhTransform
+from pyfilter.distributions import Prior, DistributionWrapper, JointDistribution, SinhArcsinhTransform, NegativeExponential, DoubleExponential
 from torch.distributions import (
     Exponential,
     StudentT,
@@ -12,6 +12,7 @@ from torch.distributions import (
 )
 from pyfilter.constants import EPS
 from math import pi
+import numpy as np
 
 
 @pytest.fixture
