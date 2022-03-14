@@ -150,3 +150,12 @@ class FilterResult(BaseState, Generic[TState]):
     def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         # TODO: Might have use prefix?
         self.latest_state.load_state_dict(state_dict.pop(prefix + "latest_state"))
+
+    def _apply(self, fn):
+        super(FilterResult, self)._apply(fn)
+
+        new_deque = make_dequeue(maxlen=self._states.maxlen)
+        for s in self.states:
+            new_deque.append(s.apply(fn))
+
+        self._states = new_deque
