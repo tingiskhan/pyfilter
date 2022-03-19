@@ -25,7 +25,7 @@ class FilterResult(BaseState, Generic[TState]):
             record_moments: Same as ``record_states`` but for the filter means and variances.
         """
 
-        super().__init__(maxlen=record_moments)
+        super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 

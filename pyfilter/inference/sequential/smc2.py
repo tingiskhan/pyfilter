@@ -110,4 +110,7 @@ class SMC2(SequentialParticleAlgorithm):
         w = new_filter_state.loglikelihood - state.filter_state.loglikelihood
         self._increases += 1
 
-        return SMC2State(w, new_filter_state, state.ess, parsed_data=state.parsed_data)
+        res = SMC2State(w, new_filter_state, state.ess, parsed_data=state.parsed_data)
+        res.exchange_tensor_tuples(state)
+
+        return res
