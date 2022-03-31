@@ -22,7 +22,7 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNo
     centralized = x - mean
     cov = torch.matmul(w * centralized.t(), centralized)
 
-    if cov.det() == 0.0:
+    if cov.det() <= 0.0:
         chol = cov.diag().sqrt().diag()
     else:
         chol = chol_fun(cov)
