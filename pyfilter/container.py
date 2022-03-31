@@ -218,13 +218,16 @@ class BufferIterable(BufferDict):
             v = state_dict.pop(k)
 
             key = k.replace(p, "")
-            item_to_add_to = self.__getitem__(key) if key in self else tuple()
+            item_to_add_to = self.__getitem__(key) if key in self else None
 
-            if isinstance(item_to_add_to, tuple):
+            if item_to_add_to is None or isinstance(item_to_add_to, tuple):
+                item_to_add_to = tuple()
                 item_to_add_to += tuple(v)
             elif isinstance(item_to_add_to, list):
+                item_to_add_to.clear()
                 item_to_add_to.extend(list(v))
             elif isinstance(item_to_add_to, deque):
+                item_to_add_to.clear()
                 for item in v:
                     item_to_add_to.append(item)
 

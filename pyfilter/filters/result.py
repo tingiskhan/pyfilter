@@ -25,7 +25,7 @@ class FilterResult(BaseState, Generic[TState]):
             record_moments: Same as ``record_states`` but for the filter means and variances.
         """
 
-        super().__init__(maxlen=record_moments)
+        super().__init__()
 
         self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
 
@@ -150,3 +150,12 @@ class FilterResult(BaseState, Generic[TState]):
     def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
         # TODO: Might have use prefix?
         self.latest_state.load_state_dict(state_dict.pop(prefix + "latest_state"))
+
+    def _apply(self, fn):
+        super(FilterResult, self)._apply(fn)
+
+        new_deque = make_dequeue(maxlen=self._states.maxlen)
+        for s in self.states:
+            new_deque.append(s.apply(fn))
+
+        self._states = new_deque
