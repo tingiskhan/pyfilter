@@ -5,6 +5,7 @@ from .epidemiological import OneFactorSIR
 from .local_linear_trend import LocalLinearTrend, SmoothLinearTrend
 from .random_walk import RandomWalk
 from .ucsv import UCSV
+from .self_exciting_process import LambdaProcess
 
 __all__ = [
     "OrnsteinUhlenbeck",
@@ -15,4 +16,5 @@ __all__ = [
     "RandomWalk",
     "UCSV",
     "SmoothLinearTrend",
+    "LambdaProcess"
 ]
