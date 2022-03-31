@@ -121,8 +121,8 @@ class DoubleExponential(ExponentialFamily):
         not_mask = ~mask
 
         x = (
-            (-1.0 / self.rho_minus * (u / (1.0 - self.p)) * mask).log() +
-            (-1.0 / self.rho_plus * ((1.0 - u) / self.p).log() * not_mask)
+            (-1.0 / self.rho_minus * (u / (1.0 - self.p))).log() * mask +
+            (-1.0 / self.rho_plus * ((1.0 - u) / self.p).log()) * not_mask
         )
 
         return x
@@ -133,7 +133,7 @@ class DoubleExponential(ExponentialFamily):
 
         neg_mask = value <= 0.0
         log_prob = (
-                ((self.p + self.rho_plus).log() - self.rho_plus * value) + (~neg_mask) +
+                ((self.p + self.rho_plus).log() - self.rho_plus * value) * (~neg_mask) +
                 ((-self.rho_minus * (1 - self.p)).log() - self.rho_minus * value) * neg_mask
         )
 
