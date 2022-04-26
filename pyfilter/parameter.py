@@ -1,5 +1,13 @@
 from torch.nn import Parameter
 import torch
+from collections import OrderedDict
+
+
+def _rebuild_parameter(data, requires_grad, backward_hooks):
+    param = PriorBoundParameter(data, requires_grad)
+    param._backward_hooks = backward_hooks
+
+    return param
 
 
 class PriorBoundParameter(Parameter):
@@ -41,3 +49,13 @@ class PriorBoundParameter(Parameter):
 
         # Tries to set to self if congruent, else reshapes
         self[:] = value.view(self.shape) if value.numel() == self.numel() else value
+
+    # NB: Same as torch but we replace the `_rebuild_parameter` with our custom one.
+    def __reduce_ex__(self, proto):
+        return (
+            _rebuild_parameter,
+            (self.data, self.requires_grad, OrderedDict())
+        )
+
+    def __repr__(self):
+        return f"PriorBoundParameter containing:\n{super(Parameter, self).__repr__()}"
