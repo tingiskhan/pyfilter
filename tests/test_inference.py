@@ -2,7 +2,7 @@ import pytest
 from pyfilter.timeseries import LinearGaussianObservations, models as m, AffineObservations, StateSpaceModel
 from pyfilter.distributions import Prior, DistributionWrapper
 from torch.distributions import Normal, Exponential, LogNormal
-from tests.filters import construct_filters
+from tests.test_filters import construct_filters
 from pyfilter.inference.sequential import NESS, SMC2, SMC2FW, NESSMC2, threshold
 from scipy.stats import gaussian_kde
 from pyfilter.inference.batch import variational, mcmc

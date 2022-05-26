@@ -161,7 +161,7 @@ class TestFilters(object):
             kalman_ll = kalman_model.loglikelihood(y.numpy())
 
             for f in construct_filters(model):
-                f.set_num_parallel(self.PARALLEL_FILTERS)
+                f.set_batch_shape(self.PARALLEL_FILTERS)
 
                 result = f.longfilter(y)
 
@@ -306,7 +306,7 @@ class TestFilters(object):
                 for parallel in [0, 10]:
                     for f in construct_filters(model, nan_strategy=strat):
                         if parallel > 0:
-                            f.set_num_parallel(parallel)
+                            f.set_batch_shape(parallel)
 
                         res = f.longfilter(y)
 
