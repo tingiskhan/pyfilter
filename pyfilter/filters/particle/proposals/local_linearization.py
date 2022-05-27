@@ -1,6 +1,6 @@
 import torch
 from .linear import LinearGaussianObservations
-from ....timeseries import AffineProcess
+from stochproc.timeseries import AffineProcess
 
 
 class LocalLinearization(LinearGaussianObservations):

@@ -2,16 +2,13 @@ from abc import ABC
 from typing import Tuple, Union, Callable
 import torch
 from torch.distributions import Categorical
+
 from ..base import BaseFilter
 from ...resampling import systematic
-from ...timeseries import LinearGaussianObservations as LGO
-from .proposals import Bootstrap, Proposal, LinearGaussianObservations
+from .proposals import Bootstrap, Proposal
 from ...utils import get_ess, choose
 from ..utils import _construct_empty_index
 from .state import ParticleFilterState, ParticleFilterPrediction
-
-
-_PROPOSAL_MAPPING = {LGO.__name__: LinearGaussianObservations}
 
 
 class ParticleFilter(BaseFilter, ABC):
@@ -24,7 +21,7 @@ class ParticleFilter(BaseFilter, ABC):
         model,
         particles: int,
         resampling: Callable[[torch.Tensor], torch.Tensor] = systematic,
-        proposal: Union[str, Proposal] = "auto",
+        proposal: Union[str, Proposal] = None,
         ess_threshold=0.9,
         **kwargs
     ):
@@ -42,12 +39,12 @@ class ParticleFilter(BaseFilter, ABC):
 
         super().__init__(model, **kwargs)
 
-        self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
+        self._base_particles = torch.Size([particles])
         self._resample_threshold = ess_threshold
         self._resampler = resampling
 
-        if proposal == "auto":
-            proposal = _PROPOSAL_MAPPING.get(self._model.__class__.__name__, Bootstrap)()
+        if proposal is None:
+            proposal = Bootstrap()
 
         self._proposal = proposal.set_model(self._model)  # type: Proposal
 
@@ -58,7 +55,7 @@ class ParticleFilter(BaseFilter, ABC):
         ``torch.Size([number of parallel filters, number of particles])``, else ``torch.Size([number of particles])``.
         """
 
-        return torch.Size([self._particles] if self._particles.dim() == 0 else self._particles)
+        return torch.Size([*self.batch_shape, *self._base_particles])
 
     @property
     def proposal(self) -> Proposal:
@@ -79,20 +76,16 @@ class ParticleFilter(BaseFilter, ABC):
 
         return out, mask
 
-    def set_num_parallel(self, num_filters: int):
-        self._n_parallel = torch.tensor(num_filters)
-        self._particles = torch.tensor(
-            (*self.n_parallel, *(self.particles if len(self.particles) < 2 else self.particles[1:])), dtype=torch.int
-        )
-
-        return self
-
     def initialize(self) -> ParticleFilterState:
         x = self._model.hidden.initial_sample(self.particles)
-        w = torch.zeros(self.particles, device=x.device)
-        prev_inds = torch.ones(w.shape, dtype=torch.long, device=x.device) * torch.arange(w.shape[-1], device=x.device)
 
-        return ParticleFilterState(x, w, torch.zeros(self.n_parallel, device=x.device), prev_inds)
+        device = x.values.device
+
+        w = torch.zeros(self.particles, device=device)
+        prev_inds = torch.ones(w.shape, dtype=torch.long, device=device) * torch.arange(w.shape[-1], device=device)
+        ll = torch.zeros(self.batch_shape, device=device)
+
+        return ParticleFilterState(x, w, ll, prev_inds)
 
     def predict_path(self, state: ParticleFilterState, steps, aggregate: bool = True, **kwargs):
         x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
@@ -133,4 +126,4 @@ class ParticleFilter(BaseFilter, ABC):
         return torch.stack(res[::-1], dim=0)
 
     def _get_observation_dist_from_prediction(self, prediction: ParticleFilterPrediction):
-        return self.ssm.observable.propagate(prediction.x).dist
+        raise NotImplementedError()

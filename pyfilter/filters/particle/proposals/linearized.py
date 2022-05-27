@@ -1,7 +1,7 @@
 import torch
-from torch.distributions import Normal, Independent, AffineTransform
+from pyro.distributions import Normal
 from torch.autograd import grad
-from ....timeseries import AffineProcess
+from stochproc.timeseries import AffineProcess
 from .base import Proposal
 
 
@@ -49,39 +49,41 @@ class Linearized(Proposal):
         return self
 
     def sample_and_weight(self, y, x):
-        x_copy = x.copy(dist=x.dist, values=x.values)
-        affine_transform = next(trans for trans in x_copy.dist.transforms if isinstance(trans, AffineTransform))
+        mean, std = self._model.hidden.mean_scale(x)
 
-        mean = affine_transform.loc.clone()
-        std = affine_transform.scale.clone()
+        std = std.clone()
+        x_copy = x.copy(values=mean)
 
-        x_copy.values = mean
+        # TODO: Would optimally build density utilizing the mean and scale from above
+        x_dist = self._model.hidden.build_density(x)
 
         for _ in range(self._n_steps):
             mean.requires_grad_(True)
 
-            y_state = self._model.observable.propagate(x_copy)
-
-            logl = y_state.dist.log_prob(y) + x_copy.dist.log_prob(mean)
+            y_dist = self._model.build_density(x_copy)
+            logl = y_dist.log_prob(y) + x_dist.log_prob(mean)
             g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
-            step = self._alpha * torch.ones_like(g)
+            ones_like_g = torch.ones_like(g)
+            step = self._alpha * ones_like_g
             if self._use_second_order:
-                neg_inv_hess = -1.0 / grad(g, mean, grad_outputs=torch.ones_like(g))[-1]
+                neg_inv_hess = -grad(g, mean, grad_outputs=ones_like_g)[-1].pow(-1.0)
+
+                # TODO: There is a better approach in Dahlin, find it
                 mask = neg_inv_hess > 0.0
 
-                step[mask] = neg_inv_hess[mask]
-                std[mask] = neg_inv_hess[mask].sqrt()
+                step.masked_scatter_(mask, neg_inv_hess)
+                std.masked_scatter_(mask, neg_inv_hess.sqrt())
 
                 g.detach_()
 
-            mean = mean.detach() + step * g
-            x_copy = x_copy.copy(x_copy.dist, mean)
+            mean.detach_()
+            mean += step * g
 
         kernel = Normal(mean, std, validate_args=False)
         if not self._is1d:
-            kernel = Independent(kernel, self._model.hidden.n_dim)
+            kernel = kernel.to_event(1)
 
-        x_result = x_copy.copy(dist=x_copy.dist, values=kernel.sample())
+        x_result = x_copy.copy(values=kernel.sample)
 
-        return x_result, self._weight_with_kernel(y, x_result, kernel)
+        return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)

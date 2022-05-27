@@ -1,9 +1,8 @@
 import torch
 from torch import Tensor
-from typing import Callable, Union
+from stochproc.timeseries import TimeseriesState
 from ..state import FilterState, PredictionState
 from ...utils import choose, normalize
-from ...timeseries import NewState
 
 
 class ParticleFilterPrediction(PredictionState):
@@ -11,37 +10,21 @@ class ParticleFilterPrediction(PredictionState):
     Prediction state for particle filters.
     """
 
-    def __init__(self, x: Union[NewState, Callable], old_weights: Tensor, indices: Tensor, mask: Tensor = None):
+    def __init__(self, prev_x: TimeseriesState, old_weights: Tensor, indices: Tensor, mask: Tensor = None):
         """
         Initializes the ``ParticleFilterPrediction`` class.
 
         Args:
-            x: The new state of the latent process. We allow callable to enable deferring computation if it's necessary
-                to avoid incurring unnecessary computations.
+            prev_x: the resampled previous state.
             old_weights: The previous normalized weights.
             indices: The selected indices
             mask: Mask for which batch to resample, only relevant for filters in parallel.
         """
 
-        self._x = x
+        self.prev_x = prev_x
         self.old_weights = old_weights
         self.indices = indices
         self.mask = mask
-
-    @property
-    def x(self) -> NewState:
-        if not isinstance(self._x, NewState) and callable(self._x):
-            self._x = self._x()
-
-        return self._x
-
-    def create_state_from_prediction(self) -> "FilterState":
-        return ParticleFilterState(
-            self.x,
-            torch.zeros_like(self.old_weights),
-            torch.zeros(self.old_weights.shape[0], device=self.old_weights.device, dtype=self.old_weights.dtype),
-            prev_indices=self.indices,
-        )
 
 
 class ParticleFilterState(FilterState):
@@ -49,7 +32,7 @@ class ParticleFilterState(FilterState):
     State object for particle based filters.
     """
 
-    def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_indices: Tensor):
+    def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
         Initializes the ``ParticleFilterState`` class.
 
@@ -62,13 +45,13 @@ class ParticleFilterState(FilterState):
 
         super().__init__()
         self.x = x
-        self.register_buffer("w", w)
-        self.register_buffer("ll", ll)
-        self.register_buffer("prev_inds", prev_indices)
+        self.w = w
+        self.ll = ll
+        self.prev_inds = prev_indices
 
         mean, var = self._calc_mean_and_var()
-        self.register_buffer("_mean", mean)
-        self.register_buffer("_var", var)
+        self.mean = mean
+        self.var = var
 
     def _calc_mean_and_var(self) -> (torch.Tensor, torch.Tensor):
         normalized_weights = self.normalized_weights()
@@ -86,10 +69,10 @@ class ParticleFilterState(FilterState):
         return mean, var
 
     def get_mean(self):
-        return self._mean
+        return self.mean
 
     def get_variance(self):
-        return self._var
+        return self.var
 
     def normalized_weights(self):
         return normalize(self.w)
@@ -105,7 +88,7 @@ class ParticleFilterState(FilterState):
     def get_loglikelihood(self):
         return self.ll
 
-    def exchange(self, state, indices):
+    def exchange(self, state: "ParticleFilterState", indices):
         x = self.x.copy(values=self.x.values.clone())
         x.values[indices] = state.x.values[indices]
 
@@ -120,5 +103,5 @@ class ParticleFilterState(FilterState):
 
         self.__init__(x, w, ll, prev_inds)
 
-    def get_timeseries_state(self) -> NewState:
+    def get_timeseries_state(self) -> TimeseriesState:
         return self.x

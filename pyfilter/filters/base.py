@@ -3,17 +3,16 @@ from abc import ABC
 from tqdm import tqdm
 import torch
 from torch.nn import Module
-from typing import Tuple, Sequence, TypeVar, List, Callable
+from typing import Tuple, Sequence, TypeVar, Union
 from torch.distributions import Distribution
-from .utils import select_mean_of_dist
-from ..timeseries import StateSpaceModel
-from ..utils import choose
+from stochproc.timeseries import StateSpaceModel
+
 from .result import FilterResult
 from .state import FilterState, PredictionState
-from ..container import BoolOrInt
 
 
 TState = TypeVar("TState", bound=FilterState)
+BoolOrInt = Union[bool, int]
 
 
 class BaseFilter(Module, ABC):
@@ -47,8 +46,7 @@ class BaseFilter(Module, ABC):
             raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
 
         self._model = model
-        self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
-        self._n_parallel = None
+        self._batch_shape = torch.Size([])
 
         self.record_states = record_states
         self.record_moments = record_moments
@@ -63,39 +61,36 @@ class BaseFilter(Module, ABC):
         return self._model
 
     @property
-    def n_parallel(self) -> torch.Size:
+    def batch_shape(self) -> torch.Size:
         """
         Returns the number of parallel filters.
         """
 
-        if self._n_parallel is None or self._n_parallel == 0:
-            return torch.Size([])
+        return self._batch_shape
 
-        return torch.Size([self._n_parallel])
-
-    def set_num_parallel(self, num_filters: int):
+    def set_batch_shape(self, batch_shape: torch.Size):
         """
         Sets the number of parallel filters to use by utilizing broadcasting. Useful when running sequential particle
         algorithms or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
         objects.
 
         Args:
-             num_filters: The number of filters to run in parallel.
+             batch_shape: batch size.
 
         Example:
             >>> from pyfilter.filters.particle import SISR
             >>>
             >>> model = ...
             >>>
-            >>> sisr = SISR(model, 1000)
-            >>> sisr.set_num_parallel(50)
+            >>> sisr = SISR(model, 1_000)
+            >>> sisr.set_batch_shape(50)
             >>>
             >>> state = sisr.initialize()
             >>> state.x.values.shape
             torch.Size([50, 1000])
         """
 
-        raise NotImplementedError()
+        self._batch_shape = batch_shape
 
     def initialize(self) -> TState:
         """
@@ -131,9 +126,9 @@ class BaseFilter(Module, ABC):
 
         return self.__call__(y, state)
 
-    def longfilter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
+    def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
-        Batch version of ``.filter(...)`` where entire data set is parsed.
+        Batch version of :meth:`filter` where entire data set is parsed.
 
         Args:
             y: Data set to filter.
@@ -231,24 +226,12 @@ class BaseFilter(Module, ABC):
 
         nan_mask = torch.isnan(y)
         if nan_mask.any():
-            # TODO: Perhaps handle switching in __init__ instead?
-            if self._nan_strategy == "skip":
-                return prediction.create_state_from_prediction()
-            elif self._nan_strategy == "impute":
-                dist = self._get_observation_dist_from_prediction(prediction)
-
-                # NB: Might be better to reshape `y` to the number of parallel filters instead of using global mean?
-                mean = select_mean_of_dist(dist)
-                if len(dist.batch_shape) > 0:
-                    for d in reversed(range(0, len(dist.batch_shape))):
-                        mean = mean.median(dim=d)[0]
-
-                y = y.clone()
-                y[nan_mask] = mean[nan_mask]
+            # TODO: Fix this one...
+            raise NotImplementedError()
 
         return self.correct(y, state, prediction)
 
-    def resample(self, indices: torch.Tensor) -> "BaseFilter":
+    def resample(self, indices: torch.IntTensor) -> "BaseFilter":
         """
         Resamples the parameters of the ``.ssm`` attribute, used e.g. when running parallel filters.
 
@@ -256,31 +239,31 @@ class BaseFilter(Module, ABC):
              indices: The indices to select.
         """
 
-        if self.n_parallel.numel() == 0:
+        if self.batch_shape.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
 
         for m in [self.ssm.hidden, self.ssm.observable]:
             for p in m.parameters():
-                p.copy_(choose(p, indices))
+                p.copy_(p[indices])
 
         return self
 
-    def exchange(self, filter_: "BaseFilter", indices: torch.Tensor):
+    def exchange(self, filter_: "BaseFilter", mask: torch.BoolTensor):
         """
         Exchanges the parameters of ``.ssm`` with the parameters of ``filter_.ssm`` at the locations specified by
         ``indices``.
 
         Args:
             filter_: The filter to exchange parameters with.
-            indices: Mask specifying which parallel filters to exchange.
+            mask: Mask specifying which parallel filters to exchange.
         """
 
-        if self.n_parallel.numel() == 0:
+        if self.batch_shape.numel() == 0:
             raise Exception("No parallel filters, cannot resample!")
 
         for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
             for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
-                self_param[indices] = new_param[indices]
+                self_param.masked_scatter_(mask, new_param)
 
         return self
 

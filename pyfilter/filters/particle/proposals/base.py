@@ -3,7 +3,7 @@ from torch.distributions import Distribution
 from typing import Callable
 from abc import ABC
 from .pre_weight_funcs import get_pre_weight_func
-from ....timeseries import StochasticProcess, StateSpaceModel, NewState
+from stochproc.timeseries import StochasticProcess, StateSpaceModel, TimeseriesState
 
 
 class Proposal(ABC):
@@ -11,7 +11,7 @@ class Proposal(ABC):
     Abstract base class for proposal objects.
     """
 
-    def __init__(self, pre_weight_func: Callable[[StochasticProcess, NewState], NewState] = None):
+    def __init__(self, pre_weight_func: Callable[[StochasticProcess, TimeseriesState], TimeseriesState] = None):
         """
         Initializes the proposal object.
 
@@ -38,11 +38,11 @@ class Proposal(ABC):
 
         return self
 
-    def _weight_with_kernel(self, y: torch.Tensor, x_new: NewState, kernel: Distribution) -> torch.Tensor:
-        y_dist = self._model.observable.build_density(x_new)
-        return y_dist.log_prob(y) + x_new.dist.log_prob(x_new.values) - kernel.log_prob(x_new.values)
+    def _weight_with_kernel(self, y: torch.Tensor, x_dist: Distribution, x_new: TimeseriesState, kernel: Distribution) -> torch.Tensor:
+        y_dist = self._model.build_density(x_new)
+        return y_dist.log_prob(y) + x_dist.log_prob(x_new.values) - kernel.log_prob(x_new.values)
 
-    def sample_and_weight(self, y: torch.Tensor, x: NewState) -> (NewState, torch.Tensor):
+    def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
         """
         Method to be derived by inherited classes. Given the current observation ``y`` and previous state ``x``, this
         method samples new state values and weighs them accordingly.
@@ -57,7 +57,7 @@ class Proposal(ABC):
 
         raise NotImplementedError()
 
-    def pre_weight(self, y: torch.Tensor, x: NewState) -> torch.Tensor:
+    def pre_weight(self, y: torch.Tensor, x: TimeseriesState) -> torch.Tensor:
         """
         Pre-weights previous state ``x`` w.r.t. the current observation ``y``. Used in the ``APF`` when evaluating which
         candidate particles to select for propagation.
@@ -71,6 +71,6 @@ class Proposal(ABC):
         """
 
         new_state = self._pre_weight_func(self._model.hidden, x)
-        y_state = self._model.observable.propagate(new_state)
+        y_dist = self._model.build_density(new_state)
 
-        return y_state.dist.log_prob(y)
+        return y_dist.log_prob(y)

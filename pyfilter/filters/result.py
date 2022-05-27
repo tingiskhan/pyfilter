@@ -1,10 +1,11 @@
 import torch
-from typing import List, TypeVar, Generic
+from typing import List, TypeVar, Generic, Union
+from stochproc.container import make_dequeue
 from .state import FilterState
-from ..container import make_dequeue, BoolOrInt
 from ..state import BaseState
 
 TState = TypeVar("TState", bound=FilterState)
+BoolOrInt = Union[bool, int]
 
 
 class FilterResult(BaseState, Generic[TState]):
@@ -27,16 +28,13 @@ class FilterResult(BaseState, Generic[TState]):
 
         super().__init__()
 
-        self.register_buffer("_loglikelihood", init_state.get_loglikelihood())
+        self._loglikelihood = init_state.get_loglikelihood()
 
-        self.tensor_tuples["filter_means"] = make_dequeue(maxlen=record_moments)
-        self.tensor_tuples["filter_variances"] = make_dequeue(maxlen=record_moments)
+        self.tensor_tuples.make_deque("filter_means", maxlen=record_moments)
+        self.tensor_tuples.make_deque("filter_variances", maxlen=record_moments)
 
         self._states = make_dequeue(maxlen=record_states)
         self.append(init_state)
-
-        self._register_state_dict_hook(self._state_dump_hook)
-        self._register_load_state_dict_pre_hook(self._state_load_hook)
 
     @property
     def loglikelihood(self) -> torch.Tensor:
@@ -44,7 +42,7 @@ class FilterResult(BaseState, Generic[TState]):
         Returns the current estimate of the total log likelihood, :math:`\\log{p(y_{1:t})}`.
         """
 
-        return self._buffers["_loglikelihood"]
+        return self._loglikelihood
 
     @property
     def filter_means(self) -> torch.Tensor:
@@ -93,7 +91,7 @@ class FilterResult(BaseState, Generic[TState]):
 
         return self
 
-    def resample(self, indices: torch.Tensor, entire_history=True):
+    def resample(self, indices: torch.IntTensor, entire_history=True):
         """
         Resamples tensor tuples and states.
 
@@ -103,33 +101,15 @@ class FilterResult(BaseState, Generic[TState]):
                 resampling the tensor tuples.
         """
 
-        self._loglikelihood[:] = self.loglikelihood[indices]
+        self._loglikelihood.copy_(self._loglikelihood[indices])
 
         if entire_history:
             for tt in self.tensor_tuples.values():
                 for tens in tt:
-                    tens[:] = tens[indices]
+                    tens.copy_(tens[indices])
 
         for s in self.states:
             s.resample(indices)
-
-        return self
-
-    def forward(self, state: TState):
-        self.tensor_tuples["filter_means"].append(state.get_mean())
-        self.tensor_tuples["filter_variances"].append(state.get_variance())
-
-        # TODO: Assumes tuples...
-        for k, v in state.tensor_tuples.items():
-            if k not in self.tensor_tuples:
-                self.tensor_tuples[k] = tuple()
-
-            self.tensor_tuples[k] += v
-
-        # TODO: Might be able to do this better?
-        self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
-
-        self._states.append(state)
 
         return self
 
@@ -141,21 +121,12 @@ class FilterResult(BaseState, Generic[TState]):
             state: The state to append.
         """
 
-        return self.__call__(state)
+        self.tensor_tuples["filter_means"].append(state.get_mean())
+        self.tensor_tuples["filter_variances"].append(state.get_variance())
 
-    @staticmethod
-    def _state_dump_hook(self: "FilterResult[TState]", state_dict, prefix, local_metadata):
-        state_dict[prefix + "latest_state"] = self.latest_state.state_dict()
+        # TODO: Might be able to do this better?
+        self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
 
-    def _state_load_hook(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-        # TODO: Might have use prefix?
-        self.latest_state.load_state_dict(state_dict.pop(prefix + "latest_state"))
+        self._states.append(state)
 
-    def _apply(self, fn):
-        super(FilterResult, self)._apply(fn)
-
-        new_deque = make_dequeue(maxlen=self._states.maxlen)
-        for s in self.states:
-            new_deque.append(s.apply(fn))
-
-        self._states = new_deque
+        return self

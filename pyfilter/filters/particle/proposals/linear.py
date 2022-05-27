@@ -1,8 +1,8 @@
 from .base import Proposal
 import torch
 from typing import Tuple
-from torch.distributions import Normal, MultivariateNormal, AffineTransform
-from ....timeseries import LinearGaussianObservations as LGO, AffineProcess, NewState
+from torch.distributions import Normal, MultivariateNormal
+from stochproc.timeseries import AffineProcess, TimeseriesState
 from ....utils import construct_diag_from_flat
 
 if torch.__version__ >= "1.9.0":
@@ -35,7 +35,7 @@ class LinearGaussianObservations(Proposal):
         self._observable_is1d = None
 
     def set_model(self, model):
-        if not (isinstance(model, LGO) and isinstance(model.hidden, AffineProcess)):
+        if not isinstance(model.hidden, AffineProcess):
             raise ValueError("Model combination not supported!")
 
         self._model = model
@@ -68,19 +68,17 @@ class LinearGaussianObservations(Proposal):
 
         return MultivariateNormal(m, scale_tril=cholesky(cov), validate_args=False)
 
-    def _get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: NewState) -> (torch.Tensor, torch.Tensor):
+    def _get_constant_and_offset(self, params: Tuple[torch.Tensor, ...], x: TimeseriesState) -> (torch.Tensor, torch.Tensor):
         return params[0], None
 
     def sample_and_weight(self, y, x):
-        x_copy = x.copy(dist=x.dist, values=x.values)
-        affine_transform = next(trans for trans in x_copy.dist.transforms if isinstance(trans, AffineTransform))
+        mean, scale = self._model.hidden.mean_scale(x)
+        x_dist = self._model.hidden.build_density(x)
 
-        loc, scale = affine_transform.loc, affine_transform.scale
         h_var_inv = scale.pow(-2.0)
-
         params = self._model.observable.functional_parameters()
 
-        x_copy.values = loc
+        x_copy = x.copy(values=mean)
         c, offset = self._get_constant_and_offset(params, x_copy)
 
         _, o_scale = self._model.observable.mean_scale(x_copy)
@@ -88,19 +86,19 @@ class LinearGaussianObservations(Proposal):
 
         y_offset = y - (offset if offset is not None else 0.0)
         kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
-        kernel = kernel_func(y_offset, loc, h_var_inv, o_var_inv, c)
+        kernel = kernel_func(y_offset, mean, h_var_inv, o_var_inv, c)
 
-        x_result = x_copy.copy(dist=x_copy.dist, values=kernel.sample())
+        x_result = x_copy.copy(values=kernel.sample())
 
-        return x_result, self._weight_with_kernel(y, x_result, kernel)
+        return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
         new_state = x.propagate_from(values=h_loc)
         o_loc, o_scale = self._model.observable.mean_scale(new_state)
 
-        o_var = o_scale ** 2
-        h_var = h_scale ** 2
+        o_var = o_scale.pow(2.0)
+        h_var = h_scale.pow(2.0)
 
         params = self._model.observable.functional_parameters()
         c, offset = self._get_constant_and_offset(params, new_state)

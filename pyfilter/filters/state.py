@@ -1,7 +1,6 @@
 from torch import Tensor
 from abc import ABC
-from ..timeseries import NewState
-from ..state import BaseState
+from stochproc.timeseries import TimeseriesState
 
 
 class PredictionState(ABC):
@@ -17,7 +16,7 @@ class PredictionState(ABC):
         raise NotImplementedError()
 
 
-class FilterState(BaseState, ABC):
+class FilterState(dict, ABC):
     """
     Abstract base class for all filter states.
     """
@@ -64,7 +63,7 @@ class FilterState(BaseState, ABC):
 
         raise NotImplementedError()
 
-    def get_timeseries_state(self) -> NewState:
+    def get_timeseries_state(self) -> TimeseriesState:
         """
         Returns the state of the timeseries.
         """

@@ -1,16 +1,16 @@
 from typing import Callable, TypeVar
-from ....timeseries import AffineEulerMaruyama, AffineProcess, StochasticProcess, NewState
+from stochproc.timeseries import AffineEulerMaruyama, AffineProcess, StochasticProcess, TimeseriesState
 
 T = TypeVar("T", bound=StochasticProcess)
-_RESULT = Callable[[T, NewState], NewState]
+_RESULT = Callable[[T, TimeseriesState], TimeseriesState]
 
 
-def _affine_process(mod: AffineProcess, state: NewState) -> NewState:
+def _affine_process(mod: AffineProcess, state: TimeseriesState) -> TimeseriesState:
     loc, _ = mod.mean_scale(state)
     return state.propagate_from(values=loc)
 
 
-def _affine_euler(mod: AffineEulerMaruyama, state: NewState) -> NewState:
+def _affine_euler(mod: AffineEulerMaruyama, state: TimeseriesState) -> TimeseriesState:
     return mod.propagate_conditional(state, 0.0)
 
 
