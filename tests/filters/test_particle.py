@@ -2,6 +2,7 @@ import itertools
 import pytest
 import torch
 from pyfilter.filters import particle as part
+import numpy as np
 
 from .models import linear_models
 
@@ -32,6 +33,8 @@ class TestParticleFilters(object):
 
     @pytest.mark.parametrize("models, filter_, batch_size", PARAMETERS)
     def test_compare_with_kalman_filter(self, models, filter_, batch_size):
+        np.random.seed(123)
+
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
