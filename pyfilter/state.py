@@ -1,21 +1,21 @@
 from torch.nn import Module
-from .container import BufferIterable
+from stochproc.container import BufferIterable
 
 
-class BaseState(Module):
+class BaseResult(dict):
     """
     Base class for state like objects.
     """
 
     def __init__(self):
         """
-        Initializes the ``BaseState`` class.
+        Initializes the ``BaseResult`` class.
         """
 
-        super(BaseState, self).__init__()
+        super(BaseResult, self).__init__()
         self.tensor_tuples = BufferIterable()
 
-    def exchange_tensor_tuples(self, other: "BaseState"):
+    def exchange_tensor_tuples(self, other: "BaseResult"):
         """
         Exchanges the ``.tensor_tuples`` of self with that of other.
 

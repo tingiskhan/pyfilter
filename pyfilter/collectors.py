@@ -4,12 +4,12 @@ from torch.distributions import TransformedDistribution
 
 from .filters.particle.state import ParticleFilterState
 from .inference.sequential.state import SequentialAlgorithmState
-from .state import BaseState
+from .state import BaseResult
 import torch.nn
 
 from stochproc.timeseries import StateSpaceModel
 
-T = TypeVar("T", bound=BaseState)
+T = TypeVar("T", bound=BaseResult)
 
 
 __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
