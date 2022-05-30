@@ -33,10 +33,10 @@ def linear_models():
         transition_offsets=alpha,
         observation_covariance=s ** 2.0,
         initial_state_mean=alpha,
-        initial_state_covariance=sigma ** 2 / (1 - beta ** 2.0)
+        initial_state_covariance=sigma ** 2.0
     )
 
-    yield [obs_1d_1d, kalman_1d_1d]
+    yield obs_1d_1d, kalman_1d_1d
 
     sigma = np.array([0.05, 0.1])
     a, s = np.eye(2), 0.15 * np.ones(2)
