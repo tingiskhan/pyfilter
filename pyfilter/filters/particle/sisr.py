@@ -2,6 +2,7 @@ from .base import ParticleFilter
 from .utils import log_likelihood
 import torch
 from .state import ParticleFilterState, ParticleFilterPrediction
+from ..utils import gather
 
 
 class SISR(ParticleFilter):
@@ -13,14 +14,11 @@ class SISR(ParticleFilter):
         old_normalized_w = state.normalized_weights()
 
         indices, mask = self._resample_parallel(state.w)
-        resampled_x = state.x.copy(values=state.x.values.index_select(dim=len(self.batch_shape), index=indices))
 
-        return ParticleFilterPrediction(
-            resampled_x,
-            old_normalized_w,
-            indices=indices,
-            mask=mask
-        )
+        resampled_x = gather(state.x.values, indices)
+        resampled_state = state.x.copy(values=resampled_x)
+
+        return ParticleFilterPrediction(resampled_state, old_normalized_w, indices=indices, mask=mask)
 
     def correct(self, y: torch.Tensor, state, prediction: ParticleFilterPrediction):
         x, weights = self.proposal.sample_and_weight(y, prediction.prev_x)

@@ -2,6 +2,7 @@ import torch
 from .base import ParticleFilter
 from .utils import log_likelihood
 from .state import ParticleFilterState, ParticleFilterPrediction
+from ..utils import gather
 
 
 class APF(ParticleFilter):
@@ -20,11 +21,14 @@ class APF(ParticleFilter):
         resample_weights = pre_weights + state.w
 
         indices = self._resampler(resample_weights)
-        resampled_x = state.x.copy(values=state.x.values.index_select(dim=len(self.batch_shape), index=indices))
 
-        x, weights = self._proposal.sample_and_weight(y, resampled_x)
+        dim = len(self.batch_shape)
+        resampled_x = gather(state.x.values, indices)
+        resampled_state = state.x.copy(values=resampled_x)
 
-        w = weights - pre_weights.index_select(dim=-1, index=indices)
+        x, weights = self._proposal.sample_and_weight(y, resampled_state)
+
+        w = weights - pre_weights.gather(dim, indices)
         ll = log_likelihood(w) + (prediction.old_weights * pre_weights.exp()).sum(-1).log()
 
         return ParticleFilterState(x, w, ll, indices)
