@@ -1,26 +1,6 @@
 import torch
-from torch.distributions import utils
 from functools import wraps
 from .constants import INFTY
-from .typing import ShapeLike
-
-
-def size_getter(shape: ShapeLike) -> torch.Size:
-    """
-    Utility function for aiding in generating a ``torch.Size`` object.
-
-    Args:
-        shape: The shape to use, can be ``None``, ``int`` or tuples.
-    """
-
-    if shape is None:
-        return torch.Size([])
-    elif isinstance(shape, torch.Size):
-        return shape
-    elif isinstance(shape, int):
-        return torch.Size([shape])
-
-    return torch.Size(shape)
 
 
 def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
@@ -113,29 +93,6 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
 
     return normalized.squeeze(0) if is_1d else normalized
-
-
-def broadcast_all(*values):
-    """
-    Wrapper around ``torch.distributions.utils.broadcast_all`` for unifying tensors.
-
-    Args:
-        values: Iterable of tensors.
-    """
-
-    from .distributions.base import DistributionBuilder
-
-    broadcast_tensors = utils.broadcast_all(*(v for v in values if not issubclass(v.__class__, DistributionBuilder)))
-
-    res = tuple()
-    torch_index = 0
-    for i, v in enumerate(values):
-        is_dist_subclass = issubclass(v.__class__, DistributionBuilder)
-        res += (values[i] if is_dist_subclass else broadcast_tensors[torch_index],)
-
-        torch_index += int(not is_dist_subclass)
-
-    return res
 
 
 def is_documented_by(original):
