@@ -2,7 +2,6 @@ import copy
 from abc import ABC
 from tqdm import tqdm
 import torch
-from torch.nn import Module
 from typing import Tuple, Sequence, TypeVar, Union
 from torch.distributions import Distribution
 from stochproc.timeseries import StateSpaceModel
@@ -15,7 +14,7 @@ TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
 
 
-class BaseFilter(Module, ABC):
+class BaseFilter(ABC):
     """
     Abstract base class for filters.
     """
@@ -83,7 +82,7 @@ class BaseFilter(Module, ABC):
             >>> model = ...
             >>>
             >>> sisr = SISR(model, 1_000)
-            >>> sisr.set_batch_shape(50)
+            >>> sisr.set_batch_shape(torch.Size([50]))
             >>>
             >>> state = sisr.initialize()
             >>> state.x.values.shape
@@ -110,21 +109,6 @@ class BaseFilter(Module, ABC):
         """
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
-
-    def filter(self, y: torch.Tensor, state: TState) -> TState:
-        """
-        Performs one filter move given observation ``y`` and previous state of the filter. Wraps the ``__call__``
-        method of `torch.nn.Module``.
-
-        Args:
-            y: The observation for which to filter.
-            state: The previous state of the filter.
-
-        Returns:
-            New and updated state.
-        """
-
-        return self.__call__(y, state)
 
     def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
@@ -213,13 +197,17 @@ class BaseFilter(Module, ABC):
 
         raise NotImplementedError()
 
-    def forward(self, y: torch.Tensor, state: TState) -> TState:
+    def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
-        Method to be overridden by derived filters.
+        Performs one filter move given observation ``y`` and previous state of the filter. Wraps the ``__call__``
+        method of `torch.nn.Module``.
 
         Args:
-            y: See ``self.filter(...)``.
-            state: See ``self.filter(...)``.
+            y: The observation for which to filter.
+            state: The previous state of the filter.
+
+        Returns:
+            New and updated state.
         """
 
         prediction = self.predict(state)
