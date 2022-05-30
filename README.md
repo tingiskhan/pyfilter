@@ -4,6 +4,7 @@ Sequential Monte Carlo and variational inference. It is similar to `pomp`, but i
 [`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
 
 ## Example
+
 ```python
 from pyfilter.timeseries import AffineEulerMaruyama, LinearGaussianObservations
 import torch
@@ -44,7 +45,7 @@ ax[0].plot(x.numpy(), label="True")
 ax[1].plot(y.numpy())
 
 filt = APF(ssm, 1000, proposal=p.Bootstrap())
-result = filt.longfilter(y)
+result = filt.batch_filter(y)
 
 ax[0].plot(result.filter_means.numpy(), label="Filtered")
 ax[0].legend()

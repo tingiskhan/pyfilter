@@ -1,6 +1,4 @@
 import itertools
-import random
-import numpy as np
 import pytest
 import torch
 from pyfilter.filters import particle as part
@@ -8,7 +6,7 @@ from pyfilter.filters import particle as part
 from .models import linear_models
 
 
-def construct_filters(particles=500, **kwargs):
+def construct_filters(particles=1_000, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     for pt in particle_types:
@@ -16,22 +14,23 @@ def construct_filters(particles=500, **kwargs):
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
+        linear_proposal = part.proposals.LinearGaussianObservations(a_name="parameter_0")
+        yield lambda m: pt(m, particles, proposal=linear_proposal)
+
 
 BATCH_SIZES = [
     torch.Size([]),
-    torch.Size([10])
+    torch.Size([10]),
 ]
+
+PARAMETERS = itertools.product(linear_models(), construct_filters(), BATCH_SIZES)
 
 
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
-    PARALLEL_FILTERS = 20
     SERIES_LENGTH = 100
-    PREDICTION_STEPS = 5
-    STATE_RECORD_LENGTH = 5
-    NUMBER_OF_NANS = 10
 
-    @pytest.mark.parametrize("models, filter_, batch_size", itertools.product(linear_models(), construct_filters(), BATCH_SIZES))
+    @pytest.mark.parametrize("models, filter_, batch_size", PARAMETERS)
     def test_compare_with_kalman_filter(self, models, filter_, batch_size):
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)

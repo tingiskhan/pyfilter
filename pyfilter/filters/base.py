@@ -89,6 +89,9 @@ class BaseFilter(ABC):
             torch.Size([50, 1000])
         """
 
+        if len(batch_shape) > 1:
+            raise NotImplementedError("Currently do not support nested batches!")
+
         self._batch_shape = batch_shape
 
     def initialize(self) -> TState:
