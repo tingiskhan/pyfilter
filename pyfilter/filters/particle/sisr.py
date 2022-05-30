@@ -25,7 +25,7 @@ class SISR(ParticleFilter):
         indices, mask = self._resample_parallel(state.w)
 
         resampled_x = state.x.values
-        resampled_x.masked_scatter_(mask, batched_gather(resampled_x[mask], indices))
+        resampled_x.masked_scatter_(mask, batched_gather(resampled_x[mask], indices, len(self.batch_shape)))
 
         resampled_state = state.x.copy(values=resampled_x)
 

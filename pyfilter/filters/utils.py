@@ -1,5 +1,6 @@
 import torch
 from torch.distributions import TransformedDistribution, Distribution, AffineTransform
+import einops
 
 
 def _construct_empty_index(array: torch.Tensor) -> torch.Tensor:
@@ -37,13 +38,14 @@ def select_mean_of_dist(dist: Distribution) -> torch.Tensor:
 
 
 #: TODO: Improve this to allow for arbitrary batching...
-def batched_gather(x: torch.Tensor, indices: torch.IntTensor):
+def batched_gather(x: torch.Tensor, indices: torch.IntTensor, dim: int):
     """
     Similar to the gather method of :class:`torch.Tensor`.
 
     Args:
         x: the tensor to select.
         indices: the indices to choose.
+        dim: the dimension to choose.
 
     Returns:
         A selected tensor
@@ -52,6 +54,9 @@ def batched_gather(x: torch.Tensor, indices: torch.IntTensor):
     if indices.dim() == 1:
         return x[indices]
     elif indices.dim() == 2:
-        return x[torch.arange(x.shape[0], device=x.device).unsqueeze(-1), indices]
+        if x.dim() > indices.dim():
+            indices = indices.unsqueeze(-1).repeat_interleave(2, dim=-1)
+
+        return x.gather(dim, indices)
 
     raise NotImplementedError("Currently do not support more batch dimensions than 1!")
