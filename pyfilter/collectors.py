@@ -7,7 +7,7 @@ from .inference.sequential.state import SequentialAlgorithmState
 from .state import BaseState
 import torch.nn
 
-from .timeseries import StateSpaceModel
+from stochproc.timeseries import StateSpaceModel
 
 T = TypeVar("T", bound=BaseState)
 
