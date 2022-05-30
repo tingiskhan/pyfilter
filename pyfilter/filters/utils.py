@@ -37,7 +37,7 @@ def select_mean_of_dist(dist: Distribution) -> torch.Tensor:
 
 
 #: TODO: Improve this to allow for arbitrary batching...
-def gather(x: torch.Tensor, indices: torch.IntTensor):
+def batched_gather(x: torch.Tensor, indices: torch.IntTensor):
     """
     Similar to the gather method of :class:`torch.Tensor`.
 

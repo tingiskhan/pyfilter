@@ -6,8 +6,7 @@ from torch.distributions import Categorical
 from ..base import BaseFilter
 from ...resampling import systematic
 from .proposals import Bootstrap, Proposal
-from ...utils import get_ess, choose
-from ..utils import _construct_empty_index
+from ...utils import choose
 from .state import ParticleFilterState, ParticleFilterPrediction
 
 
@@ -64,17 +63,6 @@ class ParticleFilter(BaseFilter, ABC):
         """
 
         return self._proposal
-
-    def _resample_parallel(
-        self, w: torch.Tensor
-    ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, bool]]:
-        ess = get_ess(w) / w.shape[-1]
-        mask = ess < self._resample_threshold
-
-        out = _construct_empty_index(w)
-        out[mask] = self._resampler(w[mask])
-
-        return out, mask
 
     def initialize(self) -> ParticleFilterState:
         x = self._model.hidden.initial_sample(self.particles)
