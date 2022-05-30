@@ -2,13 +2,13 @@ import torch
 from typing import List, TypeVar, Generic, Union
 from stochproc.container import make_dequeue
 from .state import FilterState
-from ..state import BaseState
+from ..state import BaseResult
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
 
 
-class FilterResult(BaseState, Generic[TState]):
+class FilterResult(BaseResult, Generic[TState]):
     """
     Implements an object for storing results when running filters.
     """
