@@ -2,7 +2,7 @@ from torch.distributions import Independent, Normal
 import torch
 from torch.autograd import grad
 from .random_walk import RandomWalk
-from .....timeseries import NewState
+from stochproc.timeseries import TimeseriesState
 
 
 class GradientBasedProposal(RandomWalk):
@@ -43,8 +43,9 @@ class GradientBasedProposal(RandomWalk):
 
         time = torch.stack(tuple(s.x.time_index for s in state.filter_state.states))
 
-        xtm1 = NewState(time[:-1], values=smoothed[:-1])
-        xt = NewState(time[1:], values=smoothed[1:])
+        # TODO: Fix
+        # xtm1 = TimeseriesState(time[:-1], values=smoothed[:-1])
+        # xt = TimeseriesState(time[1:], values=smoothed[1:])
 
         y = y.view(y.shape[0], 1, 1, *y.shape[1:])
 

@@ -28,11 +28,11 @@ class SMC2(SequentialParticleAlgorithm):
         Args:
             filter_: See base.
             particles: See base.
-            threshold: The threshold of the relative ESS at which to perform a rejuvenation of the particles. Note that
+            threshold: The threshold of the relative ESS at which to perform a rejuvenation of the num_particles. Note that
                 using anything other than an ``float`` is experimental and is not supported in any literature.
-            kernel: Optional parameter. The kernel to use for mutating the particles.
+            kernel: Optional parameter. The kernel to use for mutating the num_particles.
             max_increases: Whenever the acceptance rate of the rejuvenation step falls below 20% we double the amount
-                of state particles (as recommended in the original article). However, to avoid cases where there is such
+                of state num_particles (as recommended in the original article). However, to avoid cases where there is such
                 a mismatch between the observed data and the model that we just continue to get low acceptance rates, we
                 allow capping the number of increases. This is especially useful if running multiple parallel instances
                 to avoid one of them from hogging all resources.
@@ -55,7 +55,7 @@ class SMC2(SequentialParticleAlgorithm):
 
         return SMC2State(state.w, state.filter_state, state.ess)
 
-    def forward(self, y, state: SMC2State):
+    def step(self, y, state: SMC2State):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
@@ -71,7 +71,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def rejuvenate(self, state: SMC2State):
         """
-        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below ``._threshold``.
+        Rejuvenates the num_particles using a PMCMC move, called whenever the relative ESS falls below ``._threshold``.
 
         Args:
             state: The current state of the algorithm.
@@ -89,7 +89,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def _increase_states(self, state: SMC2State) -> SMC2State:
         """
-        Method that increases the number of state particles, called whenever the acceptance rate of ``.rejuvenate``
+        Method that increases the number of state num_particles, called whenever the acceptance rate of ``.rejuvenate``
         falls below 20%.
 
         Args:
@@ -103,9 +103,9 @@ class SMC2(SequentialParticleAlgorithm):
             raise Exception(f"Configuration only allows {self._max_increases}!")
 
         self.filter._particles[-1] *= 2
-        self.filter.set_num_parallel(*self.particles)
+        self.filter.set_batch_shape(*self.particles)
 
-        new_filter_state = self.filter.longfilter(state.parsed_data, bar=False)
+        new_filter_state = self.filter.batch_filter(state.parsed_data, bar=False)
 
         w = new_filter_state.loglikelihood - state.filter_state.loglikelihood
         self._increases += 1

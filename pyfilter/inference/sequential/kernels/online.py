@@ -5,7 +5,7 @@ from .jittering import JitterKernel, NonShrinkingKernel
 
 class OnlineKernel(BaseKernel):
     """
-    Kernel for mutating parameter particles in an online fashion.
+    Kernel for mutating parameter num_particles in an online fashion.
     """
 
     def __init__(self, kernel: JitterKernel = None, discrete=False, **kwargs):
@@ -13,8 +13,8 @@ class OnlineKernel(BaseKernel):
         Initializes the ``OnlineKernel`` class.
 
         Args:
-            kernel: The kernel to use for jittering the parameter particles.
-            discrete: Whether to mutate all particles, or just some of them with a probability proportional to the ESS.
+            kernel: The kernel to use for jittering the parameter num_particles.
+            discrete: Whether to mutate all num_particles, or just some of them with a probability proportional to the ESS.
             kwargs: See base.
         """
 

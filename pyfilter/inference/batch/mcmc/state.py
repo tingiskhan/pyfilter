@@ -1,7 +1,9 @@
+from typing import Dict
+
 import torch
+from stochproc.timeseries import StateSpaceModel
 from ...state import FilterAlgorithmState
 from ....filters import FilterResult
-from ....timeseries import StateSpaceModel
 
 
 class PMMHResult(FilterAlgorithmState):
@@ -9,7 +11,7 @@ class PMMHResult(FilterAlgorithmState):
     Result object for PMMH algorithm.
     """
 
-    def __init__(self, initial_sample: torch.Tensor, filter_result: FilterResult):
+    def __init__(self, initial_sample: Dict[str, torch.Tensor], filter_result: FilterResult):
         """
         Initializes the ``PMMHResult`` class.
 
@@ -19,11 +21,7 @@ class PMMHResult(FilterAlgorithmState):
         """
 
         super().__init__(filter_result)
-        self.tensor_tuples["samples"] = (initial_sample,)
-
-    @property
-    def samples(self) -> torch.Tensor:
-        return self._tensor_tuples.get_as_tensor("samples")
+        self.samples = initial_sample
 
     def update_chain(self, sample: torch.Tensor):
         """
@@ -33,7 +31,7 @@ class PMMHResult(FilterAlgorithmState):
             sample: The next accepted sample of the chain.
         """
 
-        self.tensor_tuples["samples"] += (sample,)
+        self.tensor_tuples["num_samples"] += (sample,)
 
     def update_parameters_from_chain(self, model: StateSpaceModel, burn_in: int, constrained=True):
         """
@@ -41,7 +39,7 @@ class PMMHResult(FilterAlgorithmState):
 
         Args:
             model: The model to set the parameters for.
-            burn_in: The number of samples from the chain to discard.
+            burn_in: The number of num_samples from the chain to discard.
             constrained: Whether parameters are constrained.
         """
 

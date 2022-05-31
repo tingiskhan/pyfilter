@@ -18,7 +18,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         Args:
             filter_: See base.
             particles: See base.
-            kernel: Optional parameter. The jittering kernel to use when mutating particles from :math:`t` to
+            kernel: Optional parameter. The jittering kernel to use when mutating num_particles from :math:`t` to
                 :math:`t+1`. If ``None`` defaults to using ``pyfilter.inference.sequential.kernels.NonShrinkingKernel``.
             discrete: See ``pyfilter.inference.sequential.kernels.OnlineKernel``.
         """
@@ -43,7 +43,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def forward(self, y, state):
+    def step(self, y, state):
         if self.do_update_particles(state):
             self._kernel.update(self.filter, state)
 
@@ -66,7 +66,7 @@ class NESS(BaseOnlineAlgorithm):
         Args:
             filter_: See base.
             particles: See base.
-            threshold: The relative ESS threshold at when update the particles.
+            threshold: The relative ESS threshold at when update the num_particles.
         """
 
         super().__init__(filter_, particles, **kwargs)
@@ -89,7 +89,7 @@ class FixedWidthNESS(BaseOnlineAlgorithm):
         Args:
             filter_: See base.
             particles: See base.
-            block_len: The length of the block of observations to parse before updating the particles.
+            block_len: The length of the block of observations to parse before updating the num_particles.
         """
 
         super().__init__(filter_, particles, **kwargs)

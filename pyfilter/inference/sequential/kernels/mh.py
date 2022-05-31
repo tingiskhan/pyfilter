@@ -41,7 +41,7 @@ class ParticleMetropolisHastings(BaseKernel):
         state.filter_state.resample(indices)
 
         accepted = torch.zeros_like(state.w, dtype=torch.bool)
-        shape = torch.Size([]) if any(dist.batch_shape) else filter_.n_parallel
+        shape = torch.Size([]) if any(dist.batch_shape) else filter_.batch_shape
 
         # NB: The adaptive part is inspired by https://github.com/nchopin/particles
         old_params = filter_.ssm.concat_parameters(constrained=False)

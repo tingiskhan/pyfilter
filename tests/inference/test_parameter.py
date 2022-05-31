@@ -1,0 +1,37 @@
+import pytest
+import torch
+
+import pyfilter.inference as inf
+from pyro.distributions import Normal
+from stochproc.timeseries import StructuralStochasticProcess
+
+
+SHAPES = [
+    torch.Size([]),
+    torch.Size([200, 1])
+]
+
+
+class TestParameter(object):
+    @pytest.mark.parametrize("batch_shape", SHAPES)
+    def test_initialize_parameter(self, batch_shape):
+        with inf.make_context() as cntxt:
+            prior = inf.Prior(Normal, loc=0.0, scale=1.0)
+            parameter = cntxt.named_parameter("kappa", prior)
+
+            sts = StructuralStochasticProcess((parameter,), None)
+            assert (next(sts.parameters()) is parameter) and (cntxt.get_parameter("kappa") is parameter)
+
+            for p in sts.parameters():
+                p.sample_(batch_shape)
+                assert (p is parameter) and (p.shape == batch_shape)
+
+            if not torch.cuda.is_available():
+                return
+
+            sts = sts.cuda()
+            assert (next(sts.parameters()) is parameter) and (cntxt.get_parameter("kappa") is parameter)
+
+            for p in sts.parameters():
+                p.sample_(batch_shape)
+                assert (p is parameter) and (p.shape == batch_shape)

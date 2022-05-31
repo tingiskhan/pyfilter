@@ -78,7 +78,7 @@ class IntervalThreshold(Thresholder):
         Initializes the ``IntervalThreshold`` class.
 
         Args:
-            thresholds: A dictionary specifying the thresholds and the ending numer of samples.
+            thresholds: A dictionary specifying the thresholds and the ending numer of num_samples.
             ending_threshold: The end threshold.
         """
 

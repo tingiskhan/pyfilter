@@ -1,8 +1,8 @@
-from ..state import BaseState
+from ..state import BaseResult
 from ..filters import FilterResult
 
 
-class AlgorithmState(BaseState):
+class AlgorithmState(BaseResult):
     """
     Base state class for algorithms.
     """

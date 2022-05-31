@@ -1,19 +1,57 @@
 from abc import ABC
-from torch.nn import Module
+from collections import OrderedDict
+
 import torch
-from typing import Tuple
+from typing import Tuple, Dict
+
 from ..filters import BaseFilter
 from .logging import DefaultLogger
 from .state import AlgorithmState
+from .parameter import PriorBoundParameter
+from .context import ParameterContext
 
 
-class BaseAlgorithm(Module, ABC):
+class BaseAlgorithm(ABC):
     """
     Abstract base class for all algorithms.
     """
 
-    def __init__(self):
+    def __init__(self, filter_: BaseFilter):
+        """
+        Initializes the :class:`BaseFilterAlgorithm` class.
+
+        Args:
+             filter_: The filter to use for approximating the log likelihood.
+        """
+
         super().__init__()
+        self._filter = filter_
+        self.context: ParameterContext = ParameterContext.get_context()
+
+    @property
+    def filter(self) -> BaseFilter:
+        """
+        Returns the algorithms instance of the filter.
+        """
+
+        return self._filter
+
+    @filter.setter
+    def filter(self, x: BaseFilter):
+        if not isinstance(x, type(self.filter)):
+            raise ValueError(f"'x' is not {self.filter}!")
+
+        self._filter = x
+
+    def get_parameters(self, constrained=True) -> Dict[str, PriorBoundParameter]:
+        """
+        Gets the parameters in the current scope.
+
+        Args:
+            constrained: whether to return the constrained parameters.
+        """
+
+        return OrderedDict(self.context.get_parameters(constrained=constrained))
 
     def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
         """
@@ -21,8 +59,7 @@ class BaseAlgorithm(Module, ABC):
 
         Args:
             y: The data to consider, should of size ``(number of time steps, [dimension of observed space])``.
-            logging: Class inherited from ``DefaultLogger`` to handle logging. E.g. ``VariationalBayes`` logs every
-                iteration of the full dataset, whereas sequential algorithms every data point.
+            logging: Class inherited from ``DefaultLogger`` to handle logging.
         """
 
         raise NotImplementedError()
@@ -45,36 +82,3 @@ class BaseAlgorithm(Module, ABC):
 
     def __repr__(self):
         return str(self.__class__.__name__)
-
-
-class BaseFilterAlgorithm(BaseAlgorithm, ABC):
-    """
-    Abstract base class for algorithms utilizing filters for building an approximation of the log likelihood,
-    :math:`\\log{\\hat{p}(y_{1:t})}`, rather than the exact likelihood.
-    """
-
-    def __init__(self, filter_: BaseFilter):
-        """
-        Initializes the ``BaseFilterAlgorithm`` class.
-
-        Args:
-             filter_: The filter to use for approximating the log likelihood.
-        """
-
-        super().__init__()
-        self._filter = filter_
-
-    @property
-    def filter(self) -> BaseFilter:
-        """
-        Returns the algorithms instance of the filter.
-        """
-
-        return self._filter
-
-    @filter.setter
-    def filter(self, x: BaseFilter):
-        if not isinstance(x, type(self.filter)):
-            raise ValueError(f"'x' is not {self.filter}!")
-
-        self._filter = x

@@ -1,14 +1,22 @@
 from torch.distributions import Distribution
 import torch
 from abc import ABC
+from ....context import ParameterContext
 from ....state import FilterAlgorithmState
 from .....filters import BaseFilter
 
 
 class BaseProposal(ABC):
     """
-    Abstract base class for proposal objects used for generating candidate samples in PMMH.
+    Abstract base class for proposal objects used for generating candidate num_samples in PMMH.
     """
+
+    def __init__(self):
+        """
+        Initializes the :class:`BaseProposal` class.
+        """
+
+        self.context = ParameterContext.get_context()
 
     def build(self, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
         """

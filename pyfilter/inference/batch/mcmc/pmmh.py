@@ -1,27 +1,29 @@
 import torch
-from .utils import seed, run_pmmh
+from .utils import run_pmmh
 from .proposals import RandomWalk, BaseProposal
 from .state import PMMHResult
-from ..base import BatchFilterAlgorithm
+from ...base import BaseAlgorithm
 from ...logging import TQDMWrapper
-from ....filters import ParticleFilter
 
 
-class PMMH(BatchFilterAlgorithm):
+class PMMH(BaseAlgorithm):
+    # TODO: Add reference
     """
     Implements the `Particle Marginal Metropolis Hastings` algorithm found in `Particle Markov chain Monte Carlo
     methods` by C. Andrieu et al.
     """
 
+    MONTE_CARLO_SAMPLES = torch.Size([10_000])
+
     def __init__(
-        self, filter_, samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"
+        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"
     ):
         """
-        Initializes the ``PMMH`` class.
+        Initializes the :class:`PMMH` class.
 
         Args:
              filter_: See base.
-             samples: The number of PMMH samples to draw.
+             num_samples: The number of PMMH samples to draw.
              num_chains: The number of parallel chains to run. The total number of samples on termination is thus
                 ``samples * num_chains``. Do note that we utilize broadcasting rather than ``for``-loops.
              proposal: Optional parameter specifying how to construct the proposal density for candidate
@@ -34,30 +36,29 @@ class PMMH(BatchFilterAlgorithm):
                     determining the mean.
         """
 
-        super().__init__(filter_, samples)
-        self._num_chains = num_chains
+        super().__init__(filter_)
+        self.num_samples = num_samples
+
+        self._num_chains = torch.Size([num_chains])
         self._proposal = proposal or RandomWalk()
         self._initializer = initializer
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
+        self.filter.set_batch_shape(self._num_chains)
+        size = torch.Size([*self._num_chains, 1])
+
         if self._initializer == "seed":
-            init_params = seed(self.filter.copy(), y, 50, self._num_chains)
+            raise NotImplementedError()
         elif self._initializer == "mean":
-            self.filter.ssm.sample_params(torch.Size([5_000]))
-            init_params = self.filter.ssm.concat_parameters(constrained=True).mean(0)
+            for p in self.filter.ssm.parameters():
+                dist = p.prior.build_distribution()
+                p.data = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0).expand(size)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
-        self.filter.set_num_parallel(self._num_chains)
+        prev_res = self._filter.batch_filter(y, bar=False)
 
-        size = torch.Size([self._num_chains, 1] if isinstance(self.filter, ParticleFilter) else [self._num_chains])
-
-        self.filter.ssm.sample_params(size)
-        self.filter.ssm.update_parameters_from_tensor(init_params.unsqueeze(0), constrained=True)
-
-        prev_res = self._filter.longfilter(y, bar=False)
-
-        return PMMHResult(self._filter.ssm.concat_parameters(constrained=True, flatten=True), prev_res)
+        return PMMHResult(self.get_parameters(), prev_res)
 
     def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y)
@@ -65,10 +66,10 @@ class PMMH(BatchFilterAlgorithm):
         logging = logging or TQDMWrapper()
 
         try:
-            logging.initialize(self, self._max_iter)
+            logging.initialize(self, self.num_samples)
             prop_dist = self._proposal.build(state, self._filter, y)
 
-            for i in range(self._max_iter):
+            for i in range(self.num_samples):
                 run_pmmh(self._filter, state, self._proposal, prop_dist, y, mutate_kernel=True)
 
                 state.update_chain(self._filter.ssm.concat_parameters(constrained=True, flatten=True))

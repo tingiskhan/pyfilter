@@ -29,7 +29,7 @@ def silverman(n: int, ess: float) -> float:
 
     Args:
         n: The dimension of the space to construct the KDE for.
-        ess: The ESS of the samples.
+        ess: The ESS of the num_samples.
     """
 
     return (ess * (n + 2) / 4) ** (-1 / (n + 4))
@@ -54,7 +54,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> t
             V(\\theta) = \\{ \\min(IQR(\\theta), \\sigma(\\theta)) \\}^2.
 
     Args:
-        x: The samples to calculate the variance for.
+        x: The num_samples to calculate the variance for.
         w: The normalized weights associated with ``x``.
         mean: Optional parameter. If you've already calculated the mean outside of the function, you may pass that value
             to avoid wasting computational resources.
@@ -102,10 +102,10 @@ class JitterKernel(ABC):
 
     def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         """
-        Method to be overridden by derived subclasses. Specifies how to jitter a given collection of samples.
+        Method to be overridden by derived subclasses. Specifies how to jitter a given collection of num_samples.
 
         Args:
-            x: The samples to jitter.
+            x: The num_samples to jitter.
             w: The normalized weights associated with ``x``.
             indices: The rows of ``x`` to choose.
 
