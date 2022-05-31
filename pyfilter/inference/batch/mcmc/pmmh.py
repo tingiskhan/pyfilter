@@ -16,7 +16,7 @@ class PMMH(BaseAlgorithm):
     MONTE_CARLO_SAMPLES = torch.Size([10_000])
 
     def __init__(
-        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "seed"
+        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean"
     ):
         """
         Initializes the :class:`PMMH` class.
