@@ -12,7 +12,7 @@ def build_obs_1d(model):
 
 
 def linear_models():
-    alpha, beta, sigma = 0.0, 0.99, 0.05
-    ar = ts.models.AR(alpha, beta, sigma)
+    sigma = 0.05
+    ar = ts.models.RandomWalk(scale=sigma)
 
     yield build_obs_1d(ar)
