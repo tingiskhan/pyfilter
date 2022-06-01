@@ -1,101 +1,74 @@
 import torch
+from pyfilter.filters import ParticleFilter
 from torch.distributions import Distribution
 from typing import TypeVar
 from .proposals import BaseProposal
+from ...context import ParameterContext
 from ...state import FilterAlgorithmState
-from ....filters import BaseFilter, ParticleFilter
-from ....constants import INFTY
+from ....filters import BaseFilter
+
 
 TFilter = TypeVar("TFilter", bound=BaseFilter)
 
 
-def seed(filter_: TFilter, y: torch.Tensor, num_seeds: int, num_chains: torch.Size) -> TFilter:
-    """
-    Seeds the initial sample(s) of the Markov chain by running the chosen filter on a subset of the data, and then
-    picking the best one in terms of total log likelihood, i.e. :math:`p_\\theta(y_{1:t}) \\cdot p(\\theta)`.
-
-    Args:
-        filter_: The filter to use in the PMCMC algorithm.
-        y: The subset of the data, of shape ``(number of observations, [dimension of observation space])``.
-        num_seeds: The number of seeds to consider. The number of total num_samples to pick from is given by
-            ``num_seeds * num_chains``.
-        num_chains: The number of chains to consider in the base PMCMC algorithm.
-
-    Returns:
-        Returns ``filter_`` with the best parameters.
-    """
-
-    num_samples = torch.Size([num_chains[0] * num_seeds])
-    filter_.set_batch_shape(num_samples)
-
-    size = torch.Size([*num_samples, 1])
-    filter_.ssm.sample_params(size)
-
-    res = filter_.batch_filter(y, bar=False)
-
-    params = filter_.ssm.concat_parameters(constrained=True)
-    log_likelihood = res.loglikelihood + filter_.ssm.eval_prior_log_prob(constrained=True).squeeze()
-    log_likelihood[~torch.isfinite(log_likelihood)] = -INFTY
-
-    return params[log_likelihood.argmax()]
-
-
 def run_pmmh(
-    filter_: TFilter,
+    context: ParameterContext,
     state: FilterAlgorithmState,
     proposal: BaseProposal,
     proposal_kernel: Distribution,
+    proposal_filter: ParticleFilter,
+    proposal_context: ParameterContext,
     y: torch.Tensor,
     size=torch.Size([]),
     mutate_kernel=False,
-    **kwargs,
-) -> torch.Tensor:
+) -> torch.BoolTensor:
     """
     Runs one iteration of the PMMH update step in which we sample a candidate :math:`\\theta^*` from the proposal
     kernel, run a filter for the considered dataset with :math:`\\theta^*`, and accept based on the acceptance
     probability given by the article. If accepted, we call the ``.exchange(...)`` method of ``filter_`` and ``state``.
 
     Args:
-        filter_: The filter with the latest accepted candidate num_samples.
-        state: The latest algorithm state.
-        proposal: The proposal to use when generating the candidate sample :math:`\\theta^*`.
-        proposal_kernel: The kernel from which to draw the candidate sample :math:`\\theta^*`. To clarify, ``proposal``
+        context: the parameter context of the main algorithm.
+        state: the latest algorithm state.
+        proposal: the proposal to use when generating the candidate sample :math:`\\theta^*`.
+        proposal_kernel: the kernel from which to draw the candidate sample :math:`\\theta^*`. To clarify, ``proposal``
             corresponds to the ``BaseProposal`` class that was used when generating ``prop_kernel``.
-        y: See ``pyfilter.inference.base.BaseAlgorithm``.
-        size: Optional parameter specifying the number of num_samples to draw from ``proposal_kernel``. Should be empty
+        proposal_filter: the proposal filter to use.
+        proposal_context: the parameter context of the proposal filter.
+        y: see ``pyfilter.inference.base.BaseAlgorithm``.
+        size: optional parameter specifying the number of num_samples to draw from ``proposal_kernel``. Should be empty
             if we draw from an independent kernel.
-        mutate_kernel: Optional parameter specifying whether to update ``proposal_kernel`` with the newly accepted
+        mutate_kernel: optional parameter specifying whether to update ``proposal_kernel`` with the newly accepted
             candidate sample.
-        kwargs: Kwargs passed
 
     Returns:
         Returns the candidate sample(s) that were accepted.
     """
 
-    # TODO: Need to think about this one. Copies are generally bad as we'll break some pointers. Could be enough
-    # to improve the copying function.
-    proposal_filter = filter_.copy()
+    constrained = False
 
     rvs = proposal_kernel.sample(size)
-    proposal_filter.ssm.update_parameters_from_tensor(rvs, constrained=False)
+    proposal_context.unstack_parameters(rvs, constrained=constrained)
 
-    new_res = proposal_filter.batch_filter(y, bar=False, **kwargs)
+    new_res = proposal_filter.batch_filter(y, bar=False)
 
     diff_logl = new_res.loglikelihood - state.filter_state.loglikelihood
-    diff_prior = (proposal_filter.ssm.eval_prior_log_prob(False) - filter_.ssm.eval_prior_log_prob(False)).squeeze()
+    diff_prior = proposal_context.eval_priors(constrained=constrained) - context.eval_priors(constrained=constrained)
 
-    new_prop_kernel = proposal.build(state.replicate(new_res), proposal_filter, y)
-    params_as_tensor = filter_.ssm.concat_parameters(constrained=False, flatten=True)
+    new_prop_kernel = proposal.build(proposal_context, state.replicate(new_res), proposal_filter, y)
+    params_as_tensor = context.stack_parameters(constrained=constrained)
 
     diff_prop = new_prop_kernel.log_prob(params_as_tensor) - proposal_kernel.log_prob(rvs)
 
-    log_acc_prob = diff_prop + diff_prior + diff_logl
-    accepted: torch.Tensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob
+    log_acc_prob = diff_prop + diff_prior.squeeze(-1) + diff_logl
+    accepted: torch.BoolTensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob
 
     state.filter_state.exchange(new_res, accepted)
-    filter_.exchange(proposal_filter, accepted)
+
+    broadcasted_mask = accepted.unsqueeze(-1)
+    context.exchange(proposal_context, broadcasted_mask)
 
     if mutate_kernel:
-        proposal.exchange(proposal_kernel, new_prop_kernel, accepted)
+        proposal.exchange(proposal_kernel, new_prop_kernel, broadcasted_mask)
 
     return accepted

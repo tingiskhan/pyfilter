@@ -11,36 +11,40 @@ class PMMHResult(FilterAlgorithmState):
     Result object for PMMH algorithm.
     """
 
-    def __init__(self, initial_sample: Dict[str, torch.Tensor], filter_result: FilterResult):
+    def __init__(self, initial_sample: Dict[str, torch.Tensor], filter_result: FilterResult, stack_dim=1):
         """
-        Initializes the ``PMMHResult`` class.
+        Initializes the :class:`PMMHResult` class.
 
         Args:
-            initial_sample: The initial sample of the Markov chain.
-            filter_result: The filter result object.
+            initial_sample: the initial sample of the Markov chain.
+            filter_result: the filter result object.
+            stack_dim: which dimension to stack along.
         """
 
         super().__init__(filter_result)
-        self.samples = initial_sample
+        self.dim = stack_dim
+        self.samples = {n: v.clone().unsqueeze(self.dim) for n, v in initial_sample.items()}
 
-    def update_chain(self, sample: torch.Tensor):
+    def update_chain(self, sample: Dict[str, torch.Tensor]):
         """
         Updates the Markov chain with the newly accepted candidate.
 
         Args:
-            sample: The next accepted sample of the chain.
+            sample: the next accepted sample of the chain.
         """
 
-        self.tensor_tuples["num_samples"] += (sample,)
+        for n, p in sample.items():
+            sub_sample = self.samples[n]
+            self.samples[n] = torch.cat((sub_sample, p.data.clone().unsqueeze(self.dim)), dim=self.dim)
 
     def update_parameters_from_chain(self, model: StateSpaceModel, burn_in: int, constrained=True):
         """
         Sets the parameters of ``model`` from chain indexed from ``burn_in`` and forward.
 
         Args:
-            model: The model to set the parameters for.
-            burn_in: The number of num_samples from the chain to discard.
-            constrained: Whether parameters are constrained.
+            model: the model to set the parameters for.
+            burn_in: the number of num_samples from the chain to discard.
+            constrained: whether parameters are constrained.
         """
 
         samples = self.samples[burn_in:]

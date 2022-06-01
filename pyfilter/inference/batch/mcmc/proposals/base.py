@@ -16,35 +16,32 @@ class BaseProposal(ABC):
         Initializes the :class:`BaseProposal` class.
         """
 
-        self.context = ParameterContext.get_context()
-
-    def build(self, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
+    def build(self, context: ParameterContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
         """
         Method to be overridden by derived classes. Given the latest state, filter and dataset, generate a proposal
         kernel from which to sample a candidate sample :math:`\\theta^*`.
 
         Args:
-            state: See ``pyfilter.inference.batch.mcmc.utils.run_pmmh``.
-            filter_: See ``pyfilter.inference.batch.mcmc.utils.run_pmmh``.
-            y: See ``pyfilter.inference.batch.mcmc.utils.run_pmmh``.
+            context: the context to use.
+            state: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
+            filter_: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
+            y: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
         """
 
         raise NotImplementedError()
 
-    def exchange(self, latest: Distribution, candidate: Distribution, indices: torch.Tensor) -> None:
+    def exchange(self, latest: Distribution, candidate: Distribution, mask: torch.Tensor) -> None:
         """
-        Method to be overridden by dervied classes. Given the latest and candidate kernel, together with the accepted
-        indices, do an exchange of distributional parameters between ``latest`` and ``candidate``, where ``latest``
+        Method to be overridden by derived classes. Given the latest and candidate kernel, together with the accepted
+        mask, do an exchange of distributional parameters between ``latest`` and ``candidate``, where ``latest``
         should be given the parameters of ``candidate``.
 
         Args:
-            latest: The latest kernel, the distribution that is supposed to receive distributional parameters from
+            latest: the latest kernel, the distribution that is supposed to receive distributional parameters from
                 ``candidate``.
             candidate: The candidate kernel.
-            indices: The accepted indices of ``candidate``.
+            mask: the accepted mask of ``candidate``.
 
-        Returns:
-            Nothing, ``latest`` is update in place.
         """
 
         raise NotImplementedError()

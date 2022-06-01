@@ -14,5 +14,5 @@ class SymmetricMH(BaseProposal):
 
         return construct_mvn(values, weights, scale=1.1)  # Same scale in in num_particles
 
-    def exchange(self, latest, candidate, indices: torch.Tensor) -> None:
+    def exchange(self, latest, candidate, mask: torch.Tensor) -> None:
         return

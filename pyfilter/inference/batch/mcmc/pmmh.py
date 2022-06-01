@@ -2,15 +2,17 @@ import torch
 from .utils import run_pmmh
 from .proposals import RandomWalk, BaseProposal
 from .state import PMMHResult
+from ...context import make_context
 from ...base import BaseAlgorithm
 from ...logging import TQDMWrapper
 
 
 class PMMH(BaseAlgorithm):
-    # TODO: Add reference
     """
     Implements the `Particle Marginal Metropolis Hastings` algorithm found in `Particle Markov chain Monte Carlo
-    methods` by C. Andrieu et al.
+    methods`_ by C. Andrieu et al.
+
+    .. _`Particle Markov chain Monte Carlo methods`: https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf
     """
 
     MONTE_CARLO_SAMPLES = torch.Size([10_000])
@@ -18,17 +20,17 @@ class PMMH(BaseAlgorithm):
     def __init__(
         self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean"
     ):
-        """
+        r"""
         Initializes the :class:`PMMH` class.
 
         Args:
-             filter_: See base.
-             num_samples: The number of PMMH samples to draw.
-             num_chains: The number of parallel chains to run. The total number of samples on termination is thus
+             filter_: see base.
+             num_samples: the number of PMMH samples to draw.
+             num_chains: the number of parallel chains to run. The total number of samples on termination is thus
                 ``samples * num_chains``. Do note that we utilize broadcasting rather than ``for``-loops.
-             proposal: Optional parameter specifying how to construct the proposal density for candidate
-                :math:`\\theta^*` given the previously accepted candidate :math:`\\theta_i`. If not specified, defaults
-                to ``pyfilter.inference.batch.mcmc.proposals.RandomWalk``.
+             proposal: optional parameter specifying how to construct the proposal density for candidate
+                :math:`\theta^*` given the previously accepted candidate :math:`\theta_i`. If not specified, defaults
+                to :class:`pyfilter.inference.batch.mcmc.proposals.RandomWalk`.
             initializer: Optional parameter specifying how to initialize the chain:
                 - ``seed``: Seeds the initial value by running several chains in parallel and choosing the one
                     maximizing the total likelihood
@@ -40,19 +42,22 @@ class PMMH(BaseAlgorithm):
         self.num_samples = num_samples
 
         self._num_chains = torch.Size([num_chains])
+        self._parameter_shape = torch.Size([num_chains, 1])
+
         self._proposal = proposal or RandomWalk()
         self._initializer = initializer
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         self.filter.set_batch_shape(self._num_chains)
-        size = torch.Size([*self._num_chains, 1])
 
         if self._initializer == "seed":
             raise NotImplementedError()
         elif self._initializer == "mean":
             for p in self.filter.ssm.parameters():
                 dist = p.prior.build_distribution()
-                p.data = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0).expand(size)
+                mean = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0)
+
+                p.data = mean * torch.ones(self._parameter_shape, device=p.device)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
@@ -67,12 +72,25 @@ class PMMH(BaseAlgorithm):
 
         try:
             logging.initialize(self, self.num_samples)
-            prop_dist = self._proposal.build(state, self._filter, y)
+            prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
             for i in range(self.num_samples):
-                run_pmmh(self._filter, state, self._proposal, prop_dist, y, mutate_kernel=True)
+                with make_context() as sub_context:
+                    proposal_filter = self.filter.copy()
+                    sub_context.initialize_parameters(self._parameter_shape)
 
-                state.update_chain(self._filter.ssm.concat_parameters(constrained=True, flatten=True))
+                    accepted = run_pmmh(
+                        self.context,
+                        state,
+                        self._proposal,
+                        prop_dist,
+                        proposal_filter,
+                        sub_context,
+                        y,
+                        mutate_kernel=True
+                    )
+
+                state.update_chain(self.get_parameters())
                 logging.do_log(i, state)
 
             return state
