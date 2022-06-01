@@ -12,13 +12,13 @@ class ParticleFilterPrediction(PredictionState):
 
     def __init__(self, prev_x: TimeseriesState, old_weights: Tensor, indices: Tensor, mask: Tensor = None):
         """
-        Initializes the ``ParticleFilterPrediction`` class.
+        Initializes the :class:`ParticleFilterPrediction` class.
 
         Args:
             prev_x: the resampled previous state.
-            old_weights: The previous normalized weights.
-            indices: The selected indices
-            mask: Mask for which batch to resample, only relevant for filters in parallel.
+            old_weights: the previous normalized weights.
+            indices: the selected mask
+            mask: mask for which batch to resample, only relevant for filters in parallel.
         """
 
         self.prev_x = prev_x
@@ -34,13 +34,13 @@ class ParticleFilterState(FilterState):
 
     def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
-        Initializes the ``ParticleFilterState`` class.
+        Initializes the :class:`ParticleFilterState` class.
 
         Args:
-            x: The state particles of the timeseries.
-            w: The log weights associated with the state particles.
-            ll: The estimate log-likelihood, i.e. :math:`p(y_t)`.
-            prev_indices: The indices of the previous state particles that were used to propagate to this state.
+            x: the state particles of the timeseries.
+            w: the log weights associated with the state particles.
+            ll: the estimate log-likelihood, i.e. :math:`p(y_t)`.
+            prev_indices: the mask of the previous state particles that were used to propagate to this state.
         """
 
         super().__init__()
@@ -77,6 +77,7 @@ class ParticleFilterState(FilterState):
     def normalized_weights(self):
         return normalize(self.w)
 
+    # TODO: Use batched_gather instead
     def resample(self, indices):
         self.__init__(
             self.x.copy(values=choose(self.x.values, indices)),
@@ -88,6 +89,7 @@ class ParticleFilterState(FilterState):
     def get_loglikelihood(self):
         return self.ll
 
+    # TODO: Use batched_gather instead
     def exchange(self, state: "ParticleFilterState", indices):
         x = self.x.copy(values=self.x.values.clone())
         x.values[indices] = state.x.values[indices]

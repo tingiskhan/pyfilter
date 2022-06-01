@@ -6,8 +6,8 @@ from torch.distributions import Categorical
 from ..base import BaseFilter
 from ...resampling import systematic
 from .proposals import Bootstrap, Proposal
-from ...utils import choose
-from .state import ParticleFilterState, ParticleFilterPrediction
+from .state import ParticleFilterState
+from ..utils import batched_gather
 
 
 class ParticleFilter(BaseFilter, ABC):
@@ -25,14 +25,14 @@ class ParticleFilter(BaseFilter, ABC):
         **kwargs
     ):
         """
-        Initializes the ``ParticleFilter`` class.
+        Initializes the :class:`ParticleFilter` class.
 
         Args:
-            model: See base.
-            particles: The number of particles to use for estimating the filter distribution.
-            resampling: The resampling method. Takes as input the log weights and returns indices.
-            proposal: The proposal distribution generator to use.
-            ess_threshold: The relative "effective sample size" threshold at which to perform resampling. Not relevant
+            model: see base.
+            particles: the number of particles to use for estimating the filter distribution.
+            resampling: the resampling method. Takes as input the log weights and returns mask.
+            proposal: the proposal distribution generator to use.
+            ess_threshold: the relative "effective sample size" threshold at which to perform resampling. Not relevant
                 for ``APF`` as resampling is always performed.
         """
 
@@ -94,24 +94,44 @@ class ParticleFilter(BaseFilter, ABC):
         return x_mean, y_mean
 
     def smooth(self, states: Tuple[ParticleFilterState]) -> torch.Tensor:
-        hidden_copy = self.ssm.hidden.copy()
         offset = -(2 + self.ssm.hidden.n_dim)
 
-        for p in hidden_copy.parameters():
+        dim_to_unsqueeze = -2
+        for p in self.ssm.hidden.parameters():
             if p.dim() > 0:
-                p.unsqueeze_(-2)
+                p.unsqueeze_(dim_to_unsqueeze)
 
-        res = [choose(states[-1].x.values, self._resampler(states[-1].w))]
+        dim = len(self.batch_shape)
+
+        res = [batched_gather(states[-1].x.values, self._resampler(states[-1].w), dim=dim)]
         for state in reversed(states[:-1]):
             temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
-            density = hidden_copy.build_density(temp_state)
+            density = self.ssm.hidden.build_density(temp_state)
 
             w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
 
             cat = Categorical(logits=w)
-            res.append(choose(state.x.values, cat.sample()))
+            res.append(batched_gather(state.x.values, cat.sample(), dim=dim))
+
+        for p in self.ssm.hidden.parameters():
+            if p.dim() > 0:
+                p.squeeze_(dim_to_unsqueeze)
 
         return torch.stack(res[::-1], dim=0)
 
-    def _get_observation_dist_from_prediction(self, prediction: ParticleFilterPrediction):
-        raise NotImplementedError()
+    def copy(self):
+        res = type(self)(
+            model=self._model_builder,
+            particles=self._base_particles[0],
+            resampling=self._resampler,
+            proposal=self._proposal,
+            ess_threshold=self._resample_threshold,
+            record_states=self.record_states,
+            record_moments=self.record_moments,
+            nan_strategy=self._nan_strategy,
+        )
+
+        res.set_batch_shape(self.batch_shape)
+
+        return res
+

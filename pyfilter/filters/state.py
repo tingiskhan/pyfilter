@@ -40,7 +40,7 @@ class FilterState(dict, ABC):
         Resamples the necessary objects of ``self`` at ``indices``. Only matters when running parallel filters.
 
         Args:
-            indices: The indices to select.
+            indices: the indices to select.
         """
 
         raise NotImplementedError()
@@ -52,13 +52,13 @@ class FilterState(dict, ABC):
 
         raise NotImplementedError()
 
-    def exchange(self, state: "FilterState", indices: Tensor):
+    def exchange(self, state: "FilterState", mask: Tensor):
         """
         Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
 
         Args:
-            state: The state to exchange with
-            indices: Which indices of ``state`` to replace ``self`` with.
+            state: the state to exchange with
+            mask: mask of ``state`` to replace ``self`` with.
         """
 
         raise NotImplementedError()

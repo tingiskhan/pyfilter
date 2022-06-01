@@ -1,17 +1,17 @@
-import copy
 from abc import ABC
 from tqdm import tqdm
 import torch
-from typing import Tuple, Sequence, TypeVar, Union
-from torch.distributions import Distribution
+from typing import Tuple, Sequence, TypeVar, Union, Callable
 from stochproc.timeseries import StateSpaceModel
 
 from .result import FilterResult
 from .state import FilterState, PredictionState
+from ..inference.context import ParameterContext
 
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
+ModelObject = Union[StateSpaceModel, Callable[[ParameterContext], StateSpaceModel]]
 
 
 class BaseFilter(ABC):
@@ -21,19 +21,19 @@ class BaseFilter(ABC):
 
     def __init__(
         self,
-        model: StateSpaceModel,
+        model: ModelObject,
         record_states: BoolOrInt = False,
         record_moments: BoolOrInt = True,
         nan_strategy: str = "skip",
     ):
         """
-        Initializes the ``BaseFilter`` class.
+        Initializes the :class:`BaseFilter` class.
 
         Args:
-            model: The state space model to use for filtering.
-            record_states: See ``pyfilter.filters.FilterResult.record_states``.
-            record_moments: See ``pyfilter.filters.FilterResult.record_moments``.
-            nan_strategy: How to handle ``nan``s in observation data. Can be:
+            model: the state space model to use for filtering.
+            record_states: see ``pyfilter.filters.FilterResult.record_states``.
+            record_moments: see ``pyfilter.filters.FilterResult.record_moments``.
+            nan_strategy: how to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
@@ -41,10 +41,12 @@ class BaseFilter(ABC):
 
         super().__init__()
 
-        if not isinstance(model, StateSpaceModel):
+        if not (isinstance(model, StateSpaceModel) or callable(model)):
             raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
 
-        self._model = model
+        self._model_builder = model if callable(model) else None
+
+        self._model = model if self._model_builder is None else model(ParameterContext.get_context())
         self._batch_shape = torch.Size([])
 
         self.record_states = record_states
@@ -108,7 +110,7 @@ class BaseFilter(ABC):
         ``pyfilter.filters.result.FilterResult``. Also registers the callbacks on the ``FilterResult`` object.
 
         Args:
-            state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
+            state: optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
         """
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
@@ -118,9 +120,9 @@ class BaseFilter(ABC):
         Batch version of :meth:`filter` where entire data set is parsed.
 
         Args:
-            y: Data set to filter.
-            bar: Whether to display a ``tqdm`` progress bar.
-            init_state: Optional parameter for whether to pass an initial state.
+            y: data set to filter.
+            bar: whether to display a ``tqdm`` progress bar.
+            init_state: optional parameter for whether to pass an initial state.
         """
 
         iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
@@ -146,34 +148,22 @@ class BaseFilter(ABC):
 
     def copy(self) -> "BaseFilter":
         """
-        Creates a deep copy of the filter object.
-        """
-
-        return copy.deepcopy(self)
-
-    def predict_path(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Given the previous ``state``, predict ``steps`` steps into the future.
-
-        Args:
-              state: Previous state.
-              steps: The number of steps to predict.
-              args: Any filter specific arguments.
-              kwargs: Any filter specific kwargs.
-
-        Returns:
-            Returns a tuple consisting of ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
-            ``(steps, [additional shapes])``.
+        Creates a copy of the filter object.
         """
 
         raise NotImplementedError()
 
-    def _get_observation_dist_from_prediction(self, prediction: PredictionState) -> Distribution:
+    def predict_path(self, state: TState, steps: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Method for generating an observation distribution from the predicted latent distribution.
+        Given the previous ``state``, predict ``steps`` steps into the future.
 
         Args:
-            prediction: The prediction to use for creating the distribution.
+              state: previous state.
+              steps: the number of steps to predict.
+
+        Returns:
+            Returns a tuple consisting of ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
+            ``(steps, [additional shapes])``.
         """
 
         raise NotImplementedError()
@@ -183,7 +173,7 @@ class BaseFilter(ABC):
         Corresponds to the predict step of the given filter.
 
         Args:
-            state: The previous state of the algorithm.
+            state: the previous state of the algorithm.
         """
 
         raise NotImplementedError()
@@ -193,21 +183,20 @@ class BaseFilter(ABC):
         Corresponds to the correct step of the given filter.
 
         Args:
-            y: The observation.
-            state: The previous state of the algorithm.
-            prediction: The predicted state.
+            y: the observation.
+            state: the previous state of the algorithm.
+            prediction: the predicted state.
         """
 
         raise NotImplementedError()
 
     def filter(self, y: torch.Tensor, state: TState) -> TState:
         """
-        Performs one filter move given observation ``y`` and previous state of the filter. Wraps the ``__call__``
-        method of `torch.nn.Module``.
+        Performs one filter move given observation ``y`` and previous state of the filter.
 
         Args:
-            y: The observation for which to filter.
-            state: The previous state of the filter.
+            y: the observation for which to filter.
+            state: the previous state of the filter.
 
         Returns:
             New and updated state.
@@ -222,48 +211,12 @@ class BaseFilter(ABC):
 
         return self.correct(y, state, prediction)
 
-    def resample(self, indices: torch.IntTensor) -> "BaseFilter":
-        """
-        Resamples the parameters of the ``.ssm`` attribute, used e.g. when running parallel filters.
-
-        Args:
-             indices: The indices to select.
-        """
-
-        if self.batch_shape.numel() == 0:
-            raise Exception("No parallel filters, cannot resample!")
-
-        for m in [self.ssm.hidden, self.ssm.observable]:
-            for p in m.parameters():
-                p.copy_(p[indices])
-
-        return self
-
-    def exchange(self, filter_: "BaseFilter", mask: torch.BoolTensor):
-        """
-        Exchanges the parameters of ``.ssm`` with the parameters of ``filter_.ssm`` at the locations specified by
-        ``indices``.
-
-        Args:
-            filter_: The filter to exchange parameters with.
-            mask: Mask specifying which parallel filters to exchange.
-        """
-
-        if self.batch_shape.numel() == 0:
-            raise Exception("No parallel filters, cannot resample!")
-
-        for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
-            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
-                self_param.masked_scatter_(mask, new_param)
-
-        return self
-
     def smooth(self, states: Sequence[FilterState]) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 
         Args:
-            states: The filtered states.
+            states: the filtered states.
         """
 
         raise NotImplementedError()

@@ -72,12 +72,12 @@ class FilterResult(BaseResult, Generic[TState]):
 
     def exchange(self, res: "FilterResult[TState]", indices: torch.Tensor):
         """
-        Exchanges the states and tensor tuples with ``res`` at ``indices``. Note that this is only relevant for filters
+        Exchanges the states and tensor tuples with ``res`` at ``mask``. Note that this is only relevant for filters
         that have been run in parallel.
 
         Args:
-            res: The object to exchange states and tensor tuples with.
-            indices: Mask specifying which values to exchange.
+            res: the object to exchange states and tensor tuples with.
+            indices: mask specifying which values to exchange.
         """
 
         self._loglikelihood[indices] = res.loglikelihood[indices]
@@ -96,8 +96,8 @@ class FilterResult(BaseResult, Generic[TState]):
         Resamples tensor tuples and states.
 
         Args:
-            indices: The indices to select.
-            entire_history: Optional parameter for whether to resample entire history or not. If ``False``, we ignore
+            indices: the indices to select.
+            entire_history: optional parameter for whether to resample entire history or not. If ``False``, we ignore
                 resampling the tensor tuples.
         """
 
