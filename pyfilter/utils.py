@@ -33,20 +33,6 @@ def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
     return array[torch.arange(array.shape[0], device=array.device).unsqueeze(-1), indices]
 
 
-def concater(*x: torch.Tensor) -> torch.Tensor:
-    """
-    Given an iterable of tensors, broadcast them to the same shape and stack along the last dimension.
-
-    Args:
-        x: The iterable of tensors to stack.
-    """
-
-    if isinstance(x, torch.Tensor):
-        return x
-
-    return torch.stack(torch.broadcast_tensors(*x), dim=-1)
-
-
 def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     """
     Constructs a diagonal matrix based on ``x``. Solution found `here`_:
