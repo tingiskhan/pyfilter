@@ -97,6 +97,19 @@ class PriorBoundParameter(Parameter):
 
         return self.prior.get_unconstrained(self)
 
+    def eval_prior(self, constrained=True):
+        """
+        Evaluates the priors.
+
+        Args:
+            constrained: whether to evaluate the constrained parameters.
+        """
+
+        if constrained:
+            return self.prior.build_distribution().log_prob(self)
+
+        return self.prior.unconstrained_prior.log_prob(self.get_unconstrained())
+
     # NB: Same as torch but we replace the `_rebuild_parameter` with our custom one.
     def __reduce_ex__(self, proto):
         return (_rebuild_parameter, (self.data, self.requires_grad, OrderedDict(), self._name, self._context))

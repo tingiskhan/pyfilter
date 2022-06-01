@@ -24,6 +24,9 @@ class ParameterContext(object):
         self._prior_dict: Dict[str, Prior] = OrderedDict([])
         self._parameter_dict: Dict[str, PriorBoundParameter] = OrderedDict([])
 
+        self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
+        self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
+
     @property
     def stack(self) -> List["ParameterContext"]:
         return self.__class__._contexts.stack
@@ -76,6 +79,9 @@ class ParameterContext(object):
         parameter.set_context(self.get_context())
         parameter.set_name(name)
 
+        self._shape_dict[name] = prior.build_distribution().event_shape
+        self._unconstrained_shape_dict[name] = prior.unconstrained_prior.event_shape
+
         return parameter
 
     def get_parameter(self, name: str) -> PriorBoundParameter:
@@ -99,19 +105,80 @@ class ParameterContext(object):
         for k, v in self._parameter_dict.items():
             yield k, (v if constrained else v.get_unconstrained())
 
-    def stack_parameters(self, constrained=True, dim=-1):
+    def stack_parameters(self, constrained=True, dim=-1) -> torch.Tensor:
         """
-        Stacks the parameters along `dim`.
+        Stacks the parameters along ``dim`` in order of registration.
         """
 
         res = tuple()
+        shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
         for n, p in self.get_parameters():
-            prior = p.prior.build_distribution()
-            v = p if constrained else p.get_unconstrained()
+            shape = shape_dict[n]
 
-            res += (v if prior.event_shape.numel() > 1 else v.unsqueeze(dim),)
+            event_dim = len(shape)
+            v = (p if constrained else p.get_unconstrained()).flatten(end_dim=-(event_dim + 1))
+
+            res += (v if dim > 0 else v.unsqueeze(-1),)
 
         return torch.cat(res, dim=dim)
+
+    def unstack_parameters(self, x: torch.Tensor, constrained=True):
+        """
+        Unstacks and updates parameters given the :class:`torch.Tensor` ``x``.
+
+        Args:
+            x: the tensor to unstack and use for updating.
+            constrained: whether the values of ``x`` are considered constrained.
+        """
+
+        shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
+        tot_len = sum(s.numel() for s in shape_dict.values())
+
+        assert tot_len == x.shape[-1], f"Total length of parameters is different from parameters in context!"
+
+        index = 0
+        for n, p in self.get_parameters():
+            numel = shape_dict[n].numel()
+
+            param = x[..., index:index + numel]
+            p.update_values_(param, constrained=constrained)
+
+            index += numel
+
+    def initialize_parameters(self, batch_shape: torch.Size):
+        """
+        Initializes the parameters by sampling from the priors.
+
+        Args:
+            batch_shape: the batch shape to use.
+        """
+
+        for _, p in self.get_parameters():
+            p.sample_(batch_shape)
+
+    def eval_priors(self, constrained=True) -> torch.Tensor:
+        """
+        Evaluates the priors.
+
+        Args:
+            constrained: whether to evaluate the constrained parameters.
+
+        """
+
+        return sum(p.eval_prior(constrained=constrained) for _, p in self.get_parameters())
+
+    def exchange(self, other: "ParameterContext", mask: torch.BoolTensor):
+        """
+        Exchanges the parameters of ``self`` with that of other.
+
+        Args:
+            other: the :class:`ParameterContext` to take the values from.
+            mask: the mask from where to take.
+        """
+
+        for n, p in self.get_parameters():
+            other_p = other.get_parameter(n)
+            p.masked_scatter_(mask, other_p)
 
 
 def make_context() -> ParameterContext:
