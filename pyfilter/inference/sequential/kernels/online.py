@@ -23,15 +23,15 @@ class OnlineKernel(BaseKernel):
         self._kernel = kernel or NonShrinkingKernel()
         self._disc = discrete
 
-    def update(self, filter_, state):
+    def update(self, context, filter_, state):
         weights = state.normalized_weights()
 
-        stacked = filter_.ssm.concat_parameters(constrained=False)
+        stacked = context.stack_parameters(constrained=False)
         indices = self._resampler(weights, normalized=True)
 
         jittered = self._kernel.jitter(stacked, weights, indices)
 
-        filter_.resample(indices)
+        context.resample(indices)
         state.filter_state.resample(indices, entire_history=False)
 
         if self._disc:
@@ -43,7 +43,7 @@ class OnlineKernel(BaseKernel):
 
             jittered = (1 - to_jitter) * stacked[indices] + to_jitter * jittered
 
-        filter_.ssm.update_parameters_from_tensor(jittered, constrained=False)
-        state.w[:] = 0.0
+        context.unstack_parameters(jittered, constrained=False)
+        state.w.fill_(0.0)
 
         return self

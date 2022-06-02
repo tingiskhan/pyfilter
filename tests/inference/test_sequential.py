@@ -1,21 +1,29 @@
+import itertools
+
 import pytest
 from pyfilter import inference as inf, filters as filts
 from .models import linear_models, build_model
 
 
-PARAMETERS = linear_models()
+def algorithms():
+    yield lambda f: inf.sequential.NESS(f, 1_000)
+    yield lambda f: inf.sequential.SMC2(f, 1_000, num_steps=5)
+
+
+PARAMETERS = itertools.product(linear_models(), algorithms())
 
 
 class TestPMCMC(object):
-    @pytest.mark.parametrize("true_model", PARAMETERS)
-    def test_smc2(self, true_model):
+    @pytest.mark.parametrize("true_model, algorithm", PARAMETERS)
+    def test_smc2(self, true_model, algorithm):
         _, y = true_model.sample_states(500).get_paths()
 
         with inf.make_context() as context:
             filter_ = filts.APF(build_model, 250)
-            smc2 = inf.sequential.SMC2(filter_, 1_000, num_steps=5)
+            alg = algorithm(filter_)
 
-            result = smc2.fit(y)
+            result = alg.fit(y)
 
             # TODO: Add something to test
             print()
+

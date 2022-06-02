@@ -13,14 +13,14 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False):
         """
-        Initializes the ``BaseOnlineAlgorithm`` class.
+        Initializes the :class:`BaseOnlineAlgorithm` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            kernel: Optional parameter. The jittering kernel to use when mutating num_particles from :math:`t` to
-                :math:`t+1`. If ``None`` defaults to using ``pyfilter.inference.sequential.kernels.NonShrinkingKernel``.
-            discrete: See ``pyfilter.inference.sequential.kernels.OnlineKernel``.
+            filter_: see base.
+            particles: see base.
+            kernel: optional parameter. The jittering kernel to use when mutating num_particles from :math:`t` to
+                :math:`t+1`. If ``None`` defaults to using :class:`pyfilter.inference.sequential.kernels.NonShrinkingKernel`.
+            discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
         """
 
         super().__init__(filter_, particles)
@@ -35,7 +35,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         Method to be overridden by derived subclasses, decides when to perform an update step of particle approximation.
 
         Args:
-            state: The current state of the algorithm
+            state: the current state of the algorithm
 
         Returns:
               A bool indicating whether to perform an update.
@@ -45,7 +45,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def step(self, y, state):
         if self.do_update_particles(state):
-            self._kernel.update(self.filter, state)
+            self._kernel.update(self.context, self.filter, state)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state)
         state.update(filter_state)
@@ -55,18 +55,20 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
 class NESS(BaseOnlineAlgorithm):
     """
-    Implements the NESS algorithm by Miguez and Crisan, with the slight modification of allowing dynamically triggered
+    Implements the `NESS`_ algorithm by Miguez and Crisan, with the slight modification of allowing dynamically triggered
     particle updates with regards to the current ESS.
+
+    .. _`NESS`:  https://arxiv.org/abs/1308.1883
     """
 
     def __init__(self, filter_, particles, threshold=0.9, **kwargs):
         """
-        Initializes the ``NESS`` class.
+        Initializes the :class:`NESS` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            threshold: The relative ESS threshold at when update the num_particles.
+            filter_: see base.
+            particles: see base.
+            threshold: the relative ESS threshold at when update the num_particles.
         """
 
         super().__init__(filter_, particles, **kwargs)
