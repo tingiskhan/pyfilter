@@ -43,16 +43,6 @@ class BaseAlgorithm(ABC):
 
         self._filter = x
 
-    def get_parameters(self, constrained=True) -> Dict[str, PriorBoundParameter]:
-        """
-        Gets the parameters in the current scope.
-
-        Args:
-            constrained: whether to return the constrained parameters.
-        """
-
-        return OrderedDict(self.context.get_parameters(constrained=constrained))
-
     def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
         """
         Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.

@@ -63,7 +63,7 @@ class PMMH(BaseAlgorithm):
 
         prev_res = self._filter.batch_filter(y, bar=False)
 
-        return PMMHResult(self.get_parameters(), prev_res)
+        return PMMHResult(dict(self.context.get_parameters()), prev_res)
 
     def fit(self, y: torch.Tensor, logging=None, **kwargs):
         state = self.initialize(y)
@@ -90,7 +90,7 @@ class PMMH(BaseAlgorithm):
                         mutate_kernel=True
                     )
 
-                state.update_chain(self.get_parameters())
+                state.update_chain(dict(self.context.get_parameters()))
                 logging.do_log(i, state)
 
             return state
