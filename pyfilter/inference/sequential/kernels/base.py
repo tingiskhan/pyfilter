@@ -1,34 +1,36 @@
 from abc import ABC
+
+from ..state import SequentialAlgorithmState
+from ...context import ParameterContext
 from ....resampling import systematic
 from ....filters import BaseFilter
-from ..state import SequentialAlgorithmState
 
 
 class BaseKernel(ABC):
     """
-    Abstract base class for kernels. Kernels are objects used by subclasses of ``SequentialParticleAlgorithm`` for
+    Abstract base class for kernels. Kernels are objects used by subclasses of :class:`SequentialParticleAlgorithm` for
     updating the particle approximation of the parameter posteriors.
     """
 
     def __init__(self, resampling=systematic):
         """
-        Initializes the ``BaseKernel`` class.
+        Initializes the :class:`BaseKernel` class.
 
         Args:
-             resampling: The resampling function to use.
+             resampling: the resampling function to use.
         """
 
         self._resampler = resampling
 
-    def update(self, filter_: BaseFilter, state: SequentialAlgorithmState):
+    def update(self, context: ParameterContext, filter_: BaseFilter, state: SequentialAlgorithmState):
         """
         Method to be overridden by inherited classes. Specifies how to update the particle approximation of the
         parameter posteriors.
 
         Args:
-            filter_: The filter used by the calling algorithm.
-            state: The current state of the algorithm.
-            args: Any class specific arguments required by the inherited classes.
+            context: the parameter context.
+            filter_: the filter used by the calling algorithm.
+            state: the current state of the algorithm.
         """
 
         raise NotImplementedError()

@@ -23,6 +23,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         super().__init__(filter_)
 
         self.particles = torch.Size([num_particles])
+        self._parameter_shape = torch.Size([num_particles, 1])
         self.filter.set_batch_shape(self.particles)
 
     def initialize(self) -> SequentialAlgorithmState:
@@ -32,6 +33,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
+
+        self.context.initialize_parameters(self._parameter_shape)
 
         return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
 
