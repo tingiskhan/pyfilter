@@ -30,5 +30,5 @@ class RandomWalk(BaseProposal):
         return Normal(context.stack_parameters(constrained=False), self._scale).to_event(1)
 
     def exchange(self, latest, candidate, mask):
-        latest.mean.masked_scatter_(mask, candidate.mean)
-        latest.stddev.masked_scatter_(mask, candidate.stddev)
+        latest.mean[mask] = candidate.mean[mask]
+        latest.stddev[mask] = candidate.stddev[mask]
