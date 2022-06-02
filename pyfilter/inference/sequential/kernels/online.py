@@ -13,9 +13,9 @@ class OnlineKernel(BaseKernel):
         Initializes the ``OnlineKernel`` class.
 
         Args:
-            kernel: The kernel to use for jittering the parameter num_particles.
-            discrete: Whether to mutate all num_particles, or just some of them with a probability proportional to the ESS.
-            kwargs: See base.
+            kernel: the kernel to use for jittering the parameter num_particles.
+            discrete: whether to mutate all num_particles, or just some of them with a probability proportional to the ESS.
+            kwargs: see base.
         """
 
         super().__init__(**kwargs)
