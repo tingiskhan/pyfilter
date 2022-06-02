@@ -72,8 +72,8 @@ class Linearized(Proposal):
                 # TODO: There is a better approach in Dahlin, find it
                 mask = neg_inv_hess > 0.0
 
-                step.masked_scatter_(mask, neg_inv_hess)
-                std.masked_scatter_(mask, neg_inv_hess.sqrt())
+                step[mask] = neg_inv_hess[mask]
+                std[mask] = neg_inv_hess[mask].sqrt()
 
                 g.detach_()
 
