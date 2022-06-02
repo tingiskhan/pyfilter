@@ -70,8 +70,7 @@ class PMMH(BaseAlgorithm):
 
         logging = logging or TQDMWrapper()
 
-        try:
-            logging.initialize(self, self.num_samples)
+        with logging.initialize(self, self.num_samples):
             prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
             for i in range(self.num_samples):
@@ -94,8 +93,3 @@ class PMMH(BaseAlgorithm):
                 logging.do_log(i, state)
 
             return state
-
-        except Exception as e:
-            raise e
-        finally:
-            logging.teardown()

@@ -54,20 +54,14 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
     def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
-        logging.initialize(self, y.shape[0])
 
-        try:
+        with logging.initialize(self, y.shape[0]):
             state = self.initialize()
             for i, yt in enumerate(y):
                 state = self.step(yt, state)
                 logging.do_log(i, state)
 
             return state
-
-        except Exception as e:
-            raise e
-        finally:
-            logging.teardown()
 
     def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
         px, py = self.filter.predict_path(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)

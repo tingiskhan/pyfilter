@@ -21,7 +21,16 @@ class DefaultLogger(object):
         self._func = func or (lambda *args: None)
         self._per_iter = log_every_iteration
 
-    def initialize(self, algorithm: "BaseAlgorithm", num_iterations: int):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            raise exc_val
+
+        self.teardown()
+
+    def initialize(self, algorithm: "BaseAlgorithm", num_iterations: int) -> "DefaultLogger":
         """
         Initializes the logging class.
 
@@ -30,7 +39,7 @@ class DefaultLogger(object):
             num_iterations: The number of iterations to perform.
         """
 
-        return
+        return self
 
     def do_log(self, iteration: int, state: AlgorithmState):
         """
@@ -68,6 +77,8 @@ class TQDMWrapper(DefaultLogger):
     def initialize(self, algorithm, num_iterations):
         self._tqdm_bar.total = num_iterations
         self._tqdm_bar.set_description(str(algorithm))
+
+        return self
 
     def func(self, obj):
         self._tqdm_bar.update(self._per_iter)
