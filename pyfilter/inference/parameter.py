@@ -88,7 +88,7 @@ class PriorBoundParameter(Parameter):
                 raise ValueError("Some of the values were out of bounds!")
 
         # Tries to set to self if congruent, else reshapes
-        self[:] = value.view(self.shape) if value.numel() == self.numel() else value
+        self.copy_(value.view(self.shape))
 
     def get_unconstrained(self) -> torch.Tensor:
         """

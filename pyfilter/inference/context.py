@@ -169,7 +169,7 @@ class ParameterContext(object):
 
     def exchange(self, other: "ParameterContext", mask: torch.BoolTensor):
         """
-        Exchanges the parameters of ``self`` with that of other.
+        Exchanges the parameters of ``self`` with that of ``other``.
 
         Args:
             other: the :class:`ParameterContext` to take the values from.
@@ -178,7 +178,28 @@ class ParameterContext(object):
 
         for n, p in self.get_parameters():
             other_p = other.get_parameter(n)
-            p.masked_scatter_(mask, other_p)
+            # TODO: Change when masked_scatter works
+            p[mask] = other_p[mask]
+
+    def resample(self, indices: torch.IntTensor):
+        """
+        Resamples the parameters of ``self`` given ``indices``.
+
+        Args:
+            indices: the indices at which to resample.
+
+        """
+
+        for n, p in self.get_parameters():
+            p.copy_(p[indices])
+
+    @classmethod
+    def make_new(cls) -> "ParameterContext":
+        """
+        Creates a new context.
+        """
+
+        return ParameterContext()
 
 
 def make_context() -> ParameterContext:
@@ -186,4 +207,4 @@ def make_context() -> ParameterContext:
     Helper method for creating a context.
     """
 
-    return ParameterContext()
+    return ParameterContext.make_new()
