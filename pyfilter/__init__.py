@@ -1,4 +1,4 @@
-__version__ = "0.23.5"
+__version__ = "0.24.0"
 
 from torch.distributions import Distribution
 
