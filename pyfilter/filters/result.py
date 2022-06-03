@@ -70,24 +70,24 @@ class FilterResult(BaseResult, Generic[TState]):
     def latest_state(self) -> TState:
         return self._states[-1]
 
-    def exchange(self, res: "FilterResult[TState]", indices: torch.Tensor):
+    def exchange(self, res: "FilterResult[TState]", mask: torch.Tensor):
         """
         Exchanges the states and tensor tuples with ``res`` at ``mask``. Note that this is only relevant for filters
         that have been run in parallel.
 
         Args:
             res: the object to exchange states and tensor tuples with.
-            indices: mask specifying which values to exchange.
+            mask: mask specifying which values to exchange.
         """
 
-        self._loglikelihood[indices] = res.loglikelihood[indices]
+        self._loglikelihood[mask] = res.loglikelihood[mask]
 
         for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
             for old, new in zip(old_tt, new_tt):
-                old[indices] = new[indices]
+                old[mask] = new[mask]
 
         for ns, os in zip(res.states, self.states):
-            os.exchange(ns, indices)
+            os.exchange(ns, mask)
 
         return self
 

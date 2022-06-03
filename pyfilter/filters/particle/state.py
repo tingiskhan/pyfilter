@@ -90,18 +90,19 @@ class ParticleFilterState(FilterState):
         return self.ll
 
     # TODO: Use batched_gather instead
-    def exchange(self, state: "ParticleFilterState", indices):
+    # TODO: Improve...
+    def exchange(self, state: "ParticleFilterState", mask):
         x = self.x.copy(values=self.x.values.clone())
-        x.values[indices] = state.x.values[indices]
+        x.values[mask] = state.x.values[mask]
 
         w = self.w.clone()
-        w[indices] = state.w[indices]
+        w[mask] = state.w[mask]
 
         ll = self.ll.clone()
-        ll[indices] = state.ll[indices]
+        ll[mask] = state.ll[mask]
 
         prev_inds = self.prev_inds.clone()
-        prev_inds[indices] = state.prev_inds[indices]
+        prev_inds[mask] = state.prev_inds[mask]
 
         self.__init__(x, w, ll, prev_inds)
 
