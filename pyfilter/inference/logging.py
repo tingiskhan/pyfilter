@@ -25,10 +25,9 @@ class DefaultLogger(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.teardown()
         if exc_type:
             raise exc_val
-
-        self.teardown()
 
     def initialize(self, algorithm: "BaseAlgorithm", num_iterations: int) -> "DefaultLogger":
         """
