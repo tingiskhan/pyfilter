@@ -70,7 +70,7 @@ class ParticleMetropolisHastings(BaseKernel):
                 if not self._is_adaptive:
                     continue
 
-                new_params: torch.Tensor = filter_.ssm.concat_parameters(constrained=False)
+                new_params: torch.Tensor = context.stack_parameters(constrained=False)
                 distance = (new_params - old_params).norm(dim=0, p=INFTY).mean()
 
                 if (distance - previous_distance).abs() <= (self._dist_thresh * previous_distance):
