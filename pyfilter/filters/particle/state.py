@@ -2,7 +2,8 @@ import torch
 from torch import Tensor
 from stochproc.timeseries import TimeseriesState
 from ..state import FilterState, PredictionState
-from ...utils import choose, normalize
+from ..utils import batched_gather
+from ...utils import normalize
 
 
 class ParticleFilterPrediction(PredictionState):
@@ -77,13 +78,12 @@ class ParticleFilterState(FilterState):
     def normalized_weights(self):
         return normalize(self.w)
 
-    # TODO: Use batched_gather instead
     def resample(self, indices):
         self.__init__(
-            self.x.copy(values=choose(self.x.values, indices)),
-            choose(self.w, indices),
-            choose(self.ll, indices),
-            choose(self.prev_inds, indices),
+            self.x.copy(values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_dim.numel())),
+            batched_gather(self.w, indices, 0),
+            batched_gather(self.ll, indices, 0),
+            batched_gather(self.prev_inds, indices, 1),
         )
 
     def get_loglikelihood(self):
