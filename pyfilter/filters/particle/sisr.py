@@ -24,12 +24,16 @@ class SISR(ParticleFilter):
 
         indices, mask = self._resample_parallel(state.w)
 
+        # TODO: Perhaps slow
+        tot_index = torch.ones_like(state.prev_inds).cumsum(dim=1) - 1
+        tot_index[mask] = indices
+
         resampled_x = state.x.values
         resampled_x[mask] = batched_gather(resampled_x[mask], indices, len(self.batch_shape))
 
         resampled_state = state.x.copy(values=resampled_x)
 
-        return ParticleFilterPrediction(resampled_state, old_normalized_w, indices=indices, mask=mask)
+        return ParticleFilterPrediction(resampled_state, old_normalized_w, indices=tot_index, mask=mask)
 
     def correct(self, y: torch.Tensor, state, prediction: ParticleFilterPrediction):
         x, weights = self.proposal.sample_and_weight(y, prediction.prev_x)
