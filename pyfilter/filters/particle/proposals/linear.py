@@ -25,14 +25,14 @@ class LinearGaussianObservations(Proposal):
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def __init__(self, a_name: str):
+    def __init__(self, parameter_index: int):
         """
         Initializes the ``LinearGaussianObservations`` class.
         """
 
         super().__init__()
         self._hidden_is1d = None
-        self._a_name = a_name
+        self._parameter_index = parameter_index
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
@@ -76,11 +76,11 @@ class LinearGaussianObservations(Proposal):
         observable_dist = self._model.build_density(x_copy)
         o_var_inv = observable_dist.variance.pow(-1.0)
 
-        observable_parameters = self._model.parameters_and_buffers()
+        observable_parameters = self._model.functional_parameters()
 
         kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
         kernel = kernel_func(
-            y, mean, h_var_inv, o_var_inv, observable_parameters[self._a_name], len(observable_dist.event_shape)
+            y, mean, h_var_inv, o_var_inv, observable_parameters[self._parameter_index], len(observable_dist.event_shape)
         )
 
         x_result = x_copy.copy(values=kernel.sample)
@@ -91,13 +91,13 @@ class LinearGaussianObservations(Proposal):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
         new_state = x.propagate_from(values=h_loc)
 
-        observable_parameters = self._model.parameters_and_buffers()
+        observable_parameters = self._model.functional_parameters()
 
         h_var = h_scale.pow(2.0)
         obs_dist = self._model.build_density(new_state)
 
         o_loc, o_var = obs_dist.mean, obs_dist.variance
-        c = observable_parameters[self._a_name]
+        c = observable_parameters[self._parameter_index]
 
         obs_n_dim = len(obs_dist.event_shape)
 
