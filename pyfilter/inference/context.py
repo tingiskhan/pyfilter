@@ -76,7 +76,7 @@ class ParameterContext(object):
         v = prior.build_distribution().sample()
 
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
-        parameter.set_context(self.get_context())
+        parameter.set_context(self)
         parameter.set_name(name)
 
         self._shape_dict[name] = prior.build_distribution().event_shape
