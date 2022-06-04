@@ -1,5 +1,4 @@
 import torch
-from pyfilter.filters import ParticleFilter
 from torch.distributions import Distribution
 from typing import TypeVar
 from .proposals import BaseProposal
@@ -16,7 +15,7 @@ def run_pmmh(
     state: FilterAlgorithmState,
     proposal: BaseProposal,
     proposal_kernel: Distribution,
-    proposal_filter: ParticleFilter,
+    proposal_filter: BaseFilter,
     proposal_context: ParameterContext,
     y: torch.Tensor,
     size=torch.Size([]),
