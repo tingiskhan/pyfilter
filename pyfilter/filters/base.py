@@ -47,7 +47,7 @@ class BaseFilter(ABC):
 
         self._model_builder = model if callable(model) else None
 
-        self._model = model if callable(self._model_builder) else model(ParameterContext.get_context())
+        self._model = model if not callable(self._model_builder) else model(ParameterContext.get_context())
         self._batch_shape = torch.Size([])
 
         self.record_states = record_states
