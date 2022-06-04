@@ -45,9 +45,11 @@ class BaseFilter(ABC):
         if not (isinstance(model, StateSpaceModel) or callable(model)):
             raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
 
-        self._model_builder = model if callable(model) else None
+        is_function = callable(model) and not isinstance(model, StateSpaceModel)
 
-        self._model = model if not callable(self._model_builder) else model(ParameterContext.get_context())
+        self._model_builder = model if is_function else None
+
+        self._model = model if not is_function else model(ParameterContext.get_context())
         self._batch_shape = torch.Size([])
 
         self.record_states = record_states
