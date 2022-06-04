@@ -29,6 +29,6 @@ class APF(ParticleFilter):
         x, weights = self._proposal.sample_and_weight(y, resampled_state)
 
         w = weights - pre_weights.gather(dim, indices)
-        ll = log_likelihood(w) + (prediction.old_weights * pre_weights.exp()).sum(-1).log()
+        ll = log_likelihood(w) + (prediction.old_weights * pre_weights.exp()).sum(dim=-1).log()
 
         return ParticleFilterState(x, w, ll, indices)
