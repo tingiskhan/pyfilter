@@ -2,7 +2,7 @@ import itertools
 
 import pytest
 from pyfilter import inference as inf, filters as filts
-from .models import linear_models, build_model
+from models import linear_models
 
 
 def proposals():
@@ -14,8 +14,9 @@ PARAMETERS = itertools.product(linear_models(), proposals())
 
 
 class TestPMCMC(object):
-    @pytest.mark.parametrize("true_model, kernel_and_record_states", PARAMETERS)
-    def test_pmcmc(self, true_model, kernel_and_record_states):
+    @pytest.mark.parametrize("models, kernel_and_record_states", PARAMETERS)
+    def test_pmcmc(self, models, kernel_and_record_states):
+        true_model, build_model = models
         _, y = true_model.sample_states(500).get_paths()
 
         with inf.make_context() as context:

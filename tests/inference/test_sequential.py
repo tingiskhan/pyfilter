@@ -2,7 +2,7 @@ import itertools
 
 import pytest
 from pyfilter import inference as inf, filters as filts
-from .models import linear_models, build_model
+from models import linear_models
 
 
 def algorithms():
@@ -14,8 +14,9 @@ PARAMETERS = itertools.product(linear_models(), algorithms())
 
 
 class TestSequential(object):
-    @pytest.mark.parametrize("true_model, algorithm", PARAMETERS)
-    def test_smc2(self, true_model, algorithm):
+    @pytest.mark.parametrize("models, algorithm", PARAMETERS)
+    def test_algorithms(self, models, algorithm):
+        true_model, build_model = models
         _, y = true_model.sample_states(500).get_paths()
 
         with inf.make_context() as context:
