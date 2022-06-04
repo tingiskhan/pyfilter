@@ -60,21 +60,3 @@ def linear_models():
 
     yield obs_2d_2d, kalman_2d_2d
 
-    sigma = np.array([0.005, 0.02])
-    llt = ts.models.LocalLinearTrend(torch.from_numpy(sigma).float())
-
-    a, s = np.array([0.0, 1.0]), 0.15
-
-    params = torch.from_numpy(a).float(), s
-    obs_2d_1d = ts.StateSpaceModel(llt, build_2d_to_1d_dist, parameters=params)
-
-    state_covariance_2 = sigma ** 2.0 * np.eye(2)
-    kalman_2d_1d = KalmanFilter(
-        transition_matrices=llt.parameters_and_buffers()["parameter_0"].numpy(),
-        observation_matrices=a,
-        transition_covariance=state_covariance_2,
-        observation_covariance=s ** 2.0,
-        initial_state_covariance=state_covariance_2
-    )
-
-    yield obs_2d_1d, kalman_2d_1d
