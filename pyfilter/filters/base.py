@@ -6,12 +6,11 @@ from stochproc.timeseries import StateSpaceModel
 
 from .result import FilterResult
 from .state import FilterState, PredictionState
-from ..inference.context import ParameterContext
 
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
-ModelObject = Union[StateSpaceModel, Callable[[ParameterContext], StateSpaceModel]]
+ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]]
 
 
 class BaseFilter(ABC):
@@ -39,6 +38,8 @@ class BaseFilter(ABC):
                     median of mean.
         """
 
+        from ..inference.context import ParameterContext
+
         super().__init__()
 
         if not (isinstance(model, StateSpaceModel) or callable(model)):
@@ -46,7 +47,7 @@ class BaseFilter(ABC):
 
         self._model_builder = model if callable(model) else None
 
-        self._model = model if self._model_builder is None else model(ParameterContext.get_context())
+        self._model = model if callable(self._model_builder) else model(ParameterContext.get_context())
         self._batch_shape = torch.Size([])
 
         self.record_states = record_states
