@@ -13,7 +13,7 @@ def algorithms():
 PARAMETERS = itertools.product(linear_models(), algorithms())
 
 
-class TestPMCMC(object):
+class TestSequential(object):
     @pytest.mark.parametrize("true_model, algorithm", PARAMETERS)
     def test_smc2(self, true_model, algorithm):
         _, y = true_model.sample_states(500).get_paths()
