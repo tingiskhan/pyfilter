@@ -64,6 +64,17 @@ class ParticleFilter(BaseFilter, ABC):
 
         return self._proposal
 
+    def increase_particles(self, factor: int):
+        """
+        Increases the particle count by ``factor``.
+
+        Args:
+            factor: the factor to increase the particles with.
+
+        """
+
+        self._base_particles = torch.Size([2 * self._base_particles[0]])
+
     def initialize(self) -> ParticleFilterState:
         x = self._model.hidden.initial_sample(self.particles)
 
