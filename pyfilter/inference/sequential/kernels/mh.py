@@ -40,7 +40,7 @@ class ParticleMetropolisHastings(BaseKernel):
         context.resample(indices)
         state.filter_state.resample(indices)
 
-        accepted = torch.zeros_like(state.w, dtype=torch.bool)
+        accepted = torch.zeros_like(state.w).bool()
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.batch_shape
 
         # NB: The adaptive part is inspired by https://github.com/nchopin/particles
