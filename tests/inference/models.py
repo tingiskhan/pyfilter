@@ -1,3 +1,4 @@
+import torch.cuda
 from stochproc import timeseries as ts
 from pyro.distributions import Normal, LogNormal, Exponential
 from pyfilter import inference as inf
@@ -23,10 +24,14 @@ def linear_models():
 
 
 def build_model(cntxt):
-    kappa = cntxt.named_parameter("kappa", inf.Prior(Exponential, rate=1.0))
+    kappa = cntxt.named_parameter("kappa", inf.Prior(Exponential, rate=5.0))
     gamma = cntxt.named_parameter("gamma", inf.Prior(Normal, loc=0.0, scale=1.0))
     sigma = cntxt.named_parameter("sigma", inf.Prior(LogNormal, loc=-2.0, scale=0.5))
 
     prob_model = ts.models.OrnsteinUhlenbeck(kappa, gamma, sigma)
 
-    return build_obs_1d(prob_model)
+    res = build_obs_1d(prob_model)
+    if torch.cuda.is_available():
+        res = res.cuda()
+
+    return res
