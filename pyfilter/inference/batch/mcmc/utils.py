@@ -63,11 +63,9 @@ def run_pmmh(
     accepted: torch.BoolTensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob
 
     state.filter_state.exchange(new_res, accepted)
-
-    broadcasted_mask = accepted.unsqueeze(-1)
-    context.exchange(proposal_context, broadcasted_mask)
+    context.exchange(proposal_context, accepted)
 
     if mutate_kernel:
-        proposal.exchange(proposal_kernel, new_prop_kernel, broadcasted_mask)
+        proposal.exchange(proposal_kernel, new_prop_kernel, accepted.unsqueeze(-1))
 
     return accepted
