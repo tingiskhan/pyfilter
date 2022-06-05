@@ -18,21 +18,6 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     return weights.sum(-1) ** 2 / (weights ** 2).sum(-1)
 
 
-def choose(array: torch.Tensor, indices: torch.Tensor) -> torch.Tensor:
-    """
-    Utility function for aiding in choosing along the first dimension of a tensor.
-
-    Args:
-        array: The tensor to choose from.
-        indices: The indices to select.
-    """
-
-    if indices.dim() < 2:
-        return array[indices]
-
-    return array[torch.arange(array.shape[0], device=array.device).unsqueeze(-1), indices]
-
-
 def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     """
     Constructs a diagonal matrix based on ``x``. Solution found `here`_:
