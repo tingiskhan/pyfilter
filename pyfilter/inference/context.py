@@ -54,7 +54,7 @@ class ParameterContext(object):
         Returns the prior given the name of the parameter.
         """
 
-        return self._prior_dict[name]
+        return self._prior_dict.get(name, None)
 
     def named_parameter(self, name: str, prior: Prior) -> PriorBoundParameter:
         """
