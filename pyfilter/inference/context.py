@@ -28,6 +28,14 @@ class ParameterContext(object):
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
 
     @property
+    def parameters(self) -> Dict[str, PriorBoundParameter]:
+        """
+        Returns the parameters.
+        """
+
+        return self._parameter_dict
+
+    @property
     def stack(self) -> List["ParameterContext"]:
         return self.__class__._contexts.stack
 

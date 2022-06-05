@@ -3,3 +3,4 @@ from . import sequential
 
 from .context import make_context, ParameterContext
 from .prior import Prior
+from .parameter import PriorBoundParameter
