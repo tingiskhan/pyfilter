@@ -6,9 +6,9 @@ from models import linear_models
 
 
 def algorithms():
-    yield lambda f: inf.sequential.NESS(f, 1_000)
-    yield lambda f: inf.sequential.SMC2(f, 1_000, num_steps=5)
-    yield lambda f: inf.sequential.SMC2(f, 1_000, num_steps=10, distance_threshold=0.1)
+    yield lambda f: inf.sequential.NESS(f, 2_000)
+    yield lambda f: inf.sequential.SMC2(f, 2_000, num_steps=5)
+    yield lambda f: inf.sequential.SMC2(f, 2_000, num_steps=10, distance_threshold=0.1)
 
 
 PARAMETERS = itertools.product(linear_models(), algorithms())
@@ -21,7 +21,7 @@ class TestSequential(object):
         _, y = true_model.sample_states(1_000).get_paths()
 
         with inf.make_context() as context:
-            filter_ = filts.APF(build_model, 250)
+            filter_ = filts.APF(build_model, 200)
             alg = algorithm(filter_)
 
             result = alg.fit(y)
