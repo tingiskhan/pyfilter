@@ -18,9 +18,9 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNo
         scale: applies a scaling to the Cholesky factorized covariance matrix of the distribution.
     """
 
-    mean = (x * w.unsqueeze(-1)).sum(0)
+    mean = w @ x
     centralized = x - mean
-    cov = torch.matmul(w * centralized.t(), centralized)
+    cov = (w * centralized.t()).matmul(centralized)
 
     if cov.det() <= 0.0:
         chol = cov.diag().sqrt().diag()
