@@ -23,8 +23,8 @@ def linear_models():
 
 
 def build_model(cntxt):
-    kappa = cntxt.named_parameter("kappa", inf.Prior(Exponential, rate=10.0))
-    gamma = cntxt.named_parameter("gamma", inf.Prior(Normal, loc=-2.0, scale=0.5))
+    kappa = cntxt.named_parameter("kappa", inf.Prior(Exponential, rate=1.0))
+    gamma = cntxt.named_parameter("gamma", inf.Prior(Normal, loc=0.0, scale=1.0))
     sigma = cntxt.named_parameter("sigma", inf.Prior(LogNormal, loc=-2.0, scale=0.5))
 
     prob_model = ts.models.OrnsteinUhlenbeck(kappa, gamma, sigma)
