@@ -69,14 +69,14 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     if is_1d:
         weights = weights.unsqueeze(0)
 
-    mask = torch.isfinite(weights)
-    weights[~mask] = -INFTY
+    mask = ~weights.isfinite()
+    weights[mask] = -INFTY
 
     reweighed = torch.exp(weights - weights.max(-1)[0].unsqueeze(-1))
     normalized = reweighed / reweighed.sum(-1).unsqueeze(-1)
 
-    ax_sum = normalized.sum(1)
-    normalized[torch.isnan(ax_sum) | (ax_sum == 0.0)] = 1 / normalized.shape[-1]
+    ax_sum = normalized.sum(dim=-1)
+    normalized[ax_sum == 0.0] = 1 / normalized.shape[-1]
 
     return normalized.squeeze(0) if is_1d else normalized
 
