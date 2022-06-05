@@ -124,9 +124,7 @@ class FilterResult(BaseResult, Generic[TState]):
         self.tensor_tuples["filter_means"].append(state.get_mean())
         self.tensor_tuples["filter_variances"].append(state.get_variance())
 
-        # TODO: Might be able to do this better?
-        self._loglikelihood = self._loglikelihood + state.get_loglikelihood()
-
+        self._loglikelihood.add_(state.get_loglikelihood())
         self._states.append(state)
 
         return self
