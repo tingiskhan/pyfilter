@@ -135,7 +135,7 @@ class ParticleFilter(BaseFilter, ABC):
             model=self._model_builder,
             particles=self._base_particles[0],
             resampling=self._resampler,
-            proposal=self._proposal,
+            proposal=self._proposal.copy(),
             ess_threshold=self._resample_threshold,
             record_states=self.record_states,
             record_moments=self.record_moments,

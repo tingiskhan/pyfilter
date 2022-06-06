@@ -120,3 +120,6 @@ class LinearGaussianObservations(Proposal):
             cov = diag_o_var + c.matmul(diag_h_var).matmul(c.transpose(-2, -1))
 
         return MultivariateNormal(o_loc, cov).log_prob(y)
+
+    def copy(self) -> "Proposal":
+        return LinearGaussianObservations(self._parameter_index)

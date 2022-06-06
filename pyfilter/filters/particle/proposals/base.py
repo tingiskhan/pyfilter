@@ -74,3 +74,10 @@ class Proposal(ABC):
         y_dist = self._model.build_density(new_state)
 
         return y_dist.log_prob(y)
+
+    def copy(self) -> "Proposal":
+        """
+        Copies the proposal by returning a new instance of type ``self``.
+        """
+
+        raise NotImplementedError()

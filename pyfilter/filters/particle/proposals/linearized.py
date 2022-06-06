@@ -87,3 +87,6 @@ class Linearized(Proposal):
         x_result = x_copy.copy(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
+
+    def copy(self) -> "Proposal":
+        return Linearized(self._n_steps, self._alpha, self._use_second_order)

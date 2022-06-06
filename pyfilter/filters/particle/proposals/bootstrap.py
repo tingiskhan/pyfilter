@@ -12,3 +12,6 @@ class Bootstrap(Proposal):
         dist = self._model.build_density(new_x)
 
         return new_x, dist.log_prob(y)
+
+    def copy(self) -> "Proposal":
+        return Bootstrap()
