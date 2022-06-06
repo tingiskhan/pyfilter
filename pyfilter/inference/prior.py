@@ -1,4 +1,5 @@
-from torch.distributions import TransformedDistribution, biject_to, Transform
+from pyro.distributions import TransformedDistribution
+from pyro.distributions.transforms import biject_to, Transform
 import torch
 from typing import Tuple
 from stochproc.distributions.typing import HyperParameter, DistributionOrBuilder
