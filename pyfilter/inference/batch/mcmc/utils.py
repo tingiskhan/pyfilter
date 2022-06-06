@@ -66,6 +66,6 @@ def run_pmmh(
     context.exchange(proposal_context, accepted)
 
     if mutate_kernel:
-        proposal.exchange(proposal_kernel, new_prop_kernel, accepted.unsqueeze(-1))
+        proposal.exchange(proposal_kernel, new_prop_kernel, accepted)
 
     return accepted
