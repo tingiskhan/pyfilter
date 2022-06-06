@@ -83,7 +83,7 @@ class LinearGaussianObservations(Proposal):
             y, mean, h_var_inv, o_var_inv, observable_parameters[self._parameter_index], len(observable_dist.event_shape)
         )
 
-        x_result = x_copy.copy(values=kernel.sample)
+        x_result = x_copy.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 
