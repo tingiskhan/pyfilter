@@ -36,19 +36,3 @@ class PMMHResult(FilterAlgorithmState):
         for n, p in sample.items():
             sub_sample = self.samples[n]
             self.samples[n] = torch.cat((sub_sample, p.data.clone().unsqueeze(self.dim)), dim=self.dim)
-
-    def update_parameters_from_chain(self, model: StateSpaceModel, burn_in: int, constrained=True):
-        """
-        Sets the parameters of ``model`` from chain indexed from ``burn_in`` and forward.
-
-        Args:
-            model: the model to set the parameters for.
-            burn_in: the number of num_samples from the chain to discard.
-            constrained: whether parameters are constrained.
-        """
-
-        samples = self.samples[burn_in:]
-        samples = samples.flatten(end_dim=-2)
-
-        model.sample_params(torch.Size([samples.shape[0], 1]))
-        model.update_parameters_from_tensor(samples, constrained=constrained)
