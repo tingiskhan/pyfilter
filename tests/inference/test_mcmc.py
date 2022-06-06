@@ -21,7 +21,7 @@ class TestPMCMC(object):
 
         with inf.make_context() as context:
             kernel, record_states = kernel_and_record_states
-            filter_ = filts.APF(build_model, 150, record_states=record_states)
+            filter_ = filts.APF(lambda u: build_model(u, use_cuda=False), 150, record_states=record_states)
             pmcmc = inf.batch.mcmc.PMMH(filter_, 1_000, initializer="mean", proposal=kernel)
 
             result = pmcmc.fit(y)
