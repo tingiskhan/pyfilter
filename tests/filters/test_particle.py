@@ -24,14 +24,16 @@ BATCH_SIZES = [
     torch.Size([10]),
 ]
 
-PARAMETERS = itertools.product(linear_models(), construct_filters(), BATCH_SIZES)
+
+def create_params():
+    return itertools.product(linear_models(), construct_filters(), BATCH_SIZES)
 
 
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
 
-    @pytest.mark.parametrize("models, filter_, batch_size", PARAMETERS)
+    @pytest.mark.parametrize("models, filter_, batch_size", create_params())
     def test_compare_with_kalman_filter(self, models, filter_, batch_size):
         np.random.seed(123)
 
@@ -66,3 +68,21 @@ class TestParticleFilters(object):
         high = high.numpy()
 
         assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+
+    @pytest.mark.parametrize("models, filter_, batch_size", create_params())
+    def test_predict(self, models, filter_, batch_size):
+        model, kalman_model = models
+        x, y = kalman_model.sample(self.SERIES_LENGTH)
+
+        f: part.ParticleFilter = filter_(model)
+        f.set_batch_shape(batch_size)
+        result = f.batch_filter(torch.from_numpy(y).float())
+
+        num_steps = 10
+        path = result.latest_state.predict_path(model, num_steps)
+
+        assert len(path.get_paths()) == 2
+
+        x, y = path.get_paths()
+
+        assert x.shape == torch.Size([num_steps, *f.particles, *f.ssm.hidden.event_shape])
