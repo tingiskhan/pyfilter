@@ -1,6 +1,6 @@
 from torch import Tensor
 from abc import ABC
-from stochproc.timeseries import TimeseriesState
+from stochproc.timeseries import TimeseriesState, StateSpaceModel, result as res
 
 
 class PredictionState(ABC):
@@ -66,6 +66,17 @@ class FilterState(dict, ABC):
     def get_timeseries_state(self) -> TimeseriesState:
         """
         Returns the state of the timeseries.
+        """
+
+        raise NotImplementedError()
+
+    def predict_path(self, model: StateSpaceModel, num_steps: int) -> res.StateSpacePath:
+        """
+        Predicts ``num_steps`` into the future for ``model``.
+
+        Args:
+            model: the model to predict for.
+            num_steps: the number of steps into the future to predict.
         """
 
         raise NotImplementedError()

@@ -57,12 +57,11 @@ class ParticleFilterState(FilterState):
     def _calc_mean_and_var(self) -> (torch.Tensor, torch.Tensor):
         normalized_weights = self.normalized_weights()
 
-        sum_axis = -1
-        if self.x.values.dim() == normalized_weights.dim() + 1:
-            normalized_weights.unsqueeze_(-1)
-            sum_axis = -2
-
+        sum_axis = -(len(self.x.event_dim) + 1)
         nested = self.w.dim() > 1
+
+        if sum_axis < -1:
+            normalized_weights.unsqueeze_(-1)
 
         mean = (self.x.values * normalized_weights).sum(sum_axis)
         var = ((self.x.values - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
@@ -89,7 +88,6 @@ class ParticleFilterState(FilterState):
     def get_loglikelihood(self):
         return self.ll
 
-    # TODO: Use batched_gather instead
     # TODO: Improve...
     def exchange(self, state: "ParticleFilterState", mask):
         x = self.x.copy(values=self.x.values.clone())
@@ -108,3 +106,6 @@ class ParticleFilterState(FilterState):
 
     def get_timeseries_state(self) -> TimeseriesState:
         return self.x
+
+    def predict_path(self, model, num_steps):
+        return model.sample_states(num_steps, x_0=self.x)
