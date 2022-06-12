@@ -77,7 +77,8 @@ class ParameterContext(object):
         """
 
         if name in self._prior_dict:
-            raise KeyError(f"A prior with the key '{name}' already exists!")
+            # TODO: Add check for whether prior is the same or not, if not then raise
+            return self.get_parameter(name)
 
         self._prior_dict[name] = prior
 
