@@ -8,8 +8,8 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     Calculates the ESS from an array of (log) weights.
 
     Args:
-        weights: The (log) weights to calculate ESS for.
-        normalized: Optional parameter indicating whether the weights are normalized.
+        weights: the log weights to calculate ESS for.
+        normalized: optional parameter specifying whether the weights are normalized.
     """
 
     if not normalized:
@@ -23,8 +23,8 @@ def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     Constructs a diagonal matrix based on ``x``. Solution found `here`_:
 
     Args:
-        x: The diagonal of the matrix.
-        base_dim: The dimension of ``x``.
+        x: the diagonal of the matrix.
+        base_dim: the dimension of ``x``.
 
     Example:
         If ``x`` is of shape ``(100, 20)`` and the dimension is 0, then we get a tensor of shape ``(100, 20, 1)``.
@@ -46,7 +46,7 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     Normalizes a 1D or 2D array of log weights.
 
     Args:
-        weights: The log weights to normalize.
+        weights: the log weights to normalize.
     """
 
     is_1d = weights.dim() == 1
@@ -71,7 +71,7 @@ def is_documented_by(original):
     Wrapper for function for copying doc strings of functions. See `this`_ reference.
 
     Args:
-        original: The original function to copy the docs from.
+        original: the original function to copy the docs from.
 
     .. _this: https://softwareengineering.stackexchange.com/questions/386755/sharing-docstrings-between-similar-functions
     """

@@ -1,4 +1,3 @@
-from torch.nn import Module
 from stochproc.container import BufferIterable
 
 
@@ -9,7 +8,7 @@ class BaseResult(dict):
 
     def __init__(self):
         """
-        Initializes the ``BaseResult`` class.
+        Initializes the :class:`BaseResult` class.
         """
 
         super(BaseResult, self).__init__()
@@ -17,10 +16,10 @@ class BaseResult(dict):
 
     def exchange_tensor_tuples(self, other: "BaseResult"):
         """
-        Exchanges the ``.tensor_tuples`` of self with that of other.
+        Exchanges the :prop:`.tensor_tuples` of self with that of ``other``.
 
         Args:
-            other: The other state to exchange with.
+            other: the other state to exchange with.
         """
 
         for k, v in other.tensor_tuples.items():
