@@ -87,7 +87,7 @@ class Prior(_DistributionModule):
             normal and then map to the constrained space (i.e. perform the mapping ``exp``):
 
                 >>> from torch.distributions import Normal, Exponential
-                >>> from stochproc.distributions import Prior
+                >>> from pyfilter.inference import Prior
                 >>>
                 >>> exponential_prior = Prior(Exponential, rate=1.0)
                 >>> samples = Normal(0.0, 1.0).sample(torch.Size([1000]))

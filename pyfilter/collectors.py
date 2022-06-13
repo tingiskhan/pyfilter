@@ -15,6 +15,7 @@ T = TypeVar("T", bound=BaseResult)
 __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 
+# TODO: Better logs and implement support
 class Collector(Generic[T]):
     """
     Defines a collector object that is registered as a hook on a ``torch.nn.Module`` and calculates some quantity

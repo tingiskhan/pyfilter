@@ -10,11 +10,11 @@ class DefaultLogger(object):
 
     def __init__(self, func: Callable[[AlgorithmState], None] = None, log_every_iteration: int = 1):
         """
-        Initializes the ``DefaultLogger`` class.
+        Initializes the :class:`DefaultLogger` class.
 
         Args:
-            func: Callable that takes as input the current algorithm state.
-            log_every_iteration: Integer specifying the frequency at which to call ``func``, calls every
+            func: callable that takes as input the current algorithm state.
+            log_every_iteration: integer specifying the frequency at which to call ``func``, calls every
                 ``iteration % log_every_iteration``.
         """
 
@@ -34,8 +34,8 @@ class DefaultLogger(object):
         Initializes the logging class.
 
         Args:
-            algorithm: The algorithm using the logging class.
-            num_iterations: The number of iterations to perform.
+            algorithm: the algorithm using the logging class.
+            num_iterations: the number of iterations to perform.
         """
 
         return self
@@ -45,8 +45,8 @@ class DefaultLogger(object):
         Performs the actual logging.
 
         Args:
-            iteration: The current iteration of algorithm.
-            state: The current state of the algorithm.
+            iteration: the current iteration of algorithm.
+            state: the current state of the algorithm.
         """
 
         if iteration % self._per_iter == 0:
@@ -62,12 +62,12 @@ class DefaultLogger(object):
 
 class TQDMWrapper(DefaultLogger):
     """
-    Logging wrapper for `tqdm`.
+    Logging wrapper for :class:`tqdm.tqdm`.
     """
 
     def __init__(self):
         """
-        Initializes the ``TQDMWrapper`` class.
+        Initializes the :class:`TQDMWrapper` class.
         """
 
         super(TQDMWrapper, self).__init__(func=self.func, log_every_iteration=1)

@@ -1,19 +1,17 @@
 from abc import ABC
-from collections import OrderedDict
 
 import torch
-from typing import Tuple, Dict
+from typing import Tuple
 
 from ..filters import BaseFilter
 from .logging import DefaultLogger
 from .state import AlgorithmState
-from .parameter import PriorBoundParameter
 from .context import ParameterContext
 
 
 class BaseAlgorithm(ABC):
     """
-    Abstract base class for all algorithms.
+    Abstract base class for algorithms.
     """
 
     def __init__(self, filter_: BaseFilter):
@@ -21,7 +19,7 @@ class BaseAlgorithm(ABC):
         Initializes the :class:`BaseFilterAlgorithm` class.
 
         Args:
-             filter_: The filter to use for approximating the log likelihood.
+             filter_: the filter to use for approximating the log likelihood.
         """
 
         super().__init__()
@@ -48,24 +46,8 @@ class BaseAlgorithm(ABC):
         Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
 
         Args:
-            y: The data to consider, should of size ``(number of time steps, [dimension of observed space])``.
-            logging: Class inherited from ``DefaultLogger`` to handle logging.
-        """
-
-        raise NotImplementedError()
-
-    def predict(self, steps: int, state: AlgorithmState, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Given the current state of the algorithm, predict the timeseries ``steps`` steps into the future.
-
-        Args:
-            steps: The number of steps into the future to predict the timeseries.
-            state: The current state of the algorithm.
-            kwargs: Any algorithm specific kwargs.
-
-        Returns:
-            Returns the tuple ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
-            ``(steps, [additional shapes])``.
+            y: the data to consider, should of size ``(timesteps, [dimension of observed space])``.
+            logging: class inherited from :class:`~pyfilter.inference.logging.DefaultLogger` to handle logging.
         """
 
         raise NotImplementedError()

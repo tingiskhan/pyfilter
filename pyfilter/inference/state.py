@@ -15,10 +15,10 @@ class FilterAlgorithmState(AlgorithmState):
 
     def __init__(self, filter_state: FilterResult):
         """
-        Initializes the ``FilterAlgorithmState`` class.
+        Initializes the :class:`FilterAlgorithmState` class.
 
         Args:
-             filter_state: The initial ``pyfilter.filters.FilterResult``.
+             filter_state: the initial :class:`pyfilter.filters.FilterResult`.
         """
 
         super().__init__()
@@ -29,7 +29,7 @@ class FilterAlgorithmState(AlgorithmState):
         Creates a replica (not copy) of the instance with given ``filter_state``.
 
         Args:
-            filter_state: The filter state to use when creating the replica.
+            filter_state: the filter state to use when creating the replica.
         """
 
         return FilterAlgorithmState(filter_state)
