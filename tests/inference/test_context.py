@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from pyfilter import inference as inf
@@ -86,3 +87,9 @@ class TestContext(object):
 
             for p_model, (n, p) in zip(model.hidden.functional_parameters(), context.get_parameters()):
                 assert (p == old_dict[n][indices]).all() and (p_model is p)
+
+    def test_assert_fails_register_inactive(self):
+        context = inf.make_context()
+
+        with pytest.raises(AssertionError):
+            a = context.named_parameter("a", inf.Prior(Normal, loc=0.0, scale=1.0))
