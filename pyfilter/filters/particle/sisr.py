@@ -10,7 +10,9 @@ from ...utils import get_ess
 
 class SISR(ParticleFilter):
     """
-    Implements the SISR filter by Gordon et al.
+    Implements the `Sequential Importance Sampling Resampling`_ filter by Gordon et al.
+
+    .. _`Sequential Importance Sampling Resampling`: https://en.wikipedia.org/wiki/Particle_filter#Sequential_Importance_Resampling_(SIR)
     """
 
     def _resample_parallel(self, w: torch.Tensor) -> Tuple[torch.Tensor, torch.BoolTensor]:

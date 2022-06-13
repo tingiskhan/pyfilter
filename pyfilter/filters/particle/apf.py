@@ -7,7 +7,9 @@ from ..utils import batched_gather
 
 class APF(ParticleFilter):
     """
-    Implements the Auxiliary Particle Filter of Pitt and Shephard.
+    Implements the `Auxiliary Particle Filter`_ of Pitt and Shephard.
+
+    .. _`Auxiliary Particle Filter`: https://en.wikipedia.org/wiki/Auxiliary_particle_filter
     """
 
     def predict(self, state: ParticleFilterState):
