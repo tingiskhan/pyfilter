@@ -8,9 +8,12 @@ class PredictionState(ABC):
     Base class for filter predictions.
     """
 
-    def create_state_from_prediction(self) -> "FilterState":
+    def create_state_from_prediction(self, model: StateSpaceModel) -> "FilterState":
         """
-        Method for creating an instance of ``FilterState``.
+        Method for creating an instance of :class:`FilterState`.
+
+        Args:
+            model: the model to use for propagating.
         """
 
         raise NotImplementedError()

@@ -208,9 +208,8 @@ class BaseFilter(ABC):
         prediction = self.predict(state)
 
         nan_mask = torch.isnan(y)
-        if nan_mask.any():
-            # TODO: Fix this one...
-            raise NotImplementedError()
+        if nan_mask.all():
+            return prediction.create_state_from_prediction(self._model)
 
         return self.correct(y, state, prediction)
 
