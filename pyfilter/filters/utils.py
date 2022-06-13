@@ -19,7 +19,7 @@ def batched_gather(x: torch.Tensor, indices: torch.IntTensor, dim: int):
         return x[indices]
     elif indices.dim() == 2:
         if x.dim() > indices.dim():
-            indices = indices.unsqueeze(-1).repeat_interleave(2, dim=-1)
+            indices = indices.unsqueeze(-1).repeat_interleave(x.shape[-1], dim=-1)
 
         return x.gather(dim, indices)
 
