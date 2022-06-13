@@ -16,8 +16,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Initializes the :class:`SequentialParticleAlgorithm` class.
 
         Args:
-            filter_: See base.
-            num_particles: The number of particles to use for approximating the parameter posteriors.
+            filter_: see base.
+            num_particles: the number of particles to use for approximating the parameter posteriors.
         """
 
         super().__init__(filter_)
@@ -28,7 +28,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
     def initialize(self) -> SequentialAlgorithmState:
         """
-        Initializes the algorithm by returning an ``SequentialAlgorithmState``.
+        Initializes the algorithm by returning an :class:`SequentialAlgorithmState`.
         """
 
         init_state = self.filter.initialize()
@@ -43,8 +43,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Updates the algorithm and filter state given the latest observation ``y``.
 
         Args:
-            y: The latest observation.
-            state: The previous state of the algorithm.
+            y: the latest observation.
+            state: the previous state of the algorithm.
 
         Returns:
             The updated state of the algorithm.
@@ -63,40 +63,25 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
             return state
 
-    def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict_path(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
-
-        if not aggregate:
-            return px, py
-
-        w = state.normalized_weights()
-        w_unsqueezed = w.unsqueeze(-1)
-
-        x_m = (px * (w_unsqueezed if self.filter.ssm.hidden.n_dim > 0 else w)).sum(1)
-        y_m = (py * (w_unsqueezed if self.filter.ssm.observable.n_dim > 0 else w)).sum(1)
-
-        return x_m, y_m
-
 
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     """
-    Algorithm combining two instances of ``SequentialParticleAlgorithm``, where we let one of them target a
+    Algorithm combining two instances of :class:`SequentialParticleAlgorithm`, where we let one of them target a
     chronological subset of the data, and the other the remaining points.
 
-    One such example is the ``NESSMC2``, where we first utilize the costly but exact ``SMC2`` algorithm, and then switch
-    to the ``NESS`` algorithm which is a pure online algorithm, but with slower convergence than ``SMC2``.
+    One such example is the :class:`pyfilter.inference.sequential.NESSMC2`.
     """
 
     def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any]):
         """
-        Initializes the ``CombinedSequentialParticleAlgorithm`` class.
+        Initializes the :class:`CombinedSequentialParticleAlgorithm` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            switch: The number of observations to have parsed before switching algorithms.
-            first_kw: Kwargs sent to ``.make_first(...)``.
-            second_kw: Kwargs sent to ``.make_second(...)``.
+            filter_: see base.
+            particles: see base.
+            switch: the number of observations to have parsed before switching algorithms.
+            first_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_first`.
+            second_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_second`.
         """
 
         super().__init__(filter_, particles)
@@ -113,9 +98,9 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         Creates the algorithm to be used for the first part of the data.
 
         Args:
-            filter_: See ``__init__``.
-            particles: See ``__init__``.
-            kwargs: Corresponds to ``first_kw`` of ``__init__``.
+            filter_: see ``__init__``.
+            particles: see ``__init__``.
+            kwargs: corresponds to ``first_kw`` of ``__init__``.
 
         Returns:
             Instance of algorithm to be used for first part of the data.
@@ -125,7 +110,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
-        See ``.make_first(...)`` but replace `first` with `second`.
+        See :meth:`CombinedSequentialParticleAlgorithm.make_first` but replace `first` with `second`.
         """
 
         raise NotImplementedError()
@@ -149,9 +134,3 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
             state = self.do_on_switch(self._first, self._second, state)
 
         return self._second.step(y, state)
-
-    def predict(self, steps, state, aggregate=True, **kwargs):
-        if not self._is_switched:
-            return self._first.predict(steps, state, aggregate=aggregate, **kwargs)
-
-        return self._second.predict(steps, state, aggregate=aggregate, **kwargs)

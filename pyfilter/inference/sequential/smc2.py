@@ -1,5 +1,4 @@
 from typing import Union
-import torch
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings
 from ...filters import ParticleFilter
@@ -73,7 +72,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def rejuvenate(self, state: SMC2State):
         """
-        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below ``._threshold``.
+        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below :prop:`_threshold`.
 
         Args:
             state: the current state of the algorithm.

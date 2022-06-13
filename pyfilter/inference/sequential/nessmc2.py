@@ -7,9 +7,9 @@ from typing import Optional, Dict, Any
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
     """
-    Implements a hybrid of the ``NESS`` and ``SMC2`` algorithm, as recommended in the NESS article. That is, we use the
-    ``SMC2`` algorithm for the first part of the series and then switch to ``NESS`` when it becomes too computationally
-    demanding to use the ``SMC2``.
+    Implements a hybrid of the :class:`NESS`` and :class:`SMC2` algorithm, as recommended in the NESS article. That is,
+    we use the :class:`SMC2` algorithm for the first part of the series and then switch to :class:`NESS` when it becomes
+    too computationally demanding to use the :class`SMC2`.
     """
 
     def __init__(
@@ -21,14 +21,14 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         ness_kw: Optional[Dict[str, Any]] = None,
     ):
         """
-        Initializes the ``NESSMC2`` class.
+        Initializes the :class:`NESSMC2` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            switch: See base.
-            smc2_kw: Kwargs passed to ``SMC2``.
-            ness_kw: Kwargs passed to ``NESS``.
+            filter_: see base.
+            particles: see base.
+            switch: see base.
+            smc2_kw: kwargs passed to ``SMC2``.
+            ness_kw: kwargs passed to ``NESS``.
         """
 
         super().__init__(filter_, particles, switch, first_kw=smc2_kw, second_kw=ness_kw)

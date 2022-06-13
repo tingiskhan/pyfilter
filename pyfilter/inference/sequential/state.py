@@ -11,13 +11,13 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: torch.Tensor = None):
         """
-        Initializes the ``SequentialAlgorithmState`` class.
+        Initializes the :class:`SequentialAlgorithmState` class.
 
         Args:
-            weights: The log weights associated with the particle approximation.
-            filter_state: The current state of the filter. Somewhat misnamed as we keep track of the entire history of
+            weights: the log weights associated with the particle approximation.
+            filter_state: the current state of the filter. Somewhat misnamed as we keep track of the entire history of
                 the filter, should perhaps be called ``filter_result``.
-            ess: Optional parameter, only used when re-initializing a state object.
+            ess: optional parameter, only used when re-initializing a state object.
         """
 
         super().__init__(filter_state)
@@ -54,18 +54,19 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
 class SMC2State(SequentialAlgorithmState):
     """
-    Custom state class for ``SMC2``, as it requires keeping a history of the parsed observations.
+    Custom state class for :class:`pyfilter.inference.sequential.SMC2`, as it requires keeping a history of the parsed
+    observations.
     """
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: torch.Tensor = None):
         """
-        Initializes the ``SMC2State`` class.
+        Initializes the :class:`SMC2State` class.
 
         Args:
-            weights: See base:
-            filter_state: See base.
-            ess: See base.
-            parsed_data: The collection of observations that have been parsed by the algorithm.
+            weights: see base:
+            filter_state: see base.
+            ess: see base.
+            parsed_data: the collection of observations that have been parsed by the algorithm.
         """
 
         super().__init__(weights, filter_state, ess)

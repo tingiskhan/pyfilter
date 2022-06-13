@@ -9,11 +9,11 @@ class Thresholder(object):
 
     def __init__(self, min_thresh: float, start_thresh: float):
         """
-        Initializes the ``Thresholder`` class.
+        Initializes the :class:`Thresholder` class.
 
         Args:
-             min_thresh: The minimum allowed threshold.
-             start_thresh: The starting threshold.
+             min_thresh: the minimum allowed threshold.
+             start_thresh: the starting threshold.
         """
 
         self._min = min_thresh
@@ -27,7 +27,7 @@ class Thresholder(object):
         Returns the threshold of the current iteration.
 
         Args:
-            iteration: The current iteration.
+            iteration: the current iteration.
         """
 
         return max(self._mutate_thresh(iteration, self._start), self._min)
@@ -52,10 +52,10 @@ class DecayingThreshold(Thresholder):
 
     def __init__(self, min_thresh: float, start_thresh: float, half_life: int = 1_000):
         """
-        Initializes the ``DecayingThreshold`` class.
+        Initializes the :class:`DecayingThreshold` class.
 
         Args:
-            half_life: The number of steps at which to achieve a halfing of the threshold.
+            half_life: The number of steps at which to achieve a halving of the threshold.
         """
 
         super().__init__(min_thresh, start_thresh)
@@ -75,11 +75,11 @@ class IntervalThreshold(Thresholder):
 
     def __init__(self, thresholds: Dict[int, float], ending_threshold: float):
         """
-        Initializes the ``IntervalThreshold`` class.
+        Initializes the :class:`IntervalThreshold` class.
 
         Args:
-            thresholds: A dictionary specifying the thresholds and the ending numer of num_samples.
-            ending_threshold: The end threshold.
+            thresholds: dictionary specifying the thresholds and the ending numer of num_samples.
+            ending_threshold: the ending threshold.
         """
 
         super(IntervalThreshold, self).__init__(ending_threshold, ending_threshold)

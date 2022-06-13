@@ -81,17 +81,17 @@ class NESS(BaseOnlineAlgorithm):
 
 class FixedWidthNESS(BaseOnlineAlgorithm):
     """
-    Implements a fixed observation width version of ``NESS``.
+    Implements a fixed observation width version of :class:`NESS`.
     """
 
     def __init__(self, filter_, particles, block_len=125, **kwargs):
         """
-        Initializes the ``NESS`` class.
+        Initializes the :class:`FixedWidthNESS` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            block_len: The length of the block of observations to parse before updating the num_particles.
+            filter_: see base.
+            particles: see base.
+            block_len: the length of the block of observations to parse before updating the num_particles.
         """
 
         super().__init__(filter_, particles, **kwargs)
