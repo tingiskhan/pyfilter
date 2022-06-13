@@ -21,10 +21,10 @@ def run_pmmh(
     size=torch.Size([]),
     mutate_kernel=False,
 ) -> torch.BoolTensor:
-    """
-    Runs one iteration of the PMMH update step in which we sample a candidate :math:`\\theta^*` from the proposal
-    kernel, run a filter for the considered dataset with :math:`\\theta^*`, and accept based on the acceptance
-    probability given by the article. If accepted, we call the ``.exchange(...)`` method of ``filter_`` and ``state``.
+    r"""
+    Runs one iteration of the PMMH update step in which we sample a candidate :math:`\theta^*` from the proposal
+    kernel, run a filter for the considered dataset with :math:`\theta^*`, and accept based on the acceptance
+    probability given by the article.
 
     Args:
         context: the parameter context of the main algorithm.
