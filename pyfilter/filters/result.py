@@ -16,14 +16,14 @@ class FilterResult(BaseResult, Generic[TState]):
     # TODO: Add dump and load hook for all states instead of just last?
     def __init__(self, init_state: TState, record_states: BoolOrInt, record_moments: BoolOrInt):
         """
-        Initializes the ``FilterResult`` object.
+        Initializes the :class:`FilterResult` class.
 
         Args:
-            init_state: The initial state.
-            record_states: Parameter for whether to record all, or some of the states of the filter. Do note that
+            init_state: the initial state.
+            record_states: parameter for whether to record all, or some of the states of the filter. Do note that
                 recording all states will be very memory intensive for particle filters. See
-                ``pyfilter.container.make_dequeue`` for more details.
-            record_moments: Same as ``record_states`` but for the filter means and variances.
+                :func:`pyfilter.container.make_dequeue` for more details.
+            record_moments: same as ``record_states`` but for the filter means and variances.
         """
 
         super().__init__()
@@ -38,8 +38,8 @@ class FilterResult(BaseResult, Generic[TState]):
 
     @property
     def loglikelihood(self) -> torch.Tensor:
-        """
-        Returns the current estimate of the total log likelihood, :math:`\\log{p(y_{1:t})}`.
+        r"""
+        Returns the current estimate of the total log likelihood, :math:`\log p(y_{1:t})`.
         """
 
         return self._loglikelihood
@@ -48,7 +48,7 @@ class FilterResult(BaseResult, Generic[TState]):
     def filter_means(self) -> torch.Tensor:
         """
         Returns the estimated filter means, of shape
-        ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
+        ``(timesteps, [batch shape], latent dimension)``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_means")
@@ -57,7 +57,7 @@ class FilterResult(BaseResult, Generic[TState]):
     def filter_variance(self) -> torch.Tensor:
         """
         Returns the estimated filter variances, of shape
-        ``(number of timesteps, [number of parallel filters], dimension of latent space)``.
+        ``(timesteps, [batch shape], latent dimension)``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_variances")
@@ -70,23 +70,23 @@ class FilterResult(BaseResult, Generic[TState]):
     def latest_state(self) -> TState:
         return self._states[-1]
 
-    def exchange(self, res: "FilterResult[TState]", mask: torch.Tensor):
+    def exchange(self, other: "FilterResult[TState]", mask: torch.Tensor):
         """
         Exchanges the states and tensor tuples with ``res`` at ``mask``. Note that this is only relevant for filters
         that have been run in parallel.
 
         Args:
-            res: the object to exchange states and tensor tuples with.
+            other: the object to exchange states and tensor tuples with.
             mask: mask specifying which values to exchange.
         """
 
-        self._loglikelihood[mask] = res.loglikelihood[mask]
+        self._loglikelihood[mask] = other.loglikelihood[mask]
 
-        for old_tt, new_tt in zip(self.tensor_tuples.values(), res.tensor_tuples.values()):
+        for old_tt, new_tt in zip(self.tensor_tuples.values(), other.tensor_tuples.values()):
             for old, new in zip(old_tt, new_tt):
                 old[mask] = new[mask]
 
-        for ns, os in zip(res.states, self.states):
+        for ns, os in zip(other.states, self.states):
             os.exchange(ns, mask)
 
         return self
@@ -115,7 +115,7 @@ class FilterResult(BaseResult, Generic[TState]):
 
     def append(self, state: TState):
         """
-        Appends state to ``self``, wraps around the ``__call__`` method of ``torch.nn.Module``.
+        Appends state to ``self``.
 
         Args:
             state: The state to append.

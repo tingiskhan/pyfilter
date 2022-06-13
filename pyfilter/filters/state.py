@@ -55,12 +55,12 @@ class FilterState(dict, ABC):
 
         raise NotImplementedError()
 
-    def exchange(self, state: "FilterState", mask: Tensor):
+    def exchange(self, other: "FilterState", mask: Tensor):
         """
         Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
 
         Args:
-            state: the state to exchange with
+            other: the state to exchange with
             mask: mask of ``state`` to replace ``self`` with.
         """
 

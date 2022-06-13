@@ -101,26 +101,26 @@ class BaseFilter(ABC):
 
     def initialize(self) -> TState:
         """
-        Initializes the filter. This is mainly for internal use, consider using `.`initialize_with_result(...)``
-        instead.
+        Initializes the filter. This is mainly for internal use, consider using
+        :meth:`BaseFilter.initialize_with_result` instead.
         """
 
         raise NotImplementedError()
 
     def initialize_with_result(self, state: TState = None) -> FilterResult[TState]:
         """
-        Initializes the filter using ``.initialize()`` if ``state`` is ``None``, and wraps the result using
-        ``pyfilter.filters.result.FilterResult``. Also registers the callbacks on the ``FilterResult`` object.
+        Initializes the filter using :meth:`BaseFilter.initialize` if ``state`` is ``None``, and wraps the result using
+        :class:`~pyfilter.filters.result.FilterResult`.
 
         Args:
-            state: optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
+            state: optional parameter, if ``None`` calls :meth:`BaseFilter..initialize` otherwise uses ``state``.
         """
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
     def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
-        Batch version of :meth:`filter` where entire data set is parsed.
+        Batch version of :meth:`BaseFilter.filter` where entire data set is parsed.
 
         Args:
             y: data set to filter.
