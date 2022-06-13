@@ -6,27 +6,27 @@ from .base import Proposal
 
 
 class Linearized(Proposal):
-    """
+    r"""
     Given a state space model with dynamics
         .. math::
-            Y_t \\sim p_\\theta(y_t \\mid X_t), \n
-            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+            Y_t \sim p_\theta(y_t \mid X_t), \newline
+            X_{t+1} = f_\theta(X_t) + g_\theta(X_t) W_{t+1},
 
-    where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`X_t`, and which is
+    where :math:`p_\theta` denotes an arbitrary density parameterized by :math:`\theta` and :math:`X_t`, and which is
     continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
-    density :math:`p_\\theta(y_t \\mid x_t) \\cdot p_\\theta(x_t \\mid x_{t-1})` by linearizing it around
-    :math:`f_\\theta(x_t)` and approximate it using a normal distribution.
+    density :math:`p_\theta(y_t \mid x_t) \cdot p_\theta(x_t \mid x_{t-1})` by linearizing it around
+    :math:`f_\theta(x_t)` and approximate it using a normal distribution.
     """
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Initializes the ``Linearized`` proposal
+        Initializes the :class:`Linearized` class.
 
         Args:
-            n_steps: The number of steps to take when performing gradient descent
-            alpha: The step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+            n_steps: the number of steps to take when performing gradient descent
+            alpha: the step size to take when performing gradient descent. Only matters when ``use_second_order`` is
                 ``False``, or when the Hessian is badly conditioned.
-            use_second_order: Whether to use second order information when constructing the proposal distribution.
+            use_second_order: whether to use second order information when constructing the proposal distribution.
                 Amounts to using the diagonal of the Hessian.
         """
         super().__init__()

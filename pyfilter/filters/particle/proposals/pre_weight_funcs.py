@@ -1,6 +1,7 @@
 from typing import Callable, TypeVar
 from stochproc.timeseries import AffineEulerMaruyama, AffineProcess, StochasticProcess, TimeseriesState
 
+
 T = TypeVar("T", bound=StochasticProcess)
 _RESULT = Callable[[T, TimeseriesState], TimeseriesState]
 
@@ -23,8 +24,8 @@ def get_pre_weight_func(func: _RESULT, process: StochasticProcess) -> _RESULT:
     Gets function for generating a pre-weight for the APF.
 
     Args:
-        func: Whether to override the choosing by passing your own custom function, else defaults to pre-defined ones.
-        process: The process for which to choose a pre-weighting function for.
+        func: whether to override the choosing by passing your own custom function, else defaults to pre-defined ones.
+        process: the process for which to choose a pre-weighting function for.
 
     Returns:
         Returns the function.
@@ -33,7 +34,8 @@ def get_pre_weight_func(func: _RESULT, process: StochasticProcess) -> _RESULT:
     if func is not None:
         return func
 
-    if isinstance(process, AffineEulerMaruyama):
+    # TODO: This might be retired
+    if isinstance(process, AffineEulerMaruyama) and process.num_steps > 1:
         return _affine_euler
 
     if isinstance(process, AffineProcess):

@@ -1,33 +1,27 @@
 from .base import Proposal
-import torch
-from typing import Tuple
+from torch.linalg import cholesky_ex
 from torch.distributions import Normal, MultivariateNormal
-from stochproc.timeseries import AffineProcess, TimeseriesState
+from stochproc.timeseries import AffineProcess
 from ....utils import construct_diag_from_flat
-
-if torch.__version__ >= "1.9.0":
-    cholesky = torch.linalg.cholesky
-else:
-    cholesky = torch.cholesky
 
 
 class LinearGaussianObservations(Proposal):
-    """
+    r"""
     Implements the optimal proposal density whenever we have that both the latent and observation densities are
     Gaussian, and that the mean of the observation density can be expressed as a linear combination of the latent
     states. More specifically, we have that
         .. math::
-            Y_t = A \\cdot X_t + V_t, \n
-            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+            Y_t = A \cdot X_t + V_t, \newline
+            X_{t+1} = f_\theta(X_t) + g_\theta(X_t) W_{t+1},
 
-    where :math:`A` is a matrix of dimension ``(dimension of observation space, dimension of  latent space)``,
-    :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\\theta` denotes the
+    where :math:`A` is a matrix of dimension ``(observation dimension, latent dimension)``,
+    :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\theta` denotes the
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
     def __init__(self, parameter_index: int):
         """
-        Initializes the ``LinearGaussianObservations`` class.
+        Initializes the :class:`LinearGaussianObservations` class.
         """
 
         super().__init__()
@@ -64,7 +58,7 @@ class LinearGaussianObservations(Proposal):
         t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
         m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
 
-        return MultivariateNormal(m, scale_tril=cholesky(cov))
+        return MultivariateNormal(m, scale_tril=cholesky_ex(cov)[0])
 
     def sample_and_weight(self, y, x):
         mean, scale = self._model.hidden.mean_scale(x)

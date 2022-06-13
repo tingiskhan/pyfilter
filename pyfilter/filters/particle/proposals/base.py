@@ -13,12 +13,12 @@ class Proposal(ABC):
 
     def __init__(self, pre_weight_func: Callable[[StochasticProcess, TimeseriesState], TimeseriesState] = None):
         """
-        Initializes the proposal object.
+        Initializes the :class:`Proposal` object.
 
         Args:
-            pre_weight_func: Function used in the ``APF`` when weighing the particles to be propagated. A common choice
-                is :math:`p(y_t | E_t[x_{t-1}])`, where :math:`E_t[...}` denotes the expected value of the stochastic
-                process at time ``t`` using the values at ``t-1``.
+            pre_weight_func: `f`unction used in the :class:`APF` when weighing the particles to be propagated. A common
+                choice is :math:`p(y_t | E_t[x_{t-1}])`, where :math:`E_t[...]` denotes the expected value of the
+                stochastic process at time :math:`t`` using the values at :math:`t-1`.
         """
 
         super().__init__()
@@ -30,7 +30,7 @@ class Proposal(ABC):
         Sets the model to be used in the proposal.
 
         Args:
-            model: The model to be used.
+            model: the model to consider.
         """
 
         self._model = model
@@ -48,8 +48,8 @@ class Proposal(ABC):
         method samples new state values and weighs them accordingly.
 
         Args:
-            y: The current observation.
-            x: The previous state.
+            y: the current observation.
+            x: the previous state.
 
         Returns:
             The new state together with the associated weights.
@@ -63,8 +63,8 @@ class Proposal(ABC):
         candidate particles to select for propagation.
 
         Args:
-            y: The current observation.
-            x: The previous state.
+            y: the current observation.
+            x: the previous state.
 
         Returns:
             Returns the log weights associated with the previous state particles.
