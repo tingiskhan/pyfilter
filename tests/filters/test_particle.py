@@ -24,21 +24,31 @@ BATCH_SIZES = [
     torch.Size([10]),
 ]
 
+MISSING_PERC = [0.0, 0.1]
+
 
 def create_params():
-    return itertools.product(linear_models(), construct_filters(), BATCH_SIZES)
+    return itertools.product(linear_models(), construct_filters(), BATCH_SIZES, MISSING_PERC)
 
 
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
 
-    @pytest.mark.parametrize("models, filter_, batch_size", create_params())
-    def test_compare_with_kalman_filter(self, models, filter_, batch_size):
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params())
+    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc):
         np.random.seed(123)
 
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
+        y_tensor = torch.from_numpy(y).float()
+
+        if missing_perc > 0.0:
+            num_missing = int(missing_perc * self.SERIES_LENGTH)
+            indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+            y[indices] = np.ma.masked
+            y_tensor[indices] = float("nan")
 
         kalman_mean, _ = kalman_model.filter(y)
 
@@ -49,7 +59,7 @@ class TestParticleFilters(object):
 
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
-        result = f.batch_filter(torch.from_numpy(y).float())
+        result = f.batch_filter(y_tensor)
 
         assert len(result.states) == 1
         assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
@@ -69,14 +79,21 @@ class TestParticleFilters(object):
 
         assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
 
-    @pytest.mark.parametrize("models, filter_, batch_size", create_params())
-    def test_predict(self, models, filter_, batch_size):
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params())
+    def test_predict(self, models, filter_, batch_size, missing_perc):
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
+        y_tensor = torch.from_numpy(y).float()
+        if missing_perc > 0.0:
+            num_missing = int(missing_perc * self.SERIES_LENGTH)
+            indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+            y_tensor[indices] = float("nan")
+
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
-        result = f.batch_filter(torch.from_numpy(y).float())
+        result = f.batch_filter(y_tensor)
 
         num_steps = 10
         path = result.latest_state.predict_path(model, num_steps)
