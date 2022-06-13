@@ -1,5 +1,6 @@
 from torch.distributions import MultivariateNormal
 import torch
+from ..constants import EPS
 
 if torch.__version__ >= "1.9.0":
     chol_fun = torch.linalg.cholesky
@@ -22,7 +23,7 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNo
     centralized = x - mean
     cov = (w * centralized.t()).matmul(centralized)
 
-    if cov.det() <= 0.0:
+    if cov.det() <= EPS:
         chol = cov.diag().sqrt().diag()
     else:
         chol = chol_fun(cov)
