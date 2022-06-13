@@ -55,7 +55,7 @@ class DecayingThreshold(Thresholder):
         Initializes the :class:`DecayingThreshold` class.
 
         Args:
-            half_life: The number of steps at which to achieve a halving of the threshold.
+            half_life: the number of steps at which to achieve a halving of the threshold.
         """
 
         super().__init__(min_thresh, start_thresh)
