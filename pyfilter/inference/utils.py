@@ -1,11 +1,6 @@
 from torch.distributions import MultivariateNormal
 import torch
-from ..constants import EPS
-
-if torch.__version__ >= "1.9.0":
-    chol_fun = torch.linalg.cholesky
-else:
-    chol_fun = torch.cholesky
+from torch.linalg import cholesky_ex
 
 
 def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNormal:
@@ -23,9 +18,9 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0) -> MultivariateNo
     centralized = x - mean
     cov = (w * centralized.t()).matmul(centralized)
 
-    if cov.det() <= EPS:
-        chol = cov.diag().sqrt().diag()
-    else:
-        chol = chol_fun(cov)
+    cholesky, info = cholesky_ex(cov)
 
-    return MultivariateNormal(mean, scale_tril=scale * chol)
+    if (info > 0).any():
+        cholesky = cov.diag().sqrt().diag()
+
+    return MultivariateNormal(mean, scale_tril=scale * cholesky)
