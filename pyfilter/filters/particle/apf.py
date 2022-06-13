@@ -12,8 +12,9 @@ class APF(ParticleFilter):
 
     def predict(self, state: ParticleFilterState):
         normalized = state.normalized_weights()
+        old_indices = torch.zeros_like(state.prev_inds) + torch.arange(normalized.shape[-1], device=normalized.device)
 
-        return ParticleFilterPrediction(state.x, normalized, None, None)
+        return ParticleFilterPrediction(state.x, normalized, old_indices)
 
     def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction):
         pre_weights = self.proposal.pre_weight(y, state.x)
