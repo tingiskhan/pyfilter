@@ -76,11 +76,11 @@ class ParameterContext(object):
             Returns a :class:`PriorBoundParameter`.
         """
 
-        assert self in self.stack, "Cannot register parameters in an inactive context!"
-
         if name in self._prior_dict:
             # TODO: Add check for whether prior is the same or not, if not then raise
             return self.get_parameter(name)
+
+        assert self in self.stack, "Cannot register parameters in an inactive context!"
 
         self._prior_dict[name] = prior
 
