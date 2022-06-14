@@ -207,6 +207,11 @@ class BaseFilter(ABC):
 
         prediction = self.predict(state)
 
+        # TODO: Would be neat to record the intermediary results to the result object such that we may perform smoothing
+        while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
+            state = prediction.create_state_from_prediction(self._model)
+            prediction = self.predict(state)
+
         nan_mask = torch.isnan(y)
         if nan_mask.all():
             return prediction.create_state_from_prediction(self._model)

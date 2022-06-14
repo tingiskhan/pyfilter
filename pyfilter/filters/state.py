@@ -8,6 +8,13 @@ class PredictionState(ABC):
     Base class for filter predictions.
     """
 
+    def get_previous_state(self) -> TimeseriesState:
+        """
+        Returns the previous timeseries state.
+        """
+
+        raise NotImplementedError()
+
     def create_state_from_prediction(self, model: StateSpaceModel) -> "FilterState":
         """
         Method for creating an instance of :class:`FilterState`.

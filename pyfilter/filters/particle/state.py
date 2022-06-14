@@ -27,6 +27,9 @@ class ParticleFilterPrediction(PredictionState):
         self.indices = indices
         self.mask = mask
 
+    def get_previous_state(self) -> TimeseriesState:
+        return self.prev_x
+
     def create_state_from_prediction(self, model):
         x_new = model.hidden.propagate(self.prev_x)
         new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.values.device)
