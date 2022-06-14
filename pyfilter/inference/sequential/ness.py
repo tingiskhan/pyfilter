@@ -96,8 +96,8 @@ class FixedWidthNESS(BaseOnlineAlgorithm):
 
         super().__init__(filter_, particles, **kwargs)
         self._bl = block_len
-        self._num_iters = 0
+        self._num_iterations = 0
 
     def do_update_particles(self, state):
-        self._num_iters += 1
-        return (self._num_iters % self._bl == 0) or (~isfinite(state.w)).any()
+        self._num_iterations += 1
+        return (self._num_iterations % self._bl == 0) or (~isfinite(state.w)).any()
