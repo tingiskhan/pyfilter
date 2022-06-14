@@ -47,7 +47,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         if self.do_update_particles(state):
             self._kernel.update(self.context, self.filter, state)
 
-        filter_state = self.filter.filter(y, state.filter_state.latest_state)
+        filter_state = self.filter.filter(y, state.filter_state.latest_state, result=state.filter_state)
         state.update(filter_state)
 
         return state

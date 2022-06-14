@@ -135,12 +135,10 @@ class BaseFilter(ABC):
             result = self.initialize_with_result(state)
 
             for yt in y:
-                state = self.filter(yt, state)
+                state = self.filter(yt, state, result=result)
 
                 if bar:
                     iter_bar.update(1)
-
-                result.append(state)
 
             return result
         except Exception as e:
@@ -193,16 +191,17 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def filter(self, y: torch.Tensor, state: TState) -> TState:
+    def filter(self, y: torch.Tensor, state: TState, result: FilterResult = None) -> TState:
         """
         Performs one filter move given observation ``y`` and previous state of the filter.
 
         Args:
             y: the observation for which to filter.
             state: the previous state of the filter.
+            result: optional parameter specifying the result on which to append the resulting states.
 
         Returns:
-            New and updated state.
+            Updated state.
         """
 
         prediction = self.predict(state)
@@ -210,13 +209,20 @@ class BaseFilter(ABC):
         # TODO: Would be neat to record the intermediary results to the result object such that we may perform smoothing
         while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
             state = prediction.create_state_from_prediction(self._model)
+
+            result.append(state)
             prediction = self.predict(state)
 
         nan_mask = torch.isnan(y)
         if nan_mask.all():
-            return prediction.create_state_from_prediction(self._model)
+            state = prediction.create_state_from_prediction(self._model)
+        else:
+            state = self.correct(y, state, prediction)
 
-        return self.correct(y, state, prediction)
+        if result:
+            result.append(state)
+
+        return state
 
     def smooth(self, states: Sequence[FilterState]) -> torch.Tensor:
         """
