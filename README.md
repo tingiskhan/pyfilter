@@ -1,84 +1,90 @@
 # pyfilter
-`pyfilter` is a package designed for joint parameter and state inference in (mainly) non-linear state space models using
-Sequential Monte Carlo and variational inference. It is similar to `pomp`, but implemented in `Python` leveraging
-[`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
+`pyfilter` is a package designed for joint parameter and state inference in state space models using
+particle filters and particle filter based inference algorithms. 
+
+## Features
+`pyfilter` features:
+1. Particle filters in the form of [SISR](https://en.wikipedia.org/wiki/Particle_filter) and [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter) together with different proposal distributions.
+2. Both online and offline particle filter based inference algorithms such as
+   1. [SMC2](https://arxiv.org/abs/1101.1528) 
+   2. [NESS](https://arxiv.org/abs/1308.1883)
+   3. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
+   4. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
+3. [pytorch](https://pytorch.org/) integration enables GPU accelerated inference - what took hours on a CPU now takes minutes (or even seconds).
+
+## Requirements
+`pyfilter` requires
+1. [pytorch](https://pytorch.org/)
+2. [pyro](https://pyro.ai)
+3. [stoch-proc](https://github.com/tingiskhan/stoch-proc)
+
+Item 3. was previously integrated in `pyfilter` but is now a standalone package.
 
 ## Example
 
+All examples are located [here](./examples), but you'll find a short one below
+
 ```python
-from pyfilter.timeseries import AffineEulerMaruyama, LinearGaussianObservations
+from stochproc import timeseries as ts, distributions as dists
 import torch
-from pyfilter.distributions import DistributionWrapper
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
-from pyfilter.filters.particle import APF, proposals as p
+from pyfilter.filters.particle import APF
 from math import sqrt
 
 
-def drift(x, gamma, sigma):
-    return torch.sin(x.values - gamma)
+def f(x, gamma, sigma):
+    return torch.sin(x.values - gamma), sigma
 
 
-def diffusion(x, gamma, sigma):
-    return sigma
+def build_observation(x, a, s):
+    return Normal(loc=a * x.values, scale=s)
 
 
 dt = 0.1
-parameters = 0.0, 1.0
-init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-inc_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
-sine_diffusion = AffineEulerMaruyama(
-    (drift, diffusion),
-    parameters,
+gamma = 0.0
+sigma = 1.0
+
+init_dist = dists.DistributionModule(Normal, loc=0.0, scale=1.0)
+inc_dist = dists.DistributionModule(Normal, loc=0.0, scale=sqrt(dt))
+
+sine_diffusion = ts.AffineEulerMaruyama(
+    f,
+    (gamma, sigma),
     init_dist,
     inc_dist,
-    dt=dt,
-    num_steps=int(1 / dt)
+    dt=dt
 )
-ssm = LinearGaussianObservations(sine_diffusion, scale=0.1)
 
-x, y = ssm.sample_path(1000)
+a = 1.0
+s = 0.1
 
-fig, ax = plt.subplots(2)
-ax[0].plot(x.numpy(), label="True")
-ax[1].plot(y.numpy())
+ssm = ts.StateSpaceModel(sine_diffusion, build_observation, (a, s))
 
-filt = APF(ssm, 1000, proposal=p.Bootstrap())
+sample_result = ssm.sample_states(250)
+x, y = sample_result.get_paths()
+
+fig, ax = plt.subplots()
+
+ax.set_title("Latent")
+ax.plot(sample_result.time_indexes, x, label="True", color="gray")
+ax.plot(sample_result.time_indexes, y, marker="o", linestyle="None", label="Observed", color="lightblue")
+
+filt = APF(ssm, 1_000)
 result = filt.batch_filter(y)
 
-ax[0].plot(result.filter_means.numpy(), label="Filtered")
-ax[0].legend()
-
-plt.show()
+ax.plot(sample_result.time_indexes, result.filter_means.numpy()[1:], label="Filtered", color="salmon", alpha=0.75)
+ax.legend()
 ```
 
+![alt text](./static/filtering.jpg?raw=true)
+
 ## Installation
-Install the package by typing the following in a `git shell` or similar
+`pyfilter` is currently unavailable on pypi, as such install it via
 ```
 pip install git+https://github.com/tingiskhan/pyfilter.git
 ```
-
-## Implementations
-Below is a list of implemented algorithms/filters.
-
-### Filters
-The currently implemented filters are
-1. [SISR](https://en.wikipedia.org/wiki/Particle_filter)
-2. [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter)
-3. [UKF](https://www.seas.harvard.edu/courses/cs281/papers/unscented.pdf)
-
-For filters 1. and 2. there exist different proposals, s.a.
-1. Optimal proposal when observations are linear combinations of states, and normally distributed.
-2. Locally linearized observation density, mainly used for models having log-concave observation density.
-
-### Algorithms
-The currently implemented algorithms are
-1. [NESS](https://arxiv.org/abs/1308.1883)
-2. [SMC2](https://arxiv.org/abs/1101.1528) (see [here](https://github.com/nchopin/particles) for one of the original authors' implementation)
-3. [Variational Bayes](https://en.wikipedia.org/wiki/Variational_Bayesian_methods)
-4. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
-5. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
 
 ## Caveats
 Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
