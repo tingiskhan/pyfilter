@@ -11,10 +11,6 @@ def _affine_process(mod: AffineProcess, state: TimeseriesState) -> TimeseriesSta
     return state.propagate_from(values=loc)
 
 
-def _affine_euler(mod: AffineEulerMaruyama, state: TimeseriesState) -> TimeseriesState:
-    return mod.propagate_conditional(state, 0.0)
-
-
 def _missing(mod, state):
     raise Exception("You didn't pass a custom function, and couldn't find a suitable pre-defined one!")
 
@@ -33,10 +29,6 @@ def get_pre_weight_func(func: _RESULT, process: StochasticProcess) -> _RESULT:
 
     if func is not None:
         return func
-
-    # TODO: This might be retired
-    if isinstance(process, AffineEulerMaruyama) and process.num_steps > 1:
-        return _affine_euler
 
     if isinstance(process, AffineProcess):
         return _affine_process
