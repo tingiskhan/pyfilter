@@ -41,8 +41,6 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         """
 
         self.w += filter_state.get_loglikelihood()
-        self.filter_state.append(filter_state)
-
         self.tensor_tuples["ess"].append(get_ess(self.w))
 
     def normalized_weights(self) -> torch.Tensor:

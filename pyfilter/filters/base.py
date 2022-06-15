@@ -24,18 +24,21 @@ class BaseFilter(ABC):
         record_states: BoolOrInt = False,
         record_moments: BoolOrInt = True,
         nan_strategy: str = "skip",
+        record_intermediary_states: bool = False
     ):
         """
         Initializes the :class:`BaseFilter` class.
 
         Args:
             model: the state space model to use for filtering.
-            record_states: see ``pyfilter.filters.FilterResult.record_states``.
-            record_moments: see ``pyfilter.filters.FilterResult.record_moments``.
+            record_states: see :class:`pyfilter.filters.FilterResult`.
+            record_moments: see :class:`pyfilter.filters.FilterResult`.
             nan_strategy: how to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
+            record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
+                `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
         """
 
         from ..inference.context import ParameterContext
@@ -59,6 +62,7 @@ class BaseFilter(ABC):
             raise NotImplementedError(f"Currently cannot handle strategy '{nan_strategy}'!")
 
         self._nan_strategy = nan_strategy
+        self._record_intermediary = record_intermediary_states
 
     @property
     def ssm(self) -> StateSpaceModel:
@@ -206,11 +210,14 @@ class BaseFilter(ABC):
 
         prediction = self.predict(state)
 
+        result_is_none = result is None
         # TODO: Would be neat to record the intermediary results to the result object such that we may perform smoothing
         while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
             state = prediction.create_state_from_prediction(self._model)
 
-            result.append(state)
+            if not result_is_none and self._record_intermediary:
+                result.append(state)
+
             prediction = self.predict(state)
 
         nan_mask = torch.isnan(y)
@@ -219,7 +226,7 @@ class BaseFilter(ABC):
         else:
             state = self.correct(y, state, prediction)
 
-        if result:
+        if not result_is_none:
             result.append(state)
 
         return state
