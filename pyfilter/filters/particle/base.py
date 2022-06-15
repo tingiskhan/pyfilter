@@ -140,6 +140,7 @@ class ParticleFilter(BaseFilter, ABC):
             record_states=self.record_states,
             record_moments=self.record_moments,
             nan_strategy=self._nan_strategy,
+            record_intermediary_states=self._record_intermediary
         )
 
         res.set_batch_shape(self.batch_shape)
