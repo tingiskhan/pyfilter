@@ -86,24 +86,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         return ParticleFilterState(x, w, ll, prev_inds)
 
-    def predict_path(self, state: ParticleFilterState, steps, aggregate: bool = True, **kwargs):
-        x, y = self._model.sample_path(steps, x_s=state.x, **kwargs)
-
-        x = x[1:]
-        if not aggregate:
-            return x, y
-
-        w = state.normalized_weights()
-        w_unsqueezed = w.unsqueeze(-1)
-
-        sum_axis = -(1 + self.ssm.hidden.n_dim)
-
-        obs_ndim = self.ssm.observable.n_dim
-        x_mean = (x * (w_unsqueezed if self.ssm.hidden.n_dim > 0 else w)).sum(sum_axis)
-        y_mean = (y * (w_unsqueezed if obs_ndim > 0 else w)).sum(-2 if obs_ndim > 0 else -1)
-
-        return x_mean, y_mean
-
     def smooth(self, states: Tuple[ParticleFilterState]) -> torch.Tensor:
         offset = -(2 + self.ssm.hidden.n_dim)
 

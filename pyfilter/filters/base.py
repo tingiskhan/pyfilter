@@ -158,21 +158,6 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def predict_path(self, state: TState, steps: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Given the previous ``state``, predict ``steps`` steps into the future.
-
-        Args:
-              state: previous state.
-              steps: the number of steps to predict.
-
-        Returns:
-            Returns a tuple consisting of ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
-            ``(steps, [additional shapes])``.
-        """
-
-        raise NotImplementedError()
-
     def predict(self, state: TState) -> PredictionState:
         """
         Corresponds to the predict step of the given filter.
