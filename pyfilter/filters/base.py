@@ -24,7 +24,7 @@ class BaseFilter(ABC):
         record_states: BoolOrInt = False,
         record_moments: BoolOrInt = True,
         nan_strategy: str = "skip",
-        record_intermediary_states: bool = False
+        record_intermediary_states: bool = False,
     ):
         """
         Initializes the :class:`BaseFilter` class.

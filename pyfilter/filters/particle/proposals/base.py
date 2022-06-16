@@ -38,7 +38,9 @@ class Proposal(ABC):
 
         return self
 
-    def _weight_with_kernel(self, y: torch.Tensor, x_dist: Distribution, x_new: TimeseriesState, kernel: Distribution) -> torch.Tensor:
+    def _weight_with_kernel(
+        self, y: torch.Tensor, x_dist: Distribution, x_new: TimeseriesState, kernel: Distribution
+    ) -> torch.Tensor:
         y_dist = self._model.build_density(x_new)
         return y_dist.log_prob(y) + x_dist.log_prob(x_new.values) - kernel.log_prob(x_new.values)
 

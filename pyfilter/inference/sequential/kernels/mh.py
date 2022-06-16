@@ -62,7 +62,7 @@ class ParticleMetropolisHastings(BaseKernel):
                     sub_context,
                     state.parsed_data,
                     shape,
-                    mutate_kernel=False
+                    mutate_kernel=False,
                 )
 
                 accepted |= to_accept

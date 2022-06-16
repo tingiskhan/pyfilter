@@ -74,7 +74,12 @@ class LinearGaussianObservations(Proposal):
 
         kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
         kernel = kernel_func(
-            y, mean, h_var_inv, o_var_inv, observable_parameters[self._parameter_index], len(observable_dist.event_shape)
+            y,
+            mean,
+            h_var_inv,
+            o_var_inv,
+            observable_parameters[self._parameter_index],
+            len(observable_dist.event_shape),
         )
 
         x_result = x_copy.propagate_from(values=kernel.sample)

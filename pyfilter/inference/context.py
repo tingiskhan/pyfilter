@@ -151,7 +151,7 @@ class ParameterContext(object):
         for n, p in self.get_parameters():
             numel = shape_dict[n].numel()
 
-            param = x[..., index:index + numel]
+            param = x[..., index : index + numel]
             p.update_values_(param, constrained=constrained)
 
             index += numel

@@ -16,7 +16,9 @@ class BaseProposal(ABC):
         Initializes the :class:`BaseProposal` class.
         """
 
-    def build(self, context: ParameterContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor) -> Distribution:
+    def build(
+        self, context: ParameterContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor
+    ) -> Distribution:
         r"""
         Method to be overridden by derived classes. Given the latest state, filter and dataset, generate a proposal
         kernel from which to sample a candidate sample :math:`\theta^*`.

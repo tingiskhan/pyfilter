@@ -86,7 +86,7 @@ class PMMH(BaseAlgorithm):
                         proposal_filter,
                         sub_context,
                         y,
-                        mutate_kernel=True
+                        mutate_kernel=True,
                     )
 
                     state.update_chain(dict(self.context.get_parameters()))
