@@ -28,7 +28,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
     def initialize(self) -> SequentialAlgorithmState:
         """
-        Initializes the algorithm by returning an :class:`SequentialAlgorithmState`.
+        Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
         """
 
         init_state = self.filter.initialize()

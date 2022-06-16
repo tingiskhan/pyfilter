@@ -29,15 +29,15 @@ class SMC2(SequentialParticleAlgorithm):
         Args:
             filter_: see base.
             particles: see base.
-            threshold: the threshold of the relative ESS at which to perform a rejuvenation of the num_particles. Note that
+            threshold: the threshold of the relative ESS at which to perform a rejuvenation of the particles. Note that
                 using anything other than an ``float`` is experimental and is not supported in any literature.
-            kernel: optional parameter. The kernel to use for mutating the num_particles.
+            kernel: optional parameter. The kernel to use for mutating the particles.
             max_increases: whenever the acceptance rate of the rejuvenation step falls below 20% we double the amount
-                of state num_particles (as recommended in the original article). However, to avoid cases where there is such
-                a mismatch between the observed data and the model that we just continue to get low acceptance rates, we
-                allow capping the number of increases. This is especially useful if running multiple parallel instances
-                to avoid one of them from hogging all resources.
-            kwargs: kwargs passed to ``pyfilter.inference.sequential.kernels.ParticleMetropolisHastings``.
+                of state particles (as recommended in the original article). However, to avoid cases where there is
+                such a mismatch between the observed data and the model that we just continue to get low acceptance
+                rates, we allow capping the number of increases. This is especially useful if running multiple parallel
+                instances to avoid one of them from hogging all resources.
+            kwargs: kwargs passed to :class:`pyfilter.inference.sequential.kernels.ParticleMetropolisHastings`.
         """
 
         super().__init__(filter_, particles)
@@ -90,7 +90,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def _increase_states(self, state: SMC2State) -> SMC2State:
         """
-        Method that increases the number of state num_particles, called whenever the acceptance rate of
+        Method that increases the number of state particles, called whenever the acceptance rate of
         :meth:`rejuvenate` falls below 20%.
 
         Args:

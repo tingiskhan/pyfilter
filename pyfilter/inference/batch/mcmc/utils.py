@@ -29,8 +29,8 @@ def run_pmmh(
     Args:
         context: the parameter context of the main algorithm.
         state: the latest algorithm state.
-        proposal: the proposal to use when generating the candidate sample :math:`\\theta^*`.
-        proposal_kernel: the kernel from which to draw the candidate sample :math:`\\theta^*`. To clarify, ``proposal``
+        proposal: the proposal to use when generating the candidate sample :math:`\theta^*`.
+        proposal_kernel: the kernel from which to draw the candidate sample :math:`\theta^*`. To clarify, ``proposal``
             corresponds to the ``BaseProposal`` class that was used when generating ``prop_kernel``.
         proposal_filter: the proposal filter to use.
         proposal_context: the parameter context of the proposal filter.

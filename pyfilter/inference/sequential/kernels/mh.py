@@ -13,7 +13,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
     def __init__(self, num_steps=1, proposal: BaseProposal = None, distance_threshold: float = None, **kwargs):
         """
-        Initializes the ``ParticleMetropolisHastings`` class.
+        Initializes the :class:`ParticleMetropolisHastings` class.
 
         Args:
             num_steps: the number of successive PMMH steps to perform at each update.
