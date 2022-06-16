@@ -25,7 +25,7 @@ To install pyfilter just copy the below command into your favourite terminal
 pip install git+https://github.com/tingiskhan/pyfilter
 ```
 
-## Usage
+# Usage
 
 All examples are located [here](./examples), but you'll find a short one below in which we define a sine diffusion 
 process for which  
@@ -82,7 +82,7 @@ ax.legend()
     <img src="./static/filtering.jpg" alt="Logo" width="640" height="480">
 </div>
 
-## Contributing
+# Contributing
 
 Contributions are always welcome! Simply
 1. Fork the project.
@@ -90,10 +90,10 @@ Contributions are always welcome! Simply
 3. Push the branch to origin.
 4. Open a pull request.
 
-## License
+# License
 Distributed under the MIT License, see `LICENSE` for more information.
 
-## Contact
+# Contact
 Contact details are located under `setup.py`.
 
 
