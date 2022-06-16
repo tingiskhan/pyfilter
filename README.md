@@ -28,7 +28,8 @@ pip install git+https://github.com/tingiskhan/pyfilter
 # Usage
 
 All examples are located [here](./examples), but you'll find a short one below in which we define a sine diffusion 
-process for which  
+process which we observe with some noise, and then back out using the APF together with the "optimal proposal"
+distribution
 
 ```python
 from stochproc import timeseries as ts, distributions as dists
