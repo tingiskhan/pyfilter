@@ -34,7 +34,7 @@ distribution
 ```python
 from stochproc import timeseries as ts, distributions as dists
 import torch
-from torch.distributions import Normal
+from pyro.distributions import Normal
 import matplotlib.pyplot as plt
 from pyfilter.filters.particle import APF, proposals
 from math import sqrt
