@@ -34,13 +34,6 @@ class BaseAlgorithm(ABC):
 
         return self._filter
 
-    @filter.setter
-    def filter(self, x: BaseFilter):
-        if not isinstance(x, type(self.filter)):
-            raise ValueError(f"'x' is not {self.filter}!")
-
-        self._filter = x
-
     def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
         """
         Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
