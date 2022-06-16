@@ -49,13 +49,7 @@ sigma = 1.0
 init_dist = dists.DistributionModule(Normal, loc=0.0, scale=1.0)
 inc_dist = dists.DistributionModule(Normal, loc=0.0, scale=sqrt(dt))
 
-sine_diffusion = ts.AffineEulerMaruyama(
-    f,
-    (gamma, sigma),
-    init_dist,
-    inc_dist,
-    dt=dt
-)
+sine_diffusion = ts.AffineEulerMaruyama(f, (gamma, sigma), init_dist, inc_dist, dt=dt)
 
 a = 1.0
 s = 0.1
