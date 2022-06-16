@@ -1,35 +1,41 @@
-# pyfilter
-`pyfilter` is a package designed for joint parameter and state inference in state space models using
-particle filters and particle filter based inference algorithms. 
+# About the project
+pyfilter is a package designed for joint parameter and state inference in state space models using
+particle filters and particle filter based inference algorithms. It's borne out of my layman's interest in Sequential 
+Monte Carlo methods, and a continuation of my [Master's dissertation](http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-177104).
 
-## Features
-`pyfilter` features:
+Some features include:
 1. Particle filters in the form of [SISR](https://en.wikipedia.org/wiki/Particle_filter) and [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter) together with different proposal distributions.
-2. Both online and offline particle filter based inference algorithms such as
+2. Both online and offline inference algorithms such as
    1. [SMC2](https://arxiv.org/abs/1101.1528) 
    2. [NESS](https://arxiv.org/abs/1308.1883)
    3. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
    4. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
-3. [pytorch](https://pytorch.org/) integration enables GPU accelerated inference - what took hours on a CPU now takes minutes (or even seconds).
+3. [pytorch](https://pytorch.org/) backend enables GPU accelerated inference - what took hours on a CPU now takes minutes (or even seconds).
 
-## Requirements
-`pyfilter` requires
-1. [pytorch](https://pytorch.org/)
-2. [pyro](https://pyro.ai)
-3. [stoch-proc](https://github.com/tingiskhan/stoch-proc)
+# Getting started
+Follow the below instructions in order to get started with pyfilter.
 
-Item 3. was previously integrated in `pyfilter` but is now a standalone package.
+## Prerequisites
+Start by [installing pytorch](https://pytorch.org/get-started/locally/). 
 
-## Example
+## Installation
+To install pyfilter just copy the below command into your favourite terminal 
 
-All examples are located [here](./examples), but you'll find a short one below
+```cmd
+pip install git+https://github.com/tingiskhan/pyfilter
+```
+
+## Usage
+
+All examples are located [here](./examples), but you'll find a short one below in which we define a sine diffusion 
+process for which  
 
 ```python
 from stochproc import timeseries as ts, distributions as dists
 import torch
 from torch.distributions import Normal
 import matplotlib.pyplot as plt
-from pyfilter.filters.particle import APF
+from pyfilter.filters.particle import APF, proposals
 from math import sqrt
 
 
@@ -65,22 +71,29 @@ ax.set_title("Latent")
 ax.plot(sample_result.time_indexes, x, label="True", color="gray")
 ax.plot(sample_result.time_indexes, y, marker="o", linestyle="None", label="Observed", color="lightblue")
 
-filt = APF(ssm, 1_000)
+filt = APF(ssm, 250, proposal=proposals.LinearGaussianObservations(0))
 result = filt.batch_filter(y)
 
-ax.plot(sample_result.time_indexes, result.filter_means.numpy()[1:], label="Filtered", color="salmon", alpha=0.75)
+ax.plot(sample_result.time_indexes, result.filter_means.numpy()[1:], label="Filtered", color="salmon", alpha=0.5)
 ax.legend()
 ```
 
-![alt text](./static/filtering.jpg?raw=true)
+<div align="center"> 
+    <img src="./static/filtering.jpg" alt="Logo" width="640" height="480">
+</div>
 
-## Installation
-`pyfilter` is currently unavailable on pypi, as such install it via
-```
-pip install git+https://github.com/tingiskhan/pyfilter.git
-```
+## Contributing
 
-## Caveats
-Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
-sub-optimal performance. You are more than welcome to report bugs should you try out the library.
+Contributions are always welcome! Simply
+1. Fork the project.
+2. Create your feature branch (I try to follow [Microsoft's naming](https://docs.microsoft.com/en-us/azure/devops/repos/git/git-branching-guidance?view=azure-devops)).
+3. Push the branch to origin.
+4. Open a pull request.
+
+## License
+Distributed under the MIT License, see `LICENSE` for more information.
+
+## Contact
+Contact details are located under `setup.py`.
+
 
