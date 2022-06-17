@@ -1,34 +1,31 @@
-from typing import Callable, TypeVar, Tuple, Generic
-
-from torch.distributions import TransformedDistribution
-
-from .filters.particle.state import ParticleFilterState
-from .inference.sequential.state import SequentialAlgorithmState
-from .state import BaseResult
+from typing import Generic
 import torch.nn
-
 from stochproc.timeseries import StateSpaceModel
+from torch.distributions import TransformedDistribution
+from collections import deque
 
-T = TypeVar("T", bound=BaseResult)
+from .state import SequentialAlgorithmState
+from .base import SequentialParticleAlgorithm, Callback, T
+from ...filters.particle.state import ParticleFilterState
 
 
 __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 
-# TODO: Better logs and implement support
 class Collector(Generic[T]):
-    """
-    Defines a collector object that is registered as a hook on a ``torch.nn.Module`` and calculates some quantity
-    that is saved to the state object's ``.tensor_tuples`` attribute.
+    r"""
+    Defines a collector object that is registered as a callback on 
+    :meth:`SequentialParticleAlgorithm.step` on a  :class:`SequentialParticleAlgorithm` and calculates some quantity
+    that is saved to the associated :class:`SequentialAlgorithmState` object.
     """
 
-    def __init__(self, name: str, f: Callable[[torch.nn.Module, torch.Tensor, T], None]):
+    def __init__(self, name: str, f: Callback):
         """
-        Initializes the ``Collector`` class.
+        Initializes the :class:`Collector` class.
 
         Args:
-            name: The name to assign to the ``tensor_tuple``.
-            f: The function to use when calculating statics.
+            name: name to assign to the ``tensor_tuple``.
+            f: function to use when calculating statics.
         """
 
         self._name = name
@@ -38,11 +35,11 @@ class Collector(Generic[T]):
     def name(self) -> str:
         return self._name
 
-    def __call__(self, module: torch.nn.Module, inp: Tuple[torch.Tensor, T], out: T):
-        if self._name not in out.tensor_tuples:
-            out.tensor_tuples[self._name] = tuple()
+    def __call__(self, algorithm: SequentialParticleAlgorithm, y: torch.Tensor, state: T):
+        if self._name not in state.tensor_tuples:
+            state.tensor_tuples.make_deque(self._name)
 
-        out.tensor_tuples[self._name] += (self._f(module, inp[0], out),)
+        state.tensor_tuples[self._name].append(self._f(algorithm, y, state),)
 
 
 class MeanCollector(Collector[SequentialAlgorithmState]):
@@ -103,7 +100,7 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
 
     def __init__(self, constrained=True):
         """
-        Initializes the ``ParameterPosterior`` collector.
+        Initializes the :class:`ParameterPosterior` collector.
 
         Args:
             constrained: Whether to record constrained or non-constrained.

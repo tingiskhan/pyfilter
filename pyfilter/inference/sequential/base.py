@@ -1,9 +1,13 @@
 from abc import ABC
 import torch
-from typing import Dict, Any
+from typing import Dict, Any, TypeVar, Callable, List
 from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
 from ..base import BaseAlgorithm
+
+
+T = TypeVar("T", bound=SequentialAlgorithmState)
+Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]
 
 
 class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
@@ -26,6 +30,21 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         self._parameter_shape = torch.Size([num_particles, 1])
         self.filter.set_batch_shape(self.particles)
 
+        self._callbacks: List[Callback] = list()
+
+    def register_callback(self, callback: Callback):
+        """
+        Registers a callback that is called directly after :meth:`step`.
+
+        Args:
+            callback: callback to register.
+        """
+
+        if callback in self._callbacks:
+            return
+
+        self._callbacks.append(callback)
+
     def initialize(self) -> SequentialAlgorithmState:
         """
         Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
@@ -41,6 +60,25 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
     def step(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Updates the algorithm and filter state given the latest observation ``y``.
+
+        Args:
+            y: the latest observation.
+            state: the previous state of the algorithm.
+
+        Returns:
+            The updated state of the algorithm.
+        """
+
+        result = self._step(y, state)
+
+        for cb in self._callbacks:
+            cb(self, y, state)
+
+        return result
+
+    def _step(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
+        """
+        Defines how to update ``state`` given the latest observation ``y``, should be overridden by derived classes.
 
         Args:
             y: the latest observation.
@@ -123,14 +161,14 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def step(self, y: torch.Tensor, state):
+    def _step(self, y: torch.Tensor, state):
         self._num_iterations += 1
 
         if not self._is_switched:
             if self._num_iterations <= self._when_to_switch:
-                return self._first.step(y, state)
+                return self._first._step(y, state)
 
             self._is_switched = True
             state = self.do_on_switch(self._first, self._second, state)
 
-        return self._second.step(y, state)
+        return self._second._step(y, state)

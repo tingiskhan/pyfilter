@@ -44,7 +44,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def step(self, y, state):
+    def _step(self, y, state):
         if self.do_update_particles(state):
             self._kernel.update(self.context, self.filter, state)
 
