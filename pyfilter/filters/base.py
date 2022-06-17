@@ -46,7 +46,7 @@ class BaseFilter(ABC):
         super().__init__()
 
         if not (isinstance(model, StateSpaceModel) or callable(model)):
-            raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
+            raise ValueError(f"`model` must be `{StateSpaceModel:s}` or {callable} that returns `{StateSpaceModel:s}!")
 
         is_function = callable(model) and not isinstance(model, StateSpaceModel)
 
