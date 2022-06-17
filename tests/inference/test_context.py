@@ -109,6 +109,8 @@ class TestContext(object):
             alpha = context_.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context_.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
+            return ts.models.OrnsteinUhlenbeck(alpha, beta, beta)
+
         with inf.make_context() as context:
             make_model(context)
 
@@ -116,7 +118,10 @@ class TestContext(object):
             as_state = context.state_dict()
 
         with inf.make_context() as new_context:
-            make_model(new_context)
+            model = make_model(new_context)
             new_context.load_state_dict(as_state)
 
             assert (context.stack_parameters() == new_context.stack_parameters()).all()
+
+            for p1, p2 in zip(model.functional_parameters(), new_context.parameters.values()):
+                assert p1 is p2
