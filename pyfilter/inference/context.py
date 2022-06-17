@@ -1,16 +1,38 @@
 import threading
 from collections import OrderedDict
-from typing import Iterable, Tuple, List, Dict
+from typing import Iterable, Tuple, List, Dict, Any
 
 import torch
 from .prior import Prior
 from .parameter import PriorBoundParameter
 
 
+def verify_same_prior(x: Prior, y: Prior):
+    """
+    Verifies that ``x`` and ``y`` are equivalent.
+
+    Args:
+        x: prior ``x``.
+        y: prior ``y``.
+    """
+
+    x_dist = x.build_distribution()
+    y_dist = y.build_distribution()
+
+    assert x_dist.__class__ == y_dist.__class__, "Seems to not be the same distribution!"
+
+    y_params = y._get_parameters()
+    for k, v in x._get_parameters().items():
+        assert (v == y_params[k]).all(), f"Parameter {k} differs between ``x`` and ``y``!"
+
+
 class ParameterContext(object):
     """
     Defines a parameter context in which we define parameters and priors.
     """
+
+    _PARAMETER_KEY = "parameters"
+    _PRIOR_KEY = "prior"
 
     # NB: Same approach as in PyMC3
     _contexts = threading.local()
@@ -77,7 +99,7 @@ class ParameterContext(object):
         """
 
         if name in self._prior_dict:
-            # TODO: Add check for whether prior is the same or not, if not then raise
+            verify_same_prior(self._prior_dict[name], prior)
             return self.get_parameter(name)
 
         assert self in self.stack, "Cannot register parameters in an inactive context!"
@@ -211,6 +233,43 @@ class ParameterContext(object):
         """
 
         return ParameterContext()
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Returns the state dictionary of ``self``.
+        """
+
+        res = dict()
+
+        res[self._PARAMETER_KEY] = self.parameters
+
+        priors = dict()
+        for k, v in self._prior_dict.items():
+            priors[k] = v.state_dict()
+
+        res[self._PRIOR_KEY] = priors
+
+        return res
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads the state dict from other context. Note that this method only verifies that the parameters of the priors
+        are same as when saving the initial state, it does not compare the actual distribution.
+
+        Args:
+            state_dict: state of other context.
+        """
+
+        assert set(self.parameters.keys()) == set(state_dict[self._PARAMETER_KEY].keys())
+
+        for k, v in self._prior_dict.items():
+            for p_name, p_value in v._get_parameters().items():
+                assert (p_value == state_dict[self._PRIOR_KEY][k][p_name]).all()
+
+            p = self.get_parameter(k)
+            p.data = state_dict[self._PARAMETER_KEY][k]
+
+        return
 
 
 def make_context() -> ParameterContext:

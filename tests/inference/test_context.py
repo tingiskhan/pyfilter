@@ -93,3 +93,30 @@ class TestContext(object):
 
         with pytest.raises(AssertionError):
             a = context.named_parameter("a", inf.Prior(Normal, loc=0.0, scale=1.0))
+
+    def test_assert_sampling_multiple_same(self):
+        with inf.make_context() as context:
+            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+
+            alpha2 = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
+
+            with pytest.raises(AssertionError):
+                alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=2.0))
+
+    def test_serialize_and_load(self):
+        def make_model(context_):
+            alpha = context_.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
+            beta = context_.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+
+        with inf.make_context() as context:
+            make_model(context)
+
+            context.initialize_parameters(batch_shape)
+            as_state = context.state_dict()
+
+        with inf.make_context() as new_context:
+            make_model(new_context)
+            new_context.load_state_dict(as_state)
+
+            assert (context.stack_parameters() == new_context.stack_parameters()).all()
