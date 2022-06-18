@@ -3,3 +3,6 @@ tqdm>=4.26
 stochproc @ git+https://github.com/tingiskhan/stoch-proc#egg=stochproc
 pytest
 pyro-ppl
+numpy
+matplotlib
+statsmodels

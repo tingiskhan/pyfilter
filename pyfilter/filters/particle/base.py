@@ -73,7 +73,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         """
 
-        self._base_particles = torch.Size([factor * self._base_particles[0]])
+        self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
     def initialize(self) -> ParticleFilterState:
         x = self._model.hidden.initial_sample(self.particles)
