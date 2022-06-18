@@ -1,7 +1,7 @@
 # About the project
 pyfilter is a package designed for joint parameter and state inference in state space models using
 particle filters and particle filter based inference algorithms. It's borne out of my layman's interest in Sequential 
-Monte Carlo methods, and a continuation of my [Master's dissertation](http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-177104).
+Monte Carlo methods, and a continuation of my [Master's thesis](http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-177104).
 
 Some features include:
 1. Particle filters in the form of [SISR](https://en.wikipedia.org/wiki/Particle_filter) and [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter) together with different proposal distributions.
