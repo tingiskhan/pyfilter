@@ -71,7 +71,7 @@ def linear_models():
     joint = ts.AffineJointStochasticProcess(proc_1=proc_1, proc_2=proc_2)
 
     eye = torch.eye(2)
-    joint_ssm = ts.StateSpaceModel(joint, build_joint, (eye, s))
+    joint_ssm = ts.StateSpaceModel(joint, build_joint, (eye, params[-1]))
 
     state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
