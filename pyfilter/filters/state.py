@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 from torch import Tensor
 from abc import ABC
 from stochproc.timeseries import TimeseriesState, StateSpaceModel, result as res
@@ -87,6 +89,23 @@ class FilterState(dict, ABC):
         Args:
             model: the model to predict for.
             num_steps: the number of steps into the future to predict.
+        """
+
+        raise NotImplementedError()
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Converts ``self`` to a dictionary.
+        """
+
+        raise NotImplementedError()
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads state from existing state dictionary.
+
+        Args:
+            state_dict: state dictionary to load from.
         """
 
         raise NotImplementedError()

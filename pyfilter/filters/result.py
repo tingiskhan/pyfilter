@@ -1,6 +1,9 @@
+from collections import OrderedDict
 import torch
-from typing import List, TypeVar, Generic, Union
+from typing import List, TypeVar, Generic, Union, Dict, Any
 from stochproc.container import make_dequeue
+from copy import deepcopy
+
 from .state import FilterState
 from ..state import BaseResult
 
@@ -128,3 +131,40 @@ class FilterResult(BaseResult, Generic[TState]):
         self._states.append(state)
 
         return self
+
+    def state_dict(self) -> Dict[str, Any]:
+        """
+        Converts ``self`` to a dictionary.
+        """
+
+        res = OrderedDict([])
+
+        res["states"] = OrderedDict({f"{i}": s.state_dict() for i, s in enumerate(self.states)})
+        res["tensor_tuples"] = self.tensor_tuples.state_dict()
+        res["log_likelihood"] = self.loglikelihood
+
+        return res
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads state from existing state dictionary.
+
+        Args:
+            state_dict: state dictionary to load from.
+        """
+
+        self.tensor_tuples.load_state_dict(state_dict["tensor_tuples"])
+        self._loglikelihood = state_dict["log_likelihood"]
+
+        for _, s in state_dict["states"].items():
+            new_s = deepcopy(self.latest_state)
+            new_s.load_state_dict(s)
+
+            self._states.append(new_s)
+
+        self._states.popleft()
+
+        return
+
+    def __repr__(self):
+        return f"FilterResult(ll: {self._loglikelihood.__repr__()}, num_observations: {self.filter_means.shape[0]})"

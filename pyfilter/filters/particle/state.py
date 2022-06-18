@@ -1,3 +1,6 @@
+from collections import OrderedDict
+from typing import Dict, Any
+
 import torch
 from torch import Tensor
 from stochproc.timeseries import TimeseriesState
@@ -118,3 +121,38 @@ class ParticleFilterState(FilterState):
 
     def predict_path(self, model, num_steps):
         return model.sample_states(num_steps, x_0=self.x)
+
+    def state_dict(self) -> Dict[str, Any]:
+        res = OrderedDict([])
+
+        res["x"] = {
+            "values": self.x.values,
+            "time_index": self.x.time_index,
+        }
+
+        res["w"] = self.w
+        res["ll"] = self.ll
+        res["prev_inds"] = self.prev_inds
+
+        return res
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads state from existing state dictionary.
+
+        Args:
+            state_dict: state dictionary to load from.
+        """
+
+        self.x = self.x.propagate_from(
+            values=state_dict["x"]["values"], time_increment=-self.x.time_index + state_dict["x"]["time_index"]
+        )
+
+        self.w = state_dict["w"]
+        self.ll = state_dict["ll"]
+        self.prev_inds = state_dict["prev_inds"]
+
+        return
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(time_index: {self.x.time_index}, event_shape: {self.x.event_dim})"

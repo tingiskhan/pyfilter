@@ -103,3 +103,38 @@ class TestParticleFilters(object):
         x, y = path.get_paths()
 
         assert x.shape == torch.Size([num_steps, *f.particles, *f.ssm.hidden.event_shape])
+
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params())
+    def test_save_and_load(self, models, filter_, batch_size, missing_perc):
+        model, kalman_model = models
+        x, y = kalman_model.sample(self.SERIES_LENGTH)
+
+        y_tensor = torch.from_numpy(y).float()
+        if missing_perc > 0.0:
+            num_missing = int(missing_perc * self.SERIES_LENGTH)
+            indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+            y_tensor[indices] = float("nan")
+
+        f: part.ParticleFilter = filter_(model)
+        f.record_states = True
+
+        f.set_batch_shape(batch_size)
+        result = f.batch_filter(y_tensor)
+
+        state_dict = result.state_dict()
+
+        new_result = f.initialize_with_result()
+        new_result.load_state_dict(state_dict)
+
+        assert (
+                (new_result.filter_means == result.filter_means).all() and
+                (new_result.filter_variance == result.filter_variance).all() and
+                (new_result.loglikelihood == result.loglikelihood).all()
+        )
+
+        for new_s, old_s in zip(new_result.states, result.states):
+            new_ts = new_s.get_timeseries_state()
+            old_ts = old_s.get_timeseries_state()
+
+            assert (new_ts.values == old_ts.values).all() and (new_ts.time_index == old_ts.time_index).all()
