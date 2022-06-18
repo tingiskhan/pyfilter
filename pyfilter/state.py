@@ -19,7 +19,7 @@ class BaseResult(dict):
 
     def exchange_tensor_tuples(self, other: "BaseResult"):
         """
-        Exchanges the :prop:`.tensor_tuples` of self with that of ``other``.
+        Exchanges the :attr:`tensor_tuples` of self with that of ``other``.
 
         Args:
             other: the other state to exchange with.

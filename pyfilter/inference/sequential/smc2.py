@@ -72,7 +72,7 @@ class SMC2(SequentialParticleAlgorithm):
 
     def rejuvenate(self, state: SMC2State):
         """
-        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below :prop:`_threshold`.
+        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below :attr:`_threshold`.
 
         Args:
             state: the current state of the algorithm.
