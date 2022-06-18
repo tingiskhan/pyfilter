@@ -1,3 +1,6 @@
+from collections import OrderedDict
+from typing import Any
+
 import torch
 from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
@@ -32,7 +35,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return self.tensor_tuples.get_as_tensor("ess")
 
-    def update(self, filter_state: FilterState):
+    def append(self, filter_state: FilterState):
         """
         Updates ``self`` given a new filter state.
 
@@ -48,6 +51,16 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def replicate(self, filter_state):
         return SequentialAlgorithmState(torch.zeros_like(self.w), filter_state)
+
+    def state_dict(self):
+        res = super(SequentialAlgorithmState, self).state_dict()
+        res["w"] = self.w
+
+        return res
+
+    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
+        super(SequentialAlgorithmState, self).load_state_dict(state_dict)
+        self.w = state_dict["w"]
 
 
 class SMC2State(SequentialAlgorithmState):

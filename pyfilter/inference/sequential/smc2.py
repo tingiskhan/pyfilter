@@ -60,7 +60,7 @@ class SMC2(SequentialParticleAlgorithm):
         state.append_data(y)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state, result=state.filter_state)
-        state.update(filter_state)
+        state.append(filter_state)
 
         any_nans = ~state.w.isfinite().all()
         ess = state.tensor_tuples["ess"]

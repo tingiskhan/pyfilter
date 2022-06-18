@@ -1,3 +1,6 @@
+from collections import OrderedDict
+from typing import Dict, Any
+
 from stochproc.container import BufferIterable
 
 
@@ -24,5 +27,24 @@ class BaseResult(dict):
 
         for k, v in other.tensor_tuples.items():
             self.tensor_tuples[k] = v
+
+        return
+
+    def state_dict(self) -> OrderedDict[str, Any]:
+        """
+        Converts ``self`` to a dictionary.
+        """
+
+        return OrderedDict({"tensor_tuples": self.tensor_tuples.state_dict()})
+
+    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
+        """
+        Loads state from existing state dictionary.
+
+        Args:
+            state_dict: state dictionary to load from.
+        """
+
+        self.tensor_tuples.load_state_dict(state_dict["tensor_tuples"])
 
         return

@@ -1,3 +1,6 @@
+from collections import OrderedDict
+from typing import Any
+
 from ..state import BaseResult
 from ..filters import FilterResult
 
@@ -33,3 +36,13 @@ class FilterAlgorithmState(AlgorithmState):
         """
 
         return FilterAlgorithmState(filter_state)
+
+    def state_dict(self):
+        res = super(FilterAlgorithmState, self).state_dict()
+        res["filter_state"] = self.filter_state.state_dict()
+
+        return res
+
+    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
+        super(FilterAlgorithmState, self).load_state_dict(state_dict)
+        self.filter_state.load_state_dict(state_dict["filter_state"])

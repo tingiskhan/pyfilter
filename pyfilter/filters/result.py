@@ -132,20 +132,19 @@ class FilterResult(BaseResult, Generic[TState]):
 
         return self
 
-    def state_dict(self) -> Dict[str, Any]:
+    def state_dict(self):
         """
         Converts ``self`` to a dictionary.
         """
 
-        res = OrderedDict([])
+        res = super(FilterResult, self).state_dict()
 
         res["states"] = OrderedDict({f"{i}": s.state_dict() for i, s in enumerate(self.states)})
-        res["tensor_tuples"] = self.tensor_tuples.state_dict()
         res["log_likelihood"] = self.loglikelihood
 
         return res
 
-    def load_state_dict(self, state_dict: Dict[str, Any]):
+    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
         """
         Loads state from existing state dictionary.
 
@@ -153,16 +152,17 @@ class FilterResult(BaseResult, Generic[TState]):
             state_dict: state dictionary to load from.
         """
 
-        self.tensor_tuples.load_state_dict(state_dict["tensor_tuples"])
+        super(FilterResult, self).load_state_dict(state_dict)
         self._loglikelihood = state_dict["log_likelihood"]
 
-        for _, s in state_dict["states"].items():
-            new_s = deepcopy(self.latest_state)
-            new_s.load_state_dict(s)
+        new_s = deepcopy(self.latest_state)
+        self._states.popleft()
 
+        for _, s in state_dict["states"].items():
+            new_s.load_state_dict(s)
             self._states.append(new_s)
 
-        self._states.popleft()
+            new_s = deepcopy(self.latest_state)
 
         return
 

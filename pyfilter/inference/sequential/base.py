@@ -40,7 +40,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
             callback: callback to register.
         """
 
-        if callback in self._callbacks:
+        if (callback in self._callbacks) or (callback is None):
             return
 
         self._callbacks.append(callback)
