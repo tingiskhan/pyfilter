@@ -19,6 +19,10 @@ def build_2d_to_1d_dist(x, a, s):
     return Normal(loc=a.matmul(x.values.unsqueeze(-1)).squeeze(-1), scale=s)
 
 
+def build_joint(x, a, s):
+    return build_2d_to_1d_dist(x, a, s).to_event(1)
+
+
 def linear_models():
     alpha, beta, sigma = 0.0, 0.99, 0.05
     ar = ts.models.AR(alpha, beta, sigma)
@@ -60,3 +64,22 @@ def linear_models():
 
     yield obs_2d_2d, kalman_2d_2d
 
+    sigma = 0.05
+    proc_1 = ts.models.RandomWalk(sigma)
+    proc_2 = ts.models.RandomWalk(sigma)
+
+    joint = ts.AffineJointStochasticProcess(proc_1=proc_1, proc_2=proc_2)
+
+    eye = torch.eye(2)
+    joint_ssm = ts.StateSpaceModel(joint, build_joint, (eye, s))
+
+    state_covariance = sigma ** 2.0 * np.eye(2)
+    kalman_2d_2d = KalmanFilter(
+        transition_matrices=eye.numpy(),
+        observation_matrices=eye.numpy(),
+        transition_covariance=state_covariance,
+        observation_covariance=s ** 2.0 * np.eye(2),
+        initial_state_covariance=state_covariance
+    )
+
+    yield joint_ssm, kalman_2d_2d
