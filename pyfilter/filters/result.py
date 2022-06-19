@@ -1,8 +1,7 @@
-from collections import OrderedDict
+from typing import OrderedDict
 import torch
-from typing import List, TypeVar, Generic, Union, Dict, Any
+from typing import List, TypeVar, Generic, Union, Any
 from stochproc.container import make_dequeue
-from copy import deepcopy
 
 from .state import FilterState
 from ..state import BaseResult
