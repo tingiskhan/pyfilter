@@ -2,7 +2,7 @@ import itertools
 
 import pytest
 from pyfilter import inference as inf, filters as filts
-from models import linear_models
+from .models import linear_models
 
 
 def algorithms():
