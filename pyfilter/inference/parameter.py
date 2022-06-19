@@ -21,7 +21,7 @@ class PriorBoundParameter(Parameter):
     its bound prior.
     """
 
-    _context: "ParameterContext" = None
+    _context: "ParameterContext" = None     # noqa: F821
     _name: str = None
 
     def set_name(self, name: str):
@@ -36,7 +36,7 @@ class PriorBoundParameter(Parameter):
 
     # TODO: Should be done on __init__/__new__
     # TODO: Might have to add
-    def set_context(self, context: "ParameterContext"):
+    def set_context(self, context: "ParameterContext"): # noqa: F821
         """
         Sets the context of the parameter.
 
