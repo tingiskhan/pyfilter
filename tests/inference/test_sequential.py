@@ -1,14 +1,18 @@
 import itertools
 
 import pytest
+import torch
+
 from pyfilter import inference as inf, filters as filts
 from .models import linear_models
 
 
 def algorithms():
-    yield lambda f: inf.sequential.NESS(f, 2_000)
-    yield lambda f: inf.sequential.SMC2(f, 2_000, num_steps=5)
-    yield lambda f: inf.sequential.SMC2(f, 2_000, num_steps=10, distance_threshold=0.1)
+    particles = 1_000
+
+    yield lambda f: inf.sequential.NESS(f, particles)
+    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
+    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=10, distance_threshold=0.1)
 
 
 def callbacks():
@@ -23,6 +27,8 @@ def make_parameters():
 class TestSequential(object):
     @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
     def test_algorithms(self, models, algorithm, callback):
+        torch.manual_seed(123)
+
         true_model, build_model = models
         _, y = true_model.sample_states(200).get_paths()
 
@@ -37,6 +43,8 @@ class TestSequential(object):
 
     @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
     def test_algorithms_serialize(self, models, algorithm, callback):
+        torch.manual_seed(123)
+
         true_model, build_model = models
         _, y = true_model.sample_states(100).get_paths()
 
