@@ -1,7 +1,5 @@
-from collections import OrderedDict
-from typing import Any
-
 import torch
+
 from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
 from ...utils import normalize, get_ess
@@ -58,7 +56,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return res
 
-    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
+    def load_state_dict(self, state_dict):
         super(SequentialAlgorithmState, self).load_state_dict(state_dict)
         self.w = state_dict["w"]
 

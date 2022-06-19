@@ -1,6 +1,5 @@
-from typing import OrderedDict
 import torch
-from typing import List, TypeVar, Generic, Union, Any
+from typing import List, TypeVar, Generic, Union
 from stochproc.container import make_dequeue
 
 from .state import FilterState
@@ -143,7 +142,7 @@ class FilterResult(BaseResult, Generic[TState]):
 
         return res
 
-    def load_state_dict(self, state_dict: OrderedDict[str, Any]):
+    def load_state_dict(self, state_dict):
         """
         Loads state from existing state dictionary.
 
