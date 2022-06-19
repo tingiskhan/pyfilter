@@ -134,12 +134,12 @@ class FilterResult(BaseResult, Generic[TState]):
 
     def state_dict(self):
         """
-        Converts ``self`` to a dictionary.
+        Converts ``self`` to a dictionary. Currently onnly handles the latest state.
         """
 
         res = super(FilterResult, self).state_dict()
 
-        res["states"] = OrderedDict({f"{i}": s.state_dict() for i, s in enumerate(self.states)})
+        res["state"] = self.latest_state.state_dict()
         res["log_likelihood"] = self.loglikelihood
 
         return res
@@ -155,14 +155,8 @@ class FilterResult(BaseResult, Generic[TState]):
         super(FilterResult, self).load_state_dict(state_dict)
         self._loglikelihood = state_dict["log_likelihood"]
 
-        new_s = deepcopy(self.latest_state)
-        self._states.popleft()
-
-        for _, s in state_dict["states"].items():
-            new_s.load_state_dict(s)
-            self._states.append(new_s)
-
-            new_s = deepcopy(self.latest_state)
+        assert len(self.states) == 1, "Can only handle case when we have 1 state!"
+        self.latest_state.load_state_dict(state_dict["state"])
 
         return
 

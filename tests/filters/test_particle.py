@@ -117,7 +117,6 @@ class TestParticleFilters(object):
             y_tensor[indices] = float("nan")
 
         f: part.ParticleFilter = filter_(model)
-        f.record_states = True
 
         f.set_batch_shape(batch_size)
         result = f.batch_filter(y_tensor)
