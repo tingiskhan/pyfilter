@@ -144,10 +144,13 @@ class ParticleFilterState(FilterState):
             state_dict: state dictionary to load from.
         """
 
-        # TODO: Handle case when the particles have doubled
+        # TODO: Handle case when the particles have doubled better?
+        values_to_load = state_dict["x"]["values"]
+        msg = f"Seems like you're loading a different shape: self:{self.x.values.shape} != other:{values_to_load.shape}"
+        assert self.x.values.shape == values_to_load.shape, msg
 
         self.x = self.x.propagate_from(
-            values=state_dict["x"]["values"], time_increment=-self.x.time_index + state_dict["x"]["time_index"]
+            values=values_to_load, time_increment=-self.x.time_index + state_dict["x"]["time_index"]
         )
 
         self.w = state_dict["w"]
