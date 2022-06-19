@@ -1,32 +1,32 @@
 import torch
-from torch.distributions import Normal, Independent, AffineTransform
+from pyro.distributions import Normal
 from torch.autograd import grad
-from ....timeseries import AffineProcess
+from stochproc.timeseries import AffineProcess
 from .base import Proposal
 
 
 class Linearized(Proposal):
-    """
+    r"""
     Given a state space model with dynamics
         .. math::
-            Y_t \\sim p_\\theta(y_t \\mid X_t), \n
-            X_{t+1} = f_\\theta(X_t) + g_\\theta(X_t) W_{t+1},
+            Y_t \sim p_\theta(y_t \mid X_t), \newline
+            X_{t+1} = f_\theta(X_t) + g_\theta(X_t) W_{t+1},
 
-    where :math:`p_\\theta` denotes an arbitrary density parameterized by :math:`\\theta` and :math:`X_t`, and which is
+    where :math:`p_\theta` denotes an arbitrary density parameterized by :math:`\theta` and :math:`X_t`, and which is
     continuous and (twice) differentiable w.r.t. :math:`X_t`. This proposal seeks to approximate the optimal proposal
-    density :math:`p_\\theta(y_t \\mid x_t) \\cdot p_\\theta(x_t \\mid x_{t-1})` by linearizing it around
-    :math:`f_\\theta(x_t)` and approximate it using a normal distribution.
+    density :math:`p_\theta(y_t \mid x_t) \cdot p_\theta(x_t \mid x_{t-1})` by linearizing it around
+    :math:`f_\theta(x_t)` and approximate it using a normal distribution.
     """
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Initializes the ``Linearized`` proposal
+        Initializes the :class:`Linearized` class.
 
         Args:
-            n_steps: The number of steps to take when performing gradient descent
-            alpha: The step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+            n_steps: the number of steps to take when performing gradient descent
+            alpha: the step size to take when performing gradient descent. Only matters when ``use_second_order`` is
                 ``False``, or when the Hessian is badly conditioned.
-            use_second_order: Whether to use second order information when constructing the proposal distribution.
+            use_second_order: whether to use second order information when constructing the proposal distribution.
                 Amounts to using the diagonal of the Hessian.
         """
         super().__init__()
@@ -49,25 +49,27 @@ class Linearized(Proposal):
         return self
 
     def sample_and_weight(self, y, x):
-        x_copy = x.copy(dist=x.dist, values=x.values)
-        affine_transform = next(trans for trans in x_copy.dist.transforms if isinstance(trans, AffineTransform))
+        mean, std = self._model.hidden.mean_scale(x)
 
-        mean = affine_transform.loc.clone()
-        std = affine_transform.scale.clone()
+        std = std.clone()
+        x_copy = x.copy(values=mean)
 
-        x_copy.values = mean
+        # TODO: Would optimally build density utilizing the mean and scale from above
+        x_dist = self._model.hidden.build_density(x)
 
         for _ in range(self._n_steps):
             mean.requires_grad_(True)
 
-            y_state = self._model.observable.propagate(x_copy)
-
-            logl = y_state.dist.log_prob(y) + x_copy.dist.log_prob(mean)
+            y_dist = self._model.build_density(x_copy)
+            logl = y_dist.log_prob(y) + x_dist.log_prob(mean)
             g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
-            step = self._alpha * torch.ones_like(g)
+            ones_like_g = torch.ones_like(g)
+            step = self._alpha * ones_like_g
             if self._use_second_order:
-                neg_inv_hess = -1.0 / grad(g, mean, grad_outputs=torch.ones_like(g))[-1]
+                neg_inv_hess = -grad(g, mean, grad_outputs=ones_like_g)[-1].pow(-1.0)
+
+                # TODO: There is a better approach in Dahlin, find it
                 mask = neg_inv_hess > 0.0
 
                 step[mask] = neg_inv_hess[mask]
@@ -75,13 +77,16 @@ class Linearized(Proposal):
 
                 g.detach_()
 
-            mean = mean.detach() + step * g
-            x_copy = x_copy.copy(x_copy.dist, mean)
+            mean.detach_()
+            mean += step * g
 
         kernel = Normal(mean, std, validate_args=False)
         if not self._is1d:
-            kernel = Independent(kernel, self._model.hidden.n_dim)
+            kernel = kernel.to_event(1)
 
-        x_result = x_copy.copy(dist=x_copy.dist, values=kernel.sample())
+        x_result = x_copy.copy(values=kernel.sample)
 
-        return x_result, self._weight_with_kernel(y, x_result, kernel)
+        return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
+
+    def copy(self) -> "Proposal":
+        return Linearized(self._n_steps, self._alpha, self._use_second_order)

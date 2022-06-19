@@ -1,9 +1,12 @@
+from collections import OrderedDict
+from typing import Dict, Any
+
 import torch
 from torch import Tensor
-from typing import Callable, Union
+from stochproc.timeseries import TimeseriesState
 from ..state import FilterState, PredictionState
-from ...utils import choose, normalize
-from ...timeseries import NewState
+from ..utils import batched_gather
+from ...utils import normalize
 
 
 class ParticleFilterPrediction(PredictionState):
@@ -11,37 +14,30 @@ class ParticleFilterPrediction(PredictionState):
     Prediction state for particle filters.
     """
 
-    def __init__(self, x: Union[NewState, Callable], old_weights: Tensor, indices: Tensor, mask: Tensor = None):
+    def __init__(self, prev_x: TimeseriesState, old_weights: Tensor, indices: Tensor, mask: Tensor = None):
         """
-        Initializes the ``ParticleFilterPrediction`` class.
+        Initializes the :class:`ParticleFilterPrediction` class.
 
         Args:
-            x: The new state of the latent process. We allow callable to enable deferring computation if it's necessary
-                to avoid incurring unnecessary computations.
-            old_weights: The previous normalized weights.
-            indices: The selected indices
-            mask: Mask for which batch to resample, only relevant for filters in parallel.
+            prev_x: the resampled previous state.
+            old_weights: the previous normalized weights.
+            indices: the selected mask
+            mask: mask for which batch to resample, only relevant for filters in parallel.
         """
 
-        self._x = x
+        self.prev_x = prev_x
         self.old_weights = old_weights
         self.indices = indices
         self.mask = mask
 
-    @property
-    def x(self) -> NewState:
-        if not isinstance(self._x, NewState) and callable(self._x):
-            self._x = self._x()
+    def get_previous_state(self) -> TimeseriesState:
+        return self.prev_x
 
-        return self._x
+    def create_state_from_prediction(self, model):
+        x_new = model.hidden.propagate(self.prev_x)
+        new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.values.device)
 
-    def create_state_from_prediction(self) -> "FilterState":
-        return ParticleFilterState(
-            self.x,
-            torch.zeros_like(self.old_weights),
-            torch.zeros(self.old_weights.shape[0], device=self.old_weights.device, dtype=self.old_weights.dtype),
-            prev_indices=self.indices,
-        )
+        return ParticleFilterState(x_new, torch.zeros_like(self.old_weights), new_ll, self.indices)
 
 
 class ParticleFilterState(FilterState):
@@ -49,36 +45,35 @@ class ParticleFilterState(FilterState):
     State object for particle based filters.
     """
 
-    def __init__(self, x: NewState, w: Tensor, ll: Tensor, prev_indices: Tensor):
+    def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
-        Initializes the ``ParticleFilterState`` class.
+        Initializes the :class:`ParticleFilterState` class.
 
         Args:
-            x: The state particles of the timeseries.
-            w: The log weights associated with the state particles.
-            ll: The estimate log-likelihood, i.e. :math:`p(y_t)`.
-            prev_indices: The indices of the previous state particles that were used to propagate to this state.
+            x: the state particles of the timeseries.
+            w: the log weights associated with the state particles.
+            ll: the estimate log-likelihood, i.e. :math:`p(y_t)`.
+            prev_indices: the mask of the previous state particles that were used to propagate to this state.
         """
 
         super().__init__()
         self.x = x
-        self.register_buffer("w", w)
-        self.register_buffer("ll", ll)
-        self.register_buffer("prev_inds", prev_indices)
+        self.w = w
+        self.ll = ll
+        self.prev_inds = prev_indices
 
         mean, var = self._calc_mean_and_var()
-        self.register_buffer("_mean", mean)
-        self.register_buffer("_var", var)
+        self.mean = mean
+        self.var = var
 
     def _calc_mean_and_var(self) -> (torch.Tensor, torch.Tensor):
         normalized_weights = self.normalized_weights()
 
-        sum_axis = -1
-        if self.x.values.dim() == normalized_weights.dim() + 1:
-            normalized_weights.unsqueeze_(-1)
-            sum_axis = -2
-
+        sum_axis = -(len(self.x.event_dim) + 1)
         nested = self.w.dim() > 1
+
+        if sum_axis < -1:
+            normalized_weights.unsqueeze_(-1)
 
         mean = (self.x.values * normalized_weights).sum(sum_axis)
         var = ((self.x.values - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
@@ -86,39 +81,83 @@ class ParticleFilterState(FilterState):
         return mean, var
 
     def get_mean(self):
-        return self._mean
+        return self.mean
 
     def get_variance(self):
-        return self._var
+        return self.var
 
     def normalized_weights(self):
         return normalize(self.w)
 
     def resample(self, indices):
         self.__init__(
-            self.x.copy(values=choose(self.x.values, indices)),
-            choose(self.w, indices),
-            choose(self.ll, indices),
-            choose(self.prev_inds, indices),
+            self.x.copy(values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_dim.numel())),
+            batched_gather(self.w, indices, 0),
+            batched_gather(self.ll, indices, 0),
+            batched_gather(self.prev_inds, indices, 1),
         )
 
     def get_loglikelihood(self):
         return self.ll
 
-    def exchange(self, state, indices):
+    # TODO: Improve...
+    def exchange(self, state: "ParticleFilterState", mask):
         x = self.x.copy(values=self.x.values.clone())
-        x.values[indices] = state.x.values[indices]
+        x.values[mask] = state.x.values[mask]
 
         w = self.w.clone()
-        w[indices] = state.w[indices]
+        w[mask] = state.w[mask]
 
         ll = self.ll.clone()
-        ll[indices] = state.ll[indices]
+        ll[mask] = state.ll[mask]
 
         prev_inds = self.prev_inds.clone()
-        prev_inds[indices] = state.prev_inds[indices]
+        prev_inds[mask] = state.prev_inds[mask]
 
         self.__init__(x, w, ll, prev_inds)
 
-    def get_timeseries_state(self) -> NewState:
+    def get_timeseries_state(self) -> TimeseriesState:
         return self.x
+
+    def predict_path(self, model, num_steps):
+        return model.sample_states(num_steps, x_0=self.x)
+
+    def state_dict(self) -> Dict[str, Any]:
+        res = OrderedDict([])
+
+        res["x"] = {
+            "values": self.x.values,
+            "time_index": self.x.time_index,
+        }
+
+        res["w"] = self.w
+        res["ll"] = self.ll
+        res["prev_inds"] = self.prev_inds
+
+        return res
+
+    def load_state_dict(self, state_dict: Dict[str, Any]):
+        """
+        Loads state from existing state dictionary.
+
+        Args:
+            state_dict: state dictionary to load from.
+        """
+
+        # TODO: Handle case when the particles have doubled better?
+        values_to_load = state_dict["x"]["values"]
+        msg = f"Seems like you're loading a different shape: self:{self.x.values.shape} != other:{values_to_load.shape}"
+        assert self.x.values.shape == values_to_load.shape, msg
+
+        self.x = self.x.propagate_from(
+            values=values_to_load, time_increment=-self.x.time_index + state_dict["x"]["time_index"]
+        )
+
+        self.w = state_dict["w"]
+        self.ll = state_dict["ll"]
+        self.prev_inds = state_dict["prev_inds"]
+
+        return
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(time_index: {self.x.time_index}, event_shape: {self.x.event_dim})"

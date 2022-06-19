@@ -1,5 +1,8 @@
-torch>1.5.0
+torch>=1.9.0
 tqdm>=4.26
-numpy
+stochproc @ git+https://github.com/tingiskhan/stoch-proc#egg=stochproc
 pytest
 pyro-ppl
+numpy
+matplotlib
+statsmodels

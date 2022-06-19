@@ -1,68 +1,30 @@
 from abc import ABC
-from torch.nn import Module
+
 import torch
 from typing import Tuple
+
 from ..filters import BaseFilter
 from .logging import DefaultLogger
 from .state import AlgorithmState
+from .context import ParameterContext
 
 
-class BaseAlgorithm(Module, ABC):
+class BaseAlgorithm(ABC):
     """
-    Abstract base class for all algorithms.
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
-        """
-        Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
-
-        Args:
-            y: The data to consider, should of size ``(number of time steps, [dimension of observed space])``.
-            logging: Class inherited from ``DefaultLogger`` to handle logging. E.g. ``VariationalBayes`` logs every
-                iteration of the full dataset, whereas sequential algorithms every data point.
-        """
-
-        raise NotImplementedError()
-
-    def predict(self, steps: int, state: AlgorithmState, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Given the current state of the algorithm, predict the timeseries ``steps`` steps into the future.
-
-        Args:
-            steps: The number of steps into the future to predict the timeseries.
-            state: The current state of the algorithm.
-            kwargs: Any algorithm specific kwargs.
-
-        Returns:
-            Returns the tuple ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
-            ``(steps, [additional shapes])``.
-        """
-
-        raise NotImplementedError()
-
-    def __repr__(self):
-        return str(self.__class__.__name__)
-
-
-class BaseFilterAlgorithm(BaseAlgorithm, ABC):
-    """
-    Abstract base class for algorithms utilizing filters for building an approximation of the log likelihood,
-    :math:`\\log{\\hat{p}(y_{1:t})}`, rather than the exact likelihood.
+    Abstract base class for algorithms.
     """
 
     def __init__(self, filter_: BaseFilter):
         """
-        Initializes the ``BaseFilterAlgorithm`` class.
+        Initializes the :class:`BaseFilterAlgorithm` class.
 
         Args:
-             filter_: The filter to use for approximating the log likelihood.
+             filter_: the filter to use for approximating the log likelihood.
         """
 
         super().__init__()
         self._filter = filter_
+        self.context: ParameterContext = ParameterContext.get_context()
 
     @property
     def filter(self) -> BaseFilter:
@@ -72,9 +34,16 @@ class BaseFilterAlgorithm(BaseAlgorithm, ABC):
 
         return self._filter
 
-    @filter.setter
-    def filter(self, x: BaseFilter):
-        if not isinstance(x, type(self.filter)):
-            raise ValueError(f"'x' is not {self.filter}!")
+    def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
+        """
+        Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
 
-        self._filter = x
+        Args:
+            y: the data to consider, should of size ``(timesteps, [dimension of observed space])``.
+            logging: class inherited from :class:`~pyfilter.inference.logging.DefaultLogger` to handle logging.
+        """
+
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return str(self.__class__.__name__)

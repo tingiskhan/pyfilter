@@ -1,8 +1,8 @@
-from ..state import BaseState
+from ..state import BaseResult
 from ..filters import FilterResult
 
 
-class AlgorithmState(BaseState):
+class AlgorithmState(BaseResult):
     """
     Base state class for algorithms.
     """
@@ -15,10 +15,10 @@ class FilterAlgorithmState(AlgorithmState):
 
     def __init__(self, filter_state: FilterResult):
         """
-        Initializes the ``FilterAlgorithmState`` class.
+        Initializes the :class:`FilterAlgorithmState` class.
 
         Args:
-             filter_state: The initial ``pyfilter.filters.FilterResult``.
+             filter_state: the initial :class:`pyfilter.filters.FilterResult`.
         """
 
         super().__init__()
@@ -29,7 +29,17 @@ class FilterAlgorithmState(AlgorithmState):
         Creates a replica (not copy) of the instance with given ``filter_state``.
 
         Args:
-            filter_state: The filter state to use when creating the replica.
+            filter_state: the filter state to use when creating the replica.
         """
 
         return FilterAlgorithmState(filter_state)
+
+    def state_dict(self):
+        res = super(FilterAlgorithmState, self).state_dict()
+        res["filter_state"] = self.filter_state.state_dict()
+
+        return res
+
+    def load_state_dict(self, state_dict):
+        super(FilterAlgorithmState, self).load_state_dict(state_dict)
+        self.filter_state.load_state_dict(state_dict["filter_state"])

@@ -1,4 +1,5 @@
 import torch
+
 from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
 from ...utils import normalize, get_ess
@@ -11,18 +12,18 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: torch.Tensor = None):
         """
-        Initializes the ``SequentialAlgorithmState`` class.
+        Initializes the :class:`SequentialAlgorithmState` class.
 
         Args:
-            weights: The log weights associated with the particle approximation.
-            filter_state: The current state of the filter. Somewhat misnamed as we keep track of the entire history of
+            weights: the log weights associated with the particle approximation.
+            filter_state: the current state of the filter. Somewhat misnamed as we keep track of the entire history of
                 the filter, should perhaps be called ``filter_result``.
-            ess: Optional parameter, only used when re-initializing a state object.
+            ess: optional parameter, only used when re-initializing a state object.
         """
 
         super().__init__(filter_state)
-        self.register_buffer("w", weights)
-        self.tensor_tuples["ess"] = (get_ess(weights),) if ess is None else tuple(ess)
+        self.w = weights
+        self.tensor_tuples.make_deque("ess", get_ess(weights).unsqueeze(0) if ess is None else tuple(ess))
 
     @property
     def ess(self) -> torch.Tensor:
@@ -32,7 +33,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return self.tensor_tuples.get_as_tensor("ess")
 
-    def update(self, filter_state: FilterState):
+    def append(self, filter_state: FilterState):
         """
         Updates ``self`` given a new filter state.
 
@@ -41,9 +42,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         """
 
         self.w += filter_state.get_loglikelihood()
-        self.filter_state.append(filter_state)
-
-        self.tensor_tuples["ess"] += (get_ess(self.w),)
+        self.tensor_tuples["ess"].append(get_ess(self.w))
 
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
@@ -51,29 +50,40 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     def replicate(self, filter_state):
         return SequentialAlgorithmState(torch.zeros_like(self.w), filter_state)
 
+    def state_dict(self):
+        res = super(SequentialAlgorithmState, self).state_dict()
+        res["w"] = self.w
+
+        return res
+
+    def load_state_dict(self, state_dict):
+        super(SequentialAlgorithmState, self).load_state_dict(state_dict)
+        self.w = state_dict["w"]
+
 
 class SMC2State(SequentialAlgorithmState):
     """
-    Custom state class for ``SMC2``, as it requires keeping a history of the parsed observations.
+    Custom state class for :class:`pyfilter.inference.sequential.SMC2`, as it requires keeping a history of the parsed
+    observations.
     """
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: torch.Tensor = None):
         """
-        Initializes the ``SMC2State`` class.
+        Initializes the :class:`SMC2State` class.
 
         Args:
-            weights: See base:
-            filter_state: See base.
-            ess: See base.
-            parsed_data: The collection of observations that have been parsed by the algorithm.
+            weights: see base:
+            filter_state: see base.
+            ess: see base.
+            parsed_data: the collection of observations that have been parsed by the algorithm.
         """
 
         super().__init__(weights, filter_state, ess)
-        self.tensor_tuples["parsed_data"] = tuple() if parsed_data is None else tuple(parsed_data)
+        self.tensor_tuples.make_deque("parsed_data", tuple() if parsed_data is None else tuple(parsed_data))
 
     @property
     def parsed_data(self) -> torch.Tensor:
         return self.tensor_tuples.get_as_tensor("parsed_data")
 
     def append_data(self, y: torch.Tensor):
-        self.tensor_tuples["parsed_data"] += (y,)
+        self.tensor_tuples["parsed_data"].append(y)

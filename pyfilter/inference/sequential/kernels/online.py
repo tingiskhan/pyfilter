@@ -10,12 +10,12 @@ class OnlineKernel(BaseKernel):
 
     def __init__(self, kernel: JitterKernel = None, discrete=False, **kwargs):
         """
-        Initializes the ``OnlineKernel`` class.
+        Initializes the :class:`OnlineKernel` class.
 
         Args:
-            kernel: The kernel to use for jittering the parameter particles.
-            discrete: Whether to mutate all particles, or just some of them with a probability proportional to the ESS.
-            kwargs: See base.
+            kernel: the kernel to use for jittering the parameter particles.
+            discrete: whether to mutate all particles, or just some of them with a probability proportional to ESS.
+            kwargs: see base.
         """
 
         super().__init__(**kwargs)
@@ -23,15 +23,15 @@ class OnlineKernel(BaseKernel):
         self._kernel = kernel or NonShrinkingKernel()
         self._disc = discrete
 
-    def update(self, filter_, state):
+    def update(self, context, filter_, state):
         weights = state.normalized_weights()
 
-        stacked = filter_.ssm.concat_parameters(constrained=False)
+        stacked = context.stack_parameters(constrained=False)
         indices = self._resampler(weights, normalized=True)
 
         jittered = self._kernel.jitter(stacked, weights, indices)
 
-        filter_.resample(indices)
+        context.resample(indices)
         state.filter_state.resample(indices, entire_history=False)
 
         if self._disc:
@@ -43,7 +43,7 @@ class OnlineKernel(BaseKernel):
 
             jittered = (1 - to_jitter) * stacked[indices] + to_jitter * jittered
 
-        filter_.ssm.update_parameters_from_tensor(jittered, constrained=False)
-        state.w[:] = 0.0
+        context.unstack_parameters(jittered, constrained=False)
+        state.w.fill_(0.0)
 
         return self

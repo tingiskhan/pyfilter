@@ -1,54 +1,59 @@
-import copy
 from abc import ABC
 from tqdm import tqdm
 import torch
-from torch.nn import Module
-from typing import Tuple, Sequence, TypeVar, List, Callable
-from torch.distributions import Distribution
-from .utils import select_mean_of_dist
-from ..timeseries import StateSpaceModel
-from ..utils import choose
+from typing import Tuple, Sequence, TypeVar, Union, Callable
+from stochproc.timeseries import StateSpaceModel
+
 from .result import FilterResult
 from .state import FilterState, PredictionState
-from ..container import BoolOrInt
 
 
 TState = TypeVar("TState", bound=FilterState)
+BoolOrInt = Union[bool, int]
+ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]] # noqa: F821
 
 
-class BaseFilter(Module, ABC):
+class BaseFilter(ABC):
     """
     Abstract base class for filters.
     """
 
     def __init__(
         self,
-        model: StateSpaceModel,
+        model: ModelObject,
         record_states: BoolOrInt = False,
         record_moments: BoolOrInt = True,
         nan_strategy: str = "skip",
+        record_intermediary_states: bool = False,
     ):
         """
-        Initializes the ``BaseFilter`` class.
+        Initializes the :class:`BaseFilter` class.
 
         Args:
-            model: The state space model to use for filtering.
-            record_states: See ``pyfilter.filters.FilterResult.record_states``.
-            record_moments: See ``pyfilter.filters.FilterResult.record_moments``.
-            nan_strategy: How to handle ``nan``s in observation data. Can be:
+            model: the state space model to use for filtering.
+            record_states: see :class:`pyfilter.filters.FilterResult`.
+            record_moments: see :class:`pyfilter.filters.FilterResult`.
+            nan_strategy: how to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
+            record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
+                `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
         """
+
+        from ..inference.context import ParameterContext
 
         super().__init__()
 
-        if not isinstance(model, StateSpaceModel):
-            raise ValueError(f"`model` must be `{StateSpaceModel.__name__:s}`!")
+        if not (isinstance(model, StateSpaceModel) or callable(model)):
+            raise ValueError(f"`model` must be `{StateSpaceModel:s}` or {callable} that returns `{StateSpaceModel:s}!")
 
-        self._model = model
-        self.register_buffer("_n_parallel", torch.tensor(0, dtype=torch.int))
-        self._n_parallel = None
+        is_function = callable(model) and not isinstance(model, StateSpaceModel)
+
+        self._model_builder = model if is_function else None
+
+        self._model = model if not is_function else model(ParameterContext.get_context())
+        self._batch_shape = torch.Size([])
 
         self.record_states = record_states
         self.record_moments = record_moments
@@ -57,88 +62,74 @@ class BaseFilter(Module, ABC):
             raise NotImplementedError(f"Currently cannot handle strategy '{nan_strategy}'!")
 
         self._nan_strategy = nan_strategy
+        self._record_intermediary = record_intermediary_states
 
     @property
     def ssm(self) -> StateSpaceModel:
         return self._model
 
     @property
-    def n_parallel(self) -> torch.Size:
+    def batch_shape(self) -> torch.Size:
         """
         Returns the number of parallel filters.
         """
 
-        if self._n_parallel is None or self._n_parallel == 0:
-            return torch.Size([])
+        return self._batch_shape
 
-        return torch.Size([self._n_parallel])
-
-    def set_num_parallel(self, num_filters: int):
+    def set_batch_shape(self, batch_shape: torch.Size):
         """
         Sets the number of parallel filters to use by utilizing broadcasting. Useful when running sequential particle
         algorithms or multiple parallel chains of MCMC, as this avoids the linear cost of iterating over multiple filter
         objects.
 
         Args:
-             num_filters: The number of filters to run in parallel.
+             batch_shape: batch size.
 
         Example:
             >>> from pyfilter.filters.particle import SISR
             >>>
             >>> model = ...
             >>>
-            >>> sisr = SISR(model, 1000)
-            >>> sisr.set_num_parallel(50)
+            >>> sisr = SISR(model, 1_000)
+            >>> sisr.set_batch_shape(torch.Size([50]))
             >>>
             >>> state = sisr.initialize()
             >>> state.x.values.shape
             torch.Size([50, 1000])
         """
 
-        raise NotImplementedError()
+        if len(batch_shape) > 1:
+            raise NotImplementedError("Currently do not support nested batches!")
+
+        self._batch_shape = batch_shape
 
     def initialize(self) -> TState:
         """
-        Initializes the filter. This is mainly for internal use, consider using `.`initialize_with_result(...)``
-        instead.
+        Initializes the filter. This is mainly for internal use, consider using
+        :meth:`BaseFilter.initialize_with_result` instead.
         """
 
         raise NotImplementedError()
 
     def initialize_with_result(self, state: TState = None) -> FilterResult[TState]:
         """
-        Initializes the filter using ``.initialize()`` if ``state`` is ``None``, and wraps the result using
-        ``pyfilter.filters.result.FilterResult``. Also registers the callbacks on the ``FilterResult`` object.
+        Initializes the filter using :meth:`BaseFilter.initialize` if ``state`` is ``None``, and wraps the result using
+        :class:`~pyfilter.filters.result.FilterResult`.
 
         Args:
-            state: Optional parameter, if ``None`` calls ``.initialize()`` otherwise uses ``state``.
+            state: optional parameter, if ``None`` calls :meth:`BaseFilter..initialize` otherwise uses ``state``.
         """
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
-    def filter(self, y: torch.Tensor, state: TState) -> TState:
+    def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
         """
-        Performs one filter move given observation ``y`` and previous state of the filter. Wraps the ``__call__``
-        method of `torch.nn.Module``.
+        Batch version of :meth:`BaseFilter.filter` where entire data set is parsed.
 
         Args:
-            y: The observation for which to filter.
-            state: The previous state of the filter.
-
-        Returns:
-            New and updated state.
-        """
-
-        return self.__call__(y, state)
-
-    def longfilter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
-        """
-        Batch version of ``.filter(...)`` where entire data set is parsed.
-
-        Args:
-            y: Data set to filter.
-            bar: Whether to display a ``tqdm`` progress bar.
-            init_state: Optional parameter for whether to pass an initial state.
+            y: data set to filter.
+            bar: whether to display a ``tqdm`` progress bar.
+            init_state: optional parameter for whether to pass an initial state.
         """
 
         iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
@@ -148,12 +139,10 @@ class BaseFilter(Module, ABC):
             result = self.initialize_with_result(state)
 
             for yt in y:
-                state = self.filter(yt, state)
+                state = self.filter(yt, state, result=result)
 
                 if bar:
                     iter_bar.update(1)
-
-                result.append(state)
 
             return result
         except Exception as e:
@@ -164,34 +153,7 @@ class BaseFilter(Module, ABC):
 
     def copy(self) -> "BaseFilter":
         """
-        Creates a deep copy of the filter object.
-        """
-
-        return copy.deepcopy(self)
-
-    def predict_path(self, state: TState, steps: int, *args, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Given the previous ``state``, predict ``steps`` steps into the future.
-
-        Args:
-              state: Previous state.
-              steps: The number of steps to predict.
-              args: Any filter specific arguments.
-              kwargs: Any filter specific kwargs.
-
-        Returns:
-            Returns a tuple consisting of ``(predicted x, predicted y)``, where ``x`` and ``y`` are of size
-            ``(steps, [additional shapes])``.
-        """
-
-        raise NotImplementedError()
-
-    def _get_observation_dist_from_prediction(self, prediction: PredictionState) -> Distribution:
-        """
-        Method for generating an observation distribution from the predicted latent distribution.
-
-        Args:
-            prediction: The prediction to use for creating the distribution.
+        Creates a copy of the filter object.
         """
 
         raise NotImplementedError()
@@ -201,7 +163,7 @@ class BaseFilter(Module, ABC):
         Corresponds to the predict step of the given filter.
 
         Args:
-            state: The previous state of the algorithm.
+            state: the previous state of the algorithm.
         """
 
         raise NotImplementedError()
@@ -211,85 +173,55 @@ class BaseFilter(Module, ABC):
         Corresponds to the correct step of the given filter.
 
         Args:
-            y: The observation.
-            state: The previous state of the algorithm.
-            prediction: The predicted state.
+            y: the observation.
+            state: the previous state of the algorithm.
+            prediction: the predicted state.
         """
 
         raise NotImplementedError()
 
-    def forward(self, y: torch.Tensor, state: TState) -> TState:
+    def filter(self, y: torch.Tensor, state: TState, result: FilterResult = None) -> TState:
         """
-        Method to be overridden by derived filters.
+        Performs one filter move given observation ``y`` and previous state of the filter.
 
         Args:
-            y: See ``self.filter(...)``.
-            state: See ``self.filter(...)``.
+            y: the observation for which to filter.
+            state: the previous state of the filter.
+            result: optional parameter specifying the result on which to append the resulting states.
+
+        Returns:
+            Updated state.
         """
 
         prediction = self.predict(state)
 
+        result_is_none = result is None
+        # TODO: Would be neat to record the intermediary results to the result object such that we may perform smoothing
+        while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
+            state = prediction.create_state_from_prediction(self._model)
+
+            if not result_is_none and self._record_intermediary:
+                result.append(state)
+
+            prediction = self.predict(state)
+
         nan_mask = torch.isnan(y)
-        if nan_mask.any():
-            # TODO: Perhaps handle switching in __init__ instead?
-            if self._nan_strategy == "skip":
-                return prediction.create_state_from_prediction()
-            elif self._nan_strategy == "impute":
-                dist = self._get_observation_dist_from_prediction(prediction)
+        if nan_mask.all():
+            state = prediction.create_state_from_prediction(self._model)
+        else:
+            state = self.correct(y, state, prediction)
 
-                # NB: Might be better to reshape `y` to the number of parallel filters instead of using global mean?
-                mean = select_mean_of_dist(dist)
-                if len(dist.batch_shape) > 0:
-                    for d in reversed(range(0, len(dist.batch_shape))):
-                        mean = mean.median(dim=d)[0]
+        if not result_is_none:
+            result.append(state)
 
-                y = y.clone()
-                y[nan_mask] = mean[nan_mask]
-
-        return self.correct(y, state, prediction)
-
-    def resample(self, indices: torch.Tensor) -> "BaseFilter":
-        """
-        Resamples the parameters of the ``.ssm`` attribute, used e.g. when running parallel filters.
-
-        Args:
-             indices: The indices to select.
-        """
-
-        if self.n_parallel.numel() == 0:
-            raise Exception("No parallel filters, cannot resample!")
-
-        for m in [self.ssm.hidden, self.ssm.observable]:
-            for p in m.parameters():
-                p.copy_(choose(p, indices))
-
-        return self
-
-    def exchange(self, filter_: "BaseFilter", indices: torch.Tensor):
-        """
-        Exchanges the parameters of ``.ssm`` with the parameters of ``filter_.ssm`` at the locations specified by
-        ``indices``.
-
-        Args:
-            filter_: The filter to exchange parameters with.
-            indices: Mask specifying which parallel filters to exchange.
-        """
-
-        if self.n_parallel.numel() == 0:
-            raise Exception("No parallel filters, cannot resample!")
-
-        for self_proc, new_proc in [(self.ssm.hidden, filter_.ssm.hidden), (self.ssm.observable, filter_.ssm.observable)]:
-            for new_param, self_param in zip(new_proc.parameters(), self_proc.parameters()):
-                self_param[indices] = new_param[indices]
-
-        return self
+        return state
 
     def smooth(self, states: Sequence[FilterState]) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 
         Args:
-            states: The filtered states.
+            states: the filtered states.
         """
 
         raise NotImplementedError()

@@ -1,85 +1,100 @@
-# pyfilter
-`pyfilter` is a package designed for joint parameter and state inference in (mainly) non-linear state space models using
-Sequential Monte Carlo and variational inference. It is similar to `pomp`, but implemented in `Python` leveraging
-[`pytorch`](https://pytorch.org/). The interface is heavily inspired by [`pymc3`](https://github.com/pymc-devs/pymc3). 
+# About the project
+pyfilter is a package designed for joint parameter and state inference in state space models using
+particle filters and particle filter based inference algorithms. It's borne out of my layman's interest in Sequential 
+Monte Carlo methods, and a continuation of my [Master's thesis](http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-177104).
 
-## Example
+Some features include:
+1. Particle filters in the form of [SISR](https://en.wikipedia.org/wiki/Particle_filter) and [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter) together with different proposal distributions.
+2. Both online and offline inference algorithms such as
+   1. [SMC2](https://arxiv.org/abs/1101.1528) 
+   2. [NESS](https://arxiv.org/abs/1308.1883)
+   3. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
+   4. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
+3. [pytorch](https://pytorch.org/) backend enables GPU accelerated inference - what took hours on a CPU now takes minutes (or even seconds).
+
+# Getting started
+Follow the below instructions in order to get started with pyfilter.
+
+## Prerequisites
+Start by [installing pytorch](https://pytorch.org/get-started/locally/). 
+
+## Installation
+To install pyfilter just copy the below command into your favourite terminal 
+
+```cmd
+pip install git+https://github.com/tingiskhan/pyfilter
+```
+
+# Usage
+
+All examples are located [here](./examples), but you'll find a short one below in which we define a sine diffusion 
+process which we observe with some noise, and then back out using the APF together with the "optimal proposal"
+distribution
+
 ```python
-from pyfilter.timeseries import AffineEulerMaruyama, LinearGaussianObservations
+from stochproc import timeseries as ts, distributions as dists
 import torch
-from pyfilter.distributions import DistributionWrapper
-from torch.distributions import Normal
+from pyro.distributions import Normal
 import matplotlib.pyplot as plt
-from pyfilter.filters.particle import APF, proposals as p
+from pyfilter.filters.particle import APF, proposals
 from math import sqrt
 
 
-def drift(x, gamma, sigma):
-    return torch.sin(x.values - gamma)
+def f(x, gamma, sigma):
+    return torch.sin(x.values - gamma), sigma
 
 
-def diffusion(x, gamma, sigma):
-    return sigma
+def build_observation(x, a, s):
+    return Normal(loc=a * x.values, scale=s)
 
 
 dt = 0.1
-parameters = 0.0, 1.0
-init_dist = DistributionWrapper(Normal, loc=0.0, scale=1.0)
-inc_dist = DistributionWrapper(Normal, loc=0.0, scale=sqrt(dt))
 
-sine_diffusion = AffineEulerMaruyama(
-    (drift, diffusion),
-    parameters,
-    init_dist,
-    inc_dist,
-    dt=dt,
-    num_steps=int(1 / dt)
-)
-ssm = LinearGaussianObservations(sine_diffusion, scale=0.1)
+gamma = 0.0
+sigma = 1.0
 
-x, y = ssm.sample_path(1000)
+init_dist = dists.DistributionModule(Normal, loc=0.0, scale=1.0)
+inc_dist = dists.DistributionModule(Normal, loc=0.0, scale=sqrt(dt))
 
-fig, ax = plt.subplots(2)
-ax[0].plot(x.numpy(), label="True")
-ax[1].plot(y.numpy())
+sine_diffusion = ts.AffineEulerMaruyama(f, (gamma, sigma), init_dist, inc_dist, dt=dt)
 
-filt = APF(ssm, 1000, proposal=p.Bootstrap())
-result = filt.longfilter(y)
+a = 1.0
+s = 0.1
 
-ax[0].plot(result.filter_means.numpy(), label="Filtered")
-ax[0].legend()
+ssm = ts.StateSpaceModel(sine_diffusion, build_observation, (a, s))
 
-plt.show()
+sample_result = ssm.sample_states(250)
+x, y = sample_result.get_paths()
+
+fig, ax = plt.subplots()
+
+ax.set_title("Latent")
+ax.plot(sample_result.time_indexes, x, label="True", color="gray")
+ax.plot(sample_result.time_indexes, y, marker="o", linestyle="None", label="Observed", color="lightblue")
+
+filt = APF(ssm, 250, proposal=proposals.LinearGaussianObservations(0))
+result = filt.batch_filter(y)
+
+ax.plot(sample_result.time_indexes, result.filter_means.numpy()[1:], label="Filtered", color="salmon", alpha=0.5)
+ax.legend()
 ```
 
-## Installation
-Install the package by typing the following in a `git shell` or similar
-```
-pip install git+https://github.com/tingiskhan/pyfilter.git
-```
+<div align="center"> 
+    <img src="./static/filtering.jpg" alt="Logo" width="640" height="480">
+</div>
 
-## Implementations
-Below is a list of implemented algorithms/filters.
+# Contributing
 
-### Filters
-The currently implemented filters are
-1. [SISR](https://en.wikipedia.org/wiki/Particle_filter)
-2. [APF](https://en.wikipedia.org/wiki/Auxiliary_particle_filter)
-3. [UKF](https://www.seas.harvard.edu/courses/cs281/papers/unscented.pdf)
+Contributions are always welcome! Simply
+1. Fork the project.
+2. Create your feature branch (I try to follow [Microsoft's naming](https://docs.microsoft.com/en-us/azure/devops/repos/git/git-branching-guidance?view=azure-devops)).
+3. Push the branch to origin.
+4. Open a pull request.
 
-For filters 1. and 2. there exist different proposals, s.a.
-1. Optimal proposal when observations are linear combinations of states, and normally distributed.
-2. Locally linearized observation density, mainly used for models having log-concave observation density.
+# License
+Distributed under the MIT License, see `LICENSE` for more information.
 
-### Algorithms
-The currently implemented algorithms are
-1. [NESS](https://arxiv.org/abs/1308.1883)
-2. [SMC2](https://arxiv.org/abs/1101.1528) (see [here](https://github.com/nchopin/particles) for one of the original authors' implementation)
-3. [Variational Bayes](https://en.wikipedia.org/wiki/Variational_Bayesian_methods)
-4. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
-5. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
+# Contact
+Contact details are located under `setup.py`.
 
-## Caveats
-Please note that this is a project I work on in my spare time, as such there might be errors in the implementations and
-sub-optimal performance. You are more than welcome to report bugs should you try out the library.
 

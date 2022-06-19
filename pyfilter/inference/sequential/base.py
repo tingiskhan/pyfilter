@@ -1,32 +1,88 @@
 from abc import ABC
 import torch
-from typing import Dict, Any
+from typing import Dict, Any, TypeVar, Callable, List
 from .state import SequentialAlgorithmState
 from ..logging import TQDMWrapper
-from ..base import BaseFilterAlgorithm
-from ...filters import ParticleFilter
-from ...utils import is_documented_by
+from ..base import BaseAlgorithm
 
 
-class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
+T = TypeVar("T", bound=SequentialAlgorithmState)
+Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]
+
+
+class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
     """
     Abstract base class for sequential algorithms using filters in order to approximate the log likelihood.
     """
 
+    def __init__(self, filter_, num_particles: int):
+        """
+        Initializes the :class:`SequentialParticleAlgorithm` class.
+
+        Args:
+            filter_: see base.
+            num_particles: the number of particles to use for approximating the parameter posteriors.
+        """
+
+        super().__init__(filter_)
+
+        self.particles = torch.Size([num_particles])
+        self._parameter_shape = torch.Size([num_particles, 1])
+        self.filter.set_batch_shape(self.particles)
+
+        self._callbacks: List[Callback] = list()
+
+    def register_callback(self, callback: Callback):
+        """
+        Registers a callback that is called directly after :meth:`step`.
+
+        Args:
+            callback: callback to register.
+        """
+
+        if (callback in self._callbacks) or (callback is None):
+            return
+
+        self._callbacks.append(callback)
+
     def initialize(self) -> SequentialAlgorithmState:
         """
-        Initializes the algorithm by returning an ``SequentialAlgorithmState``.
+        Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
         """
 
-        raise NotImplementedError()
+        init_state = self.filter.initialize()
+        init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
 
-    def forward(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
+        self.context.initialize_parameters(self._parameter_shape)
+
+        return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
+
+    def step(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
         """
         Updates the algorithm and filter state given the latest observation ``y``.
 
         Args:
-            y: The latest observation.
-            state: The previous state of the algorithm.
+            y: the latest observation.
+            state: the previous state of the algorithm.
+
+        Returns:
+            The updated state of the algorithm.
+        """
+
+        result = self._step(y, state)
+
+        for cb in self._callbacks:
+            cb(self, y, state)
+
+        return result
+
+    def _step(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
+        """
+        Defines how to update ``state`` given the latest observation ``y``, should be overridden by derived classes.
+
+        Args:
+            y: the latest observation.
+            state: the previous state of the algorithm.
 
         Returns:
             The updated state of the algorithm.
@@ -34,122 +90,55 @@ class SequentialFilteringAlgorithm(BaseFilterAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    @is_documented_by(forward)
-    def update(self, y: torch.Tensor, state: SequentialAlgorithmState):
-        return self.__call__(y, state)
-
     def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
-        logging.initialize(self, y.shape[0])
 
-        try:
+        with logging.initialize(self, y.shape[0]):
             state = self.initialize()
             for i, yt in enumerate(y):
-                state = self.update(yt, state)
+                state = self.step(yt, state)
                 logging.do_log(i, state)
 
             return state
 
-        except Exception as e:
-            raise e
-        finally:
-            logging.teardown()
-
-
-class SequentialParticleAlgorithm(SequentialFilteringAlgorithm, ABC):
-    """
-    Abstract base class for Bayesian sequential algorithms that use a particle approximation of the parameter
-    posteriors.
-    """
-
-    def __init__(self, filter_, particles: int):
-        """
-        Initializes the ``SequentialParticleAlgorithm`` class.
-
-        Args:
-            filter_: See base.
-            particles: The number of particles to use for approximating the parameter posteriors.
-        """
-
-        super().__init__(filter_)
-
-        self.register_buffer("_particles", torch.tensor(particles, dtype=torch.int))
-        self.filter.set_num_parallel(particles)
-        self._sample_params()
-
-    @property
-    def particles(self) -> torch.Size:
-        """
-        Returns the number of particles the algorithm uses.
-        """
-
-        return torch.Size([self._particles])
-
-    def _sample_params(self):
-        """
-        Samples the parameters of the model in place.
-        """
-
-        shape = torch.Size((*self.particles, 1)) if isinstance(self.filter, ParticleFilter) else self.particles
-        self.filter.ssm.sample_params(shape)
-
-    def initialize(self) -> SequentialAlgorithmState:
-        init_state = self.filter.initialize()
-        init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
-
-        return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
-
-    def predict(self, steps, state: SequentialAlgorithmState, aggregate=True, **kwargs):
-        px, py = self.filter.predict_path(state.filter_state.latest_state, steps, aggregate=aggregate, **kwargs)
-
-        if not aggregate:
-            return px, py
-
-        w = state.normalized_weights()
-        w_unsqueezed = w.unsqueeze(-1)
-
-        x_m = (px * (w_unsqueezed if self.filter.ssm.hidden.n_dim > 0 else w)).sum(1)
-        y_m = (py * (w_unsqueezed if self.filter.ssm.observable.n_dim > 0 else w)).sum(1)
-
-        return x_m, y_m
-
 
 class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     """
-    Algorithm combining two instances of ``SequentialParticleAlgorithm``, where we let one of them target a
+    Algorithm combining two instances of :class:`SequentialParticleAlgorithm`, where we let one of them target a
     chronological subset of the data, and the other the remaining points.
 
-    One such example is the ``NESSMC2``, where we first utilize the costly but exact ``SMC2`` algorithm, and then switch
-    to the ``NESS`` algorithm which is a pure online algorithm, but with slower convergence than ``SMC2``.
+    One such example is the :class:`pyfilter.inference.sequential.NESSMC2`.
     """
 
     def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any]):
         """
-        Initializes the ``CombinedSequentialParticleAlgorithm`` class.
+        Initializes the :class:`CombinedSequentialParticleAlgorithm` class.
 
         Args:
-            filter_: See base.
-            particles: See base.
-            switch: The number of observations to have parsed before switching algorithms.
-            first_kw: Kwargs sent to ``.make_first(...)``.
-            second_kw: Kwargs sent to ``.make_second(...)``.
+            filter_: see base.
+            particles: see base.
+            switch: the number of observations to have parsed before switching algorithms.
+            first_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_first`.
+            second_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_second`.
         """
 
         super().__init__(filter_, particles)
+
         self._first = self.make_first(filter_, particles, **(first_kw or dict()))
         self._second = self.make_second(filter_, particles, **(second_kw or dict()))
+
         self._when_to_switch = switch
-        self._is_switched = torch.tensor(False, dtype=torch.bool)
-        self._num_iters = 0
+        self._is_switched = False
+        self._num_iterations = 0
 
     def make_first(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
         Creates the algorithm to be used for the first part of the data.
 
         Args:
-            filter_: See ``__init__``.
-            particles: See ``__init__``.
-            kwargs: Corresponds to ``first_kw`` of ``__init__``.
+            filter_: see ``__init__``.
+            particles: see ``__init__``.
+            kwargs: corresponds to ``first_kw`` of ``__init__``.
 
         Returns:
             Instance of algorithm to be used for first part of the data.
@@ -159,7 +148,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
-        See ``.make_first(...)`` but replace `first` with `second`.
+        See :meth:`CombinedSequentialParticleAlgorithm.make_first` but replace `first` with `second`.
         """
 
         raise NotImplementedError()
@@ -172,20 +161,14 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     def initialize(self):
         return self._first.initialize()
 
-    def forward(self, y: torch.Tensor, state):
-        self._num_iters += 1
+    def _step(self, y: torch.Tensor, state):
+        self._num_iterations += 1
 
         if not self._is_switched:
-            if self._num_iters <= self._when_to_switch:
-                return self._first.update(y, state)
+            if self._num_iterations <= self._when_to_switch:
+                return self._first._step(y, state)
 
             self._is_switched = True
             state = self.do_on_switch(self._first, self._second, state)
 
-        return self._second.update(y, state)
-
-    def predict(self, steps, state, aggregate=True, **kwargs):
-        if not self._is_switched:
-            return self._first.predict(steps, state, aggregate=aggregate, **kwargs)
-
-        return self._second.predict(steps, state, aggregate=aggregate, **kwargs)
+        return self._second._step(y, state)

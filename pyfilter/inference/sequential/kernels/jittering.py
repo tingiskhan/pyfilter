@@ -7,14 +7,14 @@ from ....constants import EPS, INFTY
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
-    """
+    r"""
     Jitters values by the transform:
         .. math::
-            \\hat{\\theta} = \\theta + \\epsilon, \\: \\epsilon \\sim \\mathcal{N}(0, \\sigma).
+            \hat{\theta} = \theta + \epsilon, \: \epsilon \sim \mathcal{N}(0, \sigma).
 
     Args:
-        values: The values to jitter, i.e. :math:`\\theta`.
-        scale: The scale of the normal distribution used for jittering.
+        values: values to jitter, i.e. :math:`\theta`.
+        scale: scale of the normal distribution used for jittering.
 
     Returns:
         Jittered values.
@@ -28,8 +28,8 @@ def silverman(n: int, ess: float) -> float:
     Returns Silverman's factor for KDE approximation.
 
     Args:
-        n: The dimension of the space to construct the KDE for.
-        ess: The ESS of the samples.
+        n: dimension of the space to construct the KDE for.
+        ess: ESS of the samples.
     """
 
     return (ess * (n + 2) / 4) ** (-1 / (n + 4))
@@ -40,24 +40,24 @@ def scott(n: int, ess: float):
     Returns Scott's factor for KDE approximation.
 
     Args:
-        n: See ``silverman``.
-        ess: See ``silverman``.
+        n: see :meth:`silverman`.
+        ess: see :meth:`silverman`.
     """
 
     return 1.059 * ess ** (-1 / (n + 4))
 
 
 def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> torch.Tensor:
-    """
+    r"""
     Calculates the scale robustly by defining variance as:
         .. math::
-            V(\\theta) = \\{ \\min(IQR(\\theta), \\sigma(\\theta)) \\}^2.
+            V(\theta) = \{ \min(IQR(\theta), \sigma(\theta)) \}^2.
 
     Args:
-        x: The samples to calculate the variance for.
-        w: The normalized weights associated with ``x``.
-        mean: Optional parameter. If you've already calculated the mean outside of the function, you may pass that value
-            to avoid wasting computational resources.
+        x: samples to calculate the variance for.
+        w: normalized weights associated with ``x``.
+        mean: if you've already calculated the mean outside of the function context, you may pass that value to avoid
+            wasting computational resources.
     """
 
     sort, sort_indices = x.sort(0)
@@ -91,23 +91,23 @@ class JitterKernel(ABC):
 
     def __init__(self, std_threshold: float = EPS):
         """
-        Initializes ``JitterKernel`` class.
+        Initializes :class:`JitterKernel` class.
 
         Args:
-            std_threshold: Optional parameter. The minimum allowed standard deviation to avoid issues relating to
-                numerical precision whenever the KDE is "badly conditioned".
+            std_threshold: the minimum allowed standard deviation to avoid issues relating to numerical precision
+                whenever the KDE is "badly conditioned".
         """
 
         self._min_std = std_threshold
 
     def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         """
-        Method to be overridden by derived subclasses. Specifies how to jitter a given collection of samples.
+        Method to be overridden by derived subclasses. Specifies how to jitter a given collection of num_samples.
 
         Args:
-            x: The samples to jitter.
-            w: The normalized weights associated with ``x``.
-            indices: The rows of ``x`` to choose.
+            x: samples to jitter.
+            w: normalized weights associated with ``x``.
+            indices: rows of ``x`` to choose.
 
         Returns:
             Returns the tuple ``(mean, scale)``.
@@ -120,7 +120,7 @@ class JitterKernel(ABC):
         Samples from the jittering kernel.
 
         Args:
-            See ``fit(...)``.
+            See :meth:`fit`.
 
         Returns:
             Jittered values.
@@ -140,8 +140,10 @@ class JitterKernel(ABC):
 
 class ShrinkingKernel(JitterKernel):
     """
-    Defines the shrinking kernel defined in `Learning and filtering via simulation: smoothly jittered particle filters.`
+    Defines the shrinking kernel defined in `Learning and filtering via simulation smoothly jittered particle filters`_
     by Thomas Flury and Neil Shepard.
+
+    .. _`Learning and filtering via simulation smoothly jittered particle filters`: https://people.bordeaux.inria.fr/pierre.delmoral/jittered-particle-filters.pdf
     """
 
     def fit(self, x, w, indices):
@@ -159,7 +161,7 @@ class ShrinkingKernel(JitterKernel):
 
 class NonShrinkingKernel(ShrinkingKernel):
     """
-    Defines the non-shrinking version of ``ShrinkingKernel``.
+    Defines the non-shrinking version of :class:`ShrinkingKernel`.
     """
 
     def fit(self, x, w, indices):
@@ -175,15 +177,17 @@ class NonShrinkingKernel(ShrinkingKernel):
 class LiuWestShrinkage(ShrinkingKernel):
     """
     Defines the Liu-West shrinkage kernel found in `Combined parameter and state estimation in simulation-based
-    filtering` by Jane Liu and Mike West.
+    filtering`_ by Jane Liu and Mike West.
+
+    .. _`Combined parameter and state estimation in simulation-based filtering`: http://www.gatsby.ucl.ac.uk/~byron/nlds/liu00.pdf
     """
 
     def __init__(self, a=0.98):
         """
-        Initializes the ``LiuWestShrinkage`` class.
+        Initializes the :class:`LiuWestShrinkage` class.
 
         Args:
-             a: The ``a`` parameter of the shrinkage kernel, controls the amount of shrinkage applied to the mean of
+             a: ``a`` parameter of the shrinkage kernel, controls the amount of shrinkage applied to the mean of
                 the distribution. Defined on (0, 1). The closer to 1 it is, the less shrinkage is applied.
         """
 
@@ -202,7 +206,7 @@ class LiuWestShrinkage(ShrinkingKernel):
 
 class ConstantKernel(ShrinkingKernel):
     """
-    Kernel assuming constant scale, used in original ``NESS`` paper.
+    Kernel assuming constant scale, used in original :class:`NESS` paper.
     """
 
     def __init__(self, scale: Union[float, torch.Tensor]):

@@ -6,8 +6,9 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
     Given the importance weights of a particle filter, return an estimate of the log likelihood.
 
     Args:
-        importance_weights: The importance weights of the particle filter.
-        weights: Optional parameter, the weights associated with the importance weights. Used by APF.
+        importance_weights: the importance weights of the particle filter.
+        weights: optional parameter specifying whether the weights associated with the importance weights, used in
+            :class:`~pyfilter.filters.particle.APF`.
     """
 
     max_w, _ = importance_weights.max(-1)

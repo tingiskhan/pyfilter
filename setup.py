@@ -16,7 +16,7 @@ def _get_version():
 
 
 with open("requirements.txt", "r") as f:
-    install_requires = [p.strip() for p in f.readlines()]
+    install_requires = [p.strip() for p in f]
 
 
 setup(
