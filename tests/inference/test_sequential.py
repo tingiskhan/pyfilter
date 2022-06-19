@@ -24,7 +24,7 @@ class TestSequential(object):
     @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
     def test_algorithms(self, models, algorithm, callback):
         true_model, build_model = models
-        _, y = true_model.sample_states(1_000).get_paths()
+        _, y = true_model.sample_states(200).get_paths()
 
         with inf.make_context() as context:
             filter_ = filts.APF(build_model, 200)
@@ -32,9 +32,8 @@ class TestSequential(object):
 
             alg.register_callback(callback)
 
-            result = alg.fit(y)
-
             # TODO: Add something to test
+            result = alg.fit(y)
 
     @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
     def test_algorithms_serialize(self, models, algorithm, callback):
@@ -42,8 +41,9 @@ class TestSequential(object):
         _, y = true_model.sample_states(100).get_paths()
 
         train_split = y.shape[0] // 2
+        particles = 250
         with inf.make_context() as context:
-            filter_ = filts.APF(build_model, 200)
+            filter_ = filts.APF(build_model, particles)
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
@@ -54,7 +54,7 @@ class TestSequential(object):
             context_state = context.state_dict()
 
         with inf.make_context() as new_context:
-            new_filter = filts.APF(build_model, 200)
+            new_filter = filts.APF(build_model, particles)
             new_context.load_state_dict(context_state)
 
             new_alg = algorithm(new_filter)
