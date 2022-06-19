@@ -144,6 +144,8 @@ class ParticleFilterState(FilterState):
             state_dict: state dictionary to load from.
         """
 
+        # TODO: Handle case when the particles have doubled
+
         self.x = self.x.propagate_from(
             values=state_dict["x"]["values"], time_increment=-self.x.time_index + state_dict["x"]["time_index"]
         )
