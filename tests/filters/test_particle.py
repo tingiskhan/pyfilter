@@ -137,3 +137,18 @@ class TestParticleFilters(object):
             old_ts = old_s.get_timeseries_state()
 
             assert (new_ts.values == old_ts.values).all() and (new_ts.time_index == old_ts.time_index).all()
+
+    @pytest.mark.parametrize("models, filter_", itertools.product(linear_models(), construct_filters()))
+    def test_check_inactive_context_raises(self, models, filter_):
+        model, _ = models
+
+        from pyfilter.inference import make_context
+
+        context = make_context()
+
+        def model_builder(context_):
+            return model
+
+        # with pytest.raises()
+        with pytest.raises(Exception):
+            f = filter_(model_builder)
