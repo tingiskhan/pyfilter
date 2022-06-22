@@ -30,7 +30,7 @@ class TestSequential(object):
         torch.manual_seed(123)
 
         true_model, build_model = models
-        _, y = true_model.sample_states(200).get_paths()
+        _, y = true_model.sample_states(100).get_paths()
 
         with inf.make_context() as context:
             filter_ = filts.APF(build_model, 200)
