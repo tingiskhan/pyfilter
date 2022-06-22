@@ -1,6 +1,6 @@
 import threading
 from collections import OrderedDict
-from typing import Iterable, Tuple, List, Dict, Any
+from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict
 
 import torch
 from .prior import Prior
@@ -77,7 +77,10 @@ class ParameterContext(object):
         Returns the latest context.
         """
 
-        return cls._contexts.stack[-1]
+        if any(cls._contexts.stack):
+            return cls._contexts.stack[-1]
+
+        raise Exception(f"There are currently no active '{ParameterContext.__name__}'!")
 
     def get_prior(self, name: str) -> Prior:
         """
@@ -106,7 +109,10 @@ class ParameterContext(object):
 
         self._prior_dict[name] = prior
 
-        v = prior.build_distribution().sample()
+        dist = prior.build_distribution()
+        assert dist.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
+
+        v = dist.sample()
 
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
         parameter.set_context(self)
@@ -138,26 +144,27 @@ class ParameterContext(object):
         for k, v in self._parameter_dict.items():
             yield k, (v if constrained else v.get_unconstrained())
 
-    def stack_parameters(self, constrained=True, dim=-1) -> torch.Tensor:
+    def stack_parameters(self, constrained=True) -> torch.Tensor:
         """
-        Stacks the parameters along ``dim`` in order of registration.
+        Stacks the parameters such that we get a two-dimensional array where the first dimension corresponds to the
+        total batch shape, and the last corresponds to the stacked and flattened samples of the distributions.
+
+        Args:
+             constrained: whether to stack the constrained or unconstrained parameters.
         """
 
         res = tuple()
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
         for n, p in self.get_parameters():
             shape = shape_dict[n]
+            v = (p if constrained else p.get_unconstrained()).view(-1, shape.numel())
+            res += (v,)
 
-            event_dim = len(shape)
-            v = (p if constrained else p.get_unconstrained()).flatten(end_dim=-(event_dim + 1))
-
-            res += (v if dim > 0 else v.unsqueeze(-1),)
-
-        return torch.cat(res, dim=dim)
+        return torch.cat(res, dim=-1)
 
     def unstack_parameters(self, x: torch.Tensor, constrained=True):
         """
-        Unstacks and updates parameters given the :class:`torch.Tensor` ``x``.
+        Un-stacks and updates parameters given the :class:`torch.Tensor` ``x``.
 
         Args:
             x: the tensor to unstack and use for updating.
@@ -167,7 +174,7 @@ class ParameterContext(object):
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
         tot_len = sum(s.numel() for s in shape_dict.values())
 
-        assert tot_len == x.shape[-1], f"Total length of parameters is different from parameters in context!"
+        assert tot_len == x.shape[-1], "Total length of parameters is different from parameters in context!"
 
         index = 0
         for n, p in self.get_parameters():
@@ -195,7 +202,6 @@ class ParameterContext(object):
 
         Args:
             constrained: whether to evaluate the constrained parameters.
-
         """
 
         return sum(p.eval_prior(constrained=constrained) for _, p in self.get_parameters())
@@ -220,7 +226,6 @@ class ParameterContext(object):
 
         Args:
             indices: the indices at which to resample.
-
         """
 
         for n, p in self.get_parameters():
@@ -234,24 +239,18 @@ class ParameterContext(object):
 
         return ParameterContext()
 
-    def state_dict(self) -> Dict[str, Any]:
+    def state_dict(self) -> tOrderedDict[str, Any]:
         """
         Returns the state dictionary of ``self``.
         """
 
-        res = dict()
-
-        res[self._PARAMETER_KEY] = self.parameters
-
-        priors = dict()
-        for k, v in self._prior_dict.items():
-            priors[k] = v.state_dict()
-
-        res[self._PRIOR_KEY] = priors
+        res = OrderedDict([])
+        res[self._PARAMETER_KEY] = {k: v.data for k, v in self.parameters.items()}
+        res[self._PRIOR_KEY] = {k: v.state_dict() for k, v in self._prior_dict.items()}
 
         return res
 
-    def load_state_dict(self, state_dict: Dict[str, Any]):
+    def load_state_dict(self, state_dict: tOrderedDict[str, Any]):
         """
         Loads the state dict from other context. Note that this method only verifies that the parameters of the priors
         are same as when saving the initial state, it does not compare the actual distribution.
@@ -264,7 +263,8 @@ class ParameterContext(object):
 
         for k, v in self._prior_dict.items():
             for p_name, p_value in v._get_parameters().items():
-                assert (p_value == state_dict[self._PRIOR_KEY][k][p_name]).all()
+                msg = f"Seems that you don't have the same parameters for '{p_name}'!"
+                assert (p_value == state_dict[self._PRIOR_KEY][k][p_name]).all(), msg
 
             p = self.get_parameter(k)
             p.data = state_dict[self._PARAMETER_KEY][k]

@@ -17,14 +17,14 @@ class TestPMCMC(object):
     @pytest.mark.parametrize("models, kernel_and_record_states", PARAMETERS)
     def test_pmcmc(self, models, kernel_and_record_states):
         true_model, build_model = models
-        _, y = true_model.sample_states(500).get_paths()
+        _, y = true_model.sample_states(50).get_paths()
 
         with inf.make_context() as context:
             kernel, record_states = kernel_and_record_states
             filter_ = filts.APF(lambda u: build_model(u, use_cuda=False), 150, record_states=record_states)
 
             # TODO: Just make sure it runs
-            pmcmc = inf.batch.mcmc.PMMH(filter_, 200, initializer="mean", proposal=kernel)
+            pmcmc = inf.batch.mcmc.PMMH(filter_, 100, initializer="mean", proposal=kernel)
 
             result = pmcmc.fit(y)
 
