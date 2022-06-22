@@ -104,7 +104,8 @@ class TestContext(object):
             with pytest.raises(AssertionError):
                 alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=2.0))
 
-    def test_serialize_and_load(self):
+    @pytest.mark.parametrize("shape", [torch.Size([]), batch_shape])
+    def test_serialize_and_load(self, shape):
         def make_model(context_):
             alpha = context_.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context_.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
@@ -114,7 +115,7 @@ class TestContext(object):
         with inf.make_context() as context:
             make_model(context)
 
-            context.initialize_parameters(batch_shape)
+            context.initialize_parameters(shape)
             as_state = context.state_dict()
 
         with inf.make_context() as new_context:
@@ -125,3 +126,20 @@ class TestContext(object):
 
             for p1, p2 in zip(model.functional_parameters(), new_context.parameters.values()):
                 assert p1 is p2
+
+    @pytest.mark.parametrize("shape", [torch.Size([]), batch_shape])
+    def test_multidimensional_parameters(self, shape):
+        with inf.make_context() as context:
+            alpha = context.named_parameter(
+                "alpha", inf.Prior(Normal, loc=torch.zeros((2, 2)), scale=torch.ones((2, 2)), reinterpreted_batch_ndims=2)
+            )
+            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            context.initialize_parameters(shape)
+
+            stacked = context.stack_parameters()
+            assert stacked.shape == torch.Size([shape.numel(), 5])
+
+    def test_verify_not_batched(self):
+        with inf.make_context() as context:
+            with pytest.raises(AssertionError):
+                beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=torch.zeros(1), scale=torch.ones(1)))
