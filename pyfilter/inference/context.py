@@ -1,6 +1,6 @@
 import threading
 from collections import OrderedDict
-from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict
+from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
 
 import torch
 from .prior import Prior
@@ -270,6 +270,21 @@ class ParameterContext(object):
             p.data = state_dict[self._PARAMETER_KEY][k]
 
         return
+
+    def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "ParameterContext":
+        """
+        Applies ``f`` to each parameter of ``self`` and returns a new :class:`ParameterContext`.
+
+        Args:
+            f: function to apply.
+        """
+
+        with self.make_new() as new_context:
+            for k, v in self._prior_dict.items():
+                p = new_context.named_parameter(k, v)
+                p.data = f(p)
+
+        return new_context
 
 
 def make_context() -> ParameterContext:
