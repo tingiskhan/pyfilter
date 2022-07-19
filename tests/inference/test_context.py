@@ -143,3 +143,14 @@ class TestContext(object):
         with inf.make_context() as context:
             with pytest.raises(AssertionError):
                 beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=torch.zeros(1), scale=torch.ones(1)))
+
+    @pytest.mark.parametrize("shape", [torch.Size([]), batch_shape])
+    def test_apply_fun(self, shape):
+        with inf.make_context() as context:
+
+            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            context.initialize_parameters(shape)
+
+            sub_context = context.apply_fun(lambda u: u.mean())
+            for p, v in sub_context.parameters.items():
+                assert v.shape == torch.Size([])
