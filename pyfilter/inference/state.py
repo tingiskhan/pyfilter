@@ -43,3 +43,6 @@ class FilterAlgorithmState(AlgorithmState):
     def load_state_dict(self, state_dict):
         super(FilterAlgorithmState, self).load_state_dict(state_dict)
         self.filter_state.load_state_dict(state_dict["filter_state"])
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(ll: {self.filter_state.loglikelihood})"
