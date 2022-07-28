@@ -1,5 +1,7 @@
 from abc import ABC
 from typing import Tuple, Union, Callable
+
+import pyro
 import torch
 from torch.distributions import Categorical
 
@@ -128,3 +130,46 @@ class ParticleFilter(BaseFilter, ABC):
         res.set_batch_shape(self.batch_shape)
 
         return res
+
+    def _do_sample_ffbs(self, y: torch.Tensor, pyro_lib: pyro):
+        """
+        Performs the `Forward Filtering Backward Sampling` procedure in order to obtain the log-likelihood w.r.t. to the
+        parameters, and then registers the resulting log-likelihood as a factor for `pyro` to use when optimizing.
+        """
+
+        assert self.record_states is True, "Must record all states, otherwise this won't work!"
+
+        with torch.no_grad():
+            result = self.batch_filter(y, bar=False)
+            # TODO: Might be issues when have multiple batches of data
+            smoothed = self.smooth(result.states)
+
+            init_state = self.ssm.hidden.initial_sample()
+            x_tm1 = init_state.propagate_from(smoothed[:-1])
+            x_t = init_state.propagate_from(smoothed[1:])
+
+        hidden_dens = self.ssm.hidden.build_density(x_tm1)
+        obs_dens = self.ssm.build_density(x_t)
+        init_dens = self.ssm.hidden.initial_dist
+
+        # TODO: Kinda unseure if this positional indexer is correct. Also depends on whether we use particles for inf
+        y_ = y.unsqueeze(1)
+        tot_prob = (hidden_dens.log_prob(x_t.values) + obs_dens.log_prob(y_)).sum(0) + init_dens.log_prob(smoothed[0])
+
+        pyro_lib.factor("log_prob", tot_prob.mean(-1))
+
+    def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
+        """
+        Performs a filtering procedure in which we acquire the log-likelihood for `pyro` to target.
+
+        Args:
+            y: observations to use when filtering.
+            pyro_lib: pyro library.
+            method: method to use when constructing a target log-likelihood.
+        """
+
+        lower_method = method.lower()
+        if lower_method == "ffbs":
+            self._do_sample_ffbs(y, pyro_lib)
+        else:
+            raise NotImplementedError(f"Currently do not support '{method}'!")
