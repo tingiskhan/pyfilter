@@ -4,7 +4,7 @@ from pyro.distributions import LogNormal, Normal
 from stochproc import timeseries as ts
 
 
-def do_infer_with_pyro(model, data, num_samples=1_000, niter=10_000):
+def do_infer_with_pyro(model, data, num_samples=1_000, niter=250):
     guide = pyro.infer.autoguide.AutoDiagonalNormal(model)
     optim = pyro.optim.Adam({"lr": 0.01})
     svi = pyro.infer.SVI(model, guide, optim, loss=pyro.infer.Trace_ELBO())
@@ -41,7 +41,7 @@ class TestPyroIntegration(object):
 
         x, y = ssm.sample_states(250).get_paths()
 
-        guid, posterior_predictive = do_infer_with_pyro(pyro_model, x)
+        guid, posterior_predictive = do_infer_with_pyro(pyro_model, x, niter=500)
         posterior_draws = posterior_predictive(x)
 
         mean = posterior_draws["sigma"].mean()
