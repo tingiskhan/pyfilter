@@ -22,7 +22,7 @@ class Prior(_DistributionModule):
     """
 
     def __init__(
-        self, distribution: DistributionOrBuilder, reinterpreted_batch_ndims=None, **parameters: HyperParameter
+        self, distribution: DistributionOrBuilder, **parameters: HyperParameter
     ):
         """
         Initializes the :class:`Prior` class.
@@ -32,7 +32,7 @@ class Prior(_DistributionModule):
             parameters: parameters of the distribution.
         """
 
-        super().__init__(distribution, reinterpreted_batch_ndims=reinterpreted_batch_ndims)
+        super().__init__(distribution)
 
         for k, v in parameters.items():
             self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))

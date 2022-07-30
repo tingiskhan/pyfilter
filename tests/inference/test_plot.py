@@ -12,7 +12,7 @@ class TestPlotting(object):
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
             sigma = context.named_parameter(
-                "sigma", inf.Prior(LogNormal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
+                "sigma", inf.Prior(LogNormal, loc=0.0, scale=1.0).expand(torch.Size([2])).to_event(1)
             )
 
             context.initialize_parameters(batch_shape)
