@@ -158,6 +158,7 @@ class ParticleFilter(BaseFilter, ABC):
         tot_prob = (hidden_dens.log_prob(x_t.values) + obs_dens.log_prob(y_)).sum(0) + init_dens.log_prob(smoothed[0])
 
         pyro_lib.factor("log_prob", tot_prob.mean(-1))
+        pyro_lib.deterministic("x", x_t.mean(dim=1))
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """
