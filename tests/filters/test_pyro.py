@@ -12,12 +12,12 @@ from stochproc import timeseries as ts
 def do_infer_with_pyro(model, data, num_samples=1_000, niter=250, num_particles=1):
     guide = autoguide.AutoDiagonalNormal(model)
     optim = Adam({"lr": 0.01})
-    svi = SVI(model, guide, optim, loss=pyro.infer.Trace_ELBO(num_particles=num_particles, vectorize_particles=True))
+    svi = SVI(model, guide, optim, loss=pyro.infer.Trace_ELBO(num_particles=num_particles))
 
     pyro.clear_param_store()
 
     for n in range(niter):
-        loss = svi.step(data, num_particles)
+        loss = svi.step(data)
 
     posterior_predictive = pyro.infer.Predictive(
         model,
@@ -35,14 +35,12 @@ class TestPyroIntegration(object):
             latent = ts.models.RandomWalk(sigma_)
             return ts.StateSpaceModel(latent, lambda u: Normal(u.values, 0.1), ())
 
-        def pyro_model(y, num_particles=1):
-            sigma = pyro.sample("sigma", LogNormal(0.0, 1.0)).unsqueeze(-1)
+        def pyro_model(y):
+            # TODO: I think the filter should keep track of when to unsqueeze etc...
+            sigma = pyro.sample("sigma", LogNormal(0.0, 1.0))
             ssm = build_ssm(sigma)
+
             filt = part.APF(ssm, 100, record_states=True)
-
-            if (num_particles > 1) and (sigma.numel() == num_particles):
-                filt.set_batch_shape(torch.Size([num_particles]))
-
             filt.do_sample_pyro(y, pyro)
 
         true_sigma = 0.05
