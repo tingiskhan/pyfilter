@@ -1,15 +1,17 @@
+import itertools
 from abc import ABC
-from typing import Tuple, Union, Callable
+from typing import Union, Callable, Sequence
 
 import pyro
 import torch
 from torch.distributions import Categorical
 
-from ..base import BaseFilter
-from ...resampling import systematic
+from .utils import Unsqueezer
 from .proposals import Bootstrap, Proposal
 from .state import ParticleFilterState
+from ..base import BaseFilter
 from ..utils import batched_gather
+from ...resampling import systematic
 
 
 class ParticleFilter(BaseFilter, ABC):
@@ -88,31 +90,31 @@ class ParticleFilter(BaseFilter, ABC):
 
         return ParticleFilterState(x, w, ll, prev_inds)
 
-    def smooth(self, states: Tuple[ParticleFilterState]) -> torch.Tensor:
+    def _do_sample_ffbs(self, states):
         offset = -(2 + self.ssm.hidden.n_dim)
-
         dim_to_unsqueeze = -2
-        for p in self.ssm.hidden.parameters():
-            if p.dim() > 0:
-                p.unsqueeze_(dim_to_unsqueeze)
 
-        dim = len(self.batch_shape)
+        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden, self.batch_shape.numel() > 1):
+            dim = len(self.batch_shape)
 
-        res = [batched_gather(states[-1].x.values, self._resampler(states[-1].w), dim=dim)]
-        for state in reversed(states[:-1]):
-            temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
-            density = self.ssm.hidden.build_density(temp_state)
+            res = [batched_gather(states[-1].x.values, self._resampler(states[-1].w), dim=dim)]
+            for state in reversed(states[:-1]):
+                temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
+                density = self.ssm.hidden.build_density(temp_state)
 
-            w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
+                w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
 
-            cat = Categorical(logits=w)
-            res.append(batched_gather(state.x.values, cat.sample(), dim=dim))
-
-        for p in self.ssm.hidden.parameters():
-            if p.dim() > 0:
-                p.squeeze_(dim_to_unsqueeze)
+                cat = Categorical(logits=w)
+                res.append(batched_gather(state.x.values, cat.sample(), dim=dim))
 
         return torch.stack(res[::-1], dim=0)
+
+    def smooth(self, states: Sequence[ParticleFilterState], method="ffbs") -> torch.Tensor:
+        lower_method = method.lower()
+        if lower_method == "ffbs":
+            return self._do_sample_ffbs(states)
+
+        raise NotImplementedError(f"Currently do not support '{method}'!")
 
     def copy(self):
         res = type(self)(
@@ -131,18 +133,17 @@ class ParticleFilter(BaseFilter, ABC):
 
         return res
 
-    def _do_sample_ffbs(self, y: torch.Tensor, pyro_lib: pyro):
+    def _do_pyro_ffbs(self, y: torch.Tensor, pyro_lib: pyro):
         """
         Performs the `Forward Filtering Backward Sampling` procedure in order to obtain the log-likelihood w.r.t. to the
         parameters, and then registers the resulting log-likelihood as a factor for `pyro` to use when optimizing.
         """
 
-        assert self.record_states is True, "Must record all states, otherwise this won't work!"
+        assert self.record_states is True, "Must record all states! Set `record_states=True` when initializing"
 
         with torch.no_grad():
             result = self.batch_filter(y, bar=False)
-            # TODO: Might be issues when have multiple batches of data
-            smoothed = self.smooth(result.states)
+            smoothed = self.smooth(result.states, method="ffbs")
 
             init_state = self.ssm.hidden.initial_sample()
             x_tm1 = init_state.propagate_from(smoothed[:-1])
@@ -152,8 +153,8 @@ class ParticleFilter(BaseFilter, ABC):
         obs_dens = self.ssm.build_density(x_t)
         init_dens = self.ssm.hidden.initial_dist
 
-        # TODO: Kinda unseure if this positional indexer is correct. Also depends on whether we use particles for inf
-        y_ = y.unsqueeze(1)
+        shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
+        y_ = y.view(shape)
         tot_prob = (hidden_dens.log_prob(x_t.values) + obs_dens.log_prob(y_)).sum(0) + init_dens.log_prob(smoothed[0])
 
         pyro_lib.factor("log_prob", tot_prob.mean(-1))
@@ -170,6 +171,6 @@ class ParticleFilter(BaseFilter, ABC):
 
         lower_method = method.lower()
         if lower_method == "ffbs":
-            self._do_sample_ffbs(y, pyro_lib)
+            self._do_pyro_ffbs(y, pyro_lib)
         else:
             raise NotImplementedError(f"Currently do not support '{method}'!")
