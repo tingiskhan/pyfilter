@@ -45,7 +45,7 @@ def linear_models():
     sigma = np.array([0.05, 0.1])
     a, s = np.eye(2), 0.15 * np.ones(2)
 
-    inc_dist = dist.DistributionModule(Normal, loc=torch.zeros(2), scale=torch.ones(2), reinterpreted_batch_ndims=1)
+    inc_dist = dist.DistributionModule(Normal, loc=0.0, scale=1.0).expand(torch.Size([2])).to_event(1)
 
     rw = ts.LinearModel(
         torch.from_numpy(a).float(), torch.from_numpy(sigma).float(), increment_dist=inc_dist, initial_dist=inc_dist

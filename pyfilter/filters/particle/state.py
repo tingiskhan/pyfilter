@@ -69,7 +69,7 @@ class ParticleFilterState(FilterState):
     def _calc_mean_and_var(self) -> (torch.Tensor, torch.Tensor):
         normalized_weights = self.normalized_weights()
 
-        sum_axis = -(len(self.x.event_dim) + 1)
+        sum_axis = -(len(self.x.event_shape) + 1)
         nested = self.w.dim() > 1
 
         if sum_axis < -1:
@@ -91,7 +91,7 @@ class ParticleFilterState(FilterState):
 
     def resample(self, indices):
         self.__init__(
-            self.x.copy(values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_dim.numel())),
+            self.x.copy(values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_shape.numel())),
             batched_gather(self.w, indices, 0),
             batched_gather(self.ll, indices, 0),
             batched_gather(self.prev_inds, indices, 1),
@@ -160,4 +160,4 @@ class ParticleFilterState(FilterState):
         return
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(time_index: {self.x.time_index}, event_shape: {self.x.event_dim})"
+        return f"{self.__class__.__name__}(time_index: {self.x.time_index}, event_shape: {self.x.event_shape})"
