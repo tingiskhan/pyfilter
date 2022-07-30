@@ -130,9 +130,7 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", [torch.Size([]), batch_shape])
     def test_multidimensional_parameters(self, shape):
         with inf.make_context() as context:
-            alpha = context.named_parameter(
-                "alpha", inf.Prior(Normal, loc=torch.zeros((2, 2)), scale=torch.ones((2, 2)), reinterpreted_batch_ndims=2)
-            )
+            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0).expand(torch.Size([2, 2])).to_event(2))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
             context.initialize_parameters(shape)
 
