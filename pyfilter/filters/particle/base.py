@@ -169,6 +169,7 @@ class ParticleFilter(BaseFilter, ABC):
             method: method to use when constructing a target log-likelihood.
         """
 
+        # TODO: Currently does not work for vectorized inference...
         lower_method = method.lower()
         if lower_method == "ffbs":
             self._do_pyro_ffbs(y, pyro_lib)
