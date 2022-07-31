@@ -23,7 +23,6 @@ class SISR(ParticleFilter):
 
     def predict(self, state):
         old_normalized_w = state.normalized_weights()
-
         indices, mask = self._resample_parallel(state.w)
 
         # TODO: Perhaps slow
@@ -31,7 +30,7 @@ class SISR(ParticleFilter):
         tot_index[mask] = indices
 
         resampled_x = state.x.values
-        resampled_x[mask] = batched_gather(resampled_x[mask], indices, len(self.batch_shape))
+        resampled_x[mask] = batched_gather(resampled_x[mask], indices, indices.dim() - 1)
 
         resampled_state = state.x.copy(values=resampled_x)
 
