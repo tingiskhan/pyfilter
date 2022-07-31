@@ -1,3 +1,5 @@
+import torch
+
 from .base import Proposal
 from torch.linalg import cholesky_ex
 from torch.distributions import Normal, MultivariateNormal
@@ -5,6 +7,7 @@ from stochproc.timeseries import AffineProcess
 from ....utils import construct_diag_from_flat
 
 
+# TODO: This class is rather messy, might benefit from a clean-up...
 class LinearGaussianObservations(Proposal):
     r"""
     Implements the optimal proposal density whenever we have that both the latent and observation densities are
@@ -19,14 +22,19 @@ class LinearGaussianObservations(Proposal):
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def __init__(self, parameter_index: int):
+    def __init__(self, parameter_index: int = 0):
         """
         Initializes the :class:`LinearGaussianObservations` class.
+
+        Args:
+            parameter_index: index of the parameter that constitutes :math:`A` in the observable process. Assumes that
+                it's the first one. If you pass ``None`` it is assumed that this corresponds to an identity matrix.
         """
 
         super().__init__()
         self._hidden_is1d = None
         self._parameter_index = parameter_index
+        self._kernel_func = None
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
@@ -34,10 +42,11 @@ class LinearGaussianObservations(Proposal):
 
         self._model = model
         self._hidden_is1d = self._model.hidden.n_dim == 0
+        self._kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
 
         return self
 
-    def _kernel_1d(self, y, loc, h_var_inv, o_var_inv, c, observable_is_1d):
+    def _kernel_1d(self, y, loc, h_var_inv, o_var_inv, c, _):
         cov = 1 / (h_var_inv + c ** 2 * o_var_inv)
         m = cov * (h_var_inv * loc + c * o_var_inv * y)
 
@@ -70,18 +79,12 @@ class LinearGaussianObservations(Proposal):
         observable_dist = self._model.build_density(x_copy)
         o_var_inv = observable_dist.variance.pow(-1.0)
 
-        observable_parameters = self._model.functional_parameters()
+        if self._parameter_index is None:
+            raise NotImplementedError()
+        else:
+            a_param = self._model.functional_parameters()[self._parameter_index]
 
-        kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
-        kernel = kernel_func(
-            y,
-            mean,
-            h_var_inv,
-            o_var_inv,
-            observable_parameters[self._parameter_index],
-            len(observable_dist.event_shape),
-        )
-
+        kernel = self._kernel_func(y, mean, h_var_inv, o_var_inv, a_param, len(observable_dist.event_shape))
         x_result = x_copy.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
