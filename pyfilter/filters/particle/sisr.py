@@ -27,7 +27,7 @@ class SISR(ParticleFilter):
         indices, mask = self._resample_parallel(state.w)
 
         # TODO: Perhaps slow
-        tot_index = torch.ones_like(state.prev_inds).cumsum(dim=1) - 1
+        tot_index = torch.ones_like(state.prev_inds).cumsum(dim=-1) - 1
         tot_index[mask] = indices
 
         resampled_x = state.x.values
