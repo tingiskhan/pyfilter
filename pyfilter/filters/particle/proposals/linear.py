@@ -27,13 +27,13 @@ class LinearGaussianObservations(Proposal):
         Initializes the :class:`LinearGaussianObservations` class.
 
         Args:
-            parameter_index: index of the parameter that constitutes :math:`A` in the observable process. Assumes that
+            parameter_index: index of the parameter that constitutes :math:`A` in the observable process, assumes that
                 it's the first one. If you pass ``None`` it is assumed that this corresponds to an identity matrix.
         """
 
         super().__init__()
-        self._hidden_is1d = None
         self._parameter_index = parameter_index
+        self._hidden_is1d = None
         self._kernel_func = None
 
     def set_model(self, model):
@@ -47,7 +47,7 @@ class LinearGaussianObservations(Proposal):
         return self
 
     def _kernel_1d(self, y, loc, h_var_inv, o_var_inv, c, _):
-        cov = 1 / (h_var_inv + c ** 2 * o_var_inv)
+        cov = (h_var_inv + c ** 2 * o_var_inv).pow(-1.0)
         m = cov * (h_var_inv * loc + c * o_var_inv * y)
 
         return Normal(m, cov.sqrt())
