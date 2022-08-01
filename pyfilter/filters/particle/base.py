@@ -165,6 +165,8 @@ class ParticleFilter(BaseFilter, ABC):
         """
         Performs a filtering procedure in which we acquire the log-likelihood for `pyro` to target.
 
+        This is an experimental feature, as the author needs to find theoretical justifications for this approach.
+
         Args:
             y: observations to use when filtering.
             pyro_lib: pyro library.
