@@ -108,7 +108,7 @@ class LinearGaussianObservations(Proposal):
         c_transposed = c_.transpose(-2, -1)
 
         diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
-        diag_o_var = construct_diag_from_flat(o_var, self._model.hidden.n_dim)
+        diag_o_var = construct_diag_from_flat(o_var, self._model.n_dim)
 
         cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
 
