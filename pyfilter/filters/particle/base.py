@@ -145,9 +145,11 @@ class ParticleFilter(BaseFilter, ABC):
             result = self.batch_filter(y, bar=False)
             smoothed = self.smooth(result.states, method="ffbs")
 
+            time_indexes = torch.stack([s.get_timeseries_state().time_index for s in result.states])
+
             init_state = self.ssm.hidden.initial_sample()
-            x_tm1 = init_state.propagate_from(smoothed[:-1])
-            x_t = init_state.propagate_from(smoothed[1:])
+            x_tm1 = init_state.propagate_from(smoothed[:-1], time_increment=time_indexes[:-1])
+            x_t = init_state.propagate_from(smoothed[1::self.ssm.observe_every_step], time_increment=time_indexes[1::self.ssm.observe_every_step])
 
         hidden_dens = self.ssm.hidden.build_density(x_tm1)
         obs_dens = self.ssm.build_density(x_t)
@@ -155,11 +157,9 @@ class ParticleFilter(BaseFilter, ABC):
 
         shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
         y_ = y.view(shape)
-        tot_prob = (hidden_dens.log_prob(x_t.values) + obs_dens.log_prob(y_)).sum(0) + init_dens.log_prob(smoothed[0])
+        tot_prob = hidden_dens.log_prob(smoothed[1:]).sum(0) + obs_dens.log_prob(y_).sum(0) + init_dens.log_prob(smoothed[0])
 
         pyro_lib.factor("log_prob", tot_prob.mean(-1))
-        # TODO: Verify about indexer
-        pyro_lib.deterministic("x", smoothed.mean(dim=1))
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """
