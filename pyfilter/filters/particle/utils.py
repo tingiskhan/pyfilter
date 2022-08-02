@@ -1,5 +1,3 @@
-import itertools
-
 import torch
 
 
@@ -40,17 +38,18 @@ class Unsqueezer(object):
             do_unsqueeze: whether to perform an unsqueeze operation.
         """
 
+        from ...inference import PriorBoundParameter
+
         self.dim_to_unsqueeze = dim_to_unsqueeze
-        self.params_and_buffers = tuple(itertools.chain(module.buffers(), module.parameters()))
+        self.params = tuple(p for p in module.parameters() if isinstance(p, PriorBoundParameter) and p.prior.shape.numel() < p.shape.numel())
         self.do_unsqueeze = do_unsqueeze
 
     def __enter__(self):
         if not self.do_unsqueeze:
             return
 
-        for p in self.params_and_buffers:
-            if p.dim() > 0:
-                p.unsqueeze_(self.dim_to_unsqueeze)
+        for p in self.params:
+            p.unsqueeze_(self.dim_to_unsqueeze)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val:
@@ -59,6 +58,5 @@ class Unsqueezer(object):
         if not self.do_unsqueeze:
             return
 
-        for p in self.params_and_buffers:
-            if p.dim() > 0:
-                p.squeeze_(self.dim_to_unsqueeze)
+        for p in self.params:
+            p.squeeze_(self.dim_to_unsqueeze)
