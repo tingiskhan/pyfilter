@@ -21,9 +21,7 @@ class Prior(_DistributionModule):
 
     """
 
-    def __init__(
-        self, distribution: DistributionOrBuilder, **parameters: HyperParameter
-    ):
+    def __init__(self, distribution: DistributionOrBuilder, **parameters: HyperParameter):
         """
         Initializes the :class:`Prior` class.
 

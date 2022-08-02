@@ -29,7 +29,7 @@ class DefaultLogger(object):
         if exc_type:
             raise exc_val
 
-    def initialize(self, algorithm: "BaseAlgorithm", num_iterations: int) -> "DefaultLogger": # noqa: F821
+    def initialize(self, algorithm: "BaseAlgorithm", num_iterations: int) -> "DefaultLogger":  # noqa: F821
         """
         Initializes the logging class.
 

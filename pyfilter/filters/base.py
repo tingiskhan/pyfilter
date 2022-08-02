@@ -10,7 +10,7 @@ from .state import FilterState, PredictionState
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
-ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]] # noqa: F821
+ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]]  # noqa: F821
 
 
 class BaseFilter(ABC):
