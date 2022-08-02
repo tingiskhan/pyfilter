@@ -166,6 +166,7 @@ class ParticleFilter(BaseFilter, ABC):
         Performs a filtering procedure in which we acquire the log-likelihood for `pyro` to target.
 
         This is an experimental feature, as the author needs to find theoretical justifications for this approach.
+        Currently does not work with vectorized inference.
 
         Args:
             y: observations to use when filtering.
@@ -173,7 +174,6 @@ class ParticleFilter(BaseFilter, ABC):
             method: method to use when constructing a target log-likelihood.
         """
 
-        # TODO: Currently does not work for vectorized inference...
         lower_method = method.lower()
         if lower_method == "ffbs":
             self._do_pyro_ffbs(y, pyro_lib)
