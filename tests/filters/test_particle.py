@@ -16,7 +16,7 @@ def construct_filters(particles=1_000, **kwargs):
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
         linear_proposal = part.proposals.LinearGaussianObservations(parameter_index=0)
-        yield lambda m: pt(m, particles, proposal=linear_proposal)
+        yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
 
 
 BATCH_SIZES = [
