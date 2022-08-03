@@ -1,0 +1,50 @@
+from typing import Callable, Tuple
+
+import torch
+from stochproc.timeseries import TimeseriesState
+
+from .linear import LinearGaussianObservations
+
+Fun = Callable[[TimeseriesState, Tuple[torch.Tensor, ...]], torch.Tensor]
+
+
+class LocalLinearization(LinearGaussianObservations):
+    r"""
+    Proposal utilizing a local linearization of the observation dynamics around the mean of the latent process. That is,
+    given SSM with the following dynamics
+        .. math::
+            Y_t &= \alpha(X_t) + W_t, \newline
+            X_{t+1} &= \gamma(X_t) + \delta(X_t) V_t,
+
+    where both :math:`W_t, V_t` are two independent Gaussian distributions, we linearize the observation process s.t.
+        .. math::
+            \alpha(X_t) \approx \alpha(\mu_t) + \frac{d \alpha}{d x}(\mu_t) \left (X_t - \mu_t \right ).
+
+    Collecting the terms allows us to approximate :math:`Y_t` as
+        .. math::
+            Y_t \approx b + A \dot X_t \dots,
+
+    which in turn allows us to use :class:`LinearGaussianObservations`.
+    """
+
+    def __init__(self, f: Fun, linearized_f: Fun):
+        """
+        Initializes the :class:`LocalLinearization` class.
+
+        Args:
+            linearized_f: linearized function. Takes as mean of
+        """
+
+        super().__init__()
+        self._f = f
+        self._linearized_f = linearized_f
+
+    def get_offset_and_scale(self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, torch.Tensor]:
+        mean, _ = self._model.hidden.mean_scale(x)
+
+        mu_t = x.propagate_from(mean)
+        # TODO: Currently only supports 0d processes
+        d_alpha = self._linearized_f(mu_t, *parameters)
+        loc = self._f(mu_t, *parameters) - d_alpha * mean
+
+        return d_alpha, loc

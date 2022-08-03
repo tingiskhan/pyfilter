@@ -1,6 +1,9 @@
+from typing import Tuple
+
+import torch
 from torch.linalg import cholesky_ex
 from torch.distributions import Normal, MultivariateNormal
-from stochproc.timeseries import AffineProcess
+from stochproc.timeseries import AffineProcess, TimeseriesState
 
 from .base import Proposal
 from ....utils import construct_diag_from_flat
@@ -12,7 +15,7 @@ class LinearGaussianObservations(Proposal):
     Gaussian, and that the mean of the observation density can be expressed as a linear combination of the latent
     states. More specifically, we have that
         .. math::
-            Y_t = A \cdot X_t + V_t, \newline
+            Y_t = b + A \cdot X_t + V_t, \newline
             X_{t+1} = f_\theta(X_t) + g_\theta(X_t) W_{t+1},
 
     where :math:`A` is a matrix of dimension ``(observation dimension, latent dimension)``,
@@ -20,19 +23,39 @@ class LinearGaussianObservations(Proposal):
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def __init__(self, parameter_index: int = 0):
+    def __init__(self, a_index: int = 0, b_index: int = None, s_index: int = -1):
         """
         Initializes the :class:`LinearGaussianObservations` class.
 
         Args:
-            parameter_index: index of the parameter that constitutes :math:`A` in the observable process, assumes that
+            a_index: index of the parameter that constitutes :math:`A` in the observable process, assumes that
                 it's the first one. If you pass ``None`` it is assumed that this corresponds to an identity matrix.
+            b_index: index of the parameter that constitutes :math:`b` in the observable process.
+            s_index: index of the parameter that constitutes :math:`s` in the observable process.
         """
 
         super().__init__()
-        self._parameter_index = parameter_index
+        self._a_index = a_index
+        self._b_index = b_index
+        self._s_index = s_index
+
         self._hidden_is1d = None
         self._obs_is1d = None
+
+    def get_offset_and_scale(self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Standardizes the observation.
+
+        Args:
+            x: previous state.
+            parameters: parameters of the observations process.
+        """
+
+        a_param = parameters[self._a_index]
+        if self._b_index is None:
+            return a_param, 0.0
+
+        return a_param, parameters[self._b_index]
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
@@ -60,7 +83,7 @@ class LinearGaussianObservations(Proposal):
         if self._hidden_is1d:
             t1 = t1.unsqueeze(-1)
 
-        t2 = o_inv_cov.squeeze(-1) * y if self._obs_is1d else o_inv_cov.matmul(y)
+        t2 = o_inv_cov.squeeze(-1) * y.unsqueeze(-1) if self._obs_is1d else o_inv_cov.matmul(y)
         t3 = c_transposed.matmul(t2.unsqueeze(-1))
         m = cov.matmul(t1.unsqueeze(-1) + t3).squeeze(-1)
 
@@ -76,30 +99,24 @@ class LinearGaussianObservations(Proposal):
         h_var_inv = scale.pow(-2.0)
 
         x_copy = x.copy(values=mean)
-        observable_dist = self._model.build_density(x_copy)
-        o_var_inv = observable_dist.variance.pow(-1.0)
 
-        if self._parameter_index is None:
-            raise NotImplementedError()
-        else:
-            a_param = self._model.functional_parameters()[self._parameter_index]
+        parameters = self._model.functional_parameters()
+        a_param, offset = self.get_offset_and_scale(x, parameters)
+        o_var_inv = parameters[self._s_index].pow(-2.0)
 
-        kernel = self._kernel(y, mean, h_var_inv, o_var_inv, a_param)
+        kernel = self._kernel(y - offset, mean, h_var_inv, o_var_inv, a_param)
         x_result = x_copy.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 
     def pre_weight(self, y, x):
         h_loc, h_scale = self._model.hidden.mean_scale(x)
-        new_state = x.propagate_from(values=h_loc)
-
-        observable_parameters = self._model.functional_parameters()
 
         h_var = h_scale.pow(2.0)
-        obs_dist = self._model.build_density(new_state)
 
-        o_loc, o_var = obs_dist.mean, obs_dist.variance
-        c = observable_parameters[self._parameter_index]
+        observable_parameters = self._model.functional_parameters()
+        c, offset = self.get_offset_and_scale(x, observable_parameters)
+        o_var = observable_parameters[self._s_index].pow(2.0)
 
         if self._hidden_is1d:
             c = c.unsqueeze(-1)
@@ -113,11 +130,13 @@ class LinearGaussianObservations(Proposal):
         cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
 
         if self._obs_is1d:
+            o_loc = offset + c * x.values
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
+            o_loc = offset + x.values @ c
             kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
 
         return kernel.log_prob(y)
 
     def copy(self) -> "Proposal":
-        return LinearGaussianObservations(self._parameter_index)
+        return LinearGaussianObservations(self._a_index, self._b_index)
