@@ -10,6 +10,7 @@ Some features include:
    2. [NESS](https://arxiv.org/abs/1308.1883)
    3. [SMC2FW](https://arxiv.org/pdf/1503.00266.pdf)
    4. [PMMH](https://www.stats.ox.ac.uk/~doucet/andrieu_doucet_holenstein_PMCMC.pdf)
+   5. Variational inference targeting parameters coupled with particle filters for estimating log-likelihood. 
 3. [pytorch](https://pytorch.org/) backend enables GPU accelerated inference - what took hours on a CPU now takes minutes (or even seconds).
 
 # Getting started

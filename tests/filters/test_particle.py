@@ -16,7 +16,7 @@ def construct_filters(particles=1_000, **kwargs):
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
         linear_proposal = part.proposals.LinearGaussianObservations(parameter_index=0)
-        yield lambda m: pt(m, particles, proposal=linear_proposal)
+        yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
 
 
 BATCH_SIZES = [
@@ -27,8 +27,8 @@ BATCH_SIZES = [
 MISSING_PERC = [0.0, 0.1]
 
 
-def create_params():
-    return itertools.product(linear_models(), construct_filters(), BATCH_SIZES, MISSING_PERC)
+def create_params(**kwargs):
+    return itertools.product(linear_models(), construct_filters(**kwargs), BATCH_SIZES, MISSING_PERC)
 
 
 class TestParticleFilters(object):
@@ -152,3 +152,47 @@ class TestParticleFilters(object):
         # with pytest.raises()
         with pytest.raises(Exception):
             f = filter_(model_builder)
+
+    # TODO: Use same method as for filter rather than copy paste
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params(record_states=True))
+    def test_smooth(self, models, filter_, batch_size, missing_perc):
+        np.random.seed(123)
+
+        model, kalman_model = models
+        x, y = kalman_model.sample(self.SERIES_LENGTH)
+        y_tensor = torch.from_numpy(y).float()
+
+        if missing_perc > 0.0:
+            num_missing = int(missing_perc * self.SERIES_LENGTH)
+            indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+            y[indices] = np.ma.masked
+            y_tensor[indices] = float("nan")
+
+        kalman_mean, _ = kalman_model.smooth(y)
+
+        if len(batch_size) > 0:
+            kalman_mean = kalman_mean[:, None]
+
+        f: part.ParticleFilter = filter_(model)
+        f.set_batch_shape(batch_size)
+
+        result = f.batch_filter(y_tensor)
+        assert len(result.states) == kalman_mean.shape[0] + 1
+
+        smoothed = f.smooth(result.states)
+
+        means = smoothed[1:].mean(dim=len(batch_size) + 1)
+        std = smoothed[1:].std(dim=len(batch_size) + 1)
+
+        low = means - std
+        high = means + std
+
+        if model.hidden.n_dim < 1:
+            low.unsqueeze_(-1)
+            high.unsqueeze_(-1)
+
+        low = low.numpy()
+        high = high.numpy()
+
+        assert ((low <= kalman_mean) & (kalman_mean <= high)).all()

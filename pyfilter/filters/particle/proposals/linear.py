@@ -1,7 +1,8 @@
-from .base import Proposal
 from torch.linalg import cholesky_ex
 from torch.distributions import Normal, MultivariateNormal
 from stochproc.timeseries import AffineProcess
+
+from .base import Proposal
 from ....utils import construct_diag_from_flat
 
 
@@ -19,14 +20,19 @@ class LinearGaussianObservations(Proposal):
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def __init__(self, parameter_index: int):
+    def __init__(self, parameter_index: int = 0):
         """
         Initializes the :class:`LinearGaussianObservations` class.
+
+        Args:
+            parameter_index: index of the parameter that constitutes :math:`A` in the observable process, assumes that
+                it's the first one. If you pass ``None`` it is assumed that this corresponds to an identity matrix.
         """
 
         super().__init__()
-        self._hidden_is1d = None
         self._parameter_index = parameter_index
+        self._hidden_is1d = None
+        self._obs_is1d = None
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
@@ -34,29 +40,32 @@ class LinearGaussianObservations(Proposal):
 
         self._model = model
         self._hidden_is1d = self._model.hidden.n_dim == 0
+        self._obs_is1d = self._model.n_dim == 0
 
         return self
 
-    def _kernel_1d(self, y, loc, h_var_inv, o_var_inv, c, observable_is_1d):
-        cov = 1 / (h_var_inv + c ** 2 * o_var_inv)
-        m = cov * (h_var_inv * loc + c * o_var_inv * y)
+    def _kernel(self, y, loc, h_var_inv, o_var_inv, c):
+        if self._hidden_is1d:
+            c = c.unsqueeze(-1)
 
-        return Normal(m, cov.sqrt())
+        c_ = c if not self._obs_is1d else c.unsqueeze(-2)
 
-    def _kernel_2d(self, y, loc, h_var_inv, o_var_inv, c, obs_n_dim):
-        observable_is_1d = obs_n_dim == 0
-        tc = c if not observable_is_1d else c.unsqueeze(-2)
-
-        ttc = tc.transpose(-2, -1)
-        o_inv_cov = construct_diag_from_flat(o_var_inv, obs_n_dim)
-        t2 = ttc.matmul(o_inv_cov).matmul(tc)
+        c_transposed = c_.transpose(-2, -1)
+        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.n_dim)
+        t2 = c_transposed.matmul(o_inv_cov).matmul(c_)
 
         cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
         t1 = h_var_inv * loc
-        t2 = o_inv_cov.squeeze(-1) * y if observable_is_1d else o_inv_cov.matmul(y)
 
-        t3 = ttc.matmul(t2.unsqueeze(-1)).squeeze(-1)
-        m = cov.matmul((t1 + t3).unsqueeze(-1)).squeeze(-1)
+        if self._hidden_is1d:
+            t1 = t1.unsqueeze(-1)
+
+        t2 = o_inv_cov.squeeze(-1) * y if self._obs_is1d else o_inv_cov.matmul(y)
+        t3 = c_transposed.matmul(t2.unsqueeze(-1))
+        m = cov.matmul(t1.unsqueeze(-1) + t3).squeeze(-1)
+
+        if self._hidden_is1d:
+            return Normal(m.squeeze(-1), cov[..., 0, 0].sqrt())
 
         return MultivariateNormal(m, scale_tril=cholesky_ex(cov)[0])
 
@@ -70,18 +79,12 @@ class LinearGaussianObservations(Proposal):
         observable_dist = self._model.build_density(x_copy)
         o_var_inv = observable_dist.variance.pow(-1.0)
 
-        observable_parameters = self._model.functional_parameters()
+        if self._parameter_index is None:
+            raise NotImplementedError()
+        else:
+            a_param = self._model.functional_parameters()[self._parameter_index]
 
-        kernel_func = self._kernel_1d if self._hidden_is1d else self._kernel_2d
-        kernel = kernel_func(
-            y,
-            mean,
-            h_var_inv,
-            o_var_inv,
-            observable_parameters[self._parameter_index],
-            len(observable_dist.event_shape),
-        )
-
+        kernel = self._kernel(y, mean, h_var_inv, o_var_inv, a_param)
         x_result = x_copy.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
@@ -98,27 +101,23 @@ class LinearGaussianObservations(Proposal):
         o_loc, o_var = obs_dist.mean, obs_dist.variance
         c = observable_parameters[self._parameter_index]
 
-        obs_n_dim = len(obs_dist.event_shape)
-
-        if obs_n_dim == 0:
-            if self._hidden_is1d:
-                cov = o_var + c ** 2 * h_var
-            else:
-                tc = c.unsqueeze(-2)
-                diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
-                cov = o_var + tc.matmul(diag_h_var).matmul(tc.transpose(-2, -1))[..., 0, 0]
-
-            return Normal(o_loc, cov.sqrt()).log_prob(y)
-
         if self._hidden_is1d:
-            tc = c.unsqueeze(-2)
-            cov = (o_var + tc.matmul(tc.transpose(-2, -1)) * h_var)[..., 0, 0]
-        else:
-            diag_o_var = construct_diag_from_flat(o_var, obs_n_dim)
-            diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
-            cov = diag_o_var + c.matmul(diag_h_var).matmul(c.transpose(-2, -1))
+            c = c.unsqueeze(-1)
 
-        return MultivariateNormal(o_loc, cov).log_prob(y)
+        c_ = c if not self._obs_is1d else c.unsqueeze(-2)
+        c_transposed = c_.transpose(-2, -1)
+
+        diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
+        diag_o_var = construct_diag_from_flat(o_var, self._model.n_dim)
+
+        cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
+
+        if self._obs_is1d:
+            kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
+        else:
+            kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
+
+        return kernel.log_prob(y)
 
     def copy(self) -> "Proposal":
         return LinearGaussianObservations(self._parameter_index)

@@ -80,7 +80,7 @@ class Linearized(Proposal):
             mean.detach_()
             mean += step * g
 
-        kernel = Normal(mean, std, validate_args=False)
+        kernel = Normal(mean, std)
         if not self._is1d:
             kernel = kernel.to_event(1)
 

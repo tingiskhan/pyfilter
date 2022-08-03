@@ -21,3 +21,46 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
         )
 
     return max_w + temp
+
+
+class Unsqueezer(object):
+    """
+    Helper object for temporarily squeezing/unsqueezing parameters.
+    """
+
+    def __init__(self, dim_to_unsqueeze: int, module: torch.nn.Module, do_unsqueeze: bool):
+        """
+        Initializes :class:`Unsqueezer`.
+
+        Args:
+            dim_to_unsqueeze: dimension to unsqueeze.
+            module: module to keep track of.
+            do_unsqueeze: whether to perform an unsqueeze operation.
+        """
+
+        from ...inference import PriorBoundParameter
+
+        self.dim_to_unsqueeze = dim_to_unsqueeze
+        self.params = tuple(
+            p
+            for p in module.parameters()
+            if isinstance(p, PriorBoundParameter) and p.prior.shape.numel() < p.shape.numel()
+        )
+        self.do_unsqueeze = do_unsqueeze
+
+    def __enter__(self):
+        if not self.do_unsqueeze:
+            return
+
+        for p in self.params:
+            p.unsqueeze_(self.dim_to_unsqueeze)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val:
+            raise exc_val
+
+        if not self.do_unsqueeze:
+            return
+
+        for p in self.params:
+            p.squeeze_(self.dim_to_unsqueeze)

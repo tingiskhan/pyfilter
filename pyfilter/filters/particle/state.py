@@ -91,7 +91,9 @@ class ParticleFilterState(FilterState):
 
     def resample(self, indices):
         self.__init__(
-            self.x.copy(values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_shape.numel())),
+            self.x.copy(
+                values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_shape.numel())
+            ),
             batched_gather(self.w, indices, 0),
             batched_gather(self.ll, indices, 0),
             batched_gather(self.prev_inds, indices, 1),

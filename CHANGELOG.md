@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.24.4
+ - Adds support for performing variational inference using particle filter.
+
 # v0.24.3
  - Improves plotting functionality by handling multi-dimensional parameters.
 
