@@ -27,15 +27,16 @@ class LocalLinearization(LinearGaussianObservations):
     which in turn allows us to use :class:`LinearGaussianObservations`.
     """
 
-    def __init__(self, f: Fun, linearized_f: Fun):
-        """
+    def __init__(self, f: Fun, linearized_f: Fun, s_index=-1):
+        r"""
         Initializes the :class:`LocalLinearization` class.
 
         Args:
-            linearized_f: linearized function. Takes as mean of
+            f: corresponds to :math:`\alpha`.
+            linearized_f: corresponds to :math:`\frac{d \alpha}{d x}`.
         """
 
-        super().__init__()
+        super().__init__(s_index=s_index)
         self._f = f
         self._linearized_f = linearized_f
 
