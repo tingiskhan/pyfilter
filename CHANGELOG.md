@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.24.5
+ - Adds a proposal for locally linearized observation dynamics.
+
 # v0.24.4
  - Adds support for performing variational inference using particle filter.
 
