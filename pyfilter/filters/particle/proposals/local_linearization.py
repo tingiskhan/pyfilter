@@ -44,8 +44,14 @@ class LocalLinearization(LinearGaussianObservations):
         mean, _ = self._model.hidden.mean_scale(x)
 
         mu_t = x.propagate_from(mean)
-        # TODO: Currently only supports 0d processes
         d_alpha = self._linearized_f(mu_t, *parameters)
-        loc = self._f(mu_t, *parameters) - d_alpha * mean
+
+        if self._model.hidden.n_dim == 0:
+            prod = d_alpha * mean
+        else:
+            # TODO: Need to verify this with test...
+            prod = d_alpha @ mean.unsqueeze(-1)
+
+        loc = self._f(mu_t, *parameters) - prod
 
         return d_alpha, loc
