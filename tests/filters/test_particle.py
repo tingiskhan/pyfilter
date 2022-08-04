@@ -4,7 +4,7 @@ import torch
 from pyfilter.filters import particle as part
 import numpy as np
 
-from .models import linear_models
+from .models import linear_models, local_linearization
 
 
 def construct_filters(particles=1_000, **kwargs):
@@ -15,7 +15,7 @@ def construct_filters(particles=1_000, **kwargs):
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
-        linear_proposal = part.proposals.LinearGaussianObservations(parameter_index=0)
+        linear_proposal = part.proposals.LinearGaussianObservations(a_index=0)
         yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
 
 
@@ -196,3 +196,23 @@ class TestParticleFilters(object):
         high = high.numpy()
 
         assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+
+    @pytest.mark.parametrize("batch_shape, linearization", itertools.product(BATCH_SIZES, local_linearization()))
+    def test_local_linearization(self, batch_shape, linearization):
+        model, (f, f_prime) = linearization
+
+        x, y = model.sample_states(self.SERIES_LENGTH).get_paths()
+
+        for filt in (part.SISR, part.APF):
+            linearized_proposal = filt(model, 1_000, proposal=part.proposals.LocalLinearization(f, f_prime))
+            linearized_proposal.set_batch_shape(batch_shape)
+            linearized_result = linearized_proposal.batch_filter(y)
+
+            mean = linearized_result.filter_means[1:]
+            std = linearized_result.filter_variance[1:].sqrt()
+
+            low = mean - 2.0 * std
+            high = mean + 2.0 * std
+
+            # NB: Blunt, but kinda works...
+            assert ((low <= x) & (x <= high)).float.mean() > 0.95
