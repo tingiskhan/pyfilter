@@ -76,10 +76,10 @@ class LinearGaussianObservations(Proposal):
         c_ = c if not self._obs_is1d else c.unsqueeze(-2)
 
         c_transposed = c_.transpose(-2, -1)
-        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.n_dim)
+        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.event_shape)
         t2 = c_transposed.matmul(o_inv_cov).matmul(c_)
 
-        cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.n_dim) + t2).inverse()
+        cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.event_shape) + t2).inverse()
         t1 = h_var_inv * loc
 
         if self._hidden_is1d:
@@ -126,8 +126,8 @@ class LinearGaussianObservations(Proposal):
         c_ = c if not self._obs_is1d else c.unsqueeze(-2)
         c_transposed = c_.transpose(-2, -1)
 
-        diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.n_dim)
-        diag_o_var = construct_diag_from_flat(o_var, self._model.n_dim)
+        diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.event_shape)
+        diag_o_var = construct_diag_from_flat(o_var, self._model.event_shape)
 
         cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
 

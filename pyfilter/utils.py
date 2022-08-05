@@ -18,13 +18,13 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     return weights.sum(-1) ** 2 / (weights ** 2).sum(-1)
 
 
-def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
+def construct_diag_from_flat(x: torch.Tensor, event_shape: torch.Size) -> torch.Tensor:
     """
     Constructs a diagonal matrix based on ``x``. Solution found `here`_:
 
     Args:
         x: the diagonal of the matrix.
-        base_dim: the dimension of ``x``.
+        event_shape: event shape of the process for which matrix is to be constructed.
 
     Example:
         If ``x`` is of shape ``(100, 20)`` and the dimension is 0, then we get a tensor of shape ``(100, 20, 1)``.
@@ -32,13 +32,16 @@ def construct_diag_from_flat(x: torch.Tensor, base_dim: int) -> torch.Tensor:
     .. _here: https://stackoverflow.com/questions/47372508/how-to-construct-a-3d-tensor-where-every-2d-sub-tensor-is-a-diagonal-matrix-in-p
     """
 
-    if base_dim == 0:
-        return x.unsqueeze(-1).unsqueeze(-1)
+    assert len(event_shape) <= 1
 
-    if base_dim == 1 and x.shape[-1] < 2:
-        return x.unsqueeze(-1)
+    eye = torch.eye(event_shape.numel(), device=x.device, dtype=x.dtype)
 
-    return x.unsqueeze(-1) * torch.eye(x.shape[-1], device=x.device)
+    if len(event_shape) == 0:
+        diag = x.expand(*x.shape, 1, 1)
+    else:
+        diag = x.unsqueeze(-1)
+
+    return eye * diag
 
 
 def normalize(weights: torch.Tensor) -> torch.Tensor:
