@@ -42,7 +42,9 @@ class LinearGaussianObservations(Proposal):
         self._hidden_is1d = None
         self._obs_is1d = None
 
-    def get_offset_and_scale(self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_offset_and_scale(
+        self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Standardizes the observation.
 
