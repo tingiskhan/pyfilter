@@ -23,7 +23,7 @@ class LinearGaussianObservations(Proposal):
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def __init__(self, a_index: int = 0, b_index: int = None, s_index: int = -1):
+    def __init__(self, a_index: int = 0, b_index: int = None, s_index: int = -1, is_variance: bool = False):
         """
         Initializes the :class:`LinearGaussianObservations` class.
 
@@ -32,12 +32,15 @@ class LinearGaussianObservations(Proposal):
                 it's the first one. If you pass ``None`` it is assumed that this corresponds to an identity matrix.
             b_index: index of the parameter that constitutes :math:`b` in the observable process.
             s_index: index of the parameter that constitutes :math:`s` in the observable process.
+            is_variance: whether `s_index` parameter corresponds to a variance or standard deviation parameter.
         """
 
         super().__init__()
         self._a_index = a_index
         self._b_index = b_index
         self._s_index = s_index
+
+        self._is_variance = is_variance
 
         self._hidden_is1d = None
         self._obs_is1d = None
@@ -104,7 +107,7 @@ class LinearGaussianObservations(Proposal):
 
         parameters = self._model.functional_parameters()
         a_param, offset = self.get_offset_and_scale(x, parameters)
-        o_var_inv = parameters[self._s_index].pow(-2.0)
+        o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
 
         kernel = self._kernel(y - offset, mean, h_var_inv, o_var_inv, a_param)
         x_result = x_copy.propagate_from(values=kernel.sample)
@@ -118,7 +121,7 @@ class LinearGaussianObservations(Proposal):
 
         observable_parameters = self._model.functional_parameters()
         c, offset = self.get_offset_and_scale(x, observable_parameters)
-        o_var = observable_parameters[self._s_index].pow(2.0)
+        o_var = observable_parameters[self._s_index].pow(2.0 if not self._is_variance else 1.0)
 
         if self._hidden_is1d:
             c = c.unsqueeze(-1)
@@ -141,4 +144,4 @@ class LinearGaussianObservations(Proposal):
         return kernel.log_prob(y)
 
     def copy(self) -> "Proposal":
-        return LinearGaussianObservations(self._a_index, self._b_index, self._s_index)
+        return LinearGaussianObservations(self._a_index, self._b_index, self._s_index, is_variance=self._is_variance)
