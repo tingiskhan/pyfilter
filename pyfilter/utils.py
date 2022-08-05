@@ -37,7 +37,7 @@ def construct_diag_from_flat(x: torch.Tensor, event_shape: torch.Size) -> torch.
     eye = torch.eye(event_shape.numel(), device=x.device, dtype=x.dtype)
 
     if len(event_shape) == 0:
-        diag = x.expand(*x.shape, 1, 1)
+        diag = x.view(*x.shape, 1, 1)
     else:
         diag = x.unsqueeze(-1)
 
