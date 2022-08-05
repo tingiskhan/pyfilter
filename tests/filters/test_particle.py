@@ -211,10 +211,10 @@ class TestParticleFilters(object):
             mean = linearized_result.filter_means[1:]
             std = linearized_result.filter_variance[1:].sqrt()
 
-            low = mean - 2.0 * std
-            high = mean + 2.0 * std
+            low = mean - 3.0 * std
+            high = mean + 3.0 * std
 
             x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
 
             # NB: Blunt, but kinda works...
-            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.95).all()
+            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.9).all()
