@@ -57,3 +57,6 @@ class LocalLinearization(LinearGaussianObservations):
         loc = self._f(mu_t, *parameters) - prod
 
         return d_alpha, loc
+
+    def copy(self) -> "Proposal":
+        return LocalLinearization(self._f, self._linearized_f, self._s_index)
