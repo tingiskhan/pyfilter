@@ -52,7 +52,7 @@ class LocalLinearization(LinearGaussianObservations):
             prod = d_alpha * mean
         else:
             # TODO: Need to verify this with test...
-            prod = d_alpha @ mean.unsqueeze(-1)
+            prod = (d_alpha @ mean.unsqueeze(-1)).squeeze(-1)
 
         loc = self._f(mu_t, *parameters) - prod
 
