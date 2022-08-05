@@ -214,5 +214,7 @@ class TestParticleFilters(object):
             low = mean - 2.0 * std
             high = mean + 2.0 * std
 
+            x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
+
             # NB: Blunt, but kinda works...
-            assert (((low <= x) & (x <= high)).float.mean() > 0.95).all()
+            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.95).all()
