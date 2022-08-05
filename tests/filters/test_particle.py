@@ -34,6 +34,7 @@ def create_params(**kwargs):
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
+    NUM_STDS = 3.0
 
     @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params())
     def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc):
@@ -67,8 +68,8 @@ class TestParticleFilters(object):
         means = result.filter_means[1:]
         std = result.filter_variance[1:].sqrt()
 
-        low = means - std
-        high = means + std
+        low = means - self.NUM_STDS * std
+        high = means + self.NUM_STDS * std
 
         if model.hidden.n_dim < 1:
             low.unsqueeze_(-1)
@@ -185,8 +186,8 @@ class TestParticleFilters(object):
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
         std = smoothed[1:].std(dim=len(batch_size) + 1)
 
-        low = means - 2.0 * std
-        high = means + 2.0 * std
+        low = means - self.NUM_STDS * std
+        high = means + self.NUM_STDS * std
 
         if model.hidden.n_dim < 1:
             low.unsqueeze_(-1)
@@ -211,8 +212,8 @@ class TestParticleFilters(object):
             mean = linearized_result.filter_means[1:]
             std = linearized_result.filter_variance[1:].sqrt()
 
-            low = mean - 3.0 * std
-            high = mean + 3.0 * std
+            low = mean - self.NUM_STDS * std
+            high = mean + self.NUM_STDS * std
 
             x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
 
