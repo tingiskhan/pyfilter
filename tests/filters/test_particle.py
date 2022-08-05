@@ -218,4 +218,4 @@ class TestParticleFilters(object):
             x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
 
             # NB: Blunt, but kinda works...
-            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.9).all()
+            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.75).all()
