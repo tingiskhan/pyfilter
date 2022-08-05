@@ -58,5 +58,5 @@ class LocalLinearization(LinearGaussianObservations):
 
         return d_alpha, loc
 
-    def copy(self) -> "Proposal":
+    def copy(self) -> "LocalLinearization":
         return LocalLinearization(self._f, self._linearized_f, self._s_index)
