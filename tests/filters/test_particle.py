@@ -154,7 +154,7 @@ class TestParticleFilters(object):
             f = filter_(model_builder)
 
     # TODO: Use same method as for filter rather than copy paste
-    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params(record_states=True))
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params(particles=400, record_states=True))
     def test_smooth(self, models, filter_, batch_size, missing_perc):
         np.random.seed(123)
 
@@ -185,8 +185,8 @@ class TestParticleFilters(object):
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
         std = smoothed[1:].std(dim=len(batch_size) + 1)
 
-        low = means - std
-        high = means + std
+        low = means - 2.0 * std
+        high = means + 2.0 * std
 
         if model.hidden.n_dim < 1:
             low.unsqueeze_(-1)
@@ -215,4 +215,4 @@ class TestParticleFilters(object):
             high = mean + 2.0 * std
 
             # NB: Blunt, but kinda works...
-            assert ((low <= x) & (x <= high)).float.mean() > 0.95
+            assert (((low <= x) & (x <= high)).float.mean() > 0.95).all()
