@@ -141,4 +141,4 @@ class LinearGaussianObservations(Proposal):
         return kernel.log_prob(y)
 
     def copy(self) -> "Proposal":
-        return LinearGaussianObservations(self._a_index, self._b_index)
+        return LinearGaussianObservations(self._a_index, self._b_index, self._s_index)
