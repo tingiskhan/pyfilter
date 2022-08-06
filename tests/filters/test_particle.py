@@ -4,7 +4,7 @@ import torch
 from pyfilter.filters import particle as part
 import numpy as np
 
-from .models import linear_models
+from .models import linear_models, local_linearization
 
 
 def construct_filters(particles=1_000, **kwargs):
@@ -15,7 +15,7 @@ def construct_filters(particles=1_000, **kwargs):
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
         yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
-        linear_proposal = part.proposals.LinearGaussianObservations(parameter_index=0)
+        linear_proposal = part.proposals.LinearGaussianObservations(a_index=0)
         yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
 
 
@@ -34,6 +34,7 @@ def create_params(**kwargs):
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
+    NUM_STDS = 3.0
 
     @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params())
     def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc):
@@ -67,8 +68,8 @@ class TestParticleFilters(object):
         means = result.filter_means[1:]
         std = result.filter_variance[1:].sqrt()
 
-        low = means - std
-        high = means + std
+        low = means - self.NUM_STDS * std
+        high = means + self.NUM_STDS * std
 
         if model.hidden.n_dim < 1:
             low.unsqueeze_(-1)
@@ -154,7 +155,7 @@ class TestParticleFilters(object):
             f = filter_(model_builder)
 
     # TODO: Use same method as for filter rather than copy paste
-    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params(record_states=True))
+    @pytest.mark.parametrize("models, filter_, batch_size, missing_perc", create_params(particles=400, record_states=True))
     def test_smooth(self, models, filter_, batch_size, missing_perc):
         np.random.seed(123)
 
@@ -185,8 +186,8 @@ class TestParticleFilters(object):
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
         std = smoothed[1:].std(dim=len(batch_size) + 1)
 
-        low = means - std
-        high = means + std
+        low = means - self.NUM_STDS * std
+        high = means + self.NUM_STDS * std
 
         if model.hidden.n_dim < 1:
             low.unsqueeze_(-1)
@@ -196,3 +197,25 @@ class TestParticleFilters(object):
         high = high.numpy()
 
         assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+
+    @pytest.mark.parametrize("batch_shape, linearization", itertools.product(BATCH_SIZES, local_linearization()))
+    def test_local_linearization(self, batch_shape, linearization):
+        model, (f, f_prime) = linearization
+
+        x, y = model.sample_states(self.SERIES_LENGTH).get_paths()
+
+        for filt in (part.SISR, part.APF):
+            linearized_proposal = filt(model, 1_000, proposal=part.proposals.LocalLinearization(f, f_prime))
+            linearized_proposal.set_batch_shape(batch_shape)
+            linearized_result = linearized_proposal.batch_filter(y)
+
+            mean = linearized_result.filter_means[1:]
+            std = linearized_result.filter_variance[1:].sqrt()
+
+            low = mean - self.NUM_STDS * std
+            high = mean + self.NUM_STDS * std
+
+            x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
+
+            # NB: Blunt, but kinda works...
+            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.75).all()

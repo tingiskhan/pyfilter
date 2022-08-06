@@ -1,6 +1,6 @@
-import random
+from math import sqrt
+
 import numpy as np
-import pytest
 import torch
 from stochproc import timeseries as ts, distributions as dist
 from pyro.distributions import Normal
@@ -83,3 +83,42 @@ def linear_models():
     )
 
     yield joint_ssm, kalman_2d_2d
+
+
+def build_non_linear_mean(x, s):
+    return x.values ** 2.0 / 20.0
+
+
+def build_non_linear_deriv(x, s):
+    return x.values / 10.0
+
+
+def build_non_linear_dist(x, s):
+    return Normal(loc=build_non_linear_mean(x, s), scale=s)
+
+
+def mean_scale(x, s):
+    x_t = x.values
+    return x_t / 2.0 + 25 * x_t / (1 + x_t ** 2.0) + 8.0 * (1.2 * x.time_index).cos(), s
+
+
+class UKFState(object):
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self, x_t):
+        self.t += 1.0
+        return x_t / 2.0 + 25 * x_t / (1 + x_t ** 2.0) + 8.0 * np.cos(1.2 * self.t)
+
+
+def local_linearization():
+    sigma = sqrt(10.0)
+
+    init_dist = dist.DistributionModule(Normal, loc=0.0, scale=sqrt(5.0))
+    inc_dist = dist.DistributionModule(Normal, loc=0.0, scale=1.0)
+    ar = ts.AffineProcess(mean_scale, (sigma,), init_dist, inc_dist)
+
+    s = 1.0
+    obs_1d_1d = ts.StateSpaceModel(ar, build_non_linear_dist, parameters=(s,))
+
+    yield obs_1d_1d, (build_non_linear_mean, build_non_linear_deriv)
