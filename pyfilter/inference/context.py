@@ -1,6 +1,7 @@
 import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
+from copy import deepcopy
 
 import torch
 from .prior import Prior
@@ -281,7 +282,7 @@ class ParameterContext(object):
 
         with self.make_new() as new_context:
             for k, v in self._prior_dict.items():
-                p = new_context.named_parameter(k, v)
+                p = new_context.named_parameter(k, deepcopy(v))
                 p.data = f(self.get_parameter(k))
 
         return new_context
