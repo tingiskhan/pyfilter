@@ -283,7 +283,7 @@ class ParameterContext(object):
         with self.make_new() as new_context:
             for k, v in self._prior_dict.items():
                 p = new_context.named_parameter(k, v.cpu())
-                p.data = f(self.get_parameter(k).cpu())
+                p.data = f(self.get_parameter(k)).cpu()
 
         return new_context
 
