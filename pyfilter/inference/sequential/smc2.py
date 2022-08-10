@@ -54,7 +54,7 @@ class SMC2(SequentialParticleAlgorithm):
     def initialize(self) -> SMC2State:
         state = super(SMC2, self).initialize()
 
-        return SMC2State(state.w, state.filter_state, state.ess)
+        return SMC2State(state.w, state.filter_state)
 
     def _step(self, y, state: SMC2State):
         state.append_data(y)
@@ -111,7 +111,7 @@ class SMC2(SequentialParticleAlgorithm):
         w = new_filter_state.loglikelihood - state.filter_state.loglikelihood
         self._increases += 1
 
-        res = SMC2State(w, new_filter_state, state.ess, parsed_data=state.parsed_data)
-        res.exchange_tensor_tuples(state)
+        res = SMC2State(w, new_filter_state)
+        res.tensor_tuples = state.tensor_tuples
 
         return res

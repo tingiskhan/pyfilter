@@ -10,7 +10,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     Base state for sequential particle algorithms.
     """
 
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess: torch.Tensor = None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
         Initializes the :class:`SequentialAlgorithmState` class.
 
@@ -18,12 +18,11 @@ class SequentialAlgorithmState(FilterAlgorithmState):
             weights: the log weights associated with the particle approximation.
             filter_state: the current state of the filter. Somewhat misnamed as we keep track of the entire history of
                 the filter, should perhaps be called ``filter_result``.
-            ess: optional parameter, only used when re-initializing a state object.
         """
 
         super().__init__(filter_state)
         self.w = weights
-        self.tensor_tuples.make_deque("ess", get_ess(weights).unsqueeze(0) if ess is None else tuple(ess))
+        self.tensor_tuples.make_deque("ess", get_ess(weights).unsqueeze(0))
 
     @property
     def ess(self) -> torch.Tensor:
@@ -67,19 +66,17 @@ class SMC2State(SequentialAlgorithmState):
     observations.
     """
 
-    def __init__(self, weights: torch.Tensor, filter_state: FilterResult, ess=None, parsed_data: torch.Tensor = None):
+    def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
         Initializes the :class:`SMC2State` class.
 
         Args:
             weights: see base:
             filter_state: see base.
-            ess: see base.
-            parsed_data: the collection of observations that have been parsed by the algorithm.
         """
 
-        super().__init__(weights, filter_state, ess)
-        self.tensor_tuples.make_deque("parsed_data", tuple() if parsed_data is None else tuple(parsed_data))
+        super().__init__(weights, filter_state)
+        self.tensor_tuples.make_deque("parsed_data", tuple())
 
     @property
     def parsed_data(self) -> torch.Tensor:
