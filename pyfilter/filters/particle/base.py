@@ -85,7 +85,7 @@ class ParticleFilter(BaseFilter, ABC):
         device = x.values.device
 
         w = torch.zeros(self.particles, device=device)
-        prev_inds = torch.ones(w.shape, dtype=torch.long, device=device) * torch.arange(w.shape[-1], device=device)
+        prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
         ll = torch.zeros(self.batch_shape, device=device)
 
         return ParticleFilterState(x, w, ll, prev_inds)
