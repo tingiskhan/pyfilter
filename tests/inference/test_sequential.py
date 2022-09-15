@@ -13,6 +13,7 @@ def algorithms():
     yield lambda f: inf.sequential.NESS(f, particles)
     yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
     yield lambda f: inf.sequential.SMC2(f, particles, num_steps=10, distance_threshold=0.1)
+    yield lambda f: inf.sequential.NESSMC2(f, particles)
 
 
 def callbacks():
