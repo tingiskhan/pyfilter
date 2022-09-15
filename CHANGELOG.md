@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.24.10
+ - Utilizes `int` instead of `long`
+
 # v0.24.5
  - Adds a proposal for locally linearized observation dynamics.
 
