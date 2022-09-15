@@ -74,6 +74,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         for cb in self._callbacks:
             cb(self, y, state)
 
+        result.bump_iteration()
+
         return result
 
     def _step(self, y: torch.Tensor, state: SequentialAlgorithmState) -> SequentialAlgorithmState:
@@ -95,9 +97,9 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
         with logging.initialize(self, y.shape[0]):
             state = self.initialize()
-            for i, yt in enumerate(y):
+            for yt in y:
                 state = self.step(yt, state)
-                logging.do_log(i, state)
+                logging.do_log(state.current_iteration, state)
 
             return state
 
@@ -129,7 +131,6 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
         self._when_to_switch = switch
         self._is_switched = False
-        self._num_iterations = 0
 
     def make_first(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
@@ -162,10 +163,8 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         return self._first.initialize()
 
     def _step(self, y: torch.Tensor, state):
-        self._num_iterations += 1
-
         if not self._is_switched:
-            if self._num_iterations <= self._when_to_switch:
+            if state.current_iteration <= self._when_to_switch:
                 return self._first._step(y, state)
 
             self._is_switched = True

@@ -23,6 +23,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         super().__init__(filter_state)
         self.w = weights
         self.tensor_tuples.make_deque("ess", get_ess(weights).unsqueeze(0))
+        self.current_iteration: int = 0
 
     @property
     def ess(self) -> torch.Tensor:
@@ -43,6 +44,13 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         self.w += filter_state.get_loglikelihood()
         self.tensor_tuples["ess"].append(get_ess(self.w))
 
+    def bump_iteration(self):
+        """
+        Bumps current iteration by 1.
+        """
+
+        self.current_iteration += 1
+
     def normalized_weights(self) -> torch.Tensor:
         return normalize(self.w)
 
@@ -52,12 +60,14 @@ class SequentialAlgorithmState(FilterAlgorithmState):
     def state_dict(self):
         res = super(SequentialAlgorithmState, self).state_dict()
         res["w"] = self.w
+        res["current_iteration"] = self.current_iteration
 
         return res
 
     def load_state_dict(self, state_dict):
         super(SequentialAlgorithmState, self).load_state_dict(state_dict)
         self.w = state_dict["w"]
+        self.current_iteration = state_dict["current_iteration"]
 
 
 class SMC2State(SequentialAlgorithmState):
