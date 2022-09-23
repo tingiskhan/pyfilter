@@ -25,6 +25,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         """
 
         super().__init__(filter_, particles)
+        assert not self.context.is_quasi, f"'{self}' does not support quasi random sampling!"
 
         self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)
 
