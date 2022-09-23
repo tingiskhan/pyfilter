@@ -1,11 +1,11 @@
 import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
-from copy import deepcopy
 
 import torch
 from .prior import Prior
 from .parameter import PriorBoundParameter
+from .qmc import QuasiRegistry
 
 
 def verify_same_prior(x: Prior, y: Prior):
@@ -39,9 +39,12 @@ class ParameterContext(object):
     _contexts = threading.local()
     _contexts.stack = list()
 
-    def __init__(self):
+    def __init__(self, quasi_random: bool = False):
         """
         Initializes the :class:`ParameterContext` class.
+
+        Args:
+            quasi_random: whether to use quasi random sampling.
         """
 
         self._prior_dict: Dict[str, Prior] = OrderedDict([])
@@ -49,6 +52,15 @@ class ParameterContext(object):
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
+        self._quasi: bool = quasi_random
+
+    @property
+    def is_quasi(self) -> bool:
+        r"""
+        Whether we used quasi random sampling for initialization.
+        """
+
+        return self._quasi
 
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
@@ -163,6 +175,20 @@ class ParameterContext(object):
 
         return torch.cat(res, dim=-1)
 
+    def _apply_to_params(self, x: torch.Tensor, shape_dict, f):
+        r"""
+        Utility method.
+        """
+
+        index = 0
+        for n, p in self.get_parameters():
+            numel = shape_dict[n].numel()
+
+            param = x[..., index: index + numel]
+            f(p, param)
+
+            index += numel
+
     def unstack_parameters(self, x: torch.Tensor, constrained=True):
         """
         Un-stacks and updates parameters given the :class:`torch.Tensor` ``x``.
@@ -177,14 +203,7 @@ class ParameterContext(object):
 
         assert tot_len == x.shape[-1], "Total length of parameters is different from parameters in context!"
 
-        index = 0
-        for n, p in self.get_parameters():
-            numel = shape_dict[n].numel()
-
-            param = x[..., index : index + numel]
-            p.update_values_(param, constrained=constrained)
-
-            index += numel
+        self._apply_to_params(x, shape_dict, lambda u, v: u.update_values_(v, constrained=constrained))
 
     def initialize_parameters(self, batch_shape: torch.Size):
         """
@@ -194,8 +213,23 @@ class ParameterContext(object):
             batch_shape: the batch shape to use.
         """
 
-        for _, p in self.get_parameters():
-            p.sample_(batch_shape)
+        if not self.is_quasi:
+            for _, p in self.get_parameters():
+                p.sample_(batch_shape)
+
+            return
+
+        # NB: We use the un-constrained shape as that is what all algorithms use
+        self._quasi = True
+        out = self.stack_parameters(constrained=False)
+
+        QuasiRegistry.add_engine(out.shape[-1])
+        probs = QuasiRegistry.sample(out.shape[-1], batch_shape)
+
+        self._apply_to_params(
+            probs,
+            self._unconstrained_shape_dict, lambda u, v: u.inverse_sample_(v.view(batch_shape), constrained=False)
+        )
 
     def eval_priors(self, constrained=True) -> torch.Tensor:
         """
@@ -233,12 +267,12 @@ class ParameterContext(object):
             p.copy_(p[indices])
 
     @classmethod
-    def make_new(cls) -> "ParameterContext":
+    def make_new(cls, use_quasi: bool = False) -> "ParameterContext":
         """
         Creates a new context.
         """
 
-        return ParameterContext()
+        return ParameterContext(quasi_random=use_quasi)
 
     def state_dict(self) -> tOrderedDict[str, Any]:
         """
@@ -288,9 +322,9 @@ class ParameterContext(object):
         return new_context
 
 
-def make_context() -> ParameterContext:
+def make_context(use_quasi: bool = False) -> ParameterContext:
     """
     Helper method for creating a context.
     """
 
-    return ParameterContext.make_new()
+    return ParameterContext.make_new(use_quasi=use_quasi)
