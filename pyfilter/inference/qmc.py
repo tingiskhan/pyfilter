@@ -51,3 +51,7 @@ class QuasiRegistry(object):
     @classmethod
     def clear_registry(cls):
         cls._registry.registry.clear()
+
+    @classmethod
+    def remove_engine(cls, dim: int):
+        cls._registry.registry.pop(dim)
