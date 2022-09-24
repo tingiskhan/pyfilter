@@ -31,7 +31,7 @@ class QuasiRegistry(object):
         return cls._registry.registry[dim]
 
     @classmethod
-    def sample(cls, dim: int, shape: torch.Size) -> torch.Tensor:
+    def sample(cls, dim: int, shape: torch.Size, randomize: bool = True) -> torch.Tensor:
         numel = shape.numel()
         log2_samples = log2(numel)
 
@@ -41,6 +41,9 @@ class QuasiRegistry(object):
 
         if shape.numel() == 1:
             probs.squeeze_(0)
+
+        if randomize:
+            probs = (probs + torch.empty_like(probs).uniform_()).remainder(1.0)
 
         # NB: Same as in nchopin/particles to avoid "degeneracy"
         return 0.5 + (1.0 - EPS2) * (probs - 0.5)
