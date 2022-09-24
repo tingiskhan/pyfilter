@@ -1,4 +1,4 @@
-__version__ = "0.24.10"
+__version__ = "0.24.11"
 
 from . import filters
 from . import inference
