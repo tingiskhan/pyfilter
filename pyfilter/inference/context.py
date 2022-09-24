@@ -52,7 +52,9 @@ class ParameterContext(object):
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
+
         self._quasi: bool = quasi_random
+        self._quasi_key: int = None
 
     @property
     def is_quasi(self) -> bool:
@@ -80,6 +82,9 @@ class ParameterContext(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stack.remove(self)
+
+        if self._quasi_key:
+            QuasiRegistry.remove_engine(self._quasi_key)
 
         if exc_val:
             raise exc_val
@@ -223,8 +228,9 @@ class ParameterContext(object):
         self._quasi = True
         out = self.stack_parameters(constrained=False)
 
-        QuasiRegistry.add_engine(out.shape[-1])
-        probs = QuasiRegistry.sample(out.shape[-1], batch_shape).to(out.device)
+        self._quasi_key = out.shape[-1]
+        QuasiRegistry.add_engine(self._quasi_key)
+        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
