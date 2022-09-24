@@ -224,7 +224,7 @@ class ParameterContext(object):
         out = self.stack_parameters(constrained=False)
 
         QuasiRegistry.add_engine(out.shape[-1])
-        probs = QuasiRegistry.sample(out.shape[-1], batch_shape)
+        probs = QuasiRegistry.sample(out.shape[-1], batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
