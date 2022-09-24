@@ -8,7 +8,7 @@ from .models import linear_models
 
 
 def algorithms():
-    particles = 1_000
+    particles = 400
 
     yield lambda f: inf.sequential.NESS(f, particles)
     yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
