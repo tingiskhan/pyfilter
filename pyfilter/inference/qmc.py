@@ -1,6 +1,5 @@
 import threading
 from collections import OrderedDict
-from math import log2
 
 import torch.quasirandom
 
@@ -33,11 +32,9 @@ class QuasiRegistry(object):
     @classmethod
     def sample(cls, dim: int, shape: torch.Size, randomize: bool = True) -> torch.Tensor:
         numel = shape.numel()
-        log2_samples = log2(numel)
 
         engine = cls.get_engine(dim)
-        # TODO: Might have to be randomized?
-        probs = engine.draw(numel) if not log2_samples.is_integer() else engine.draw_base2(int(log2(numel)))
+        probs = engine.draw(numel)
 
         if shape.numel() == 1:
             probs.squeeze_(0)
