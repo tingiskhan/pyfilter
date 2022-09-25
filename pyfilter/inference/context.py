@@ -39,12 +39,9 @@ class ParameterContext(object):
     _contexts = threading.local()
     _contexts.stack = list()
 
-    def __init__(self, quasi_random: bool = False):
+    def __init__(self):
         """
         Initializes the :class:`ParameterContext` class.
-
-        Args:
-            quasi_random: whether to use quasi random sampling.
         """
 
         self._prior_dict: Dict[str, Prior] = OrderedDict([])
@@ -52,17 +49,6 @@ class ParameterContext(object):
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
-
-        self._quasi: bool = quasi_random
-        self._quasi_key: int = None
-
-    @property
-    def is_quasi(self) -> bool:
-        r"""
-        Whether we used quasi random sampling for initialization.
-        """
-
-        return self._quasi
 
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
@@ -82,9 +68,6 @@ class ParameterContext(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stack.remove(self)
-
-        if self._quasi_key:
-            QuasiRegistry.remove_engine(self._quasi_key)
 
         if exc_val:
             raise exc_val
@@ -218,24 +201,8 @@ class ParameterContext(object):
             batch_shape: the batch shape to use.
         """
 
-        if not self.is_quasi:
-            for _, p in self.get_parameters():
-                p.sample_(batch_shape)
-
-            return
-
-        # NB: We use the un-constrained shape as that is what all algorithms use
-        self._quasi = True
-        out = self.stack_parameters(constrained=False)
-
-        self._quasi_key = out.shape[-1]
-        QuasiRegistry.add_engine(self._quasi_key)
-        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
-
-        self._apply_to_params(
-            probs,
-            self._unconstrained_shape_dict, lambda u, v: u.inverse_sample_(v.view(batch_shape), constrained=False)
-        )
+        for _, p in self.get_parameters():
+            p.sample_(batch_shape)
 
     def eval_priors(self, constrained=True) -> torch.Tensor:
         """
@@ -272,13 +239,12 @@ class ParameterContext(object):
         for n, p in self.get_parameters():
             p.copy_(p[indices])
 
-    @classmethod
-    def make_new(cls, use_quasi: bool = False) -> "ParameterContext":
+    def make_new(self) -> "ParameterContext":
         """
         Creates a new context.
         """
 
-        return ParameterContext(quasi_random=use_quasi)
+        return ParameterContext()
 
     def state_dict(self) -> tOrderedDict[str, Any]:
         """
@@ -328,9 +294,48 @@ class ParameterContext(object):
         return new_context
 
 
-def make_context(use_quasi: bool = False) -> ParameterContext:
+class QuasiParameterContext(ParameterContext):
+    r"""
+    Implements a parameter context for quasi random sampling.
+    """
+
+    def __init__(self, randomize: bool = True):
+        """
+        Initializes the :class:`QuasiParameterContext` class.
+        """
+
+        super(QuasiParameterContext, self).__init__()
+        self._quasi_key: int = None
+        self._randomize = randomize
+
+    def initialize_parameters(self, batch_shape: torch.Size):
+        # NB: We use the un-constrained shape as that is what all algorithms use
+        out = self.stack_parameters(constrained=False)
+
+        self._quasi_key = out.shape[-1]
+        QuasiRegistry.add_engine(self._quasi_key)
+        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
+
+        self._apply_to_params(
+            probs,
+            self._unconstrained_shape_dict, lambda u, v: u.inverse_sample_(v.view(batch_shape), constrained=False)
+        )
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        QuasiRegistry.remove_engine(self._quasi_key)
+        
+        super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
+
+    def make_new(self) -> "ParameterContext":
+        return QuasiParameterContext(randomize=self._randomize)
+
+
+def make_context(use_quasi: bool = False, randomize: bool = True) -> ParameterContext:
     """
     Helper method for creating a context.
     """
 
-    return ParameterContext.make_new(use_quasi=use_quasi)
+    if use_quasi:
+        return QuasiParameterContext(randomize=randomize)
+
+    return ParameterContext()
