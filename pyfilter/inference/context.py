@@ -313,7 +313,7 @@ class QuasiParameterContext(ParameterContext):
         out = self.stack_parameters(constrained=False)
 
         self._quasi_key = out.shape[-1]
-        QuasiRegistry.add_engine(self._quasi_key)
+        QuasiRegistry.add_engine(self._quasi_key, self._randomize)
         probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
@@ -322,8 +322,9 @@ class QuasiParameterContext(ParameterContext):
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        QuasiRegistry.remove_engine(self._quasi_key)
-        
+        if len(self.stack) == 1:
+            QuasiRegistry.remove_engine(self._quasi_key)
+
         super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "ParameterContext":
