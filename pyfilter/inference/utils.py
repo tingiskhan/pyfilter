@@ -22,9 +22,6 @@ class QuasiMultivariateNormal(MultivariateNormal):
 
     def sample(self, sample_shape=torch.Size()):
         shape = self._extended_shape(sample_shape)
-
-        # TODO: This should be in __init__...
-        QuasiRegistry.add_engine(self.event_shape.numel())
         probs = QuasiRegistry.sample(self.event_shape.numel(), sample_shape).to(self.loc.device)
 
         probs.resize_(shape)
