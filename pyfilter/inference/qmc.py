@@ -75,4 +75,5 @@ class QuasiRegistry(object):
 
     @classmethod
     def remove_engine(cls, dim: int):
-        cls._registry.registry.pop(dim)
+        if dim in cls._registry.registry:
+            cls._registry.registry.pop(dim)
