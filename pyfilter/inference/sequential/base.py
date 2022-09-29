@@ -50,10 +50,10 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
         """
 
+        self.context.initialize_parameters(self._parameter_shape)
+
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)
-
-        self.context.initialize_parameters(self._parameter_shape)
 
         return SequentialAlgorithmState(init_weights, self.filter.initialize_with_result(init_state))
 
