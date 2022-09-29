@@ -23,6 +23,7 @@ class _EngineContainer(object):
 
         self._engine = engine
         self._randomize = randomize
+        self._rotation_vector: torch.Tensor = None
 
     def draw(self, shape: torch.Size):
         numel = shape.numel()
@@ -33,9 +34,12 @@ class _EngineContainer(object):
             probs.squeeze_(0)
 
         if self._randomize:
-            # TODO: Verify below
-            rands = torch.empty(probs.shape[-1], device=probs.device).uniform_()
-            probs = (probs + rands).remainder(1.0)
+            # TODO: Verify below. From the Quasi MH-paper it seems as though the rotation vector should be constant
+            #  across samples
+            if self._rotation_vector is None:
+                self._rotation_vector = torch.empty(probs.shape[-1], device=probs.device).uniform_()
+
+            probs = (probs + self._rotation_vector).remainder(1.0)
 
         # NB: Same as in nchopin/particles to avoid "degeneracy"
         return 0.5 + (1.0 - EPS2) * (probs - 0.5)
