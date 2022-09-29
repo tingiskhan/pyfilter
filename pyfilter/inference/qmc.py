@@ -42,7 +42,10 @@ class _EngineContainer(object):
             probs = (probs + self._rotation_vector).remainder(1.0)
 
         # NB: Same as in nchopin/particles to avoid "degeneracy"
-        return 0.5 + (1.0 - EPS2) * (probs - 0.5)
+        safe_probs = 0.5 + (1.0 - EPS2) * (probs - 0.5)
+
+        new_shape = shape + torch.Size([self._engine.dimension])
+        return safe_probs.reshape(new_shape)
 
 
 class QuasiRegistry(object):

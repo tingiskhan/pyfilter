@@ -24,8 +24,6 @@ class QuasiMultivariateNormal(MultivariateNormal):
         shape = self._extended_shape(sample_shape)
         probs = QuasiRegistry.sample(self.event_shape.numel(), sample_shape).to(self.loc.device)
 
-        probs.resize_(shape)
-
         loc = torch.zeros(shape, device=self.loc.device)
         scale = torch.ones(shape, device=self.loc.device)
         normal = Normal(loc, scale)
