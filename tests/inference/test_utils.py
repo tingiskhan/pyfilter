@@ -6,9 +6,9 @@ from pyfilter.inference import utils, qmc
 BATCH_SHAPES = [torch.Size([]), torch.Size([512, 1]), torch.Size([50, 2, 3])]
 
 
-@pytest.fixture()
-def clear_registry():
-    qmc.QuasiRegistry.add_engine(3, False)
+@pytest.fixture(params=[True, False])
+def clear_registry(request):
+    qmc.QuasiRegistry.add_engine(3, request.param)
     yield
     qmc.QuasiRegistry.clear_registry()
 
