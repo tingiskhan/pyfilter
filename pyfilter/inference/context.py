@@ -318,7 +318,7 @@ class QuasiParameterContext(ParameterContext):
 
         self._apply_to_params(
             probs,
-            self._unconstrained_shape_dict, lambda u, v: u.inverse_sample_(v.view(batch_shape), constrained=False)
+            self._unconstrained_shape_dict, lambda u, v: u.inverse_sample_(v, constrained=False)
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
