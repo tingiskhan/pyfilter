@@ -8,6 +8,8 @@ BATCH_SHAPES = [torch.Size([]), torch.Size([512, 1]), torch.Size([50, 2, 3])]
 
 @pytest.fixture()
 def clear_registry():
+    qmc.QuasiRegistry.add_engine(3, False)
+    yield
     qmc.QuasiRegistry.clear_registry()
 
 
