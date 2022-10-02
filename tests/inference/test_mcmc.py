@@ -1,5 +1,3 @@
-import itertools
-
 import pytest
 from pyfilter import inference as inf, filters as filts
 from .models import linear_models
@@ -10,11 +8,9 @@ def proposals():
     yield inf.batch.mcmc.proposals.RandomWalk(scale=5e-2), False
 
 
-PARAMETERS = itertools.product(linear_models(), proposals())
-
-
 class TestPMCMC(object):
-    @pytest.mark.parametrize("models, kernel_and_record_states", PARAMETERS)
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("kernel_and_record_states", proposals())
     def test_pmcmc(self, models, kernel_and_record_states):
         true_model, build_model = models
         _, y = true_model.sample_states(50).get_paths()
@@ -24,7 +20,7 @@ class TestPMCMC(object):
             filter_ = filts.APF(lambda u: build_model(u, use_cuda=False), 150, record_states=record_states)
 
             # TODO: Just make sure it runs
-            pmcmc = inf.batch.mcmc.PMMH(filter_, 100, initializer="mean", proposal=kernel)
+            pmcmc = inf.batch.mcmc.PMMH(filter_, 10, initializer="mean", proposal=kernel)
 
             result = pmcmc.fit(y)
 
