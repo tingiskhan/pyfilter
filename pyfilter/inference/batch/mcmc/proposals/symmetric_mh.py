@@ -4,7 +4,6 @@ from ....utils import construct_mvn
 from ....context import QuasiParameterContext
 
 
-# TODO: Should perhaps create a quasi-specific class for this...?
 class SymmetricMH(BaseProposal):
     """
     Builds a symmetric proposal as defined in the original `SMC2` paper.
