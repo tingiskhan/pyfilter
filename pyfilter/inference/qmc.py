@@ -25,7 +25,14 @@ class _EngineContainer(object):
         self._randomize = randomize
         self._rotation_vector: torch.Tensor = None
 
-    def draw(self, shape: torch.Size):
+    def draw(self, shape: torch.Size) -> torch.Tensor:
+        """
+        Draws samples from the QMC engine.
+
+        Args:
+            shape: shape to draw.
+        """
+
         numel = shape.numel()
 
         probs = self._engine.draw(numel)
@@ -57,15 +64,28 @@ class QuasiRegistry(object):
     _registry.registry = OrderedDict([])
 
     @classmethod
-    def add_engine(cls, dim: int, randomize: bool, raise_if_exists: int = False) -> _EngineContainer:
-        if dim in cls._registry.registry:
+    def add_engine(cls, dim: int, randomize: bool, raise_if_exists: int = False) -> int:
+        """
+        Adds an engine to the QMC registry.
+
+        Args:
+            dim: dimension of to sample.
+            randomize: whether to randomize the QMC points via rotation.
+            raise_if_exists: raise error if trying to create an engine that already exists.
+
+        Returns:
+            Returns the key to use when sampling. The key is currently the dimension of the space.
+        """
+
+        key = dim
+        if key in cls._registry.registry:
             if raise_if_exists:
                 raise KeyError("Already have an engine with the same dimension!")
 
-            return cls.get_engine(dim)
+            return key
 
-        engine = cls._registry.registry[dim] = _EngineContainer(qr.SobolEngine(dimension=dim, scramble=True), randomize)
-        return engine
+        cls._registry.registry[key] = _EngineContainer(qr.SobolEngine(dimension=dim, scramble=True), randomize)
+        return key
 
     @classmethod
     def get_engine(cls, dim: int) -> _EngineContainer:
