@@ -294,6 +294,7 @@ class ParameterContext(object):
         return new_context
 
 
+# TODO: Figure out whether you need to save the QMC state in the state dict?
 class QuasiParameterContext(ParameterContext):
     r"""
     Implements a parameter context for quasi random sampling.
