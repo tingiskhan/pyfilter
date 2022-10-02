@@ -314,7 +314,7 @@ class QuasiParameterContext(ParameterContext):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
-        self._quasi_key = QuasiRegistry.add_engine(self._quasi_key, self._randomize)
+        self._quasi_key = QuasiRegistry.add_engine(out.shape[-1], self._randomize)
         probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
