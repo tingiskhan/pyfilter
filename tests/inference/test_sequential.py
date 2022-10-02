@@ -26,7 +26,9 @@ def make_parameters():
 
 
 class TestSequential(object):
-    @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("algorithm", algorithms())
+    @pytest.mark.parametrize("callback", callbacks())
     def test_algorithms(self, models, algorithm, callback):
         torch.manual_seed(123)
 
@@ -42,7 +44,9 @@ class TestSequential(object):
             # TODO: Add something to test
             result = alg.fit(y)
 
-    @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("algorithm", algorithms())
+    @pytest.mark.parametrize("callback", callbacks())
     def test_algorithms_serialize(self, models, algorithm, callback):
         torch.manual_seed(123)
 
