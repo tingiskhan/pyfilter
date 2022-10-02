@@ -1,11 +1,11 @@
 import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
-from copy import deepcopy
 
 import torch
 from .prior import Prior
 from .parameter import PriorBoundParameter
+from .qmc import QuasiRegistry
 
 
 def verify_same_prior(x: Prior, y: Prior):
@@ -27,6 +27,7 @@ def verify_same_prior(x: Prior, y: Prior):
         assert (v == y_params[k]).all(), f"Parameter {k} differs between ``x`` and ``y``!"
 
 
+# TODO: Consider inheriting from torch.nn.Module
 class ParameterContext(object):
     """
     Defines a parameter context in which we define parameters and priors.
@@ -163,6 +164,20 @@ class ParameterContext(object):
 
         return torch.cat(res, dim=-1)
 
+    def _apply_to_params(self, x: torch.Tensor, shape_dict, f):
+        r"""
+        Utility method.
+        """
+
+        index = 0
+        for n, p in self.get_parameters():
+            numel = shape_dict[n].numel()
+
+            param = x[..., index: index + numel]
+            f(p, param)
+
+            index += numel
+
     def unstack_parameters(self, x: torch.Tensor, constrained=True):
         """
         Un-stacks and updates parameters given the :class:`torch.Tensor` ``x``.
@@ -177,14 +192,7 @@ class ParameterContext(object):
 
         assert tot_len == x.shape[-1], "Total length of parameters is different from parameters in context!"
 
-        index = 0
-        for n, p in self.get_parameters():
-            numel = shape_dict[n].numel()
-
-            param = x[..., index : index + numel]
-            p.update_values_(param, constrained=constrained)
-
-            index += numel
+        self._apply_to_params(x, shape_dict, lambda u, v: u.update_values_(v, constrained=constrained))
 
     def initialize_parameters(self, batch_shape: torch.Size):
         """
@@ -232,8 +240,7 @@ class ParameterContext(object):
         for n, p in self.get_parameters():
             p.copy_(p[indices])
 
-    @classmethod
-    def make_new(cls) -> "ParameterContext":
+    def make_new(self) -> "ParameterContext":
         """
         Creates a new context.
         """
@@ -288,9 +295,50 @@ class ParameterContext(object):
         return new_context
 
 
-def make_context() -> ParameterContext:
+# TODO: Figure out whether you need to save the QMC state in the state dict?
+class QuasiParameterContext(ParameterContext):
+    r"""
+    Implements a parameter context for quasi random sampling.
+    """
+
+    def __init__(self, randomize: bool = True):
+        """
+        Initializes the :class:`QuasiParameterContext` class.
+        """
+
+        super(QuasiParameterContext, self).__init__()
+        self._quasi_key: int = None
+        self._randomize = randomize
+
+    def initialize_parameters(self, batch_shape: torch.Size):
+        # NB: We use the un-constrained shape as that is what all algorithms use
+        out = self.stack_parameters(constrained=False)
+
+        self._quasi_key = QuasiRegistry.add_engine(out.shape[-1], self._randomize)
+        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
+
+        self._apply_to_params(
+            probs,
+            self._unconstrained_shape_dict,
+            lambda u, v: u.inverse_sample_(v.view(batch_shape + u.prior().event_shape), constrained=False)
+        )
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if len(self.stack) == 1:
+            QuasiRegistry.remove_engine(self._quasi_key)
+
+        super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
+
+    def make_new(self) -> "ParameterContext":
+        return QuasiParameterContext(randomize=self._randomize)
+
+
+def make_context(use_quasi: bool = False, randomize: bool = True) -> ParameterContext:
     """
     Helper method for creating a context.
     """
 
-    return ParameterContext.make_new()
+    if use_quasi:
+        return QuasiParameterContext(randomize=randomize)
+
+    return ParameterContext()

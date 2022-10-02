@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.24.11
+ - Adds support for using QMC points in `SMC2`
+
 # v0.24.10
  - Utilizes `int` instead of `long`
 

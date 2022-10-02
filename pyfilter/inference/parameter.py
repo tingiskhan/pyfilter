@@ -116,3 +116,20 @@ class PriorBoundParameter(Parameter):
 
     def __repr__(self):
         return f"PriorBoundParameter containing:\n{super(Parameter, self).__repr__()}"
+
+    def inverse_sample_(self, probs: torch.Tensor, constrained: bool = True):
+        r"""
+        Samples from the prior by means of inversion.
+
+        Args:
+            probs: probabilities to use when inverting.
+            constrained: whether to sample constrained.
+        """
+
+        if constrained:
+            self.data = self.prior.build_distribution().icdf(probs)
+            return
+
+        unconstrained = self.prior.unconstrained_prior
+        samples = unconstrained.icdf(probs)
+        self.data = self.prior.get_constrained(samples)

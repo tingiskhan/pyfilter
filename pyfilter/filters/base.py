@@ -196,7 +196,6 @@ class BaseFilter(ABC):
         prediction = self.predict(state)
 
         result_is_none = result is None
-        # TODO: Would be neat to record the intermediary results to the result object such that we may perform smoothing
         while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
             state = prediction.create_state_from_prediction(self._model)
 

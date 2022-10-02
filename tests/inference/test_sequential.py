@@ -1,5 +1,3 @@
-import itertools
-
 import pytest
 import torch
 
@@ -7,9 +5,7 @@ from pyfilter import inference as inf, filters as filts
 from .models import linear_models
 
 
-def algorithms():
-    particles = 1_000
-
+def algorithms(particles=400):
     yield lambda f: inf.sequential.NESS(f, particles)
     yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
     yield lambda f: inf.sequential.SMC2(f, particles, num_steps=10, distance_threshold=0.1)
@@ -21,19 +17,17 @@ def callbacks():
     yield None
 
 
-def make_parameters():
-    return itertools.product(linear_models(), algorithms(), callbacks())
+def quasi_supported_algorithms(particles=400):
+    yield lambda f: inf.sequential.SMC2(f, particles)
 
 
 class TestSequential(object):
-    @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
-    def test_algorithms(self, models, algorithm, callback):
+    @classmethod
+    def do_test_fit(cls, true_model, build_model, algorithm, callback, **kwargs):
         torch.manual_seed(123)
-
-        true_model, build_model = models
         _, y = true_model.sample_states(100).get_paths()
 
-        with inf.make_context() as context:
+        with inf.make_context(**kwargs) as context:
             filter_ = filts.APF(build_model, 200)
             alg = algorithm(filter_)
 
@@ -42,7 +36,15 @@ class TestSequential(object):
             # TODO: Add something to test
             result = alg.fit(y)
 
-    @pytest.mark.parametrize("models, algorithm, callback", make_parameters())
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("algorithm", algorithms())
+    @pytest.mark.parametrize("callback", callbacks())
+    def test_algorithms(self, models, algorithm, callback):
+        self.do_test_fit(*models, algorithm, callback)
+
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("algorithm", algorithms())
+    @pytest.mark.parametrize("callback", callbacks())
     def test_algorithms_serialize(self, models, algorithm, callback):
         torch.manual_seed(123)
 
@@ -82,3 +84,9 @@ class TestSequential(object):
                     (new_result.ess.shape[0] == y.shape[0] + 1) and
                     (new_result.filter_state.latest_state.x.time_index == y.shape[0]).all()
             )
+
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("algorithm", quasi_supported_algorithms())
+    @pytest.mark.parametrize("randomize", [False, True])
+    def test_quasi(self, models, algorithm, randomize):
+        self.do_test_fit(*models, algorithm, None, use_quasi=True, randomize=randomize)
