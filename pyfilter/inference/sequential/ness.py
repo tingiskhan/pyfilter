@@ -1,9 +1,11 @@
-from .base import SequentialParticleAlgorithm
-from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
 from torch import isfinite
 from abc import ABC
-from .state import SequentialAlgorithmState
 from typing import Optional
+
+from .state import SequentialAlgorithmState
+from .base import SequentialParticleAlgorithm
+from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
+from ..context import QuasiParameterContext
 
 
 class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
@@ -25,7 +27,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         """
 
         super().__init__(filter_, particles)
-        assert not self.context.is_quasi, f"'{self}' does not support quasi random sampling!"
+        assert not isinstance(self.context, QuasiParameterContext), f"'{self}' does not support quasi random sampling!"
 
         self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)
 
