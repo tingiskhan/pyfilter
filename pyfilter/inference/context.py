@@ -27,6 +27,7 @@ def verify_same_prior(x: Prior, y: Prior):
         assert (v == y_params[k]).all(), f"Parameter {k} differs between ``x`` and ``y``!"
 
 
+# TODO: Consider inheriting from torch.nn.Module
 class ParameterContext(object):
     """
     Defines a parameter context in which we define parameters and priors.
