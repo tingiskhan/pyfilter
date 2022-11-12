@@ -76,21 +76,22 @@ class PMMH(BaseAlgorithm):
 
             with make_context() as sub_context:
                 proposal_filter = self.filter.copy()
+                proposal_filter.initialize_model(sub_context)
                 sub_context.initialize_parameters(self._parameter_shape)
 
-                for i in range(self.num_samples):
-                    accepted = run_pmmh(
-                        self.context,
-                        state,
-                        self._proposal,
-                        prop_dist,
-                        proposal_filter,
-                        sub_context,
-                        y,
-                        mutate_kernel=True,
-                    )
+            for i in range(self.num_samples):
+                accepted = run_pmmh(
+                    self.context,
+                    state,
+                    self._proposal,
+                    prop_dist,
+                    proposal_filter,
+                    sub_context,
+                    y,
+                    mutate_kernel=True,
+                )
 
-                    state.update_chain(dict(self.context.get_parameters()))
-                    logging.do_log(i, state)
+                state.update_chain(dict(self.context.get_parameters()))
+                logging.do_log(i, state)
 
             return state
