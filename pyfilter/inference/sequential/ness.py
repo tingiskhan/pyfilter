@@ -13,7 +13,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     Abstract base class for purely online particle algorithms.
     """
 
-    def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False):
+    def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False, context=None):
         """
         Initializes the :class:`BaseOnlineAlgorithm` class.
 
@@ -26,7 +26,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
         """
 
-        super().__init__(filter_, particles)
+        super().__init__(filter_, particles, context=context)
         assert not isinstance(self.context, QuasiParameterContext), f"'{self}' does not support quasi random sampling!"
 
         self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)

@@ -48,35 +48,38 @@ class ParticleMetropolisHastings(BaseKernel):
         previous_distance = 0.0
 
         parameter_shape = torch.Size([old_params.shape[0], 1])
-        with context.make_new() as sub_context:
+        
+        with context.make_new() as sub_context:            
             proposal_filter = filter_.copy()
+            
+            proposal_filter.initialize_model(sub_context)            
             sub_context.initialize_parameters(parameter_shape)
 
-            for _ in range(self._n_steps):
-                to_accept = run_pmmh(
-                    context,
-                    state,
-                    self._proposal,
-                    dist,
-                    proposal_filter,
-                    sub_context,
-                    state.parsed_data,
-                    shape,
-                    mutate_kernel=False,
-                )
+        for _ in range(self._n_steps):
+            to_accept = run_pmmh(
+                context,
+                state,
+                self._proposal,
+                dist,
+                proposal_filter,
+                sub_context,
+                state.parsed_data,
+                shape,
+                mutate_kernel=False,
+            )
 
-                accepted |= to_accept
+            accepted |= to_accept
 
-                if not self._is_adaptive:
-                    continue
+            if not self._is_adaptive:
+                continue
 
-                new_params: torch.Tensor = context.stack_parameters(constrained=False)
-                distance = (new_params - old_params).norm(dim=0, p=INFTY).mean()
+            new_params: torch.Tensor = context.stack_parameters(constrained=False)
+            distance = (new_params - old_params).norm(dim=0, p=INFTY).mean()
 
-                if (distance - previous_distance).abs() <= (self._dist_thresh * previous_distance):
-                    break
+            if (distance - previous_distance).abs() <= (self._dist_thresh * previous_distance):
+                break
 
-                previous_distance = distance
+            previous_distance = distance
 
         self.accepted = accepted.float().mean()
         state.w.fill_(0.0)

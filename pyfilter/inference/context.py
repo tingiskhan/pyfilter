@@ -8,23 +8,9 @@ from .parameter import PriorBoundParameter
 from .qmc import QuasiRegistry
 
 
-def verify_same_prior(x: Prior, y: Prior):
-    """
-    Verifies that ``x`` and ``y`` are equivalent.
+class NotSamePriorError(Exception):
+    pass
 
-    Args:
-        x: prior ``x``.
-        y: prior ``y``.
-    """
-
-    x_dist = x.build_distribution()
-    y_dist = y.build_distribution()
-
-    assert x_dist.__class__ == y_dist.__class__, "Seems to not be the same distribution!"
-
-    y_params = y._get_parameters()
-    for k, v in x._get_parameters().items():
-        assert (v == y_params[k]).all(), f"Parameter {k} differs between ``x`` and ``y``!"
 
 
 # TODO: Consider inheriting from torch.nn.Module
@@ -104,10 +90,10 @@ class ParameterContext(object):
         """
 
         if name in self._prior_dict:
-            verify_same_prior(self._prior_dict[name], prior)
-            return self.get_parameter(name)
-
-        assert self in self.stack, "Cannot register parameters in an inactive context!"
+            if self._prior_dict[name].check_equal(prior):
+                return self.get_parameter(name)
+            
+            raise NotSamePriorError(f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!")
 
         self._prior_dict[name] = prior
 
@@ -116,6 +102,7 @@ class ParameterContext(object):
 
         v = dist.sample()
 
+        # TODO: Set name and context on init...
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
         parameter.set_context(self)
         parameter.set_name(name)
@@ -157,6 +144,7 @@ class ParameterContext(object):
 
         res = tuple()
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
+        
         for n, p in self.get_parameters():
             shape = shape_dict[n]
             v = (p if constrained else p.get_unconstrained()).view(-1, shape.numel())
@@ -287,12 +275,20 @@ class ParameterContext(object):
             f: function to apply.
         """
 
-        with self.make_new() as new_context:
-            for k, v in self._prior_dict.items():
-                p = new_context.named_parameter(k, v.cpu())
-                p.data = f(self.get_parameter(k)).cpu()
+        new_context = self.make_new()
+        
+        for k, v in self._prior_dict.items():
+            p = new_context.named_parameter(k, v.cpu())
+            p.data = f(self.get_parameter(k)).cpu()
 
         return new_context
+
+    def copy(self):
+        r"""
+        Performs a copy of the current context.
+        """
+
+        return self.apply_fun(lambda p: p.clone())
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?

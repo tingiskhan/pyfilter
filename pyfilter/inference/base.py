@@ -1,7 +1,6 @@
 from abc import ABC
 
 import torch
-from typing import Tuple
 
 from ..filters import BaseFilter
 from .logging import DefaultLogger
@@ -14,17 +13,19 @@ class BaseAlgorithm(ABC):
     Abstract base class for algorithms.
     """
 
-    def __init__(self, filter_: BaseFilter):
+    def __init__(self, filter_: BaseFilter, context: ParameterContext = None):
         """
         Initializes the :class:`BaseFilterAlgorithm` class.
 
         Args:
-             filter_: the filter to use for approximating the log likelihood.
+             filter_: filter to use for approximating the log likelihood.
+             context: parameter context to use. If not passed, tries to get from the stack.
         """
 
         super().__init__()
+
         self._filter = filter_
-        self.context: ParameterContext = ParameterContext.get_context()
+        self.context: ParameterContext = context or ParameterContext.get_context()
 
     @property
     def filter(self) -> BaseFilter:

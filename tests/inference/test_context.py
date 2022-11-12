@@ -4,6 +4,8 @@ import torch
 from pyfilter import inference as inf
 from stochproc import timeseries as ts
 from pyro.distributions import Normal, LogNormal
+
+from pyfilter.inference.context import NotSamePriorError
 from .models import build_model
 
 
@@ -92,12 +94,6 @@ class TestContext(object):
             for p_model, (n, p) in zip(model.hidden.functional_parameters(), context.get_parameters()):
                 assert (p == old_dict[n][indices]).all() and (p_model is p)
 
-    def test_assert_fails_register_inactive(self):
-        context = inf.make_context()
-
-        with pytest.raises(AssertionError):
-            a = context.named_parameter("a", inf.Prior(Normal, loc=0.0, scale=1.0))
-
     def test_assert_sampling_multiple_same(self):
         with inf.make_context() as context:
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
@@ -105,7 +101,7 @@ class TestContext(object):
 
             alpha2 = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
 
-            with pytest.raises(AssertionError):
+            with pytest.raises(NotSamePriorError):
                 alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=2.0))
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
@@ -164,3 +160,15 @@ class TestContext(object):
             context.initialize_parameters(shape)
 
             assert beta.shape == shape
+
+    @pytest.mark.parametrize("use_quasi", [False, True])
+    @pytest.mark.parametrize("shape", BATCH_SHAPES)
+    def test_copy_context(self, use_quasi, shape):
+        with inf.make_context(use_quasi=use_quasi) as context:
+            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+        
+        context.initialize_parameters(shape)
+        copy_context = context.copy()
+
+        for (ck, cv), (k, v) in zip(copy_context.parameters.items(), context.parameters.items()):
+            assert (ck == k) and (cv == v).all() and (cv.prior.check_equal(v.prior))

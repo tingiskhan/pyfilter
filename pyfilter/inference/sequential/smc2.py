@@ -21,6 +21,7 @@ class SMC2(SequentialParticleAlgorithm):
         threshold: Union[float, Thresholder] = 0.2,
         kernel: BaseProposal = None,
         max_increases=5,
+        context=None,
         **kwargs,
     ):
         """
@@ -40,7 +41,7 @@ class SMC2(SequentialParticleAlgorithm):
             kwargs: kwargs passed to :class:`pyfilter.inference.sequential.kernels.ParticleMetropolisHastings`.
         """
 
-        super().__init__(filter_, particles)
+        super().__init__(filter_, particles, context=context)
 
         self._threshold = threshold if isinstance(threshold, Thresholder) else ConstantThreshold(threshold)
         self._kernel = ParticleMetropolisHastings(proposal=kernel, **kwargs)
