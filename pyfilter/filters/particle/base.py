@@ -49,7 +49,7 @@ class ParticleFilter(BaseFilter, ABC):
         if proposal is None:
             proposal = Bootstrap()
 
-        self._proposal = proposal.set_model(self._model)  # type: Proposal
+        self._proposal: Proposal = proposal
 
     @property
     def particles(self) -> torch.Size:
@@ -79,7 +79,10 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
-    def initialize(self) -> ParticleFilterState:
+    def initialize(self) -> ParticleFilterState:        
+        assert self._model is not None, "Model has not been initialized!"
+            
+        self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
         device = x.values.device
