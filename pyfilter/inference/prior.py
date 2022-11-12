@@ -6,6 +6,29 @@ from stochproc.distributions.typing import HyperParameter, DistributionOrBuilder
 from stochproc.distributions.base import _DistributionModule
 
 
+def verify_same_prior(x: "Prior", y: "Prior") -> bool:
+    """
+    Verifies that ``x`` and ``y`` are equivalent.
+
+    Args:
+        x: prior ``x``.
+        y: prior ``y``.
+    """
+
+    x_dist = x.build_distribution()
+    y_dist = y.build_distribution()
+
+    if  x_dist.__class__ != y_dist.__class__:
+        return False
+
+    y_params = y._get_parameters()
+    for k, v in x._get_parameters().items():
+        if (v != y_params[k]).all():
+            return False
+    
+    return True
+
+
 class Prior(_DistributionModule):
     """
     Class representing a Bayesian prior on a parameter.
@@ -128,3 +151,9 @@ class Prior(_DistributionModule):
         numel = self.get_numel(constrained)
 
         return slice(prev_index, prev_index + numel), numel
+    
+    def check_equal(self, other: object) -> bool:
+        if not isinstance(other, Prior):
+            return False
+
+        return verify_same_prior(self, other)
