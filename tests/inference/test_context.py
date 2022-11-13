@@ -145,6 +145,9 @@ class TestContext(object):
     @pytest.mark.parametrize("device", ["cpu:0", "cuda:0"])
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_apply_fun(self, device, shape):
+        if (device == "cuda:0") and not torch.cuda.is_available():
+            return
+
         with inf.make_context() as context:
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0).to(device))
         
