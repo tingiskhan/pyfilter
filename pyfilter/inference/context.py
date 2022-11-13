@@ -12,6 +12,9 @@ class NotSamePriorError(Exception):
     pass
 
 
+class ParameterDoesNotExist(Exception):
+    pass
+
 
 # TODO: Consider inheriting from torch.nn.Module
 class ParameterContext(object):
@@ -123,7 +126,10 @@ class ParameterContext(object):
             Returns the prior.
         """
 
-        return self._parameter_dict.get(name, None)
+        if name in self._parameter_dict:
+            return self._parameter_dict[name]
+        
+        raise ParameterDoesNotExist(f"No such parameter '{name}'!")
 
     def get_parameters(self, constrained=True) -> Iterable[Tuple[str, PriorBoundParameter]]:
         """
