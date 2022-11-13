@@ -152,8 +152,22 @@ class Prior(_DistributionModule):
 
         return slice(prev_index, prev_index + numel), numel
     
-    def check_equal(self, other: object) -> bool:
+    def equivalent_to(self, other: object) -> bool:
+        r"""
+        Checks whether `self` is equivalent in distribution to `other`.
+
+        Args:
+            other: distribution to check equivalency with.
+        """
+
         if not isinstance(other, Prior):
             return False
 
         return verify_same_prior(self, other)
+
+    def copy(self) -> "Prior":
+        r"""
+        Copies the current instance.
+        """
+
+        return type(self)(self.base_dist, **{k: v.clone() for k, v in self._buffers.items()})

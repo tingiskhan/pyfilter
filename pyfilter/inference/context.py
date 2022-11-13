@@ -1,8 +1,8 @@
 import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
-
 import torch
+
 from .prior import Prior
 from .parameter import PriorBoundParameter
 from .qmc import QuasiRegistry
@@ -90,7 +90,7 @@ class ParameterContext(object):
         """
 
         if name in self._prior_dict:
-            if self._prior_dict[name].check_equal(prior):
+            if self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
             
             raise NotSamePriorError(f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!")
@@ -278,8 +278,8 @@ class ParameterContext(object):
         new_context = self.make_new()
         
         for k, v in self._prior_dict.items():
-            p = new_context.named_parameter(k, v.cpu())
-            p.data = f(self.get_parameter(k)).cpu()
+            p = new_context.named_parameter(k, v.copy().cpu())
+            p.data = f(self.get_parameter(k).clone()).cpu()
 
         return new_context
 
@@ -288,7 +288,7 @@ class ParameterContext(object):
         Performs a copy of the current context.
         """
 
-        return self.apply_fun(lambda p: p.clone())
+        return self.apply_fun(lambda p: p)
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?
