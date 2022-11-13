@@ -1,3 +1,5 @@
+from random import sample
+from xml.etree.ElementTree import TreeBuilder
 import pytest
 import torch
 
@@ -35,13 +37,14 @@ class TestPyroIntegration(object):
             latent = ts.models.RandomWalk(sigma_)
             return ts.StateSpaceModel(latent, lambda u: Normal(u.values, 0.1), ())
 
-        def pyro_model(y):
+        def pyro_model(y, sample_filter=True):
             # TODO: I think the filter should keep track of when to unsqueeze etc...
             sigma = pyro.sample("sigma", LogNormal(0.0, 1.0))
             ssm = build_ssm(sigma)
 
-            filt = part.APF(ssm, 100, record_states=True)
-            filt.do_sample_pyro(y, pyro)
+            if sample_filter:
+                filt = part.APF(ssm, 100, record_states=True)
+                filt.do_sample_pyro(y, pyro)
 
         true_sigma = 0.05
         ssm = build_ssm(true_sigma)
@@ -49,7 +52,7 @@ class TestPyroIntegration(object):
         x, y = ssm.sample_states(250).get_paths()
 
         guid, posterior_predictive = do_infer_with_pyro(pyro_model, x, niter=500, num_particles=num_particles)
-        posterior_draws = posterior_predictive(x)
+        posterior_draws = posterior_predictive(x, sample_filter=False)
 
         mean = posterior_draws["sigma"].mean()
         std = posterior_draws["sigma"].std()
