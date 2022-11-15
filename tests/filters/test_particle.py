@@ -36,7 +36,8 @@ class TestParticleFilters(object):
     @pytest.mark.parametrize("filter_", construct_filters())
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
-    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc):
+    @pytest.mark.parametrize("test_copy", [False, True])
+    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc, test_copy):
         np.random.seed(123)
 
         model, kalman_model = models
@@ -60,6 +61,15 @@ class TestParticleFilters(object):
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
         result = f.batch_filter(y_tensor)
+
+        if test_copy:
+            old_result = result
+            result = result.copy()
+
+            assert (result is not old_result) and (result.normalized_weights() == old_result.normalized_weights()).all()
+
+            for new_state, copy_state in zip(result.states, old_result.states):
+                assert (new_state is not copy_state) and (new_state.x.values == old_state.x.values).all()
 
         assert len(result.states) == 1
         assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
