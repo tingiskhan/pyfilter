@@ -66,10 +66,12 @@ class TestParticleFilters(object):
             old_result = result
             result = result.copy()
 
-            assert (result is not old_result) and (result.normalized_weights() == old_result.normalized_weights()).all()
+            assert (result is not old_result)
 
             for new_state, copy_state in zip(result.states, old_result.states):
-                assert (new_state is not copy_state) and (new_state.x.values == old_state.x.values).all()
+                assert new_state is not copy_state
+                assert (new_state.x.values == copy_state.x.values).all() 
+                assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
         assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
