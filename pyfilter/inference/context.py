@@ -17,7 +17,7 @@ class ParameterDoesNotExist(Exception):
 
 
 # TODO: Consider inheriting from torch.nn.Module
-class ParameterContext(object):
+class InferenceContext(object):
     """
     Defines a parameter context in which we define parameters and priors.
     """
@@ -49,7 +49,7 @@ class ParameterContext(object):
         return self._parameter_dict
 
     @property
-    def stack(self) -> List["ParameterContext"]:
+    def stack(self) -> List["InferenceContext"]:
         return self.__class__._contexts.stack
 
     def __enter__(self):
@@ -63,7 +63,7 @@ class ParameterContext(object):
             raise exc_val
 
     @classmethod
-    def get_context(cls) -> "ParameterContext":
+    def get_context(cls) -> "InferenceContext":
         """
         Returns the latest context.
         """
@@ -71,7 +71,7 @@ class ParameterContext(object):
         if any(cls._contexts.stack):
             return cls._contexts.stack[-1]
 
-        raise Exception(f"There are currently no active '{ParameterContext.__name__}'!")
+        raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
 
     def get_prior(self, name: str) -> Prior:
         """
@@ -209,7 +209,7 @@ class ParameterContext(object):
 
         return sum(p.eval_prior(constrained=constrained) for _, p in self.get_parameters())
 
-    def exchange(self, other: "ParameterContext", mask: torch.BoolTensor):
+    def exchange(self, other: "InferenceContext", mask: torch.BoolTensor):
         """
         Exchanges the parameters of ``self`` with that of ``other``.
 
@@ -234,12 +234,12 @@ class ParameterContext(object):
         for n, p in self.get_parameters():
             p.copy_(p[indices])
 
-    def make_new(self) -> "ParameterContext":
+    def make_new(self) -> "InferenceContext":
         """
         Creates a new context.
         """
 
-        return ParameterContext()
+        return InferenceContext()
 
     def state_dict(self) -> tOrderedDict[str, Any]:
         """
@@ -273,7 +273,7 @@ class ParameterContext(object):
 
         return
 
-    def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "ParameterContext":
+    def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "InferenceContext":
         """
         Applies ``f`` to each parameter of ``self`` and returns a new :class:`ParameterContext`.
 
@@ -298,7 +298,7 @@ class ParameterContext(object):
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?
-class QuasiParameterContext(ParameterContext):
+class QuasiParameterContext(InferenceContext):
     r"""
     Implements a parameter context for quasi random sampling.
     """
@@ -331,11 +331,11 @@ class QuasiParameterContext(ParameterContext):
 
         super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
 
-    def make_new(self) -> "ParameterContext":
+    def make_new(self) -> "InferenceContext":
         return QuasiParameterContext(randomize=self._randomize)
 
 
-def make_context(use_quasi: bool = False, randomize: bool = True) -> ParameterContext:
+def make_context(use_quasi: bool = False, randomize: bool = True) -> InferenceContext:
     """
     Helper method for creating a context.
     """
@@ -343,4 +343,4 @@ def make_context(use_quasi: bool = False, randomize: bool = True) -> ParameterCo
     if use_quasi:
         return QuasiParameterContext(randomize=randomize)
 
-    return ParameterContext()
+    return InferenceContext()

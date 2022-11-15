@@ -14,7 +14,7 @@ BATCH_SHAPES = [torch.Size([]), torch.Size([10, 1]), torch.Size([16, 1, 1])]
 
 class TestContext(object):
     def test_initialize_context(self):
-        context = inf.ParameterContext()
+        context = inf.InferenceContext()
 
         assert len(context.stack) == 0
 

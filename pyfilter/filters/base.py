@@ -10,7 +10,7 @@ from .state import FilterState, PredictionState
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
-ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]]  # noqa: F821
+ModelObject = Union[StateSpaceModel, Callable[["InferenceContext"], StateSpaceModel]]  # noqa: F821
 
 
 class BaseFilter(ABC):
@@ -71,7 +71,7 @@ class BaseFilter(ABC):
     def ssm(self) -> StateSpaceModel:
         return self._model
 
-    def initialize_model(self, context: "ParameterContext"): # noqa: F821
+    def initialize_model(self, context: "InferenceContext"): # noqa: F821
         r"""
         Initializes the model.
 
