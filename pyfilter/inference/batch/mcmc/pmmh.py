@@ -74,7 +74,7 @@ class PMMH(BaseAlgorithm):
         with logging.initialize(self, self.num_samples):
             prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
-            with make_context() as sub_context:
+            with self.context.make_new() as sub_context:
                 proposal_filter = self.filter.copy()
                 proposal_filter.initialize_model(sub_context)
                 sub_context.initialize_parameters(self._parameter_shape)
