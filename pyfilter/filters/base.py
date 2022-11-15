@@ -71,7 +71,7 @@ class BaseFilter(ABC):
     def ssm(self) -> StateSpaceModel:
         return self._model
 
-    def initialize_model(self, context: "ParameterContext"):
+    def initialize_model(self, context: "ParameterContext"): # noqa: F821
         r"""
         Initializes the model.
 
