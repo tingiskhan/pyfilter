@@ -117,9 +117,12 @@ class ParticleFilter(BaseFilter, ABC):
 
         latest_state = next(reversed_states)
         result = (latest_state.x.values,)
+        prev_inds = torch.ones_like(latest_state.prev_inds).cumsum(dim=-1) - 1
 
+        dim = len(self.batch_shape)
         for s in reversed_states:
-            result += (batched_gather(s.x.values, latest_state.prev_inds, dim=len(self.batch_shape)),)
+            prev_inds = batched_gather(latest_state.prev_inds, prev_inds, dim=dim)
+            result += (batched_gather(s.x.values, prev_inds, dim=dim),)
             latest_state = s
 
         return torch.stack(result[::-1], dim=0)

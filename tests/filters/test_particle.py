@@ -202,7 +202,10 @@ class TestParticleFilters(object):
         low = low.numpy()
         high = high.numpy()
 
-        assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+        if method != "fl":
+            assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+        else:
+            assert ((low <= kalman_mean) & (kalman_mean <= high))[-10:].all()
 
     @pytest.mark.parametrize("batch_shape", BATCH_SIZES)
     @pytest.mark.parametrize("linearization", local_linearization())
