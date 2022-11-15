@@ -93,7 +93,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return ParticleFilterState(x, w, ll, prev_inds)
 
-    def _do_sample_ffbs(self, states):
+    def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
         offset = -(2 + self.ssm.hidden.n_dim)
         dim_to_unsqueeze = -2
 
@@ -112,10 +112,25 @@ class ParticleFilter(BaseFilter, ABC):
 
         return torch.stack(res[::-1], dim=0)
 
+    def _do_sample_fl(self, states: Sequence[ParticleFilterState]):
+        reversed_states = reversed(states)
+
+        latest_state = next(reversed_states)
+        result = (latest_state.x.values,)
+
+        for s in reversed_states:
+            result += (batched_gather(s.x.values, latest_state.prev_inds, dim=len(self.batch_shape)),)
+            latest_state = s
+
+        return torch.stack(result[::-1], dim=0)
+
     def smooth(self, states: Sequence[ParticleFilterState], method="ffbs") -> torch.Tensor:
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
+        
+        if method == "fl":
+            return self._do_sample_fl(states)
 
         raise NotImplementedError(f"Currently do not support '{method}'!")
 

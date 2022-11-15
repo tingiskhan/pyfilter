@@ -149,7 +149,8 @@ class TestParticleFilters(object):
     @pytest.mark.parametrize("filter_", construct_filters(particles=400, record_states=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
-    def test_smooth(self, models, filter_, batch_size, missing_perc):
+    @pytest.mark.parametrize("method", ["ffbs", "fl"])
+    def test_smooth(self, models, filter_, batch_size, missing_perc, method):
         np.random.seed(123)
 
         model, kalman_model = models
@@ -174,7 +175,7 @@ class TestParticleFilters(object):
         result = f.batch_filter(y_tensor)
         assert len(result.states) == kalman_mean.shape[0] + 1
 
-        smoothed = f.smooth(result.states)
+        smoothed = f.smooth(result.states, method=method)
 
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
         std = smoothed[1:].std(dim=len(batch_size) + 1)
