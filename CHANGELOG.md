@@ -1,5 +1,9 @@
 # Changelog
 
+# v0.25.1
+ - Reworks `ParameterContext` logic by removing the requirements for the context being on the stack in order to register parameters.
+ - Adds fixed-lag smoothing.
+
 # v0.24.11
  - Adds support for using QMC points in `SMC2`
 
