@@ -20,9 +20,13 @@ class QuasiMultivariateNormal(MultivariateNormal):
 
     has_rsample = False
 
+    def __init__(self, quasi_key, loc, covariance_matrix=None, precision_matrix=None, scale_tril=None, validate_args=None):
+        super().__init__(loc, covariance_matrix, precision_matrix, scale_tril, validate_args)
+        self.quasi_key = quasi_key
+
     def sample(self, sample_shape=torch.Size()):
         shape = self._extended_shape(sample_shape)
-        probs = QuasiRegistry.sample(self.event_shape.numel(), sample_shape).to(self.loc.device)
+        probs = QuasiRegistry.sample(self.quasi_key, sample_shape).to(self.loc.device)
 
         loc = torch.zeros(shape, device=self.loc.device)
         scale = torch.ones(shape, device=self.loc.device)
@@ -50,7 +54,7 @@ def calc_mean_chol(x: torch.Tensor, w: torch.Tensor) -> MeanChol:
     return MeanChol(mean, cholesky)
 
 
-def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0, quasi: bool = False) -> MultivariateNormal:
+def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0, quasi_key: int = None) -> MultivariateNormal:
     """
     Constructs a multivariate normal distribution from weighted samples.
 
@@ -65,7 +69,7 @@ def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0, quasi: bool = Fal
     mean_chol = calc_mean_chol(x, w)
     scale_tril = scale * mean_chol.chol
 
-    if not quasi:
+    if not quasi_key:
         return MultivariateNormal(mean_chol.mean, scale_tril=scale_tril)
 
-    return QuasiMultivariateNormal(mean_chol.mean, scale_tril=scale_tril)
+    return QuasiMultivariateNormal(quasi_key, mean_chol.mean, scale_tril=scale_tril)

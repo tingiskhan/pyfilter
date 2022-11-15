@@ -309,15 +309,15 @@ class QuasiParameterContext(InferenceContext):
         """
 
         super(QuasiParameterContext, self).__init__()
-        self._quasi_key: int = None
+        self.quasi_key: int = None
         self._randomize = randomize
 
     def initialize_parameters(self, batch_shape: torch.Size):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
-        self._quasi_key = QuasiRegistry.add_engine(out.shape[-1], self._randomize)
-        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
+        self.quasi_key = QuasiRegistry.add_engine(self, out.shape[-1], self._randomize)
+        probs = QuasiRegistry.sample(self.quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
@@ -326,9 +326,6 @@ class QuasiParameterContext(InferenceContext):
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if len(self.stack) == 1:
-            QuasiRegistry.remove_engine(self._quasi_key)
-
         super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "InferenceContext":

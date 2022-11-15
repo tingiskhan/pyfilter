@@ -13,7 +13,8 @@ class SymmetricMH(BaseProposal):
         values = context.stack_parameters(constrained=False)
         weights = state.normalized_weights()
 
-        return construct_mvn(values, weights, scale=1.1, quasi=isinstance(context, QuasiParameterContext))
+        # TODO: Fix this by passing context reference instead... Much safer
+        return construct_mvn(values, weights, scale=1.1, quasi_key=context.quasi_key if isinstance(context, QuasiParameterContext) else None)
 
     def exchange(self, latest, candidate, mask: torch.Tensor) -> None:
         return

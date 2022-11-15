@@ -64,7 +64,7 @@ class QuasiRegistry(object):
     _registry.registry = OrderedDict([])
 
     @classmethod
-    def add_engine(cls, dim: int, randomize: bool, raise_if_exists: int = False) -> int:
+    def add_engine(cls, context: "InferenceContext", dim: int, randomize: bool, raise_if_exists: int = False) -> int: # noqa: F821
         """
         Adds an engine to the QMC registry.
 
@@ -77,7 +77,7 @@ class QuasiRegistry(object):
             Returns the key to use when sampling. The key is currently the dimension of the space.
         """
 
-        key = dim
+        key = id(context)
         if key in cls._registry.registry:
             if raise_if_exists:
                 raise KeyError("Already have an engine with the same dimension!")
@@ -85,6 +85,7 @@ class QuasiRegistry(object):
             return key
 
         cls._registry.registry[key] = _EngineContainer(qr.SobolEngine(dimension=dim, scramble=True), randomize)
+        
         return key
 
     @classmethod
