@@ -298,7 +298,7 @@ class InferenceContext(object):
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?
-class QuasiParameterContext(InferenceContext):
+class QuasiInferenceContext(InferenceContext):
     r"""
     Implements a parameter context for quasi random sampling.
     """
@@ -308,7 +308,7 @@ class QuasiParameterContext(InferenceContext):
         Initializes the :class:`QuasiParameterContext` class.
         """
 
-        super(QuasiParameterContext, self).__init__()
+        super(QuasiInferenceContext, self).__init__()
         self.quasi_key: int = None
         self._randomize = randomize
 
@@ -326,10 +326,10 @@ class QuasiParameterContext(InferenceContext):
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
+        super(QuasiInferenceContext, self).__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "InferenceContext":
-        return QuasiParameterContext(randomize=self._randomize)
+        return QuasiInferenceContext(randomize=self._randomize)
 
 
 def make_context(use_quasi: bool = False, randomize: bool = True) -> InferenceContext:
@@ -338,6 +338,6 @@ def make_context(use_quasi: bool = False, randomize: bool = True) -> InferenceCo
     """
 
     if use_quasi:
-        return QuasiParameterContext(randomize=randomize)
+        return QuasiInferenceContext(randomize=randomize)
 
     return InferenceContext()

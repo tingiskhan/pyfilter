@@ -5,7 +5,11 @@ from typing import Optional
 from .state import SequentialAlgorithmState
 from .base import SequentialParticleAlgorithm
 from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
-from ..context import QuasiParameterContext
+from ..context import InferenceContext
+
+
+class ContextNotSupported(Exception):
+    pass
 
 
 class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
@@ -26,8 +30,9 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
         """
 
-        super().__init__(filter_, particles, context=context)
-        assert not isinstance(self.context, QuasiParameterContext), f"'{self}' does not support quasi random sampling!"
+        super().__init__(filter_, particles, context=context)        
+        if not isinstance(self, InferenceContext):
+            raise ContextNotSupported(f"Currently do not support '{context.__class__}'!")
 
         self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)
 
