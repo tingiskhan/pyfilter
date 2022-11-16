@@ -31,8 +31,8 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         """
 
         super().__init__(filter_, particles, context=context)        
-        if not isinstance(self, InferenceContext):
-            raise ContextNotSupported(f"Currently do not support '{context.__class__}'!")
+        if not isinstance(self.context, InferenceContext):
+            raise ContextNotSupported(f"Currently do not support '{self.context.__class__}'!")
 
         self._kernel = OnlineKernel(kernel=kernel or NonShrinkingKernel(), discrete=discrete)
 
