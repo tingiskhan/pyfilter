@@ -316,7 +316,7 @@ class QuasiInferenceContext(InferenceContext):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
-        self.quasi_key = QuasiRegistry.add_engine(self, out.shape[-1], self._randomize)
+        self.quasi_key = QuasiRegistry.add_engine(id(self), out.shape[-1], self._randomize)
         probs = QuasiRegistry.sample(self.quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
