@@ -1,7 +1,7 @@
 from torch.distributions import Distribution
 import torch
 from abc import ABC
-from ....context import ParameterContext
+from ....context import InferenceContext
 from ....state import FilterAlgorithmState
 from .....filters import BaseFilter
 
@@ -17,7 +17,7 @@ class BaseProposal(ABC):
         """
 
     def build(
-        self, context: ParameterContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor
+        self, context: InferenceContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor
     ) -> Distribution:
         r"""
         Method to be overridden by derived classes. Given the latest state, filter and dataset, generate a proposal

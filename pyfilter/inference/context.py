@@ -1,34 +1,23 @@
 import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
-
 import torch
+
 from .prior import Prior
 from .parameter import PriorBoundParameter
 from .qmc import QuasiRegistry
 
 
-def verify_same_prior(x: Prior, y: Prior):
-    """
-    Verifies that ``x`` and ``y`` are equivalent.
+class NotSamePriorError(Exception):
+    pass
 
-    Args:
-        x: prior ``x``.
-        y: prior ``y``.
-    """
 
-    x_dist = x.build_distribution()
-    y_dist = y.build_distribution()
-
-    assert x_dist.__class__ == y_dist.__class__, "Seems to not be the same distribution!"
-
-    y_params = y._get_parameters()
-    for k, v in x._get_parameters().items():
-        assert (v == y_params[k]).all(), f"Parameter {k} differs between ``x`` and ``y``!"
+class ParameterDoesNotExist(Exception):
+    pass
 
 
 # TODO: Consider inheriting from torch.nn.Module
-class ParameterContext(object):
+class InferenceContext(object):
     """
     Defines a parameter context in which we define parameters and priors.
     """
@@ -60,7 +49,7 @@ class ParameterContext(object):
         return self._parameter_dict
 
     @property
-    def stack(self) -> List["ParameterContext"]:
+    def stack(self) -> List["InferenceContext"]:
         return self.__class__._contexts.stack
 
     def __enter__(self):
@@ -74,7 +63,7 @@ class ParameterContext(object):
             raise exc_val
 
     @classmethod
-    def get_context(cls) -> "ParameterContext":
+    def get_context(cls) -> "InferenceContext":
         """
         Returns the latest context.
         """
@@ -82,7 +71,7 @@ class ParameterContext(object):
         if any(cls._contexts.stack):
             return cls._contexts.stack[-1]
 
-        raise Exception(f"There are currently no active '{ParameterContext.__name__}'!")
+        raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
 
     def get_prior(self, name: str) -> Prior:
         """
@@ -104,10 +93,10 @@ class ParameterContext(object):
         """
 
         if name in self._prior_dict:
-            verify_same_prior(self._prior_dict[name], prior)
-            return self.get_parameter(name)
-
-        assert self in self.stack, "Cannot register parameters in an inactive context!"
+            if self._prior_dict[name].equivalent_to(prior):
+                return self.get_parameter(name)
+            
+            raise NotSamePriorError(f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!")
 
         self._prior_dict[name] = prior
 
@@ -116,6 +105,7 @@ class ParameterContext(object):
 
         v = dist.sample()
 
+        # TODO: Set name and context on init...
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
         parameter.set_context(self)
         parameter.set_name(name)
@@ -136,7 +126,10 @@ class ParameterContext(object):
             Returns the prior.
         """
 
-        return self._parameter_dict.get(name, None)
+        if name in self._parameter_dict:
+            return self._parameter_dict[name]
+        
+        raise ParameterDoesNotExist(f"No such parameter '{name}'!")
 
     def get_parameters(self, constrained=True) -> Iterable[Tuple[str, PriorBoundParameter]]:
         """
@@ -157,6 +150,7 @@ class ParameterContext(object):
 
         res = tuple()
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
+        
         for n, p in self.get_parameters():
             shape = shape_dict[n]
             v = (p if constrained else p.get_unconstrained()).view(-1, shape.numel())
@@ -215,7 +209,7 @@ class ParameterContext(object):
 
         return sum(p.eval_prior(constrained=constrained) for _, p in self.get_parameters())
 
-    def exchange(self, other: "ParameterContext", mask: torch.BoolTensor):
+    def exchange(self, other: "InferenceContext", mask: torch.BoolTensor):
         """
         Exchanges the parameters of ``self`` with that of ``other``.
 
@@ -240,12 +234,12 @@ class ParameterContext(object):
         for n, p in self.get_parameters():
             p.copy_(p[indices])
 
-    def make_new(self) -> "ParameterContext":
+    def make_new(self) -> "InferenceContext":
         """
         Creates a new context.
         """
 
-        return ParameterContext()
+        return InferenceContext()
 
     def state_dict(self) -> tOrderedDict[str, Any]:
         """
@@ -279,7 +273,7 @@ class ParameterContext(object):
 
         return
 
-    def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "ParameterContext":
+    def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "InferenceContext":
         """
         Applies ``f`` to each parameter of ``self`` and returns a new :class:`ParameterContext`.
 
@@ -287,16 +281,24 @@ class ParameterContext(object):
             f: function to apply.
         """
 
-        with self.make_new() as new_context:
-            for k, v in self._prior_dict.items():
-                p = new_context.named_parameter(k, v.cpu())
-                p.data = f(self.get_parameter(k)).cpu()
+        new_context = self.make_new()
+        
+        for k, v in self._prior_dict.items():
+            p = new_context.named_parameter(k, v.copy().cpu())
+            p.data = f(self.get_parameter(k).clone()).cpu()
 
         return new_context
 
+    def copy(self):
+        r"""
+        Performs a copy of the current context.
+        """
+
+        return self.apply_fun(lambda p: p)
+
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?
-class QuasiParameterContext(ParameterContext):
+class QuasiInferenceContext(InferenceContext):
     r"""
     Implements a parameter context for quasi random sampling.
     """
@@ -306,16 +308,16 @@ class QuasiParameterContext(ParameterContext):
         Initializes the :class:`QuasiParameterContext` class.
         """
 
-        super(QuasiParameterContext, self).__init__()
-        self._quasi_key: int = None
+        super(QuasiInferenceContext, self).__init__()
+        self.quasi_key: int = None
         self._randomize = randomize
 
     def initialize_parameters(self, batch_shape: torch.Size):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
-        self._quasi_key = QuasiRegistry.add_engine(out.shape[-1], self._randomize)
-        probs = QuasiRegistry.sample(self._quasi_key, batch_shape).to(out.device)
+        self.quasi_key = QuasiRegistry.add_engine(id(self), out.shape[-1], self._randomize)
+        probs = QuasiRegistry.sample(self.quasi_key, batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
@@ -324,21 +326,18 @@ class QuasiParameterContext(ParameterContext):
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if len(self.stack) == 1:
-            QuasiRegistry.remove_engine(self._quasi_key)
+        super(QuasiInferenceContext, self).__exit__(exc_type, exc_val, exc_tb)
 
-        super(QuasiParameterContext, self).__exit__(exc_type, exc_val, exc_tb)
-
-    def make_new(self) -> "ParameterContext":
-        return QuasiParameterContext(randomize=self._randomize)
+    def make_new(self) -> "InferenceContext":
+        return QuasiInferenceContext(randomize=self._randomize)
 
 
-def make_context(use_quasi: bool = False, randomize: bool = True) -> ParameterContext:
+def make_context(use_quasi: bool = False, randomize: bool = True) -> InferenceContext:
     """
     Helper method for creating a context.
     """
 
     if use_quasi:
-        return QuasiParameterContext(randomize=randomize)
+        return QuasiInferenceContext(randomize=randomize)
 
-    return ParameterContext()
+    return InferenceContext()

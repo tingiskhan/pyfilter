@@ -36,7 +36,8 @@ class TestParticleFilters(object):
     @pytest.mark.parametrize("filter_", construct_filters())
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
-    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc):
+    @pytest.mark.parametrize("test_copy", [False, True])
+    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc, test_copy):
         np.random.seed(123)
 
         model, kalman_model = models
@@ -60,6 +61,17 @@ class TestParticleFilters(object):
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
         result = f.batch_filter(y_tensor)
+
+        if test_copy:
+            old_result = result
+            result = result.copy()
+
+            assert (result is not old_result)
+
+            for new_state, copy_state in zip(result.states, old_result.states):
+                assert new_state is not copy_state
+                assert (new_state.x.values == copy_state.x.values).all() 
+                assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
         assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
@@ -144,28 +156,13 @@ class TestParticleFilters(object):
 
             assert (new_ts.values == old_ts.values).all() and (new_ts.time_index == old_ts.time_index).all()
 
-    @pytest.mark.parametrize("models", linear_models())
-    @pytest.mark.parametrize("filter_", construct_filters())
-    def test_check_inactive_context_raises(self, models, filter_):
-        model, _ = models
-
-        from pyfilter.inference import make_context
-
-        context = make_context()
-
-        def model_builder(context_):
-            return model
-
-        # with pytest.raises()
-        with pytest.raises(Exception):
-            f = filter_(model_builder)
-
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters(particles=400, record_states=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
-    def test_smooth(self, models, filter_, batch_size, missing_perc):
+    @pytest.mark.parametrize("method", ["ffbs", "fl"])
+    def test_smooth(self, models, filter_, batch_size, missing_perc, method):
         np.random.seed(123)
 
         model, kalman_model = models
@@ -190,7 +187,7 @@ class TestParticleFilters(object):
         result = f.batch_filter(y_tensor)
         assert len(result.states) == kalman_mean.shape[0] + 1
 
-        smoothed = f.smooth(result.states)
+        smoothed = f.smooth(result.states, method=method)
 
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
         std = smoothed[1:].std(dim=len(batch_size) + 1)
@@ -205,7 +202,10 @@ class TestParticleFilters(object):
         low = low.numpy()
         high = high.numpy()
 
-        assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+        if method != "fl":
+            assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+        else:
+            assert ((low <= kalman_mean) & (kalman_mean <= high))[-10:].all()
 
     @pytest.mark.parametrize("batch_shape", BATCH_SIZES)
     @pytest.mark.parametrize("linearization", local_linearization())

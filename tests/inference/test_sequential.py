@@ -66,10 +66,10 @@ class TestSequential(object):
 
         with inf.make_context() as new_context:
             new_filter = filts.APF(build_model, particles)
-            new_context.load_state_dict(context_state)
-
             new_alg = algorithm(new_filter)
             new_result = new_alg.initialize()
+
+            new_context.load_state_dict(context_state)                        
             new_result.load_state_dict(algorithm_state)
 
             assert (

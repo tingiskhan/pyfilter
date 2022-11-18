@@ -10,7 +10,7 @@ from .state import FilterState, PredictionState
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
-ModelObject = Union[StateSpaceModel, Callable[["ParameterContext"], StateSpaceModel]]  # noqa: F821
+ModelObject = Union[StateSpaceModel, Callable[["InferenceContext"], StateSpaceModel]]  # noqa: F821
 
 
 class BaseFilter(ABC):
@@ -39,20 +39,23 @@ class BaseFilter(ABC):
                     median of mean.
             record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
                 `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
-        """
-
-        from ..inference.context import ParameterContext
+        """        
 
         super().__init__()
 
         if not (isinstance(model, StateSpaceModel) or callable(model)):
             raise ValueError(f"`model` must be `{StateSpaceModel:s}` or {callable} that returns `{StateSpaceModel:s}!")
 
-        is_function = callable(model) and not isinstance(model, StateSpaceModel)
+        model_is_builder = callable(model) and not isinstance(model, StateSpaceModel)
 
-        self._model_builder = model if is_function else None
+        if model_is_builder:
+            self._model_builder = model
+            self._model = None
+        else:
+            # NB: We use a lambda to avoid having to treat `initialize_model` differently
+            self._model_builder = lambda _: model
+            self._model = model
 
-        self._model = model if not is_function else model(ParameterContext.get_context())
         self._batch_shape = torch.Size([])
 
         self.record_states = record_states
@@ -67,6 +70,16 @@ class BaseFilter(ABC):
     @property
     def ssm(self) -> StateSpaceModel:
         return self._model
+
+    def initialize_model(self, context: "InferenceContext"): # noqa: F821
+        r"""
+        Initializes the model.
+
+        Args:
+            context: context to initialize model with.
+        """
+
+        self._model = self._model_builder(context)
 
     @property
     def batch_shape(self) -> torch.Size:

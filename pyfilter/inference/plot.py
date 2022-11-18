@@ -5,7 +5,7 @@ from matplotlib.axes import Axes
 from statsmodels.nonparametric.kde import KDEUnivariate
 from math import ceil
 
-from .context import ParameterContext
+from .context import InferenceContext
 from .sequential.state import SequentialAlgorithmState
 
 
@@ -33,7 +33,7 @@ def _do_plot(v: torch.Tensor, w: torch.Tensor, ax_, name, handled, **kwargs):
 
 
 def mimic_arviz_posterior(
-    context: ParameterContext, state: SequentialAlgorithmState, num_cols: int = 3, ax: Axes = None, **kwargs
+    context: InferenceContext, state: SequentialAlgorithmState, num_cols: int = 3, ax: Axes = None, **kwargs
 ) -> Axes:
     """
     Helper function for mimicking arviz plotting functionality.

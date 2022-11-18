@@ -1,3 +1,4 @@
+from copy import deepcopy
 from ..state import BaseResult
 from ..filters import FilterResult
 
@@ -46,3 +47,11 @@ class FilterAlgorithmState(AlgorithmState):
 
     def __repr__(self):
         return f"{self.__class__.__name__}(ll: {self.filter_state.loglikelihood})"
+
+    def copy(self) -> "FilterAlgorithmState":
+        r"""
+        Creates a copy of self.
+        """
+
+        # NB: This is untested and might not be optimal tbh
+        return deepcopy(self)

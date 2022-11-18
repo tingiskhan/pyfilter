@@ -15,7 +15,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
     Abstract base class for sequential algorithms using filters in order to approximate the log likelihood.
     """
 
-    def __init__(self, filter_, num_particles: int):
+    def __init__(self, filter_, num_particles: int, context=None):
         """
         Initializes the :class:`SequentialParticleAlgorithm` class.
 
@@ -24,7 +24,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
             num_particles: the number of particles to use for approximating the parameter posteriors.
         """
 
-        super().__init__(filter_)
+        super().__init__(filter_, context=context)
 
         self.particles = torch.Size([num_particles])
         self._parameter_shape = torch.Size([num_particles, 1])
@@ -50,6 +50,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
         """
 
+        self.filter.initialize_model(self.context)
         self.context.initialize_parameters(self._parameter_shape)
 
         init_state = self.filter.initialize()
@@ -112,7 +113,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     One such example is the :class:`pyfilter.inference.sequential.NESSMC2`.
     """
 
-    def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any]):
+    def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None):
         """
         Initializes the :class:`CombinedSequentialParticleAlgorithm` class.
 
@@ -126,13 +127,13 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
         super().__init__(filter_, particles)
 
-        self._first = self.make_first(filter_, particles, **(first_kw or dict()))
-        self._second = self.make_second(filter_, particles, **(second_kw or dict()))
+        self._first = self.make_first(filter_, context, particles, **(first_kw or dict()))
+        self._second = self.make_second(filter_, context, particles, **(second_kw or dict()))
 
         self._when_to_switch = switch
         self._is_switched = False
 
-    def make_first(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
+    def make_first(self, filter_, context, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
         Creates the algorithm to be used for the first part of the data.
 
@@ -147,7 +148,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def make_second(self, filter_, particles, **kwargs) -> SequentialParticleAlgorithm:
+    def make_second(self, filter_, context, particles, **kwargs) -> SequentialParticleAlgorithm:
         """
         See :meth:`CombinedSequentialParticleAlgorithm.make_first` but replace `first` with `second`.
         """

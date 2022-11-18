@@ -1,3 +1,4 @@
+from copy import deepcopy
 import torch
 from typing import List, TypeVar, Generic, Union
 from stochproc.container import make_dequeue
@@ -160,3 +161,10 @@ class FilterResult(BaseResult, Generic[TState]):
 
     def __repr__(self):
         return f"FilterResult(ll: {self._loglikelihood.__repr__()}, num_observations: {self.filter_means.shape[0]})"
+
+    def copy(self) -> "FilterResult":
+        """
+        Performs a deep copy of self.
+        """
+
+        return deepcopy(self)

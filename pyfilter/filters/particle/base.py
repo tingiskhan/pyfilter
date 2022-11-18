@@ -49,7 +49,7 @@ class ParticleFilter(BaseFilter, ABC):
         if proposal is None:
             proposal = Bootstrap()
 
-        self._proposal = proposal.set_model(self._model)  # type: Proposal
+        self._proposal: Proposal = proposal
 
     @property
     def particles(self) -> torch.Size:
@@ -79,7 +79,10 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
-    def initialize(self) -> ParticleFilterState:
+    def initialize(self) -> ParticleFilterState:        
+        assert self._model is not None, "Model has not been initialized!"
+            
+        self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
         device = x.values.device
@@ -90,7 +93,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return ParticleFilterState(x, w, ll, prev_inds)
 
-    def _do_sample_ffbs(self, states):
+    def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
         offset = -(2 + self.ssm.hidden.n_dim)
         dim_to_unsqueeze = -2
 
@@ -109,10 +112,28 @@ class ParticleFilter(BaseFilter, ABC):
 
         return torch.stack(res[::-1], dim=0)
 
+    def _do_sample_fl(self, states: Sequence[ParticleFilterState]):
+        reversed_states = reversed(states)
+
+        latest_state = next(reversed_states)
+        result = (latest_state.x.values,)
+        prev_inds = torch.ones_like(latest_state.prev_inds).cumsum(dim=-1) - 1
+
+        dim = len(self.batch_shape)
+        for s in reversed_states:
+            prev_inds = batched_gather(latest_state.prev_inds, prev_inds, dim=dim)
+            result += (batched_gather(s.x.values, prev_inds, dim=dim),)
+            latest_state = s
+
+        return torch.stack(result[::-1], dim=0)
+
     def smooth(self, states: Sequence[ParticleFilterState], method="ffbs") -> torch.Tensor:
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
+        
+        if method == "fl":
+            return self._do_sample_fl(states)
 
         raise NotImplementedError(f"Currently do not support '{method}'!")
 

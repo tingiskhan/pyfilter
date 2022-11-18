@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Distribution
 from typing import TypeVar
 from .proposals import BaseProposal
-from ...context import ParameterContext
+from ...context import InferenceContext
 from ...state import FilterAlgorithmState
 from ....filters import BaseFilter
 
@@ -11,12 +11,12 @@ TFilter = TypeVar("TFilter", bound=BaseFilter)
 
 
 def run_pmmh(
-    context: ParameterContext,
+    context: InferenceContext,
     state: FilterAlgorithmState,
     proposal: BaseProposal,
     proposal_kernel: Distribution,
     proposal_filter: BaseFilter,
-    proposal_context: ParameterContext,
+    proposal_context: InferenceContext,
     y: torch.Tensor,
     size=torch.Size([]),
     mutate_kernel=False,

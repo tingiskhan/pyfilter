@@ -18,7 +18,7 @@ class PMMH(BaseAlgorithm):
     MONTE_CARLO_SAMPLES = torch.Size([10_000])
 
     def __init__(
-        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean"
+        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean", context=None
     ):
         r"""
         Initializes the :class:`PMMH` class.
@@ -38,9 +38,9 @@ class PMMH(BaseAlgorithm):
                     determining the mean.
         """
 
-        super().__init__(filter_)
+        super().__init__(filter_, context=context)
+        
         self.num_samples = num_samples
-
         self._num_chains = torch.Size([num_chains])
         self._parameter_shape = torch.Size([num_chains, 1])
 
@@ -48,6 +48,7 @@ class PMMH(BaseAlgorithm):
         self._initializer = initializer
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
+        self.filter.initialize_model(self.context)
         self.filter.set_batch_shape(self._num_chains)
 
         if self._initializer == "seed":
@@ -73,23 +74,24 @@ class PMMH(BaseAlgorithm):
         with logging.initialize(self, self.num_samples):
             prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
-            with make_context() as sub_context:
+            with self.context.make_new() as sub_context:
                 proposal_filter = self.filter.copy()
+                proposal_filter.initialize_model(sub_context)
                 sub_context.initialize_parameters(self._parameter_shape)
 
-                for i in range(self.num_samples):
-                    accepted = run_pmmh(
-                        self.context,
-                        state,
-                        self._proposal,
-                        prop_dist,
-                        proposal_filter,
-                        sub_context,
-                        y,
-                        mutate_kernel=True,
-                    )
+            for i in range(self.num_samples):
+                accepted = run_pmmh(
+                    self.context,
+                    state,
+                    self._proposal,
+                    prop_dist,
+                    proposal_filter,
+                    sub_context,
+                    y,
+                    mutate_kernel=True,
+                )
 
-                    state.update_chain(dict(self.context.get_parameters()))
-                    logging.do_log(i, state)
+                state.update_chain(dict(self.context.get_parameters()))
+                logging.do_log(i, state)
 
             return state
