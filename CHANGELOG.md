@@ -1,7 +1,7 @@
 # Changelog
 
 # v0.26.1
- - Reworks how we initialize parameters by initializing all parameters to their "correct" shapes from the get-go by introducing a shape object stored on `InferenceContext`.
+ - Reworks how we define parameters by initializing all parameters to their "correct" shapes from the get-go by introducing a shape object stored on `InferenceContext`.
 
 # v0.25.1
  - Reworks `ParameterContext` logic by removing the requirements for the context being on the stack in order to register parameters.
