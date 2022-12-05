@@ -51,7 +51,7 @@ class _EngineContainer(object):
         # NB: Same as in nchopin/particles to avoid "degeneracy"
         safe_probs = 0.5 + (1.0 - EPS2) * (probs - 0.5)
 
-        new_shape = shape + torch.Size([self._engine.dimension] if self._engine.dimension > 1 else [])
+        new_shape = shape + torch.Size([self._engine.dimension])
         return safe_probs.reshape(new_shape)
 
 

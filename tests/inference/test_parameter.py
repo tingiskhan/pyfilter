@@ -48,7 +48,7 @@ class TestParameter(object):
             parameter = cntxt.named_parameter("kappa", prior)
 
             key = inf.qmc.QuasiRegistry.add_engine(0, parameter.prior.shape.numel(), True)
-            samples = inf.qmc.QuasiRegistry.sample(key, batch_shape)
+            samples = inf.qmc.QuasiRegistry.sample(key, batch_shape).squeeze(-1)
 
             parameter.inverse_sample_(samples)
 
