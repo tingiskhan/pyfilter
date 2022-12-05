@@ -16,6 +16,14 @@ class ParameterDoesNotExist(Exception):
     pass
 
 
+class BatchShapeNotSet(Exception):
+    pass
+
+
+class BatchShapeAlreadySet(Exception):
+    pass
+
+
 # TODO: Consider inheriting from torch.nn.Module
 class InferenceContext(object):
     """
@@ -39,6 +47,8 @@ class InferenceContext(object):
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
+
+        self.batch_shape: torch.Size = None
 
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
@@ -73,6 +83,21 @@ class InferenceContext(object):
 
         raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
 
+    def set_batch_shape(self, batch_shape: torch.Size):
+        """
+        Sets batch shape to use in inference context, used when sampling parameters.
+
+        Args:
+            batch_shape (torch.Size): batch shape to use for parameters.
+        """
+
+        if self.batch_shape is None:
+            self.batch_shape = batch_shape
+            return
+        
+        if self.batch_shape != batch_shape:
+            raise BatchShapeAlreadySet(f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}")
+
     def get_prior(self, name: str) -> Prior:
         """
         Returns the prior given the name of the parameter.
@@ -92,6 +117,9 @@ class InferenceContext(object):
             Returns a :class:`PriorBoundParameter`.
         """
 
+        if self.batch_shape is None:
+            raise BatchShapeNotSet("property `batch_shape` not set! Have you called `set_batch_shape`?")
+
         if name in self._prior_dict:
             if self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
@@ -103,7 +131,7 @@ class InferenceContext(object):
         dist = prior.build_distribution()
         assert dist.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
 
-        v = dist.sample()
+        v = dist.sample(self.batch_shape)
 
         # TODO: Set name and context on init...
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
@@ -188,16 +216,12 @@ class InferenceContext(object):
 
         self._apply_to_params(x, shape_dict, lambda u, v: u.update_values_(v, constrained=constrained))
 
-    def initialize_parameters(self, batch_shape: torch.Size):
+    def initialize_parameters(self):
         """
         Initializes the parameters by sampling from the priors.
-
-        Args:
-            batch_shape: the batch shape to use.
         """
 
-        for _, p in self.get_parameters():
-            p.sample_(batch_shape)
+        return
 
     def eval_priors(self, constrained=True) -> torch.Tensor:
         """
@@ -284,9 +308,14 @@ class InferenceContext(object):
         new_context = self.make_new()
         
         for k, v in self._prior_dict.items():
-            p = new_context.named_parameter(k, v.copy().cpu())
-            p.data = f(self.get_parameter(k).clone()).cpu()
+            new_tensor = f(self.get_parameter(k).clone()).cpu()
 
+            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]):]
+            new_context.set_batch_shape(new_batch_shape)
+
+            p = new_context.named_parameter(k, v.copy().cpu())
+            p.data = new_tensor
+            
         return new_context
 
     def copy(self):
@@ -312,17 +341,17 @@ class QuasiInferenceContext(InferenceContext):
         self.quasi_key: int = None
         self._randomize = randomize
 
-    def initialize_parameters(self, batch_shape: torch.Size):
+    def initialize_parameters(self):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
         self.quasi_key = QuasiRegistry.add_engine(id(self), out.shape[-1], self._randomize)
-        probs = QuasiRegistry.sample(self.quasi_key, batch_shape).to(out.device)
+        probs = QuasiRegistry.sample(self.quasi_key, self.batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
             self._unconstrained_shape_dict,
-            lambda u, v: u.inverse_sample_(v.view(batch_shape + u.prior().event_shape), constrained=False)
+            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior().event_shape), constrained=False)
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):

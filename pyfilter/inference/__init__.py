@@ -7,3 +7,4 @@ from .parameter import PriorBoundParameter
 
 from . import utils
 from . import plot
+from . import qmc

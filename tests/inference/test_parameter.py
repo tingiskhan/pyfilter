@@ -1,3 +1,4 @@
+from hashlib import sha1
 import pytest
 import torch
 
@@ -16,6 +17,8 @@ class TestParameter(object):
     @pytest.mark.parametrize("batch_shape", SHAPES)
     def test_initialize_parameter(self, batch_shape):
         with inf.make_context() as cntxt:
+            cntxt.set_batch_shape(batch_shape)
+
             prior = inf.Prior(Normal, loc=0.0, scale=1.0)
             parameter = cntxt.named_parameter("kappa", prior)
 
@@ -39,11 +42,13 @@ class TestParameter(object):
     @pytest.mark.parametrize("batch_shape", SHAPES)
     def test_sample_by_inversion(self, batch_shape):
         with inf.make_context() as cntxt:
+            cntxt.set_batch_shape(batch_shape)
+
             prior = inf.Prior(Normal, loc=0.0, scale=1.0)
             parameter = cntxt.named_parameter("kappa", prior)
 
-            se = torch.quasirandom.SobolEngine(parameter.prior.shape.numel(), scramble=True)
-            samples = se.draw(batch_shape.numel())
+            key = inf.qmc.QuasiRegistry.add_engine(0, parameter.prior.shape.numel(), True)
+            samples = inf.qmc.QuasiRegistry.sample(key, batch_shape)
 
             parameter.inverse_sample_(samples)
 

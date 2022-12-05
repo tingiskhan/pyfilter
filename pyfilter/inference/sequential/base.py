@@ -28,7 +28,9 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
         self.particles = torch.Size([num_particles])
         self._parameter_shape = torch.Size([num_particles, 1])
-        self.filter.set_batch_shape(self.particles)
+        
+        self.filter.set_batch_shape(self.particles)        
+        self.context.set_batch_shape(self._parameter_shape)
 
         self._callbacks: List[Callback] = list()
 
@@ -51,7 +53,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         """
 
         self.filter.initialize_model(self.context)
-        self.context.initialize_parameters(self._parameter_shape)
+        self.context.initialize_parameters()
 
         init_state = self.filter.initialize()
         init_weights = torch.zeros(self.particles, device=init_state.get_loglikelihood().device)

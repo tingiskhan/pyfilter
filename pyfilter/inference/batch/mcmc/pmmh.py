@@ -44,13 +44,15 @@ class PMMH(BaseAlgorithm):
         self._num_chains = torch.Size([num_chains])
         self._parameter_shape = torch.Size([num_chains, 1])
 
+        self.context.set_batch_shape(self._parameter_shape)
+        self.filter.set_batch_shape(self._num_chains)
+
         self._proposal = proposal or RandomWalk()
         self._initializer = initializer
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         self.filter.initialize_model(self.context)
-        self.filter.set_batch_shape(self._num_chains)
-
+        
         if self._initializer == "seed":
             raise NotImplementedError()
         elif self._initializer == "mean":
@@ -76,8 +78,8 @@ class PMMH(BaseAlgorithm):
 
             with self.context.make_new() as sub_context:
                 proposal_filter = self.filter.copy()
+                sub_context.set_batch_shape(self._parameter_shape)
                 proposal_filter.initialize_model(sub_context)
-                sub_context.initialize_parameters(self._parameter_shape)
 
             for i in range(self.num_samples):
                 accepted = run_pmmh(
