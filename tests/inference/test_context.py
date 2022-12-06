@@ -31,31 +31,35 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_sample_parameters(self, shape):
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
+
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
             assert isinstance(context.get_parameter(alpha._name), inf.PriorBoundParameter) and \
                    isinstance(context.get_parameter(beta._name), inf.PriorBoundParameter)
 
-            context.initialize_parameters(shape)
-
             assert alpha.shape == shape and beta.shape == shape
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES[1:])
     def test_exchange_context(self, shape):
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
+
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
-            context.initialize_parameters(shape)
+            context.initialize_parameters()
 
             with context.make_new() as sub_context:
+                sub_context.set_batch_shape(shape)
+                
                 alpha_sub = sub_context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
                 beta_sub = sub_context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
                 assert alpha_sub is not alpha and beta_sub is not beta
-
-                sub_context.initialize_parameters(shape)
+                
+                context.initialize_parameters()
 
                 mask: torch.BoolTensor = (torch.empty(shape[0]).normal_() > 0.0).bool()
 
@@ -66,10 +70,12 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", BATCH_SHAPES[1:])
     def test_resample_context(self, shape):
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
+
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
-
-            context.initialize_parameters(shape)
+            
+            context.initialize_parameters()
 
             indices: torch.IntTensor = torch.randint(low=0, high=shape[0], size=shape[:1])
 
@@ -82,9 +88,11 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", BATCH_SHAPES[1:])
     def test_make_model_and_resample(self, shape):
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
             model = build_model(context)
 
-            context.initialize_parameters(shape)
+            
+            context.initialize_parameters()
 
             old_dict = {k: v.clone() for k, v in context.parameters.items()}
 
@@ -96,6 +104,8 @@ class TestContext(object):
 
     def test_assert_sampling_multiple_same(self):
         with inf.make_context() as context:
+            context.set_batch_shape(torch.Size([]))
+
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
 
@@ -113,12 +123,13 @@ class TestContext(object):
             return ts.models.OrnsteinUhlenbeck(alpha, beta, beta)
 
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
             make_model(context)
 
-            context.initialize_parameters(shape)
             as_state = context.state_dict()
 
         with inf.make_context() as new_context:
+            new_context.set_batch_shape(shape)
             model = make_model(new_context)
             new_context.load_state_dict(as_state)
 
@@ -130,15 +141,17 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_multidimensional_parameters(self, shape):
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
+
             alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0).expand(torch.Size([2, 2])).to_event(2))
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
-            context.initialize_parameters(shape)
 
             stacked = context.stack_parameters()
             assert stacked.shape == torch.Size([shape.numel(), 5])
 
     def test_verify_not_batched(self):
         with inf.make_context() as context:
+            context.set_batch_shape(torch.Size([]))
             with pytest.raises(AssertionError):
                 beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=torch.zeros(1), scale=torch.ones(1)))
 
@@ -149,19 +162,19 @@ class TestContext(object):
             return
 
         with inf.make_context() as context:
+            context.set_batch_shape(shape)
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0).to(device))
-        
-        context.initialize_parameters(shape)
 
         sub_context = context.apply_fun(lambda u: u.mean())
         for p, v in sub_context.parameters.items():
-            assert v.shape == torch.Size([])
+            assert (v == context.get_parameter(p).mean()).all()
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_quasi_initialize(self, shape):
         with inf.make_context(use_quasi=True) as context:
+            context.set_batch_shape(shape)
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
-            context.initialize_parameters(shape)
+            context.initialize_parameters()
 
             assert beta.shape == shape
 
@@ -169,9 +182,10 @@ class TestContext(object):
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_copy_context(self, use_quasi, shape):
         with inf.make_context(use_quasi=use_quasi) as context:
+            context.set_batch_shape(shape)
             beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
         
-        context.initialize_parameters(shape)
+        context.initialize_parameters()
         copy_context = context.copy()
 
         for (ck, cv), (k, v) in zip(copy_context.parameters.items(), context.parameters.items()):

@@ -69,6 +69,7 @@ class QuasiRegistry(object):
         Adds an engine to the QMC registry.
 
         Args:
+            key: the key to use for the engine.
             dim: dimension of to sample.
             randomize: whether to randomize the QMC points via rotation.
             raise_if_exists: raise error if trying to create an engine that already exists.
@@ -88,12 +89,12 @@ class QuasiRegistry(object):
         return key
 
     @classmethod
-    def get_engine(cls, dim: int) -> _EngineContainer:
-        return cls._registry.registry[dim]
+    def get_engine(cls, key: int) -> _EngineContainer:
+        return cls._registry.registry[key]
 
     @classmethod
-    def sample(cls, dim: int, shape: torch.Size) -> torch.Tensor:
-        engine = cls.get_engine(dim)
+    def sample(cls, key: int, shape: torch.Size) -> torch.Tensor:
+        engine = cls.get_engine(key)
         return engine.draw(shape)
 
     @classmethod

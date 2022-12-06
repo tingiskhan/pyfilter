@@ -67,7 +67,7 @@ class PriorBoundParameter(Parameter):
             shape: shape of samples.
         """
 
-        self.data = self.prior.build_distribution().sample(shape)
+        self.copy_(self.prior.build_distribution().sample(shape))
 
     def update_values_(self, x: torch.Tensor, constrained=True):
         """
@@ -127,9 +127,9 @@ class PriorBoundParameter(Parameter):
         """
 
         if constrained:
-            self.data = self.prior.build_distribution().icdf(probs)
+            self.copy_(self.prior.build_distribution().icdf(probs))
             return
 
         unconstrained = self.prior.unconstrained_prior
         samples = unconstrained.icdf(probs)
-        self.data = self.prior.get_constrained(samples)
+        self.copy_(self.prior.get_constrained(samples))

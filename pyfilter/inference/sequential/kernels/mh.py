@@ -51,9 +51,9 @@ class ParticleMetropolisHastings(BaseKernel):
         
         with context.make_new() as sub_context:            
             proposal_filter = filter_.copy()
+            sub_context.set_batch_shape(context.batch_shape)
             
-            proposal_filter.initialize_model(sub_context)            
-            sub_context.initialize_parameters(parameter_shape)
+            proposal_filter.initialize_model(sub_context)
 
         for _ in range(self._n_steps):
             to_accept = run_pmmh(
