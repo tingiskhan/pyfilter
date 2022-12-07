@@ -46,7 +46,7 @@ def mimic_arviz_posterior(
     """
 
     if ax is None:
-        num_rows = ceil(sum(p.prior.shape.numel() for p in context.parameters.values()) / num_cols)
+        num_rows = ceil(sum(p.prior.event_shape.numel() for p in context.parameters.values()) / num_cols)
         _, ax = plt.subplots(num_rows, num_cols)
 
     w = state.normalized_weights().cpu().numpy()
