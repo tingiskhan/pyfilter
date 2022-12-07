@@ -35,7 +35,7 @@ class ParticleFilterPrediction(PredictionState):
 
     def create_state_from_prediction(self, model):
         x_new = model.hidden.propagate(self.prev_x)
-        new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.values.device)
+        new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.value.device)
 
         return ParticleFilterState(x_new, torch.zeros_like(self.old_weights), new_ll, self.indices)
 
@@ -75,8 +75,8 @@ class ParticleFilterState(FilterState):
         if sum_axis < -1:
             normalized_weights.unsqueeze_(-1)
 
-        mean = (self.x.values * normalized_weights).sum(sum_axis)
-        var = ((self.x.values - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
+        mean = (self.x.value * normalized_weights).sum(sum_axis)
+        var = ((self.x.value - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
 
         return mean, var
 
@@ -92,7 +92,7 @@ class ParticleFilterState(FilterState):
     def resample(self, indices):
         self.__init__(
             self.x.copy(
-                values=batched_gather(self.x.values, indices, self.x.values.dim() - self.x.event_shape.numel())
+                values=batched_gather(self.x.value, indices, self.x.value.dim() - self.x.event_shape.numel())
             ),
             batched_gather(self.w, indices, 0),
             batched_gather(self.ll, indices, 0),
@@ -104,8 +104,8 @@ class ParticleFilterState(FilterState):
 
     # TODO: Improve...
     def exchange(self, state: "ParticleFilterState", mask):
-        x = self.x.copy(values=self.x.values.clone())
-        x.values[mask] = state.x.values[mask]
+        x = self.x.copy(values=self.x.value.clone())
+        x.value[mask] = state.x.value[mask]
 
         w = self.w.clone()
         w[mask] = state.w[mask]
@@ -128,7 +128,7 @@ class ParticleFilterState(FilterState):
         res = OrderedDict([])
 
         res["x"] = {
-            "values": self.x.values,
+            "values": self.x.value,
             "time_index": self.x.time_index,
         }
 
@@ -148,8 +148,8 @@ class ParticleFilterState(FilterState):
 
         # TODO: Handle case when the particles have doubled better?
         values_to_load = state_dict["x"]["values"]
-        msg = f"Seems like you're loading a different shape: self:{self.x.values.shape} != other:{values_to_load.shape}"
-        assert self.x.values.shape == values_to_load.shape, msg
+        msg = f"Seems like you're loading a different shape: self:{self.x.value.shape} != other:{values_to_load.shape}"
+        assert self.x.value.shape == values_to_load.shape, msg
 
         self.x = self.x.propagate_from(
             values=values_to_load, time_increment=-self.x.time_index + state_dict["x"]["time_index"]

@@ -1,8 +1,8 @@
 from typing import Callable, TypeVar
-from stochproc.timeseries import AffineEulerMaruyama, AffineProcess, StochasticProcess, TimeseriesState
+from stochproc.timeseries import AffineEulerMaruyama, AffineProcess, StructuralStochasticProcess, TimeseriesState
 
 
-T = TypeVar("T", bound=StochasticProcess)
+T = TypeVar("T", bound=StructuralStochasticProcess)
 _RESULT = Callable[[T, TimeseriesState], TimeseriesState]
 
 
@@ -15,7 +15,7 @@ def _missing(mod, state):
     raise Exception("You didn't pass a custom function, and couldn't find a suitable pre-defined one!")
 
 
-def get_pre_weight_func(func: _RESULT, process: StochasticProcess) -> _RESULT:
+def get_pre_weight_func(func: _RESULT, process: StructuralStochasticProcess) -> _RESULT:
     """
     Gets function for generating a pre-weight for the APF.
 

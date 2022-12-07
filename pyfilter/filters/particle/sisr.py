@@ -30,7 +30,7 @@ class SISR(ParticleFilter):
         all_indices[mask] = indices
         all_indices[~mask] = torch.arange(0, state.prev_inds.shape[-1], device=all_indices.device)
 
-        resampled_x = state.x.values
+        resampled_x = state.x.value
         resampled_x[mask] = batched_gather(resampled_x[mask], indices, indices.dim() - 1)
 
         resampled_state = state.x.copy(values=resampled_x)

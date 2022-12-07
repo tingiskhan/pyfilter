@@ -3,7 +3,7 @@ from torch.distributions import Distribution
 from typing import Callable
 from abc import ABC
 from .pre_weight_funcs import get_pre_weight_func
-from stochproc.timeseries import StochasticProcess, StateSpaceModel, TimeseriesState
+from stochproc.timeseries import StructuralStochasticProcess, StateSpaceModel, TimeseriesState
 
 
 class Proposal(ABC):
@@ -11,7 +11,7 @@ class Proposal(ABC):
     Abstract base class for proposal objects.
     """
 
-    def __init__(self, pre_weight_func: Callable[[StochasticProcess, TimeseriesState], TimeseriesState] = None):
+    def __init__(self, pre_weight_func: Callable[[StructuralStochasticProcess, TimeseriesState], TimeseriesState] = None):
         """
         Initializes the :class:`Proposal` object.
 
@@ -42,7 +42,7 @@ class Proposal(ABC):
         self, y: torch.Tensor, x_dist: Distribution, x_new: TimeseriesState, kernel: Distribution
     ) -> torch.Tensor:
         y_dist = self._model.build_density(x_new)
-        return y_dist.log_prob(y) + x_dist.log_prob(x_new.values) - kernel.log_prob(x_new.values)
+        return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)
 
     def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
         """

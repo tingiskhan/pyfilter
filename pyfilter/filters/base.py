@@ -107,7 +107,7 @@ class BaseFilter(ABC):
             >>> sisr.set_batch_shape(torch.Size([50]))
             >>>
             >>> state = sisr.initialize()
-            >>> state.x.values.shape
+            >>> state.x.value.shape
             torch.Size([50, 1000])
         """
 

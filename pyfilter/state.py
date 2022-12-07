@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from typing import Any, OrderedDict as tOrderedDict
 
-from stochproc.container import BufferIterable
+from .container import BufferIterable
 
 
 class BaseResult(dict):
@@ -14,7 +14,7 @@ class BaseResult(dict):
         Initializes the :class:`BaseResult` class.
         """
 
-        super(BaseResult, self).__init__()
+        super().__init__()
         self.tensor_tuples = BufferIterable()
 
     def exchange_tensor_tuples(self, other: "BaseResult"):
@@ -27,8 +27,6 @@ class BaseResult(dict):
 
         for k, v in other.tensor_tuples.items():
             self.tensor_tuples[k] = v
-
-        return
 
     def state_dict(self) -> tOrderedDict[str, Any]:
         """
@@ -46,5 +44,3 @@ class BaseResult(dict):
         """
 
         self.tensor_tuples.load_state_dict(state_dict["tensor_tuples"])
-
-        return

@@ -135,10 +135,10 @@ class LinearGaussianObservations(Proposal):
         cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
 
         if self._obs_is1d:
-            o_loc = offset + c.squeeze() * x.values
+            o_loc = offset + c.squeeze() * x.value
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
-            o_loc = offset + (c_ @ x.values.unsqueeze(-1)).squeeze(-1)
+            o_loc = offset + (c_ @ x.value.unsqueeze(-1)).squeeze(-1)
             kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
 
         return kernel.log_prob(y)
