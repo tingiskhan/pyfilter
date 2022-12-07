@@ -2,8 +2,9 @@ import threading
 from collections import OrderedDict
 from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
 import torch
+from pyro.distributions import Distribution
 
-from .prior import Prior
+from .prior import PriorMixin
 from .parameter import PriorBoundParameter
 from .qmc import QuasiRegistry
 
@@ -39,10 +40,10 @@ class InferenceContext(object):
 
     def __init__(self):
         """
-        Initializes the :class:`ParameterContext` class.
+        Initializes the :class:`InferenceContext` class.
         """
 
-        self._prior_dict: Dict[str, Prior] = OrderedDict([])
+        self._prior_dict: Dict[str, Distribution] = OrderedDict([])
         self._parameter_dict: Dict[str, PriorBoundParameter] = OrderedDict([])
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
@@ -98,14 +99,14 @@ class InferenceContext(object):
         if self.batch_shape != batch_shape:
             raise BatchShapeAlreadySet(f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}")
 
-    def get_prior(self, name: str) -> Prior:
+    def get_prior(self, name: str) -> PriorMixin:
         """
         Returns the prior given the name of the parameter.
         """
 
         return self._prior_dict.get(name, None)
 
-    def named_parameter(self, name: str, prior: Prior) -> PriorBoundParameter:
+    def named_parameter(self, name: str, prior: Distribution) -> PriorBoundParameter:
         """
         Registers a prior on the global prior dictionary, and creates a corresponding parameter.
 
@@ -128,18 +129,17 @@ class InferenceContext(object):
 
         self._prior_dict[name] = prior
 
-        dist = prior.build_distribution()
-        assert dist.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
+        assert prior.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
 
-        v = dist.sample(self.batch_shape)
+        v = prior.sample(self.batch_shape)
 
         # TODO: Set name and context on init...
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
         parameter.set_context(self)
         parameter.set_name(name)
 
-        self._shape_dict[name] = prior.build_distribution().event_shape
-        self._unconstrained_shape_dict[name] = prior.unconstrained_prior.event_shape
+        self._shape_dict[name] = prior.event_shape
+        self._unconstrained_shape_dict[name] = prior.unconstrained_prior().event_shape
 
         return parameter
 
@@ -238,7 +238,7 @@ class InferenceContext(object):
         Exchanges the parameters of ``self`` with that of ``other``.
 
         Args:
-            other: the :class:`ParameterContext` to take the values from.
+            other: the :class:`InferenceContext` to take the values from.
             mask: the mask from where to take.
         """
 
@@ -299,7 +299,7 @@ class InferenceContext(object):
 
     def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "InferenceContext":
         """
-        Applies ``f`` to each parameter of ``self`` and returns a new :class:`ParameterContext`.
+        Applies ``f`` to each parameter of ``self`` and returns a new :class:`InferenceContext`.
 
         Args:
             f: function to apply.
@@ -334,7 +334,7 @@ class QuasiInferenceContext(InferenceContext):
 
     def __init__(self, randomize: bool = True):
         """
-        Initializes the :class:`QuasiParameterContext` class.
+        Initializes the :class:`QuasiInferenceContext` class.
         """
 
         super(QuasiInferenceContext, self).__init__()

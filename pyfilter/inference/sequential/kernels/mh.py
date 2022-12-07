@@ -47,9 +47,7 @@ class ParticleMetropolisHastings(BaseKernel):
         old_params = context.stack_parameters(constrained=False)
         previous_distance = 0.0
 
-        parameter_shape = torch.Size([old_params.shape[0], 1])
-        
-        with context.make_new() as sub_context:            
+        with context.make_new() as sub_context:
             proposal_filter = filter_.copy()
             sub_context.set_batch_shape(context.batch_shape)
             
