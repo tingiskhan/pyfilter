@@ -1,4 +1,3 @@
-from subprocess import call
 from pyro.distributions import Distribution
 
 
