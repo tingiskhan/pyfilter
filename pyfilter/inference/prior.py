@@ -154,6 +154,31 @@ class PriorMixin(object):
 
         return deepcopy(self)
 
+    def to(self, device: torch.device) -> "PriorMixin":
+        """
+        Moves the distribution to specified device. Note that this is experimental and might not work for all distributions.
+
+        Args:
+            device (torch.device): device to move to.
+
+        Returns:
+            PriorMixin: Same distribution but where tensors are moved to cuda.
+        """
+
+        new = self._get_checked_instance(self.__class__, None)
+
+        params = dict()
+        for arg_name in self.arg_constraints.keys():
+            parameter = getattr(self, arg_name)
+            if parameter is None:
+                continue
+            
+            params[arg_name] = parameter.to(device)
+        
+        new.__init__(**params)
+
+        return new
+            
 
 applied_patches = []
 
