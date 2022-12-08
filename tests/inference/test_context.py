@@ -33,8 +33,8 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
 
-            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
             assert isinstance(context.get_parameter(alpha._name), inf.PriorBoundParameter) and \
                    isinstance(context.get_parameter(beta._name), inf.PriorBoundParameter)
@@ -46,16 +46,16 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
 
-            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
             context.initialize_parameters()
 
             with context.make_new() as sub_context:
                 sub_context.set_batch_shape(shape)
                 
-                alpha_sub = sub_context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-                beta_sub = sub_context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+                alpha_sub = sub_context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+                beta_sub = sub_context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
                 assert alpha_sub is not alpha and beta_sub is not beta
                 
@@ -72,8 +72,8 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
 
-            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
             
             context.initialize_parameters()
 
@@ -90,7 +90,6 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
             model = build_model(context)
-
             
             context.initialize_parameters()
 
@@ -106,19 +105,21 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(torch.Size([]))
 
-            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
-            alpha2 = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
+            alpha2 = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+
+            assert alpha is alpha2
 
             with pytest.raises(NotSamePriorError):
-                alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=2.0))
+                alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=2.0))
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_serialize_and_load(self, shape):
         def make_model(context_):
-            alpha = context_.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0))
-            beta = context_.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context_.named_parameter("alpha", Normal(loc=0.0, scale=1.0))
+            beta = context_.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
             return ts.models.OrnsteinUhlenbeck(alpha, beta, beta)
 
@@ -143,8 +144,8 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
 
-            alpha = context.named_parameter("alpha", inf.Prior(Normal, loc=0.0, scale=1.0).expand(torch.Size([2, 2])).to_event(2))
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0).expand(torch.Size([2, 2])).to_event(2))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
             stacked = context.stack_parameters()
             assert stacked.shape == torch.Size([shape.numel(), 5])
@@ -153,7 +154,7 @@ class TestContext(object):
         with inf.make_context() as context:
             context.set_batch_shape(torch.Size([]))
             with pytest.raises(AssertionError):
-                beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=torch.zeros(1), scale=torch.ones(1)))
+                beta = context.named_parameter("beta", LogNormal(loc=torch.zeros(1), scale=torch.ones(1)))
 
     @pytest.mark.parametrize("device", ["cpu:0", "cuda:0"])
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
@@ -163,7 +164,7 @@ class TestContext(object):
 
         with inf.make_context() as context:
             context.set_batch_shape(shape)
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0).to(device))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0).to(device))
 
         sub_context = context.apply_fun(lambda u: u.mean())
         for p, v in sub_context.parameters.items():
@@ -173,7 +174,7 @@ class TestContext(object):
     def test_quasi_initialize(self, shape):
         with inf.make_context(use_quasi=True) as context:
             context.set_batch_shape(shape)
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
             context.initialize_parameters()
 
             assert beta.shape == shape
@@ -183,7 +184,7 @@ class TestContext(object):
     def test_copy_context(self, use_quasi, shape):
         with inf.make_context(use_quasi=use_quasi) as context:
             context.set_batch_shape(shape)
-            beta = context.named_parameter("beta", inf.Prior(LogNormal, loc=0.0, scale=1.0))
+            beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
         
         context.initialize_parameters()
         copy_context = context.copy()
