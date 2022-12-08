@@ -99,7 +99,7 @@ class TestContext(object):
             indices: torch.IntTensor = torch.randint(low=0, high=shape[0], size=shape[:1])
             context.resample(indices)
 
-            for p_model, (n, p) in zip(model.hidden.functional_parameters(), context.get_parameters()):
+            for p_model, (n, p) in zip(model.hidden.parameters, context.get_parameters()):
                 assert (p == old_dict[n][indices]).all() and (p_model is p)
 
     def test_assert_sampling_multiple_same(self):
@@ -135,7 +135,7 @@ class TestContext(object):
 
             assert (context.stack_parameters() == new_context.stack_parameters()).all()
 
-            for p1, p2 in zip(model.functional_parameters(), new_context.parameters.values()):
+            for p1, p2 in zip(model.parameters, new_context.parameters.values()):
                 assert p1 is p2
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
