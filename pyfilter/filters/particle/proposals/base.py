@@ -11,7 +11,9 @@ class Proposal(ABC):
     Abstract base class for proposal objects.
     """
 
-    def __init__(self, pre_weight_func: Callable[[StructuralStochasticProcess, TimeseriesState], TimeseriesState] = None):
+    def __init__(
+        self, pre_weight_func: Callable[[StructuralStochasticProcess, TimeseriesState], TimeseriesState] = None
+    ):
         """
         Initializes the :class:`Proposal` object.
 

@@ -30,7 +30,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
         """
 
-        super().__init__(filter_, particles, context=context)        
+        super().__init__(filter_, particles, context=context)
         if not isinstance(self.context, InferenceContext):
             raise ContextNotSupported(f"Currently do not support '{self.context.__class__}'!")
 

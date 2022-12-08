@@ -18,7 +18,13 @@ class PMMH(BaseAlgorithm):
     MONTE_CARLO_SAMPLES = torch.Size([10_000])
 
     def __init__(
-        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean", context=None
+        self,
+        filter_,
+        num_samples: int,
+        num_chains: int = 4,
+        proposal: BaseProposal = None,
+        initializer: str = "mean",
+        context=None,
     ):
         r"""
         Initializes the :class:`PMMH` class.
@@ -39,7 +45,7 @@ class PMMH(BaseAlgorithm):
         """
 
         super().__init__(filter_, context=context)
-        
+
         self.num_samples = num_samples
         self._num_chains = torch.Size([num_chains])
         self._parameter_shape = torch.Size([num_chains, 1])
@@ -52,7 +58,7 @@ class PMMH(BaseAlgorithm):
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         self.filter.initialize_model(self.context)
-        
+
         if self._initializer == "seed":
             raise NotImplementedError()
         elif self._initializer == "mean":

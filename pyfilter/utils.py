@@ -15,7 +15,7 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     if not normalized:
         weights = normalize(weights)
 
-    return weights.sum(-1) ** 2 / (weights ** 2).sum(-1)
+    return weights.sum(-1) ** 2 / (weights**2).sum(-1)
 
 
 def construct_diag_from_flat(x: torch.Tensor, event_shape: torch.Size) -> torch.Tensor:

@@ -29,7 +29,7 @@ class GradientBasedProposal(RandomWalk):
         """
 
         super().__init__(**kwargs)
-        self._eps = self._scale ** 2.0 / 2.0
+        self._eps = self._scale**2.0 / 2.0
         self._use_second_order = use_second_order
 
     def build(self, context, state, filter_, y):

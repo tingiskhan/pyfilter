@@ -51,7 +51,7 @@ class PriorBoundParameter(Parameter):
         """
         The prior of the parameter.
         """
-        
+
         return self._context.get_prior(self._name)
 
     def sample_(self, shape: torch.Size = torch.Size([])):

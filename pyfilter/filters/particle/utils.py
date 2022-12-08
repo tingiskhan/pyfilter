@@ -43,9 +43,7 @@ class Unsqueezer(object):
 
         self.dim_to_unsqueeze = dim_to_unsqueeze
         self.params = tuple(
-            p
-            for p in parameters
-            if isinstance(p, PriorBoundParameter) and p.prior.shape().numel() < p.shape.numel()
+            p for p in parameters if isinstance(p, PriorBoundParameter) and p.prior.shape().numel() < p.shape.numel()
         )
         self.do_unsqueeze = do_unsqueeze
 

@@ -95,9 +95,11 @@ class InferenceContext(object):
         if self.batch_shape is None:
             self.batch_shape = batch_shape
             return
-        
+
         if self.batch_shape != batch_shape:
-            raise BatchShapeAlreadySet(f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}")
+            raise BatchShapeAlreadySet(
+                f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}"
+            )
 
     def get_prior(self, name: str) -> PriorMixin:
         """
@@ -124,8 +126,10 @@ class InferenceContext(object):
         if name in self._prior_dict:
             if self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
-            
-            raise NotSamePriorError(f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!")
+
+            raise NotSamePriorError(
+                f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!"
+            )
 
         self._prior_dict[name] = prior
 
@@ -156,7 +160,7 @@ class InferenceContext(object):
 
         if name in self._parameter_dict:
             return self._parameter_dict[name]
-        
+
         raise ParameterDoesNotExist(f"No such parameter '{name}'!")
 
     def get_parameters(self, constrained=True) -> Iterable[Tuple[str, PriorBoundParameter]]:
@@ -178,7 +182,7 @@ class InferenceContext(object):
 
         res = tuple()
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
-        
+
         for n, p in self.get_parameters():
             shape = shape_dict[n]
             v = (p if constrained else p.get_unconstrained()).view(-1, shape.numel())
@@ -195,7 +199,7 @@ class InferenceContext(object):
         for n, p in self.get_parameters():
             numel = shape_dict[n].numel()
 
-            param = x[..., index: index + numel]
+            param = x[..., index : index + numel]
             f(p, param)
 
             index += numel
@@ -272,7 +276,9 @@ class InferenceContext(object):
 
         res = OrderedDict([])
         res[self._PARAMETER_KEY] = {k: v.data for k, v in self.parameters.items()}
-        res[self._PRIOR_KEY] = {k: {kp: getattr(v, kp) for kp in v.arg_constraints.keys()} for k, v in self._prior_dict.items()}
+        res[self._PRIOR_KEY] = {
+            k: {kp: getattr(v, kp) for kp in v.arg_constraints.keys()} for k, v in self._prior_dict.items()
+        }
 
         return res
 
@@ -304,16 +310,16 @@ class InferenceContext(object):
         """
 
         new_context = self.make_new()
-        
+
         for k, v in self._prior_dict.items():
             new_tensor = f(self.get_parameter(k).clone())
 
-            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]):]
+            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]) :]
             new_context.set_batch_shape(new_batch_shape)
 
             p = new_context.named_parameter(k, v.copy())
             p.data = new_tensor
-            
+
         return new_context
 
     def copy(self):
@@ -349,7 +355,7 @@ class QuasiInferenceContext(InferenceContext):
         self._apply_to_params(
             probs,
             self._unconstrained_shape_dict,
-            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior.event_shape), constrained=False)
+            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior.event_shape), constrained=False),
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):

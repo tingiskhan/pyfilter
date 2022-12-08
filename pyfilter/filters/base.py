@@ -39,7 +39,7 @@ class BaseFilter(ABC):
                     median of mean.
             record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
                 `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
-        """        
+        """
 
         super().__init__()
 
@@ -71,7 +71,7 @@ class BaseFilter(ABC):
     def ssm(self) -> StateSpaceModel:
         return self._model
 
-    def initialize_model(self, context: "InferenceContext"): # noqa: F821
+    def initialize_model(self, context: "InferenceContext"):  # noqa: F821
         r"""
         Initializes the model.
 

@@ -23,7 +23,7 @@ def verify_same_prior(x: Distribution, y: Distribution) -> bool:
 
         if (x_val != y_val).any():
             return False
-    
+
     return True
 
 
@@ -133,7 +133,7 @@ class PriorMixin(object):
         numel = self.get_numel(constrained)
 
         return slice(prev_index, prev_index + numel), numel
-    
+
     def equivalent_to(self, other: object) -> bool:
         """
         Checks whether `self` is equivalent in distribution to `other`.
@@ -173,9 +173,9 @@ class PriorMixin(object):
             parameter = getattr(self, arg_name)
             if parameter is None:
                 continue
-            
+
             params[arg_name] = parameter.to(device)
-        
+
         new.__init__(**params)
 
         return new
@@ -186,7 +186,7 @@ class PriorMixin(object):
         """
 
         return self.to("cuda:0")
-            
+
 
 applied_patches = []
 
@@ -204,13 +204,13 @@ def patch(sub_cls, cls):
         return
 
     for methodname in sub_cls.__dict__:
-        if methodname.startswith('_') or hasattr(cls, methodname):
+        if methodname.startswith("_") or hasattr(cls, methodname):
             continue
 
         method = getattr(sub_cls, methodname)
         method = get_raw_method(method)
         setattr(cls, methodname, method)
-    
+
     applied_patches.append(sub_cls)
 
 

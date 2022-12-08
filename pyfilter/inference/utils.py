@@ -20,7 +20,9 @@ class QuasiMultivariateNormal(MultivariateNormal):
 
     has_rsample = False
 
-    def __init__(self, quasi_key, loc, covariance_matrix=None, precision_matrix=None, scale_tril=None, validate_args=None):
+    def __init__(
+        self, quasi_key, loc, covariance_matrix=None, precision_matrix=None, scale_tril=None, validate_args=None
+    ):
         super().__init__(loc, covariance_matrix, precision_matrix, scale_tril, validate_args)
         self.quasi_key = quasi_key
 
