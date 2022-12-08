@@ -21,7 +21,7 @@ def verify_same_prior(x: Distribution, y: Distribution) -> bool:
         x_val = getattr(x, constraint)
         y_val = getattr(y, constraint)
 
-        if (x_val == y_val).all():
+        if (x_val != y_val).any():
             return False
     
     return True
