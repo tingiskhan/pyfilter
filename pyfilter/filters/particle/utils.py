@@ -1,4 +1,5 @@
 import torch
+from stochproc.timeseries import StructuralStochasticProcess
 
 
 def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
@@ -28,7 +29,7 @@ class Unsqueezer(object):
     Helper object for temporarily squeezing/unsqueezing parameters.
     """
 
-    def __init__(self, dim_to_unsqueeze: int, module: torch.nn.Module, do_unsqueeze: bool):
+    def __init__(self, dim_to_unsqueeze: int, module: StructuralStochasticProcess, do_unsqueeze: bool):
         """
         Initializes :class:`Unsqueezer`.
 
@@ -43,7 +44,7 @@ class Unsqueezer(object):
         self.dim_to_unsqueeze = dim_to_unsqueeze
         self.params = tuple(
             p
-            for p in module.parameters()
+            for p in module.parameters + module.initial_parameters
             if isinstance(p, PriorBoundParameter) and p.prior.shape.numel() < p.shape.numel()
         )
         self.do_unsqueeze = do_unsqueeze
