@@ -8,7 +8,7 @@ from pykalman import KalmanFilter
 
 
 def build_0d_dist(x, a, s):
-    return Normal(loc=a * x.values, scale=s)
+    return Normal(loc=a * x.value, scale=s)
 
 
 def build_1d_dist(x, a, s):
@@ -16,7 +16,7 @@ def build_1d_dist(x, a, s):
 
 
 def build_2d_to_1d_dist(x, a, s):
-    return Normal(loc=a.matmul(x.values.unsqueeze(-1)).squeeze(-1), scale=s)
+    return Normal(loc=a.matmul(x.value.unsqueeze(-1)).squeeze(-1), scale=s)
 
 
 def build_joint(x, a, s):
@@ -45,10 +45,9 @@ def linear_models():
     sigma = np.array([0.05, 0.1])
     a, s = np.eye(2), 0.15 * np.ones(2)
 
-    inc_dist = dist.DistributionModule(Normal, loc=0.0, scale=1.0).expand(torch.Size([2])).to_event(1)
-
+    inc_dist = Normal(loc=0.0, scale=1.0).expand(torch.Size([2])).to_event(1)
     rw = ts.LinearModel(
-        torch.from_numpy(a).float(), torch.from_numpy(sigma).float(), increment_dist=inc_dist, initial_dist=inc_dist
+        torch.from_numpy(a).float(), torch.from_numpy(sigma).float(), inc_dist, lambda *args: Normal(0.0, 1.0).expand(torch.Size([2])).to_event(1)
     )
 
     params = torch.from_numpy(a).float(), torch.from_numpy(s).float()
@@ -86,11 +85,11 @@ def linear_models():
 
 
 def build_non_linear_mean(x, s):
-    return x.values ** 2.0 / 20.0
+    return x.value ** 2.0 / 20.0
 
 
 def build_non_linear_deriv(x, s):
-    return x.values / 10.0
+    return x.value / 10.0
 
 
 def build_non_linear_dist(x, s):
@@ -98,7 +97,7 @@ def build_non_linear_dist(x, s):
 
 
 def mean_scale(x, s):
-    x_t = x.values
+    x_t = x.value
     return x_t / 2.0 + 25 * x_t / (1 + x_t ** 2.0) + 8.0 * (1.2 * x.time_index).cos(), s
 
 
@@ -113,10 +112,9 @@ class UKFState(object):
 
 def local_linearization():
     sigma = sqrt(10.0)
-
-    init_dist = dist.DistributionModule(Normal, loc=0.0, scale=sqrt(5.0))
-    inc_dist = dist.DistributionModule(Normal, loc=0.0, scale=1.0)
-    ar = ts.AffineProcess(mean_scale, (sigma,), init_dist, inc_dist)
+    
+    inc_dist = Normal(loc=0.0, scale=1.0)
+    ar = ts.AffineProcess(mean_scale, inc_dist, (sigma,), lambda *args: Normal(loc=0.0, scale=sqrt(5.0)))
 
     s = 1.0
     obs_1d_1d = ts.StateSpaceModel(ar, build_non_linear_dist, parameters=(s,))

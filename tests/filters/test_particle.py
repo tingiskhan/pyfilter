@@ -70,7 +70,7 @@ class TestParticleFilters(object):
 
             for new_state, copy_state in zip(result.states, old_result.states):
                 assert new_state is not copy_state
-                assert (new_state.x.values == copy_state.x.values).all() 
+                assert (new_state.x.value == copy_state.x.value).all() 
                 assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
@@ -154,7 +154,7 @@ class TestParticleFilters(object):
             new_ts = new_s.get_timeseries_state()
             old_ts = old_s.get_timeseries_state()
 
-            assert (new_ts.values == old_ts.values).all() and (new_ts.time_index == old_ts.time_index).all()
+            assert (new_ts.value == old_ts.value).all() and (new_ts.time_index == old_ts.time_index).all()
 
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
