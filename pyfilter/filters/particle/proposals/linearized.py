@@ -75,9 +75,9 @@ class Linearized(Proposal):
                 step[mask] = neg_inv_hess[mask]
                 std[mask] = neg_inv_hess[mask].sqrt()
 
-                g.detach_()
+                g = g.detach()
 
-            mean.detach_()
+            mean = mean.detach()
             mean += step * g
 
         kernel = Normal(mean, std)
