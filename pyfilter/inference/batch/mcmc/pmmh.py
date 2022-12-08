@@ -81,7 +81,7 @@ class PMMH(BaseAlgorithm):
                 proposal_filter.initialize_model(sub_context)
 
             for i in range(self.num_samples):
-                accepted = run_pmmh(
+                _ = run_pmmh(
                     self.context,
                     state,
                     self._proposal,
