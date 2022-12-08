@@ -177,7 +177,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         hidden_dens = self.ssm.hidden.build_density(x_tm1)
         obs_dens = self.ssm.build_density(x_t)
-        init_dens = self.ssm.hidden.initial_dist
+        init_dens = self.ssm.hidden.initial_distribution
 
         shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
         y_ = y.view(shape)
