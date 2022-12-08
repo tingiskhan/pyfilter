@@ -1,7 +1,6 @@
 from typing import Callable, TypeVar
 
-from stochproc.timeseries import (AffineEulerMaruyama, AffineProcess,
-                                  StructuralStochasticProcess, TimeseriesState)
+from stochproc.timeseries import AffineProcess, StructuralStochasticProcess, TimeseriesState
 
 T = TypeVar("T", bound=StructuralStochasticProcess)
 _RESULT = Callable[[T, TimeseriesState], TimeseriesState]
