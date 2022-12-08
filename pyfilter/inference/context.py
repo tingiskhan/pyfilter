@@ -272,9 +272,10 @@ class InferenceContext(object):
 
         res = OrderedDict([])
         res[self._PARAMETER_KEY] = {k: v.data for k, v in self.parameters.items()}
-        res[self._PRIOR_KEY] = {k: v.state_dict() for k, v in self._prior_dict.items()}
+        res[self._PRIOR_KEY] = {k: {kp: getattr(v, kp) for kp in v.arg_constraints.keys()} for k, v in self._prior_dict.items()}
 
         return res
+
 
     def load_state_dict(self, state_dict: tOrderedDict[str, Any]):
         """
@@ -288,9 +289,9 @@ class InferenceContext(object):
         assert set(self.parameters.keys()) == set(state_dict[self._PARAMETER_KEY].keys())
 
         for k, v in self._prior_dict.items():
-            for p_name, p_value in v._get_parameters().items():
-                msg = f"Seems that you don't have the same parameters for '{p_name}'!"
-                assert (p_value == state_dict[self._PRIOR_KEY][k][p_name]).all(), msg
+            for name in v.arg_constraints.keys():
+                msg = f"Seems that you don't have the same parameters for '{name}'!"
+                assert (getattr(v, name) == state_dict[self._PRIOR_KEY][k][name]).all(), msg
 
             p = self.get_parameter(k)
             p.data = state_dict[self._PARAMETER_KEY][k]
@@ -308,12 +309,12 @@ class InferenceContext(object):
         new_context = self.make_new()
         
         for k, v in self._prior_dict.items():
-            new_tensor = f(self.get_parameter(k).clone()).cpu()
+            new_tensor = f(self.get_parameter(k).clone())
 
             new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]):]
             new_context.set_batch_shape(new_batch_shape)
 
-            p = new_context.named_parameter(k, v.copy().cpu())
+            p = new_context.named_parameter(k, v.copy())
             p.data = new_tensor
             
         return new_context
@@ -337,7 +338,7 @@ class QuasiInferenceContext(InferenceContext):
         Initializes the :class:`QuasiInferenceContext` class.
         """
 
-        super(QuasiInferenceContext, self).__init__()
+        super().__init__()
         self.quasi_key: int = None
         self._randomize = randomize
 
@@ -351,11 +352,11 @@ class QuasiInferenceContext(InferenceContext):
         self._apply_to_params(
             probs,
             self._unconstrained_shape_dict,
-            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior().event_shape), constrained=False)
+            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior.event_shape), constrained=False)
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        super(QuasiInferenceContext, self).__exit__(exc_type, exc_val, exc_tb)
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "InferenceContext":
         return QuasiInferenceContext(randomize=self._randomize)
