@@ -56,11 +56,10 @@ class PMMH(BaseAlgorithm):
         if self._initializer == "seed":
             raise NotImplementedError()
         elif self._initializer == "mean":
-            for p in self.filter.ssm.parameters():
-                dist = p.prior.build_distribution()
+            for p in self.context.parameters.values():
+                dist = p.prior
                 mean = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0)
-
-                p.data = mean * torch.ones(self._parameter_shape, device=p.device)
+                p.fill_(mean)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
