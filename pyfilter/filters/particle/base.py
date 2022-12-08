@@ -1,17 +1,17 @@
 import itertools
 from abc import ABC
-from typing import Union, Callable, Sequence
+from typing import Callable, Sequence, Union
 
 import pyro
 import torch
 from torch.distributions import Categorical
 
-from .utils import Unsqueezer
-from .proposals import Bootstrap, Proposal
-from .state import ParticleFilterState
+from ...resampling import systematic
 from ..base import BaseFilter
 from ..utils import batched_gather
-from ...resampling import systematic
+from .proposals import Bootstrap, Proposal
+from .state import ParticleFilterState
+from .utils import Unsqueezer
 
 
 class ParticleFilter(BaseFilter, ABC):
@@ -79,9 +79,9 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
-    def initialize(self) -> ParticleFilterState:
+    def initialize(self) -> ParticleFilterState:        
         assert self._model is not None, "Model has not been initialized!"
-
+            
         self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
@@ -97,9 +97,7 @@ class ParticleFilter(BaseFilter, ABC):
         offset = -(2 + self.ssm.hidden.n_dim)
         dim_to_unsqueeze = -2
 
-        with Unsqueezer(
-            dim_to_unsqueeze, self.ssm.hidden.parameters + self.ssm.parameters, self.batch_shape.numel() > 1
-        ):
+        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden.parameters + self.ssm.parameters, self.batch_shape.numel() > 1):
             dim = len(self.batch_shape)
 
             res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
@@ -133,7 +131,7 @@ class ParticleFilter(BaseFilter, ABC):
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
-
+        
         if method == "fl":
             return self._do_sample_fl(states)
 

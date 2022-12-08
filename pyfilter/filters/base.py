@@ -1,12 +1,12 @@
 from abc import ABC
-from tqdm import tqdm
+from typing import Callable, Sequence, TypeVar, Union
+
 import torch
-from typing import Tuple, Sequence, TypeVar, Union, Callable
 from stochproc.timeseries import StateSpaceModel
+from tqdm import tqdm
 
 from .result import FilterResult
 from .state import FilterState, PredictionState
-
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]

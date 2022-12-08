@@ -1,8 +1,9 @@
 import torch
-from .base import ParticleFilter
-from .utils import log_likelihood
-from .state import ParticleFilterState, ParticleFilterPrediction
+
 from ..utils import batched_gather
+from .base import ParticleFilter
+from .state import ParticleFilterPrediction, ParticleFilterState
+from .utils import log_likelihood
 
 
 class APF(ParticleFilter):

@@ -1,10 +1,10 @@
 import torch
-from .utils import run_pmmh
-from .proposals import RandomWalk, BaseProposal
-from .state import PMMHResult
-from ...context import make_context
+
 from ...base import BaseAlgorithm
 from ...logging import TQDMWrapper
+from .proposals import BaseProposal, RandomWalk
+from .state import PMMHResult
+from .utils import run_pmmh
 
 
 class PMMH(BaseAlgorithm):

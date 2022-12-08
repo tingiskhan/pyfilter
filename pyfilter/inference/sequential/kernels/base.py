@@ -1,9 +1,9 @@
 from abc import ABC
 
-from ..state import SequentialAlgorithmState
-from ...context import InferenceContext
-from ....resampling import systematic
 from ....filters import BaseFilter
+from ....resampling import systematic
+from ...context import InferenceContext
+from ..state import SequentialAlgorithmState
 
 
 class BaseKernel(ABC):

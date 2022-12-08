@@ -1,11 +1,12 @@
 import threading
 from collections import OrderedDict
-from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
+from typing import Any, Callable, Dict, Iterable, List, OrderedDict as tOrderedDict, Tuple
+
 import torch
 from pyro.distributions import Distribution
 
-from .prior import PriorMixin
 from .parameter import PriorBoundParameter
+from .prior import PriorMixin
 from .qmc import QuasiRegistry
 
 

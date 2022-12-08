@@ -1,12 +1,13 @@
 from collections import OrderedDict
-from typing import Dict, Any
+from typing import Any, Dict, Tuple
 
 import torch
-from torch import Tensor
 from stochproc.timeseries import TimeseriesState
+from torch import Tensor
+
+from ...utils import normalize
 from ..state import FilterState, PredictionState
 from ..utils import batched_gather
-from ...utils import normalize
 
 
 class ParticleFilterPrediction(PredictionState):
@@ -66,7 +67,7 @@ class ParticleFilterState(FilterState):
         self.mean = mean
         self.var = var
 
-    def _calc_mean_and_var(self) -> (torch.Tensor, torch.Tensor):
+    def _calc_mean_and_var(self) -> Tuple[torch.Tensor, torch.Tensor]:
         normalized_weights = self.normalized_weights()
 
         sum_axis = -(len(self.x.event_shape) + 1)

@@ -1,7 +1,8 @@
 import torch
-from .base import BaseProposal
-from ....utils import construct_mvn
+
 from ....context import QuasiInferenceContext
+from ....utils import construct_mvn
+from .base import BaseProposal
 
 
 class SymmetricMH(BaseProposal):

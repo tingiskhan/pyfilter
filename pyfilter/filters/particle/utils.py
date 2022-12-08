@@ -1,5 +1,6 @@
-import torch
 from typing import Sequence
+
+import torch
 
 
 def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:

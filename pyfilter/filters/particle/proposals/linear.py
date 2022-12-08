@@ -1,12 +1,12 @@
 from typing import Tuple
 
 import torch
-from torch.linalg import cholesky_ex
-from torch.distributions import Normal, MultivariateNormal
 from stochproc.timeseries import AffineProcess, TimeseriesState
+from torch.distributions import MultivariateNormal, Normal
+from torch.linalg import cholesky_ex
 
-from .base import Proposal
 from ....utils import construct_diag_from_flat
+from .base import Proposal
 
 
 class LinearGaussianObservations(Proposal):

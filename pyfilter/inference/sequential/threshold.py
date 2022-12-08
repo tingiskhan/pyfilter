@@ -1,5 +1,5 @@
-from math import log, exp
-from typing import Dict, Tuple, List
+from math import exp, log
+from typing import Dict, List, Tuple
 
 
 class Thresholder(object):

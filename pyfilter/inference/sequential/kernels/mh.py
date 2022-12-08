@@ -1,9 +1,10 @@
 import torch
-from .base import BaseKernel
+
+from ....constants import INFTY
 from ...batch.mcmc.proposals import BaseProposal, SymmetricMH
 from ...batch.mcmc.utils import run_pmmh
 from ..state import SMC2State
-from ....constants import INFTY
+from .base import BaseKernel
 
 
 class ParticleMetropolisHastings(BaseKernel):

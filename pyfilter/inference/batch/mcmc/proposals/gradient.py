@@ -1,6 +1,7 @@
-from pyro.distributions import Normal
 import torch
+from pyro.distributions import Normal
 from torch.autograd import grad
+
 from .random_walk import RandomWalk
 
 

@@ -1,4 +1,5 @@
 import torch
+
 from .base import BaseKernel
 from .jittering import JitterKernel, NonShrinkingKernel
 

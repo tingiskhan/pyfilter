@@ -1,11 +1,12 @@
-from torch import isfinite
 from abc import ABC
 from typing import Optional
 
-from .state import SequentialAlgorithmState
-from .base import SequentialParticleAlgorithm
-from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
+from torch import isfinite
+
 from ..context import InferenceContext
+from .base import SequentialParticleAlgorithm
+from .kernels import JitterKernel, NonShrinkingKernel, OnlineKernel
+from .state import SequentialAlgorithmState
 
 
 class ContextNotSupported(Exception):

@@ -1,9 +1,11 @@
-import torch
-from math import sqrt
-from typing import Union
 from abc import ABC
-from ....utils import get_ess
+from math import sqrt
+from typing import Tuple, Union
+
+import torch
+
 from ....constants import EPS, INFTY
+from ....utils import get_ess
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
@@ -100,7 +102,7 @@ class JitterKernel(ABC):
 
         self._min_std = std_threshold
 
-    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Method to be overridden by derived subclasses. Specifies how to jitter a given collection of num_samples.
 

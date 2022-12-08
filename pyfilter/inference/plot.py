@@ -1,9 +1,10 @@
+from math import ceil
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from statsmodels.nonparametric.kde import KDEUnivariate
-from math import ceil
 
 from .context import InferenceContext
 from .sequential.state import SequentialAlgorithmState

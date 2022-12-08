@@ -1,6 +1,7 @@
-from torch.nn import Parameter
-import torch
 from collections import OrderedDict
+
+import torch
+from torch.nn import Parameter
 
 from .prior import PriorMixin
 

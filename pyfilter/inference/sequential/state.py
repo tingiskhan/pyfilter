@@ -1,8 +1,8 @@
 import torch
 
-from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
-from ...utils import normalize, get_ess
+from ...utils import get_ess, normalize
+from ..state import FilterAlgorithmState
 
 
 class SequentialAlgorithmState(FilterAlgorithmState):

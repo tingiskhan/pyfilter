@@ -1,8 +1,9 @@
 from copy import deepcopy
+from typing import Tuple
+
 import torch
 from pyro.distributions import Distribution, TransformedDistribution
 from pyro.distributions.transforms import Transform, biject_to
-from typing import Tuple
 
 
 def verify_same_prior(x: Distribution, y: Distribution) -> bool:

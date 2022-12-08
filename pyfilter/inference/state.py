@@ -1,6 +1,7 @@
 from copy import deepcopy
-from ..state import BaseResult
+
 from ..filters import FilterResult
+from ..state import BaseResult
 
 
 class AlgorithmState(BaseResult):

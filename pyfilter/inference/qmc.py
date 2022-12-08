@@ -1,8 +1,8 @@
 import threading
 from collections import OrderedDict
 
-import torch.quasirandom as qr
 import torch
+import torch.quasirandom as qr
 
 from ..constants import EPS2
 

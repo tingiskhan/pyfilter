@@ -3,9 +3,9 @@ from abc import ABC
 import torch
 
 from ..filters import BaseFilter
+from .context import InferenceContext
 from .logging import DefaultLogger
 from .state import AlgorithmState
-from .context import InferenceContext
 
 
 class BaseAlgorithm(ABC):

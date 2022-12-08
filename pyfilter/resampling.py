@@ -1,6 +1,8 @@
-from .utils import normalize
-import torch
 from typing import Union
+
+import torch
+
+from .utils import normalize
 
 
 def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None) -> torch.Tensor:

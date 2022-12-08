@@ -1,7 +1,8 @@
 import torch
 from pyro.distributions import Normal
-from torch.autograd import grad
 from stochproc.timeseries import AffineProcess
+from torch.autograd import grad
+
 from .base import Proposal
 
 

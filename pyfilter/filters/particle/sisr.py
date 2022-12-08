@@ -1,11 +1,12 @@
 from typing import Tuple
 
-from .base import ParticleFilter
-from .utils import log_likelihood
 import torch
-from .state import ParticleFilterState, ParticleFilterPrediction
-from ..utils import batched_gather
+
 from ...utils import get_ess
+from ..utils import batched_gather
+from .base import ParticleFilter
+from .state import ParticleFilterPrediction, ParticleFilterState
+from .utils import log_likelihood
 
 
 class SISR(ParticleFilter):

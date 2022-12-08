@@ -1,9 +1,12 @@
-import torch
-from torch.distributions import Distribution
-from typing import Callable
 from abc import ABC
+from typing import Callable
+
+import torch
+from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
+                                  TimeseriesState)
+from torch.distributions import Distribution
+
 from .pre_weight_funcs import get_pre_weight_func
-from stochproc.timeseries import StructuralStochasticProcess, StateSpaceModel, TimeseriesState
 
 
 class Proposal(ABC):

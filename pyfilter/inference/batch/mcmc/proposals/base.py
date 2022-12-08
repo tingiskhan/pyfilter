@@ -1,9 +1,11 @@
-from torch.distributions import Distribution
-import torch
 from abc import ABC
+
+import torch
+from torch.distributions import Distribution
+
+from .....filters import BaseFilter
 from ....context import InferenceContext
 from ....state import FilterAlgorithmState
-from .....filters import BaseFilter
 
 
 class BaseProposal(ABC):

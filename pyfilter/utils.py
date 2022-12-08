@@ -1,5 +1,7 @@
-import torch
 from functools import wraps
+
+import torch
+
 from .constants import INFTY
 
 

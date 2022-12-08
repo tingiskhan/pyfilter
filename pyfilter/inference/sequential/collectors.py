@@ -1,13 +1,12 @@
 from typing import Generic
+
 import torch.nn
 from stochproc.timeseries import StateSpaceModel
 from torch.distributions import TransformedDistribution
-from collections import deque
 
-from .state import SequentialAlgorithmState
-from .base import SequentialParticleAlgorithm, Callback, T
 from ...filters.particle.state import ParticleFilterState
-
+from .base import Callback, SequentialParticleAlgorithm, T
+from .state import SequentialAlgorithmState
 
 __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 

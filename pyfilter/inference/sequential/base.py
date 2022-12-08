@@ -1,10 +1,11 @@
 from abc import ABC
-import torch
-from typing import Dict, Any, TypeVar, Callable, List
-from .state import SequentialAlgorithmState
-from ..logging import TQDMWrapper
-from ..base import BaseAlgorithm
+from typing import Any, Callable, Dict, List, TypeVar
 
+import torch
+
+from ..base import BaseAlgorithm
+from ..logging import TQDMWrapper
+from .state import SequentialAlgorithmState
 
 T = TypeVar("T", bound=SequentialAlgorithmState)
 Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]

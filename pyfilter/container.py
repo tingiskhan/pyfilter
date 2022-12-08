@@ -1,8 +1,8 @@
 import itertools
 import warnings
-from collections import OrderedDict, abc as container_abcs
-from collections import deque
-from typing import Optional, Mapping, Any, Iterator, Iterable, Tuple, Union, Dict, Deque
+from collections import OrderedDict, abc as container_abcs, deque
+from typing import (Any, Deque, Dict, Iterable, Iterator, Mapping, Optional,
+                    Tuple, Union)
 
 import torch
 from torch.nn import Module

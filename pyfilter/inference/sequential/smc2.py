@@ -1,10 +1,11 @@
 from typing import Union
+
+from ...filters import ParticleFilter
+from ..batch.mcmc.proposals import BaseProposal
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings
-from ...filters import ParticleFilter
 from .state import SMC2State
-from ..batch.mcmc.proposals import BaseProposal
-from .threshold import Thresholder, ConstantThreshold
+from .threshold import ConstantThreshold, Thresholder
 
 
 class SMC2(SequentialParticleAlgorithm):

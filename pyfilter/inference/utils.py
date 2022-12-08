@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from pyro.distributions import MultivariateNormal, Normal
 import torch
+from pyro.distributions import MultivariateNormal, Normal
 from torch.linalg import cholesky_ex
 
 from .qmc import QuasiRegistry

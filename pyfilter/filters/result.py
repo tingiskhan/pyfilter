@@ -1,11 +1,11 @@
 from copy import deepcopy
+from typing import Generic, List, TypeVar, Union
+
 import torch
-from typing import List, TypeVar, Generic, Union
 
-from .state import FilterState
-from ..state import BaseResult
 from ..container import make_dequeue
-
+from ..state import BaseResult
+from .state import FilterState
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]

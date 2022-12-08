@@ -1,8 +1,9 @@
+from typing import Any, Dict, Optional
+
 from .base import CombinedSequentialParticleAlgorithm
+from .kernels import ShrinkingKernel
 from .ness import NESS
 from .smc2 import SMC2
-from .kernels import ShrinkingKernel
-from typing import Optional, Dict, Any
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
