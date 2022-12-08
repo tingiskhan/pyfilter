@@ -255,7 +255,7 @@ class InferenceContext(object):
             indices: the indices at which to resample.
         """
 
-        for n, p in self.get_parameters():
+        for _, p in self.get_parameters():
             p.copy_(p[indices])
 
     def make_new(self) -> "InferenceContext":
@@ -276,7 +276,6 @@ class InferenceContext(object):
 
         return res
 
-
     def load_state_dict(self, state_dict: tOrderedDict[str, Any]):
         """
         Loads the state dict from other context. Note that this method only verifies that the parameters of the priors
@@ -295,8 +294,6 @@ class InferenceContext(object):
 
             p = self.get_parameter(k)
             p.data = state_dict[self._PARAMETER_KEY][k]
-
-        return
 
     def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "InferenceContext":
         """
