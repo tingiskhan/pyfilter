@@ -156,7 +156,8 @@ class PriorMixin(object):
 
     def to(self, device: torch.device) -> "PriorMixin":
         """
-        Moves the distribution to specified device. Note that this is experimental and might not work for all distributions.
+        Moves the distribution to specified device. Note that this is experimental and might not work for all
+        distributions.
 
         Args:
             device (torch.device): device to move to.
@@ -178,6 +179,13 @@ class PriorMixin(object):
         new.__init__(**params)
 
         return new
+
+    def cuda(self):
+        """
+        Moves to cuda.
+        """
+
+        return self.to("cuda:0")
             
 
 applied_patches = []
