@@ -105,7 +105,7 @@ class LinearGaussianObservations(Proposal):
 
         x_copy = x.copy(values=mean)
 
-        parameters = self._model.functional_parameters()
+        parameters = self._model.parameters
         a_param, offset = self.get_offset_and_scale(x, parameters)
         o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
 
@@ -119,7 +119,7 @@ class LinearGaussianObservations(Proposal):
 
         h_var = h_scale.pow(2.0)
 
-        observable_parameters = self._model.functional_parameters()
+        observable_parameters = self._model.parameters
         c, offset = self.get_offset_and_scale(x, observable_parameters)
         o_var = observable_parameters[self._s_index].pow(2.0 if not self._is_variance else 1.0)
 
