@@ -101,7 +101,12 @@ class ParticleFilter(BaseFilter, ABC):
             density = self.ssm.hidden.build_density(state.x)
 
             # TODO: Last transpose might not be necessary, figure it out
-            w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim)).transpose(0, 1)
+            w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
+
+            if self.batch_shape:
+                w_state = w_state.transpose(0, 1)
+            
+            w = state.w.unsqueeze(-2) + w_state
 
             cat = Categorical(logits=w)
             res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
