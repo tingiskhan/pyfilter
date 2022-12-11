@@ -99,10 +99,9 @@ class ParticleFilter(BaseFilter, ABC):
         batch_shape = self.particles[:-1] + torch.Size([1]) + self.particles[-1:]
         res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
 
-        dim_to_unsqueeze = -2
-        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden, self.batch_shape.numel() > 1):
+        with Unsqueezer(-2, self.ssm.hidden, self.batch_shape.numel() > 1):
             for state in reversed(states[:-1]):
-                expanded_state = state.x.copy(values=state.x.value.unsqueeze(dim_to_unsqueeze))
+                expanded_state = state.x.copy(values=state.x.value.unsqueeze(offset))
                 density = self.ssm.hidden.build_density(expanded_state).expand(batch_shape)
 
                 w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
