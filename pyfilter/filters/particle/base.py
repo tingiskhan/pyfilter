@@ -93,21 +93,19 @@ class ParticleFilter(BaseFilter, ABC):
         return ParticleFilterState(x, w, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
-        offset = -(2 + self.ssm.hidden.n_dim)
+        state_dim = -(1 + self.ssm.hidden.n_dim)
         dim = len(self.batch_shape)
 
-        batch_shape = self.particles[:-1] + torch.Size([1]) + self.particles[-1:]
         res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
 
-        with Unsqueezer(-2, self.ssm.hidden, self.batch_shape.numel() > 1):
-            for state in reversed(states[:-1]):
-                expanded_state = state.x.copy(values=state.x.value.unsqueeze(offset))
-                density = self.ssm.hidden.build_density(expanded_state).expand(batch_shape)
+        for state in reversed(states[:-1]):
+            density = self.ssm.hidden.build_density(state.x)
 
-                w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
+            # TODO: Last transpose might not be necessary, figure it out
+            w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim)).transpose(0, 1)
 
-                cat = Categorical(logits=w)
-                res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
+            cat = Categorical(logits=w)
+            res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
 
         return torch.stack(res[::-1], dim=0)
 
