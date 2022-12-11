@@ -1,6 +1,6 @@
-from typing import Sequence
-
 import torch
+
+from stochproc.timeseries import StructuralStochasticProcess
 
 
 def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
@@ -27,10 +27,17 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
 
 class Unsqueezer(object):
     """
-    Helper object for temporarily squeezing/unsqueezing parameters.
+    Helper object for temporarily squeezing/unsqueezing parameters. This is used when performing FFBS, as `expand` on
+    :class:`~torch.distributions.Distribution` only applies to the base distribution, and not the transforms.
     """
 
-    def __init__(self, dim_to_unsqueeze: int, parameters: Sequence[torch.Tensor], do_unsqueeze: bool):
+    @staticmethod
+    def _param_filter(p: torch.Tensor) -> bool:
+        from ...inference import PriorBoundParameter
+
+        return isinstance(p, PriorBoundParameter) and p.prior.shape().numel() < p.shape.numel()
+
+    def __init__(self, dim_to_unsqueeze: int, model: StructuralStochasticProcess, do_unsqueeze: bool):
         """
         Initializes :class:`Unsqueezer`.
 
@@ -40,12 +47,9 @@ class Unsqueezer(object):
             do_unsqueeze: whether to perform an unsqueeze operation.
         """
 
-        from ...inference import PriorBoundParameter
-
         self.dim_to_unsqueeze = dim_to_unsqueeze
-        self.params = tuple(
-            p for p in parameters if isinstance(p, PriorBoundParameter) and p.prior.shape().numel() < p.shape.numel()
-        )
+
+        self.params = tuple(p for p in model.yield_parameters(self._param_filter))
         self.do_unsqueeze = do_unsqueeze
 
     def __enter__(self):

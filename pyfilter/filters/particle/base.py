@@ -1,4 +1,3 @@
-import itertools
 from abc import ABC
 from typing import Callable, Sequence, Union
 
@@ -95,15 +94,16 @@ class ParticleFilter(BaseFilter, ABC):
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
         offset = -(2 + self.ssm.hidden.n_dim)
+        dim = len(self.batch_shape)
+
+        batch_shape = self.particles[:-1] + torch.Size([1]) + self.particles[-1:]
+        res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
+
         dim_to_unsqueeze = -2
-
-        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden.parameters + self.ssm.parameters, self.batch_shape.numel() > 1):
-            dim = len(self.batch_shape)
-
-            res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
+        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden, self.batch_shape.numel() > 1):
             for state in reversed(states[:-1]):
-                temp_state = state.x.copy(values=state.x.value.unsqueeze(offset))
-                density = self.ssm.hidden.build_density(temp_state)
+                expanded_state = state.x.copy(values=state.x.value.unsqueeze(dim_to_unsqueeze))
+                density = self.ssm.hidden.build_density(expanded_state).expand(batch_shape)
 
                 w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
 
