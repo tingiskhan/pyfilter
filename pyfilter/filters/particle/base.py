@@ -10,7 +10,6 @@ from ..base import BaseFilter
 from ..utils import batched_gather
 from .proposals import Bootstrap, Proposal
 from .state import ParticleFilterState
-from .utils import Unsqueezer
 
 
 class ParticleFilter(BaseFilter, ABC):
