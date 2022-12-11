@@ -105,7 +105,7 @@ class ParticleFilter(BaseFilter, ABC):
 
             if self.batch_shape:
                 w_state = w_state.transpose(0, 1)
-            
+
             w = state.w.unsqueeze(-2) + w_state
 
             cat = Categorical(logits=w)
