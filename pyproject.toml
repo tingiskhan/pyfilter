@@ -29,7 +29,8 @@ dependencies = [
     "torch>1.9.0",
     "pyro-ppl>=1.8.2",
     "tqdm>=4.26",
-    "stochproc @ git+https://github.com/tingiskhan/stoch-proc#egg=stochproc"
+    "stochproc @ git+https://github.com/tingiskhan/stoch-proc#egg=stochproc",
+    "matplotlib>=3.5.2"
 ]
 
 [project.optional-dependencies]
