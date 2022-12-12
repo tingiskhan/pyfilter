@@ -114,7 +114,7 @@ def local_linearization():
     sigma = sqrt(10.0)
     
     inc_dist = Normal(loc=0.0, scale=1.0)
-    ar = ts.AffineProcess(mean_scale, inc_dist, (sigma,), lambda *args: Normal(loc=0.0, scale=sqrt(5.0)))
+    ar = ts.AffineProcess(mean_scale, (sigma,), inc_dist, lambda *args: Normal(loc=0.0, scale=sqrt(5.0)))
 
     s = 1.0
     obs_1d_1d = ts.StateSpaceModel(ar, build_non_linear_dist, parameters=(s,))
