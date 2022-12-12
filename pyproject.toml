@@ -61,7 +61,7 @@ push = false
     'current_version = "{version}"',
 ]
 
-"stochproc/__init__.py" = [
+"pyfilter/__init__.py" = [
     '__version__ = "{version}"'
 ]
 
