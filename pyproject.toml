@@ -45,8 +45,8 @@ homepage = "https://github.com/tingiskhan/pyfilter"
 [tool.black]
 line-length = 120
 
-[tool.setuptools]
-packages = ["pyfilter"]
+[tool.setuptools.packages.find]
+include = ["pyfilter*"]
 
 [tool.bumpver]
 current_version = "0.26.0"
