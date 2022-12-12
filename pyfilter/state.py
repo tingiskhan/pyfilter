@@ -1,10 +1,9 @@
 from collections import OrderedDict
 from typing import Any, OrderedDict as tOrderedDict
 
-from .container import BufferIterable
+from .container import TensorContainer
 
 
-# TODO: Remove buffer iterable...
 class BaseResult(dict):
     """
     Base class for state like objects.
@@ -16,7 +15,7 @@ class BaseResult(dict):
         """
 
         super().__init__()
-        self.tensor_tuples = BufferIterable()
+        self.tensor_tuples = TensorContainer()
 
     def exchange_tensor_tuples(self, other: "BaseResult"):
         """
