@@ -35,7 +35,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.1.2",
-    "pykalman>=0.9.5",
+    "pykalman @ git+https://github.com/osh/pykalman@loglikelihood-fix#egg=pykalman", # Watch out for this one...
     "numpy>=1.21.6"
 ]
 
