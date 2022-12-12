@@ -152,7 +152,7 @@ class FilterResult(BaseResult, Generic[TState]):
             state_dict: state dictionary to load from.
         """
 
-        super(FilterResult, self).load_state_dict(state_dict)
+        super().load_state_dict(state_dict)
         self._loglikelihood = state_dict["log_likelihood"]
 
         assert len(self.states) == 1, "Can only handle case when we have 1 state!"
