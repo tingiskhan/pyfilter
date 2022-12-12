@@ -33,7 +33,7 @@ process which we observe with some noise, and then back out using the APF togeth
 distribution
 
 ```python
-from stochproc import timeseries as ts, distributions as dists
+from stochproc import timeseries as ts
 import torch
 from pyro.distributions import Normal
 import matplotlib.pyplot as plt
@@ -42,11 +42,15 @@ from math import sqrt
 
 
 def f(x, gamma, sigma):
-    return torch.sin(x.values - gamma), sigma
+    return torch.sin(x.value - gamma), sigma
 
 
 def build_observation(x, a, s):
-    return Normal(loc=a * x.values, scale=s)
+    return Normal(loc=a * x.value, scale=s)
+
+
+def initial_kernel(gamma, sigma):
+    return Normal(torch.zeros_like(gamma), torch.ones_like(gamma))
 
 
 dt = 0.1
@@ -54,10 +58,8 @@ dt = 0.1
 gamma = 0.0
 sigma = 1.0
 
-init_dist = dists.DistributionModule(Normal, loc=0.0, scale=1.0)
-inc_dist = dists.DistributionModule(Normal, loc=0.0, scale=sqrt(dt))
-
-sine_diffusion = ts.AffineEulerMaruyama(f, (gamma, sigma), init_dist, inc_dist, dt=dt)
+inc_dist = Normal(loc=0.0, scale=sqrt(dt))
+sine_diffusion = ts.AffineEulerMaruyama(f, (gamma, sigma), inc_dist, initial_kernel=initial_kernel, dt=dt)
 
 a = 1.0
 s = 0.1
