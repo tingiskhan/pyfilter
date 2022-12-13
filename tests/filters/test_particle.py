@@ -11,7 +11,7 @@ def median_relative_deviation(y_true, y):
     return np.median(np.abs((y_true - y) / y_true))
 
 
-def construct_filters(particles=3_000, **kwargs):
+def construct_filters(particles=1_500, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     for pt in particle_types:
@@ -43,6 +43,7 @@ class TestParticleFilters(object):
     @pytest.mark.parametrize("test_copy", [False, True])
     def test_filter_and_log_likelihood(self, models, filter_, batch_size, missing_perc, test_copy):
         np.random.seed(123)
+        torch.manual_seed(123)
 
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
@@ -86,7 +87,7 @@ class TestParticleFilters(object):
             means.unsqueeze_(-1)
 
         deviation = median_relative_deviation(kalman_mean, means.cpu().numpy())
-        thresh = 1e-1
+        thresh = 5e-2
 
         assert deviation < thresh
 
@@ -157,12 +158,13 @@ class TestParticleFilters(object):
 
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
-    @pytest.mark.parametrize("filter_", construct_filters(particles=400, record_states=True))
+    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
     @pytest.mark.parametrize("method", ["ffbs", "fl"])
     def test_smooth(self, models, filter_, batch_size, missing_perc, method):
         np.random.seed(123)
+        torch.manual_seed(123)
 
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
@@ -195,9 +197,9 @@ class TestParticleFilters(object):
 
         means = means.cpu().numpy()
 
-        thresh = 1e-1
+        thresh = 5e-2
         if method != "fl":
-            assert median_relative_deviation(kalman_mean, means) < thresh
+            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < thresh
         else:
             assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < thresh
 
