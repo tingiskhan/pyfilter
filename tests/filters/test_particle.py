@@ -11,7 +11,7 @@ def median_relative_deviation(y_true, y):
     return np.median(np.abs((y_true - y) / y_true))
 
 
-def construct_filters(particles=1_000, **kwargs):
+def construct_filters(particles=3_000, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     for pt in particle_types:
