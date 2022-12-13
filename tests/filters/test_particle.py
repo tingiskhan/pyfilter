@@ -86,7 +86,7 @@ class TestParticleFilters(object):
             means.unsqueeze_(-1)
 
         deviation = median_relative_deviation(kalman_mean, means.cpu().numpy())
-        thresh = 5e-2
+        thresh = 1e-1
 
         assert deviation < thresh
 
@@ -195,7 +195,7 @@ class TestParticleFilters(object):
 
         means = means.cpu().numpy()
 
-        thresh = 5e-2
+        thresh = 1e-1
         if method != "fl":
             assert median_relative_deviation(kalman_mean, means) < thresh
         else:
