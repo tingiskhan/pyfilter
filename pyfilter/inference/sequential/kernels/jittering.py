@@ -1,9 +1,11 @@
-import torch
-from math import sqrt
-from typing import Union
 from abc import ABC
-from ....utils import get_ess
+from math import sqrt
+from typing import Tuple, Union
+
+import torch
+
 from ....constants import EPS, INFTY
+from ....utils import get_ess
 
 
 def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Tensor:
@@ -67,7 +69,7 @@ def robust_var(x: torch.Tensor, w: torch.Tensor, mean: torch.Tensor = None) -> t
     high_indices = (cumulative_weights - 0.75).abs().argmin(0)
 
     iqr = (sort[high_indices].diag() - sort[low_indices].diag()) / 1.349
-    iqr2 = iqr ** 2
+    iqr2 = iqr**2
 
     w = w.unsqueeze(-1)
 
@@ -100,7 +102,7 @@ class JitterKernel(ABC):
 
         self._min_std = std_threshold
 
-    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    def fit(self, x: torch.Tensor, w: torch.Tensor, indices: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Method to be overridden by derived subclasses. Specifies how to jitter a given collection of num_samples.
 
@@ -153,7 +155,7 @@ class ShrinkingKernel(JitterKernel):
         mean = (w.unsqueeze(-1) * x).sum(0)
         var = robust_var(x, w, mean)
 
-        beta = sqrt(1.0 - bw_fac ** 2)
+        beta = sqrt(1.0 - bw_fac**2)
         means = (mean + beta * (x - mean))[indices]
 
         return means, bw_fac * var.sqrt()
@@ -193,7 +195,7 @@ class LiuWestShrinkage(ShrinkingKernel):
 
         super().__init__()
         self._a = a
-        self._bw_fac = sqrt(1 - a ** 2)
+        self._bw_fac = sqrt(1 - a**2)
 
     def fit(self, x, w, indices):
         mean = (w.unsqueeze(-1) * x).sum(0)

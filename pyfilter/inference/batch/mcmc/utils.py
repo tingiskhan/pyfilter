@@ -1,11 +1,12 @@
+from typing import TypeVar
+
 import torch
 from torch.distributions import Distribution
-from typing import TypeVar
-from .proposals import BaseProposal
+
+from ....filters import BaseFilter
 from ...context import InferenceContext
 from ...state import FilterAlgorithmState
-from ....filters import BaseFilter
-
+from .proposals import BaseProposal
 
 TFilter = TypeVar("TFilter", bound=BaseFilter)
 

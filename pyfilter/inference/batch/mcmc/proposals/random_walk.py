@@ -1,6 +1,8 @@
+from typing import Union
+
 from pyro.distributions import Normal
 from torch import Tensor
-from typing import Union
+
 from .base import BaseProposal
 
 

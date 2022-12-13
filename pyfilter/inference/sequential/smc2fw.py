@@ -1,5 +1,5 @@
-from .nessmc2 import NESSMC2
 from .ness import FixedWidthNESS
+from .nessmc2 import NESSMC2
 
 
 class SMC2FW(NESSMC2):

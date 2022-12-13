@@ -1,12 +1,12 @@
 from typing import Tuple
 
 import torch
-from torch.linalg import cholesky_ex
-from torch.distributions import Normal, MultivariateNormal
 from stochproc.timeseries import AffineProcess, TimeseriesState
+from torch.distributions import MultivariateNormal, Normal
+from torch.linalg import cholesky_ex
 
-from .base import Proposal
 from ....utils import construct_diag_from_flat
+from .base import Proposal
 
 
 class LinearGaussianObservations(Proposal):
@@ -105,7 +105,7 @@ class LinearGaussianObservations(Proposal):
 
         x_copy = x.copy(values=mean)
 
-        parameters = self._model.functional_parameters()
+        parameters = self._model.parameters
         a_param, offset = self.get_offset_and_scale(x, parameters)
         o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
 
@@ -119,7 +119,7 @@ class LinearGaussianObservations(Proposal):
 
         h_var = h_scale.pow(2.0)
 
-        observable_parameters = self._model.functional_parameters()
+        observable_parameters = self._model.parameters
         c, offset = self.get_offset_and_scale(x, observable_parameters)
         o_var = observable_parameters[self._s_index].pow(2.0 if not self._is_variance else 1.0)
 
@@ -135,10 +135,10 @@ class LinearGaussianObservations(Proposal):
         cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
 
         if self._obs_is1d:
-            o_loc = offset + c.squeeze() * x.values
+            o_loc = offset + c.squeeze() * x.value
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
-            o_loc = offset + (c_ @ x.values.unsqueeze(-1)).squeeze(-1)
+            o_loc = offset + (c_ @ x.value.unsqueeze(-1)).squeeze(-1)
             kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
 
         return kernel.log_prob(y)

@@ -1,6 +1,6 @@
-import torch
 from math import sqrt
 
+import torch
 
 INFTY = float("inf")
 _info = torch.finfo(torch.get_default_dtype())

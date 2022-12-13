@@ -1,10 +1,11 @@
 from abc import ABC
-import torch
-from typing import Dict, Any, TypeVar, Callable, List
-from .state import SequentialAlgorithmState
-from ..logging import TQDMWrapper
-from ..base import BaseAlgorithm
+from typing import Any, Callable, Dict, List, TypeVar
 
+import torch
+
+from ..base import BaseAlgorithm
+from ..logging import TQDMWrapper
+from .state import SequentialAlgorithmState
 
 T = TypeVar("T", bound=SequentialAlgorithmState)
 Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]
@@ -28,8 +29,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
         self.particles = torch.Size([num_particles])
         self._parameter_shape = torch.Size([num_particles, 1])
-        
-        self.filter.set_batch_shape(self.particles)        
+
+        self.filter.set_batch_shape(self.particles)
         self.context.set_batch_shape(self._parameter_shape)
 
         self._callbacks: List[Callback] = list()
@@ -115,7 +116,9 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     One such example is the :class:`pyfilter.inference.sequential.NESSMC2`.
     """
 
-    def __init__(self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None):
+    def __init__(
+        self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None
+    ):
         """
         Initializes the :class:`CombinedSequentialParticleAlgorithm` class.
 

@@ -1,8 +1,9 @@
-from torch.nn import Parameter
-import torch
 from collections import OrderedDict
 
-from .prior import Prior
+import torch
+from torch.nn import Parameter
+
+from .prior import PriorMixin
 
 
 def _rebuild_parameter(data, requires_grad, backward_hooks, name, context):
@@ -21,7 +22,7 @@ class PriorBoundParameter(Parameter):
     its bound prior.
     """
 
-    _context: "ParameterContext" = None  # noqa: F821
+    _context: "InferenceContext" = None  # noqa: F821
     _name: str = None
 
     def set_name(self, name: str):
@@ -36,7 +37,7 @@ class PriorBoundParameter(Parameter):
 
     # TODO: Should be done on __init__/__new__
     # TODO: Might have to add
-    def set_context(self, context: "ParameterContext"):  # noqa: F821
+    def set_context(self, context: "InferenceContext"):  # noqa: F821
         """
         Sets the context of the parameter.
 
@@ -47,17 +48,12 @@ class PriorBoundParameter(Parameter):
         self._context = context
 
     @property
-    def prior(self) -> Prior:
+    def prior(self) -> PriorMixin:
         """
         The prior of the parameter.
         """
 
-        # TODO: Far from optimal...
-        prior = self._context.get_prior(self._name)
-        if self.device != prior.device:
-            self._context._prior_dict[self._name] = prior = prior.to(self.device)
-
-        return prior
+        return self._context.get_prior(self._name)
 
     def sample_(self, shape: torch.Size = torch.Size([])):
         """
@@ -67,7 +63,7 @@ class PriorBoundParameter(Parameter):
             shape: shape of samples.
         """
 
-        self.copy_(self.prior.build_distribution().sample(shape))
+        self.copy_(self.prior.sample(shape))
 
     def update_values_(self, x: torch.Tensor, constrained=True):
         """
@@ -82,7 +78,7 @@ class PriorBoundParameter(Parameter):
 
         # We only the support if we're considering constrained parameters as the unconstrained by definition are fine
         if constrained:
-            support = self.prior().support.check(value)
+            support = self.prior.support.check(value)
 
             if not support.all():
                 raise ValueError("Some of the values were out of bounds!")
@@ -106,9 +102,9 @@ class PriorBoundParameter(Parameter):
         """
 
         if constrained:
-            return self.prior.build_distribution().log_prob(self)
+            return self.prior.log_prob(self)
 
-        return self.prior.unconstrained_prior.log_prob(self.get_unconstrained())
+        return self.prior.unconstrained_prior().log_prob(self.get_unconstrained())
 
     # NB: Same as torch but we replace the `_rebuild_parameter` with our custom one.
     def __reduce_ex__(self, proto):
@@ -127,9 +123,9 @@ class PriorBoundParameter(Parameter):
         """
 
         if constrained:
-            self.copy_(self.prior.build_distribution().icdf(probs))
+            self.copy_(self.prior.icdf(probs))
             return
 
-        unconstrained = self.prior.unconstrained_prior
+        unconstrained = self.prior.unconstrained_prior()
         samples = unconstrained.icdf(probs)
         self.copy_(self.prior.get_constrained(samples))

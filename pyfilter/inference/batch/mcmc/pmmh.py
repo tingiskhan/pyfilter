@@ -1,10 +1,10 @@
 import torch
-from .utils import run_pmmh
-from .proposals import RandomWalk, BaseProposal
-from .state import PMMHResult
-from ...context import make_context
+
 from ...base import BaseAlgorithm
 from ...logging import TQDMWrapper
+from .proposals import BaseProposal, RandomWalk
+from .state import PMMHResult
+from .utils import run_pmmh
 
 
 class PMMH(BaseAlgorithm):
@@ -18,7 +18,13 @@ class PMMH(BaseAlgorithm):
     MONTE_CARLO_SAMPLES = torch.Size([10_000])
 
     def __init__(
-        self, filter_, num_samples: int, num_chains: int = 4, proposal: BaseProposal = None, initializer: str = "mean", context=None
+        self,
+        filter_,
+        num_samples: int,
+        num_chains: int = 4,
+        proposal: BaseProposal = None,
+        initializer: str = "mean",
+        context=None,
     ):
         r"""
         Initializes the :class:`PMMH` class.
@@ -39,7 +45,7 @@ class PMMH(BaseAlgorithm):
         """
 
         super().__init__(filter_, context=context)
-        
+
         self.num_samples = num_samples
         self._num_chains = torch.Size([num_chains])
         self._parameter_shape = torch.Size([num_chains, 1])
@@ -52,15 +58,14 @@ class PMMH(BaseAlgorithm):
 
     def initialize(self, y: torch.Tensor) -> PMMHResult:
         self.filter.initialize_model(self.context)
-        
+
         if self._initializer == "seed":
             raise NotImplementedError()
         elif self._initializer == "mean":
-            for p in self.filter.ssm.parameters():
-                dist = p.prior.build_distribution()
+            for p in self.context.parameters.values():
+                dist = p.prior
                 mean = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0)
-
-                p.data = mean * torch.ones(self._parameter_shape, device=p.device)
+                p.fill_(mean)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
@@ -82,7 +87,7 @@ class PMMH(BaseAlgorithm):
                 proposal_filter.initialize_model(sub_context)
 
             for i in range(self.num_samples):
-                accepted = run_pmmh(
+                _ = run_pmmh(
                     self.context,
                     state,
                     self._proposal,

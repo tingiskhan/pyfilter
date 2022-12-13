@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyfilter"
+description = "Library for performing Bayesian inference in state space models"
+dynamic = ["version"]
+authors = [
+    {name = "Victor Gruselius", email="victor.gruselius@gmail.com"},
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.6"
+
+keywords = ["stochastic", "timeseries"]
+
+classifiers = [
+        "Programming Language :: Python",
+        "Development Status :: 3 - Alpha",
+        "Natural Language :: English",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+dependencies = [
+    "torch>1.9.0",
+    "pyro-ppl>=1.8.2",
+    "tqdm>=4.26",
+    "stochproc @ git+https://github.com/tingiskhan/stoch-proc.git@v0.1.1#egg=stochproc",
+    "matplotlib>=3.5.2",
+    "statsmodels>=0.13.2"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.1.2",
+    "pykalman @ git+https://github.com/osh/pykalman@loglikelihood-fix#egg=pykalman", # Watch out for this one...
+    "numpy>=1.21.6"
+]
+
+[project.urls]
+homepage = "https://github.com/tingiskhan/pyfilter"
+
+[tool.black]
+line-length = 120
+
+[tool.setuptools.packages.find]
+include = ["pyfilter*"]
+
+[tool.bumpver]
+current_version = "0.26.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+commit = false
+tag = false
+push = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+]
+
+"pyfilter/__init__.py" = [
+    '__version__ = "{version}"'
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pyfilter.__version__"}

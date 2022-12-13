@@ -1,10 +1,12 @@
 import threading
 from collections import OrderedDict
-from typing import Iterable, Tuple, List, Dict, Any, OrderedDict as tOrderedDict, Callable
-import torch
+from typing import Any, Callable, Dict, Iterable, List, OrderedDict as tOrderedDict, Tuple
 
-from .prior import Prior
+import torch
+from pyro.distributions import Distribution
+
 from .parameter import PriorBoundParameter
+from .prior import PriorMixin
 from .qmc import QuasiRegistry
 
 
@@ -39,10 +41,10 @@ class InferenceContext(object):
 
     def __init__(self):
         """
-        Initializes the :class:`ParameterContext` class.
+        Initializes the :class:`InferenceContext` class.
         """
 
-        self._prior_dict: Dict[str, Prior] = OrderedDict([])
+        self._prior_dict: Dict[str, Distribution] = OrderedDict([])
         self._parameter_dict: Dict[str, PriorBoundParameter] = OrderedDict([])
 
         self._shape_dict: Dict[str, torch.Size] = OrderedDict([])
@@ -94,18 +96,20 @@ class InferenceContext(object):
         if self.batch_shape is None:
             self.batch_shape = batch_shape
             return
-        
-        if self.batch_shape != batch_shape:
-            raise BatchShapeAlreadySet(f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}")
 
-    def get_prior(self, name: str) -> Prior:
+        if self.batch_shape != batch_shape:
+            raise BatchShapeAlreadySet(
+                f"Batch shape has already been set, and is not the same: {self.batch_shape} != {batch_shape}"
+            )
+
+    def get_prior(self, name: str) -> PriorMixin:
         """
         Returns the prior given the name of the parameter.
         """
 
         return self._prior_dict.get(name, None)
 
-    def named_parameter(self, name: str, prior: Prior) -> PriorBoundParameter:
+    def named_parameter(self, name: str, prior: Distribution) -> PriorBoundParameter:
         """
         Registers a prior on the global prior dictionary, and creates a corresponding parameter.
 
@@ -123,23 +127,24 @@ class InferenceContext(object):
         if name in self._prior_dict:
             if self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
-            
-            raise NotSamePriorError(f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!")
+
+            raise NotSamePriorError(
+                f"You are trying to register a parameter for '{name}' that already exists, but the priors don't match!"
+            )
 
         self._prior_dict[name] = prior
 
-        dist = prior.build_distribution()
-        assert dist.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
+        assert prior.batch_shape == torch.Size([]), "You cannot pass a batched distribution!"
 
-        v = dist.sample(self.batch_shape)
+        v = prior.sample(self.batch_shape)
 
         # TODO: Set name and context on init...
         self._parameter_dict[name] = parameter = PriorBoundParameter(v, requires_grad=False)
         parameter.set_context(self)
         parameter.set_name(name)
 
-        self._shape_dict[name] = prior.build_distribution().event_shape
-        self._unconstrained_shape_dict[name] = prior.unconstrained_prior.event_shape
+        self._shape_dict[name] = prior.event_shape
+        self._unconstrained_shape_dict[name] = prior.unconstrained_prior().event_shape
 
         return parameter
 
@@ -156,7 +161,7 @@ class InferenceContext(object):
 
         if name in self._parameter_dict:
             return self._parameter_dict[name]
-        
+
         raise ParameterDoesNotExist(f"No such parameter '{name}'!")
 
     def get_parameters(self, constrained=True) -> Iterable[Tuple[str, PriorBoundParameter]]:
@@ -178,7 +183,7 @@ class InferenceContext(object):
 
         res = tuple()
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
-        
+
         for n, p in self.get_parameters():
             shape = shape_dict[n]
             v = (p if constrained else p.get_unconstrained()).view(-1, shape.numel())
@@ -238,7 +243,7 @@ class InferenceContext(object):
         Exchanges the parameters of ``self`` with that of ``other``.
 
         Args:
-            other: the :class:`ParameterContext` to take the values from.
+            other: the :class:`InferenceContext` to take the values from.
             mask: the mask from where to take.
         """
 
@@ -255,7 +260,7 @@ class InferenceContext(object):
             indices: the indices at which to resample.
         """
 
-        for n, p in self.get_parameters():
+        for _, p in self.get_parameters():
             p.copy_(p[indices])
 
     def make_new(self) -> "InferenceContext":
@@ -272,7 +277,9 @@ class InferenceContext(object):
 
         res = OrderedDict([])
         res[self._PARAMETER_KEY] = {k: v.data for k, v in self.parameters.items()}
-        res[self._PRIOR_KEY] = {k: v.state_dict() for k, v in self._prior_dict.items()}
+        res[self._PRIOR_KEY] = {
+            k: {kp: getattr(v, kp) for kp in v.arg_constraints.keys()} for k, v in self._prior_dict.items()
+        }
 
         return res
 
@@ -288,34 +295,32 @@ class InferenceContext(object):
         assert set(self.parameters.keys()) == set(state_dict[self._PARAMETER_KEY].keys())
 
         for k, v in self._prior_dict.items():
-            for p_name, p_value in v._get_parameters().items():
-                msg = f"Seems that you don't have the same parameters for '{p_name}'!"
-                assert (p_value == state_dict[self._PRIOR_KEY][k][p_name]).all(), msg
+            for name in v.arg_constraints.keys():
+                msg = f"Seems that you don't have the same parameters for '{name}'!"
+                assert (getattr(v, name) == state_dict[self._PRIOR_KEY][k][name]).all(), msg
 
             p = self.get_parameter(k)
             p.data = state_dict[self._PARAMETER_KEY][k]
 
-        return
-
     def apply_fun(self, f: Callable[[PriorBoundParameter], torch.Tensor]) -> "InferenceContext":
         """
-        Applies ``f`` to each parameter of ``self`` and returns a new :class:`ParameterContext`.
+        Applies ``f`` to each parameter of ``self`` and returns a new :class:`InferenceContext`.
 
         Args:
             f: function to apply.
         """
 
         new_context = self.make_new()
-        
+
         for k, v in self._prior_dict.items():
-            new_tensor = f(self.get_parameter(k).clone()).cpu()
+            new_tensor = f(self.get_parameter(k).clone())
 
             new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]):]
             new_context.set_batch_shape(new_batch_shape)
 
-            p = new_context.named_parameter(k, v.copy().cpu())
+            p = new_context.named_parameter(k, v.copy())
             p.data = new_tensor
-            
+
         return new_context
 
     def copy(self):
@@ -334,10 +339,10 @@ class QuasiInferenceContext(InferenceContext):
 
     def __init__(self, randomize: bool = True):
         """
-        Initializes the :class:`QuasiParameterContext` class.
+        Initializes the :class:`QuasiInferenceContext` class.
         """
 
-        super(QuasiInferenceContext, self).__init__()
+        super().__init__()
         self.quasi_key: int = None
         self._randomize = randomize
 
@@ -351,11 +356,11 @@ class QuasiInferenceContext(InferenceContext):
         self._apply_to_params(
             probs,
             self._unconstrained_shape_dict,
-            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior().event_shape), constrained=False)
+            lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior.event_shape), constrained=False),
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        super(QuasiInferenceContext, self).__exit__(exc_type, exc_val, exc_tb)
+        super().__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "InferenceContext":
         return QuasiInferenceContext(randomize=self._randomize)

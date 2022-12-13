@@ -1,9 +1,10 @@
 import torch
-from .base import BaseKernel
+
+from ....constants import INFTY
 from ...batch.mcmc.proposals import BaseProposal, SymmetricMH
 from ...batch.mcmc.utils import run_pmmh
 from ..state import SMC2State
-from ....constants import INFTY
+from .base import BaseKernel
 
 
 class ParticleMetropolisHastings(BaseKernel):
@@ -47,12 +48,10 @@ class ParticleMetropolisHastings(BaseKernel):
         old_params = context.stack_parameters(constrained=False)
         previous_distance = 0.0
 
-        parameter_shape = torch.Size([old_params.shape[0], 1])
-        
-        with context.make_new() as sub_context:            
+        with context.make_new() as sub_context:
             proposal_filter = filter_.copy()
             sub_context.set_batch_shape(context.batch_shape)
-            
+
             proposal_filter.initialize_model(sub_context)
 
         for _ in range(self._n_steps):

@@ -1,12 +1,12 @@
 from abc import ABC
-from tqdm import tqdm
+from typing import Callable, Sequence, TypeVar, Union
+
 import torch
-from typing import Tuple, Sequence, TypeVar, Union, Callable
 from stochproc.timeseries import StateSpaceModel
+from tqdm import tqdm
 
 from .result import FilterResult
 from .state import FilterState, PredictionState
-
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
@@ -39,7 +39,7 @@ class BaseFilter(ABC):
                     median of mean.
             record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
                 `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
-        """        
+        """
 
         super().__init__()
 
@@ -71,7 +71,7 @@ class BaseFilter(ABC):
     def ssm(self) -> StateSpaceModel:
         return self._model
 
-    def initialize_model(self, context: "InferenceContext"): # noqa: F821
+    def initialize_model(self, context: "InferenceContext"):  # noqa: F821
         r"""
         Initializes the model.
 
@@ -107,7 +107,7 @@ class BaseFilter(ABC):
             >>> sisr.set_batch_shape(torch.Size([50]))
             >>>
             >>> state = sisr.initialize()
-            >>> state.x.values.shape
+            >>> state.x.value.shape
             torch.Size([50, 1000])
         """
 

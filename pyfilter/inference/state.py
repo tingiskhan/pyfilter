@@ -1,6 +1,7 @@
 from copy import deepcopy
-from ..state import BaseResult
+
 from ..filters import FilterResult
+from ..state import BaseResult
 
 
 class AlgorithmState(BaseResult):
@@ -42,7 +43,7 @@ class FilterAlgorithmState(AlgorithmState):
         return res
 
     def load_state_dict(self, state_dict):
-        super(FilterAlgorithmState, self).load_state_dict(state_dict)
+        super().load_state_dict(state_dict)
         self.filter_state.load_state_dict(state_dict["filter_state"])
 
     def __repr__(self):

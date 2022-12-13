@@ -1,11 +1,12 @@
-from torch import isfinite
 from abc import ABC
 from typing import Optional
 
-from .state import SequentialAlgorithmState
-from .base import SequentialParticleAlgorithm
-from .kernels import OnlineKernel, NonShrinkingKernel, JitterKernel
+from torch import isfinite
+
 from ..context import InferenceContext
+from .base import SequentialParticleAlgorithm
+from .kernels import JitterKernel, NonShrinkingKernel, OnlineKernel
+from .state import SequentialAlgorithmState
 
 
 class ContextNotSupported(Exception):
@@ -30,7 +31,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
             discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
         """
 
-        super().__init__(filter_, particles, context=context)        
+        super().__init__(filter_, particles, context=context)
         if not isinstance(self.context, InferenceContext):
             raise ContextNotSupported(f"Currently do not support '{self.context.__class__}'!")
 

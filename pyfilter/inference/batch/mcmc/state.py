@@ -1,9 +1,9 @@
 from typing import Dict
 
 import torch
-from stochproc.timeseries import StateSpaceModel
-from ...state import FilterAlgorithmState
+
 from ....filters import FilterResult
+from ...state import FilterAlgorithmState
 
 
 class PMMHResult(FilterAlgorithmState):

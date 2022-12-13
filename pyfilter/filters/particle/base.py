@@ -1,17 +1,15 @@
-import itertools
 from abc import ABC
-from typing import Union, Callable, Sequence
+from typing import Callable, Sequence, Union
 
 import pyro
 import torch
 from torch.distributions import Categorical
 
-from .utils import Unsqueezer
-from .proposals import Bootstrap, Proposal
-from .state import ParticleFilterState
+from ...resampling import systematic
 from ..base import BaseFilter
 from ..utils import batched_gather
-from ...resampling import systematic
+from .proposals import Bootstrap, Proposal
+from .state import ParticleFilterState
 
 
 class ParticleFilter(BaseFilter, ABC):
@@ -85,7 +83,7 @@ class ParticleFilter(BaseFilter, ABC):
         self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
-        device = x.values.device
+        device = x.value.device
 
         w = torch.zeros(self.particles, device=device)
         prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
@@ -94,21 +92,24 @@ class ParticleFilter(BaseFilter, ABC):
         return ParticleFilterState(x, w, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
-        offset = -(2 + self.ssm.hidden.n_dim)
-        dim_to_unsqueeze = -2
+        state_dim = -(1 + self.ssm.hidden.n_dim)
+        dim = len(self.batch_shape)
 
-        with Unsqueezer(dim_to_unsqueeze, self.ssm.hidden, self.batch_shape.numel() > 1):
-            dim = len(self.batch_shape)
+        res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
 
-            res = [batched_gather(states[-1].x.values, self._resampler(states[-1].w), dim=dim)]
-            for state in reversed(states[:-1]):
-                temp_state = state.x.copy(values=state.x.values.unsqueeze(offset))
-                density = self.ssm.hidden.build_density(temp_state)
+        for state in reversed(states[:-1]):
+            density = self.ssm.hidden.build_density(state.x)
 
-                w = state.w.unsqueeze(-2) + density.log_prob(res[-1].unsqueeze(offset + 1))
+            # TODO: Last transpose might not be necessary, figure it out
+            w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
 
-                cat = Categorical(logits=w)
-                res.append(batched_gather(state.x.values, cat.sample(), dim=dim))
+            if self.batch_shape:
+                w_state = w_state.transpose(0, 1)
+
+            w = state.w.unsqueeze(-2) + w_state
+
+            cat = Categorical(logits=w)
+            res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
 
         return torch.stack(res[::-1], dim=0)
 
@@ -116,13 +117,13 @@ class ParticleFilter(BaseFilter, ABC):
         reversed_states = reversed(states)
 
         latest_state = next(reversed_states)
-        result = (latest_state.x.values,)
+        result = (latest_state.x.value,)
         prev_inds = torch.ones_like(latest_state.prev_inds).cumsum(dim=-1) - 1
 
         dim = len(self.batch_shape)
         for s in reversed_states:
             prev_inds = batched_gather(latest_state.prev_inds, prev_inds, dim=dim)
-            result += (batched_gather(s.x.values, prev_inds, dim=dim),)
+            result += (batched_gather(s.x.value, prev_inds, dim=dim),)
             latest_state = s
 
         return torch.stack(result[::-1], dim=0)
@@ -177,7 +178,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         hidden_dens = self.ssm.hidden.build_density(x_tm1)
         obs_dens = self.ssm.build_density(x_t)
-        init_dens = self.ssm.hidden.initial_dist
+        init_dens = self.ssm.hidden.initial_distribution
 
         shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
         y_ = y.view(shape)

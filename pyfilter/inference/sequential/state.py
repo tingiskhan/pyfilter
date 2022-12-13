@@ -1,8 +1,8 @@
 import torch
 
-from ..state import FilterAlgorithmState
 from ...filters import FilterResult, FilterState
-from ...utils import normalize, get_ess
+from ...utils import get_ess, normalize
+from ..state import FilterAlgorithmState
 
 
 class SequentialAlgorithmState(FilterAlgorithmState):
@@ -65,7 +65,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         return res
 
     def load_state_dict(self, state_dict):
-        super(SequentialAlgorithmState, self).load_state_dict(state_dict)
+        super().load_state_dict(state_dict)
         self.w = state_dict["w"]
         self.current_iteration = state_dict["current_iteration"]
 

@@ -1,8 +1,8 @@
 import threading
 from collections import OrderedDict
 
-import torch.quasirandom as qr
 import torch
+import torch.quasirandom as qr
 
 from ..constants import EPS2
 
@@ -64,7 +64,7 @@ class QuasiRegistry(object):
     _registry.registry = OrderedDict([])
 
     @classmethod
-    def add_engine(cls, key: int, dim: int, randomize: bool, raise_if_exists: int = False) -> int: # noqa: F821
+    def add_engine(cls, key: int, dim: int, randomize: bool, raise_if_exists: int = False) -> int:  # noqa: F821
         """
         Adds an engine to the QMC registry.
 
@@ -85,7 +85,7 @@ class QuasiRegistry(object):
             return key
 
         cls._registry.registry[key] = _EngineContainer(qr.SobolEngine(dimension=dim, scramble=True), randomize)
-        
+
         return key
 
     @classmethod

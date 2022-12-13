@@ -1,12 +1,12 @@
-from pyro.distributions import TransformedDistribution
-from pyro.distributions.transforms import biject_to, Transform
-import torch
+from copy import deepcopy
 from typing import Tuple
-from stochproc.distributions.typing import HyperParameter, DistributionOrBuilder
-from stochproc.distributions.base import _DistributionModule
+
+import torch
+from pyro.distributions import Distribution, TransformedDistribution
+from pyro.distributions.transforms import Transform, biject_to
 
 
-def verify_same_prior(x: "Prior", y: "Prior") -> bool:
+def verify_same_prior(x: Distribution, y: Distribution) -> bool:
     """
     Verifies that ``x`` and ``y`` are equivalent.
 
@@ -15,21 +15,20 @@ def verify_same_prior(x: "Prior", y: "Prior") -> bool:
         y: prior ``y``.
     """
 
-    x_dist = x.build_distribution()
-    y_dist = y.build_distribution()
-
-    if  x_dist.__class__ != y_dist.__class__:
+    if x.__class__ != y.__class__:
         return False
 
-    y_params = y._get_parameters()
-    for k, v in x._get_parameters().items():
-        if (v != y_params[k]).all():
+    for constraint in x.arg_constraints.keys():
+        x_val = getattr(x, constraint)
+        y_val = getattr(y, constraint)
+
+        if (x_val != y_val).any():
             return False
-    
+
     return True
 
 
-class Prior(_DistributionModule):
+class PriorMixin(object):
     """
     Class representing a Bayesian prior on a parameter.
 
@@ -44,35 +43,22 @@ class Prior(_DistributionModule):
 
     """
 
-    def __init__(self, distribution: DistributionOrBuilder, **parameters: HyperParameter):
-        """
-        Initializes the :class:`Prior` class.
-
-        Args:
-            distribution: distribution of the prior.
-            parameters: parameters of the distribution.
-        """
-
-        super().__init__(distribution)
-
-        for k, v in parameters.items():
-            self.register_buffer(k, v if isinstance(v, torch.Tensor) else torch.tensor(v))
-
-    @property
-    def device(self):
-        return next(self.buffers()).device
-
-    @property
     def bijection(self) -> Transform:
         """
         Returns the bijection of the prior from unconstrained space to constrained.
         """
 
-        return biject_to(self().support)
+        return biject_to(self.support)
 
-    @property
     def unconstrained_prior(self) -> TransformedDistribution:
-        return TransformedDistribution(self(), self.bijection.inv)
+        """
+        Returns the unconstrained prior.
+
+        Returns:
+            TransformedDistribution: Unconcstrained prior
+        """
+
+        return TransformedDistribution(self, self.bijection().inv)
 
     def get_unconstrained(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -94,7 +80,7 @@ class Prior(_DistributionModule):
                 >>> unconstrained = exponential_prior.get_unconstrained(samples)  # there should now be negative values
         """
 
-        return self.bijection.inv(x)
+        return self.bijection().inv(x)
 
     def get_constrained(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -117,7 +103,7 @@ class Prior(_DistributionModule):
 
         """
 
-        return self.bijection(x)
+        return self.bijection()(x)
 
     def eval_prior(self, x: torch.Tensor, constrained=True) -> torch.Tensor:
         """
@@ -129,9 +115,9 @@ class Prior(_DistributionModule):
         """
 
         if constrained:
-            return self().log_prob(x)
+            return self.log_prob(x)
 
-        return self.unconstrained_prior.log_prob(self.get_unconstrained(x))
+        return self.unconstrained_prior().log_prob(self.get_unconstrained(x))
 
     def get_numel(self, constrained=True):
         """
@@ -142,32 +128,95 @@ class Prior(_DistributionModule):
             constrained: whether to get the number of elements of the constrained or unconstrained distribution.
         """
 
-        return (self().event_shape if not constrained else self.unconstrained_prior.event_shape).numel()
-
-    def _get_parameters(self):
-        return self._buffers
+        return (self.event_shape if not constrained else self.unconstrained_prior().event_shape).numel()
 
     def get_slice_for_parameter(self, prev_index, constrained=True) -> Tuple[slice, int]:
         numel = self.get_numel(constrained)
 
         return slice(prev_index, prev_index + numel), numel
-    
+
     def equivalent_to(self, other: object) -> bool:
-        r"""
+        """
         Checks whether `self` is equivalent in distribution to `other`.
 
         Args:
             other: distribution to check equivalency with.
         """
 
-        if not isinstance(other, Prior):
+        if not isinstance(other, Distribution):
             return False
 
         return verify_same_prior(self, other)
 
-    def copy(self) -> "Prior":
-        r"""
+    def copy(self) -> Distribution:
+        """
         Copies the current instance.
         """
 
-        return type(self)(self.base_dist, **{k: v.clone() for k, v in self._buffers.items()})
+        return deepcopy(self)
+
+    def to(self, device: torch.device) -> "PriorMixin":
+        """
+        Moves the distribution to specified device. Note that this is experimental and might not work for all
+        distributions.
+
+        Args:
+            device (torch.device): device to move to.
+
+        Returns:
+            PriorMixin: Same distribution but where tensors are moved to cuda.
+        """
+
+        new = self._get_checked_instance(self.__class__, None)
+
+        params = dict()
+        for arg_name in self.arg_constraints.keys():
+            parameter = getattr(self, arg_name)
+            if parameter is None:
+                continue
+
+            params[arg_name] = parameter.to(device)
+
+        new.__init__(**params)
+
+        return new
+
+    def cuda(self):
+        """
+        Moves to cuda.
+        """
+
+        return self.to("cuda:0")
+
+
+applied_patches = []
+
+
+# Solution found here: https://stackoverflow.com/questions/18466214/should-a-plugin-adding-new-instance-methods-monkey-patch-or-subclass-mixin-and-r
+def patch(sub_cls, cls):
+    """
+    Function for patching an existing class with methods.
+
+    Args:
+        sub_cls (_type_): sub class to patch `cls` with.
+    """
+
+    if sub_cls in applied_patches:
+        return
+
+    for methodname in sub_cls.__dict__:
+        if methodname.startswith("_") or hasattr(cls, methodname):
+            continue
+
+        method = getattr(sub_cls, methodname)
+        method = get_raw_method(method)
+        setattr(cls, methodname, method)
+
+    applied_patches.append(sub_cls)
+
+
+def get_raw_method(method):
+    return method
+
+
+patch(PriorMixin, Distribution)

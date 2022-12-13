@@ -1,5 +1,7 @@
 from typing import Callable
+
 from tqdm import tqdm
+
 from .state import AlgorithmState
 
 

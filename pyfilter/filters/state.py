@@ -1,8 +1,9 @@
-from typing import Dict, Any
-
-from torch import Tensor
 from abc import ABC
-from stochproc.timeseries import TimeseriesState, StateSpaceModel, result as res
+from typing import Any, Dict
+
+from stochproc.timeseries import StateSpaceModel, TimeseriesState
+from stochproc.timeseries import result as res
+from torch import Tensor
 
 
 class PredictionState(ABC):

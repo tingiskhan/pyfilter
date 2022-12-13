@@ -1,8 +1,9 @@
+from typing import Any, Dict, Optional
+
 from .base import CombinedSequentialParticleAlgorithm
+from .kernels import ShrinkingKernel
 from .ness import NESS
 from .smc2 import SMC2
-from .kernels import ShrinkingKernel
-from typing import Optional, Dict, Any
 
 
 class NESSMC2(CombinedSequentialParticleAlgorithm):
@@ -39,7 +40,9 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
 
     def make_second(self, filter_, context, particles, **kwargs):
         kernel = kwargs.pop("kernel", ShrinkingKernel())
-        return NESS(filter_, particles, kernel=kernel, threshold=kwargs.pop("threshold", 0.95), context=context, **kwargs)
+        return NESS(
+            filter_, particles, kernel=kernel, threshold=kwargs.pop("threshold", 0.95), context=context, **kwargs
+        )
 
     def do_on_switch(self, first: SMC2, second: NESS, state):
         return self._first.rejuvenate(state)

@@ -1,1 +1,0 @@
-pykalman @ git+https://github.com/osh/pykalman@loglikelihood-fix#egg=pykalman

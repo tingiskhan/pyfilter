@@ -1,7 +1,8 @@
 import torch
 from pyro.distributions import Normal
-from torch.autograd import grad
 from stochproc.timeseries import AffineProcess
+from torch.autograd import grad
+
 from .base import Proposal
 
 
@@ -75,9 +76,9 @@ class Linearized(Proposal):
                 step[mask] = neg_inv_hess[mask]
                 std[mask] = neg_inv_hess[mask].sqrt()
 
-                g.detach_()
+                g = g.detach()
 
-            mean.detach_()
+            mean = mean.detach()
             mean += step * g
 
         kernel = Normal(mean, std)

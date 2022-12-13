@@ -1,11 +1,10 @@
-from pyfilter.inference import Prior
-from pyro.distributions import Normal
+from pyro.distributions import Distribution
 
 
 class TestPrior(object):
-    def test_copy_prior(self):
-        prior = Prior(Normal, loc=0.0, scale=1.0)
+    # TODO: Should verify that all classes have...
+    def test_verify_is_patched(self):
+        from pyfilter.inference import PriorMixin
 
-        copied_prior = prior.copy()
-
-        assert (copied_prior is not prior) and (prior.equivalent_to(copied_prior))
+        for method_name in (mn for mn in dir(PriorMixin) if callable(mn)):
+            assert hasattr(Distribution, method_name)

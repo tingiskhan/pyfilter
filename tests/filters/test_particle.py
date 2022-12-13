@@ -7,7 +7,11 @@ import numpy as np
 from .models import linear_models, local_linearization
 
 
-def construct_filters(particles=1_000, **kwargs):
+def median_relative_deviation(y_true, y):
+    return np.median(np.abs((y_true - y) / y_true))
+
+
+def construct_filters(particles=1_500, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     for pt in particle_types:
@@ -37,8 +41,9 @@ class TestParticleFilters(object):
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
     @pytest.mark.parametrize("test_copy", [False, True])
-    def test_compare_with_kalman_filter(self, models, filter_, batch_size, missing_perc, test_copy):
+    def test_filter_and_log_likelihood(self, models, filter_, batch_size, missing_perc, test_copy):
         np.random.seed(123)
+        torch.manual_seed(123)
 
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
@@ -70,26 +75,21 @@ class TestParticleFilters(object):
 
             for new_state, copy_state in zip(result.states, old_result.states):
                 assert new_state is not copy_state
-                assert (new_state.x.values == copy_state.x.values).all() 
+                assert (new_state.x.value == copy_state.x.value).all() 
                 assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
         assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
 
         means = result.filter_means[1:]
-        std = result.filter_variance[1:].sqrt()
 
-        low = means - self.NUM_STDS * std
-        high = means + self.NUM_STDS * std
+        if model.hidden.n_dim == 0:
+            means.unsqueeze_(-1)
 
-        if model.hidden.n_dim < 1:
-            low.unsqueeze_(-1)
-            high.unsqueeze_(-1)
+        deviation = median_relative_deviation(kalman_mean, means.cpu().numpy())
+        thresh = 5e-2
 
-        low = low.numpy()
-        high = high.numpy()
-
-        assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+        assert deviation < thresh
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
@@ -154,16 +154,17 @@ class TestParticleFilters(object):
             new_ts = new_s.get_timeseries_state()
             old_ts = old_s.get_timeseries_state()
 
-            assert (new_ts.values == old_ts.values).all() and (new_ts.time_index == old_ts.time_index).all()
+            assert (new_ts.value == old_ts.value).all() and (new_ts.time_index == old_ts.time_index).all()
 
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
-    @pytest.mark.parametrize("filter_", construct_filters(particles=400, record_states=True))
+    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
     @pytest.mark.parametrize("method", ["ffbs", "fl"])
     def test_smooth(self, models, filter_, batch_size, missing_perc, method):
         np.random.seed(123)
+        torch.manual_seed(123)
 
         model, kalman_model = models
         x, y = kalman_model.sample(self.SERIES_LENGTH)
@@ -190,22 +191,17 @@ class TestParticleFilters(object):
         smoothed = f.smooth(result.states, method=method)
 
         means = smoothed[1:].mean(dim=len(batch_size) + 1)
-        std = smoothed[1:].std(dim=len(batch_size) + 1)
 
-        low = means - self.NUM_STDS * std
-        high = means + self.NUM_STDS * std
+        if model.hidden.n_dim == 0:
+            means.unsqueeze_(-1)
 
-        if model.hidden.n_dim < 1:
-            low.unsqueeze_(-1)
-            high.unsqueeze_(-1)
+        means = means.cpu().numpy()
 
-        low = low.numpy()
-        high = high.numpy()
-
+        thresh = 5e-2
         if method != "fl":
-            assert ((low <= kalman_mean) & (kalman_mean <= high)).all()
+            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < thresh
         else:
-            assert ((low <= kalman_mean) & (kalman_mean <= high))[-10:].all()
+            assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < thresh
 
     @pytest.mark.parametrize("batch_shape", BATCH_SIZES)
     @pytest.mark.parametrize("linearization", local_linearization())
@@ -222,8 +218,8 @@ class TestParticleFilters(object):
             mean = linearized_result.filter_means[1:]
             std = linearized_result.filter_variance[1:].sqrt()
 
-            low = mean - self.NUM_STDS * std
-            high = mean + self.NUM_STDS * std
+            low = mean - 2 * std
+            high = mean + 2 * std
 
             x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
 

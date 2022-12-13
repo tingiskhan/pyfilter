@@ -1,9 +1,10 @@
+from math import ceil
+
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from statsmodels.nonparametric.kde import KDEUnivariate
-from math import ceil
 
 from .context import InferenceContext
 from .sequential.state import SequentialAlgorithmState
@@ -46,7 +47,7 @@ def mimic_arviz_posterior(
     """
 
     if ax is None:
-        num_rows = ceil(sum(p.prior.shape.numel() for p in context.parameters.values()) / num_cols)
+        num_rows = ceil(sum(p.prior.event_shape.numel() for p in context.parameters.values()) / num_cols)
         _, ax = plt.subplots(num_rows, num_cols)
 
     w = state.normalized_weights().cpu().numpy()

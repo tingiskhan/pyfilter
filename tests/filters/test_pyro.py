@@ -35,7 +35,7 @@ class TestPyroIntegration(object):
     def test_vi(self, num_particles):
         def build_ssm(sigma_):
             latent = ts.models.RandomWalk(sigma_)
-            return ts.StateSpaceModel(latent, lambda u: Normal(u.values, 0.1), ())
+            return ts.StateSpaceModel(latent, lambda u: Normal(u.value, 0.1), ())
 
         def pyro_model(y, sample_filter=True):
             # TODO: I think the filter should keep track of when to unsqueeze etc...

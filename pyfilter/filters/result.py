@@ -1,10 +1,11 @@
 from copy import deepcopy
-import torch
-from typing import List, TypeVar, Generic, Union
-from stochproc.container import make_dequeue
+from typing import Generic, List, TypeVar, Union
 
-from .state import FilterState
+import torch
+
+from ..container import make_dequeue
 from ..state import BaseResult
+from .state import FilterState
 
 TState = TypeVar("TState", bound=FilterState)
 BoolOrInt = Union[bool, int]
@@ -151,7 +152,7 @@ class FilterResult(BaseResult, Generic[TState]):
             state_dict: state dictionary to load from.
         """
 
-        super(FilterResult, self).load_state_dict(state_dict)
+        super().load_state_dict(state_dict)
         self._loglikelihood = state_dict["log_likelihood"]
 
         assert len(self.states) == 1, "Can only handle case when we have 1 state!"
