@@ -14,10 +14,16 @@ class GaussianPF(ParticleFilter):
     """
 
     def _generate_importance_density(self, state: ParticleFilterState):
+        dim = -(self.ssm.hidden.n_dim + 1)
+        mean = state.mean.unsqueeze(dim)
+        var = state.var.sqrt().unsqueeze(dim) if dim == -1 else state.get_covariance().unsqueeze(dim - 1)
+
         if self.ssm.hidden.n_dim == 0:
-            return Normal(state.mean, state.var.sqrt())
+            dist = Normal(mean, var)
+        else:
+            dist = MultivariateNormal(mean, var)
         
-        return MultivariateNormal(state.mean, covariance_matrix=state.get_covariance())
+        return dist.expand(self.particles)
 
     def predict(self, state: ParticleFilterState) -> ParticleFilterPrediction:        
         return ParticleFilterPrediction(state.x, torch.zeros_like(state.w), state.prev_inds)
@@ -25,11 +31,11 @@ class GaussianPF(ParticleFilter):
     def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction) -> ParticleFilterState:                
         # TODO: This is not that nice tbh...
         if (state.x.time_index == 0).all():
-            state.x = self.ssm.hidden.propagate(state.x)
+            state = ParticleFilterState(self.ssm.hidden.propagate(state.x), state.w, state.ll, state.prev_inds)
 
         # TODO: Fix batched as the axes get re-arranged
         density = self._generate_importance_density(state)
-        x_vals = density.sample(self.particles[-1:])
+        x_vals = density.sample()
 
         x_copy = prediction.prev_x.copy(values=x_vals)        
         observation_density = self.ssm.build_density(x_copy)
