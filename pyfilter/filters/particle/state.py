@@ -87,6 +87,7 @@ class ParticleFilterState(FilterState):
     def get_variance(self):
         return self.var
 
+    # TODO: Covariance doesn't work for nested
     def get_covariance(self) -> torch.Tensor:
         """
         Returns the covariance of the posterior distribution.
