@@ -87,6 +87,22 @@ class ParticleFilterState(FilterState):
     def get_variance(self):
         return self.var
 
+    def get_covariance(self) -> torch.Tensor:
+        """
+        Returns the covariance of the posterior distribution.
+        """
+
+        if len(self.x.event_shape) == 0:
+            return self.var
+        
+        # TODO: Duplication
+        w = self.normalized_weights()
+        x = self.x.value
+
+        mean = w @ x
+        centralized = x - mean
+        return (w * centralized.t()).matmul(centralized)
+
     def normalized_weights(self):
         return normalize(self.w)
 
