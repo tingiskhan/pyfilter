@@ -100,9 +100,11 @@ class ParticleFilterState(FilterState):
         w = self.normalized_weights()
         x = self.x.value
 
-        mean = w @ x
+        mean = w.unsqueeze(-2) @ x
         centralized = x - mean
-        return (w * centralized.t()).matmul(centralized)
+        weighted_covariance = w.view(w.shape + torch.Size([1, 1])) * (centralized.unsqueeze(-1) @ centralized.unsqueeze(-2))
+        
+        return weighted_covariance.sum(dim=-3)
 
     def normalized_weights(self):
         return normalize(self.w)
