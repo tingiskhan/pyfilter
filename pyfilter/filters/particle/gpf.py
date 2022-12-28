@@ -7,7 +7,7 @@ from .utils import log_likelihood
 
 
 # TODO: Add kernels
-class GaussianPF(ParticleFilter):
+class GPF(ParticleFilter):
     """
     Implements the `Gaussian Particle Filter`_ of J.H. Kotecha and P.M. Djuric. 
 
@@ -27,7 +27,7 @@ class GaussianPF(ParticleFilter):
         return dist.expand(self.particles)
 
     def predict(self, state: ParticleFilterState) -> ParticleFilterPrediction:        
-        return ParticleFilterPrediction(state.x, torch.zeros_like(state.w), state.prev_inds)
+        return ParticleFilterPrediction(state.x, torch.ones_like(state.w) / self.particles[-1], state.prev_inds)
 
     def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction) -> ParticleFilterState:                
         density = self._generate_importance_density(state)
