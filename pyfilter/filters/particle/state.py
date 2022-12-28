@@ -38,6 +38,7 @@ class ParticleFilterPrediction(PredictionState):
         x_new = model.hidden.propagate(self.prev_x)
         new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.value.device)
 
+        # TODO: Indicies is wrong
         return ParticleFilterState(x_new, torch.zeros_like(self.old_weights), new_ll, self.indices)
 
 
