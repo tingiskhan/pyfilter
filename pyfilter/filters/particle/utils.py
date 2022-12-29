@@ -1,6 +1,5 @@
 import torch
-
-from stochproc.timeseries import StructuralStochasticProcess
+from typing import Dict, Any
 
 
 def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:

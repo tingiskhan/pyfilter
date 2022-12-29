@@ -41,7 +41,7 @@ class GradientBasedProposal(RandomWalk):
 
         context.unstack_parameters(params, constrained=False)
 
-        time = torch.stack(tuple(s.x.time_index for s in state.filter_state.states))
+        time = torch.stack(tuple(s.timeseries_state.time_index for s in state.filter_state.states))
 
         # As the first state's time value is zero, we use that
         first_state = state.filter_state.states[0].get_timeseries_state()

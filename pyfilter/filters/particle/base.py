@@ -95,10 +95,10 @@ class ParticleFilter(BaseFilter, ABC):
         state_dim = -(1 + self.ssm.hidden.n_dim)
         dim = len(self.batch_shape)
 
-        res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
+        res = [batched_gather(states[-1].timeseries_state.value, self._resampler(states[-1].weights), dim=dim)]
 
         for state in reversed(states[:-1]):
-            density = self.ssm.hidden.build_density(state.x)
+            density = self.ssm.hidden.build_density(state.timeseries_state)
 
             # TODO: Last transpose might not be necessary, figure it out
             w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
@@ -106,10 +106,10 @@ class ParticleFilter(BaseFilter, ABC):
             if self.batch_shape:
                 w_state = w_state.transpose(0, 1)
 
-            w = state.w.unsqueeze(-2) + w_state
+            w = state.weights.unsqueeze(-2) + w_state
 
             cat = Categorical(logits=w)
-            res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
+            res.append(batched_gather(state.timeseries_state.value, cat.sample(), dim=dim))
 
         return torch.stack(res[::-1], dim=0)
 
@@ -117,13 +117,13 @@ class ParticleFilter(BaseFilter, ABC):
         reversed_states = reversed(states)
 
         latest_state = next(reversed_states)
-        result = (latest_state.x.value,)
-        prev_inds = torch.ones_like(latest_state.prev_inds).cumsum(dim=-1) - 1
+        result = (latest_state.timeseries_state.value,)
+        prev_inds = torch.ones_like(latest_state.previous_indices).cumsum(dim=-1) - 1
 
         dim = len(self.batch_shape)
         for s in reversed_states:
-            prev_inds = batched_gather(latest_state.prev_inds, prev_inds, dim=dim)
-            result += (batched_gather(s.x.value, prev_inds, dim=dim),)
+            prev_inds = batched_gather(latest_state.previous_indices, prev_inds, dim=dim)
+            result += (batched_gather(s.timeseries_state.value, prev_inds, dim=dim),)
             latest_state = s
 
         return torch.stack(result[::-1], dim=0)

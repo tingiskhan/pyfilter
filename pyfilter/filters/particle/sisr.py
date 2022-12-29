@@ -22,27 +22,27 @@ class SISR(ParticleFilter):
 
         return self._resampler(w[mask]), mask
 
-    def predict(self, state):
+    def predict(self, state: ParticleFilterState):
         old_normalized_w = state.normalized_weights()
-        indices, mask = self._resample_parallel(state.w)
+        indices, mask = self._resample_parallel(state.weights)
 
         # TODO: Perhaps slow?
-        all_indices = torch.empty_like(state.prev_inds)
+        all_indices = torch.empty_like(state.previous_indices)
         all_indices[mask] = indices
-        all_indices[~mask] = torch.arange(0, state.prev_inds.shape[-1], device=all_indices.device)
+        all_indices[~mask] = torch.arange(0, state.previous_indices.shape[-1], device=all_indices.device)
 
-        resampled_x = state.x.value
+        resampled_x = state.timeseries_state.value
         resampled_x[mask] = batched_gather(resampled_x[mask], indices, indices.dim() - 1)
 
-        resampled_state = state.x.copy(values=resampled_x)
+        resampled_state = state.timeseries_state.copy(values=resampled_x)
 
         return ParticleFilterPrediction(resampled_state, old_normalized_w, indices=all_indices, mask=mask)
 
-    def correct(self, y: torch.Tensor, state, prediction: ParticleFilterPrediction):
+    def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction):
         x, weights = self.proposal.sample_and_weight(y, prediction.prev_x)
 
         tw = torch.zeros_like(weights)
-        tw[~prediction.mask] = state.w[~prediction.mask]
+        tw[~prediction.mask] = state.weights[~prediction.mask]
 
         w = weights + tw
 
