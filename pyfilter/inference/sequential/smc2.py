@@ -115,5 +115,6 @@ class SMC2(SequentialParticleAlgorithm):
 
         res = SMC2State(w, new_filter_state)
         res.tensor_tuples = state.tensor_tuples
+        res.current_iteration = state.current_iteration
 
         return res
