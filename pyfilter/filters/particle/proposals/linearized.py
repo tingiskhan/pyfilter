@@ -38,14 +38,14 @@ class Linearized(Proposal):
         self._n_steps = n_steps
         self._use_second_order = use_second_order
 
-        self._is1d = None
+        self._is_1d = None
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
 
-        super(Linearized, self).set_model(model)
-        self._is1d = self._model.hidden.n_dim == 0
+        super().set_model(model)
+        self._is_1d = self._model.hidden.n_dim == 0
 
         return self
 
@@ -80,9 +80,10 @@ class Linearized(Proposal):
 
             mean = mean.detach()
             mean += step * g
+            x_copy = x_copy.copy(value=mean)
 
         kernel = Normal(mean, std)
-        if not self._is1d:
+        if not self._is_1d:
             kernel = kernel.to_event(1)
 
         x_result = x_copy.copy(values=kernel.sample)
