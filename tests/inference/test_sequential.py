@@ -82,7 +82,7 @@ class TestSequential(object):
 
             assert (
                     (new_result.ess.shape[0] == y.shape[0] + 1) and
-                    (new_result.filter_state.latest_state.x.time_index == y.shape[0]).all()
+                    (new_result.filter_state.latest_state.timeseries_state.time_index == y.shape[0]).all()
             )
 
     @pytest.mark.parametrize("models", linear_models())

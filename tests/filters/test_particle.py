@@ -75,7 +75,7 @@ class TestParticleFilters(object):
 
             for new_state, copy_state in zip(result.states, old_result.states):
                 assert new_state is not copy_state
-                assert (new_state.x.value == copy_state.x.value).all() 
+                assert (new_state.timeseries_state.value == copy_state.timeseries_state.value).all() 
                 assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
