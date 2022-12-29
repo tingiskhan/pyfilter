@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Callable
+from typing import Callable, Tuple
 
 import torch
 from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
@@ -49,7 +49,7 @@ class Proposal(ABC):
         y_dist = self._model.build_density(x_new)
         return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)
 
-    def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
+    def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> Tuple[TimeseriesState, torch.Tensor]:
         """
         Method to be derived by inherited classes. Given the current observation ``y`` and previous state ``x``, this
         method samples new state values and weighs them accordingly.
