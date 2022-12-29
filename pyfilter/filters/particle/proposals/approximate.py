@@ -16,12 +16,12 @@ class GaussianProposal(Proposal):
     def _generate_importance_density(self, state: ParticleFilterState):
         dim = -(self._model.hidden.n_dim + 1)
         mean = state.get_mean().unsqueeze(dim)
-        chol = state.get_variance().sqrt().unsqueeze(dim) if dim == -1 else state.get_covariance().unsqueeze(dim - 1).cholesky()
+        var = state.get_variance().unsqueeze(dim) if dim == -1 else state.get_covariance().unsqueeze(dim - 1)
 
         if self._model.hidden.n_dim == 0:
-            dist = Normal(mean, chol)
+            dist = Normal(mean, var.sqrt())
         else:
-            dist = MultivariateNormal(mean, chol)
+            dist = MultivariateNormal(mean, covariance_matrix=var)
         
         return dist.expand(state.timeseries_state.batch_shape)
 
