@@ -24,7 +24,7 @@ class GPF(ParticleFilter):
         proposal = proposal if proposal is not None else GaussianProposal()
 
         assert isinstance(proposal, GaussianProposal), f"`proposal` must be of instance '{GaussianProposal}'!"
-        super().__init__(model, particles, None, proposal, 0.0, **kwargs)
+        super().__init__(model, particles, proposal=proposal, **kwargs)
 
     def generate_predictive(self, state: ParticleFilterState) -> Distribution:
         """
