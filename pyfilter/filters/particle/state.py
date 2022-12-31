@@ -135,6 +135,7 @@ class ParticleFilterState(FilterState):
         self["_ll"] = batched_gather(self.get_loglikelihood(), indices, 0)
         self["_prev_inds"] = batched_gather(self.previous_indices, indices, 1)
 
+        # TODO: Resample instead...?
         self["_mean"], self["_var"] = self._calc_mean_and_var()
 
     def exchange(self, state: "ParticleFilterState", mask):
@@ -143,6 +144,7 @@ class ParticleFilterState(FilterState):
         self["_ll"][mask] = state.get_loglikelihood()[mask]
         self["_prev_inds"][mask] = state.previous_indices[mask]
 
+        # TODO: Resample instead...?
         self["_mean"], self["_var"] = self._calc_mean_and_var()
 
     def get_timeseries_state(self) -> TimeseriesState:
