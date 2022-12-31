@@ -7,6 +7,7 @@ from torch.linalg import cholesky_ex
 
 from ....utils import construct_diag_from_flat
 from .base import Proposal
+from .utils import find_optimal_density
 
 
 class LinearGaussianObservations(Proposal):
@@ -42,9 +43,6 @@ class LinearGaussianObservations(Proposal):
 
         self._is_variance = is_variance
 
-        self._hidden_is1d = None
-        self._obs_is1d = None
-
     def get_offset_and_scale(
         self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -58,7 +56,7 @@ class LinearGaussianObservations(Proposal):
 
         a_param = parameters[self._a_index]
         if self._b_index is None:
-            return a_param, 0.0
+            return a_param, torch.tensor(0.0, device=a_param.device)
 
         return a_param, parameters[self._b_index]
 
@@ -66,36 +64,7 @@ class LinearGaussianObservations(Proposal):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError("Model combination not supported!")
 
-        self._model = model
-        self._hidden_is1d = self._model.hidden.n_dim == 0
-        self._obs_is1d = self._model.n_dim == 0
-
-        return self
-
-    def _kernel(self, y, loc, h_var_inv, o_var_inv, c):
-        if self._hidden_is1d:
-            c = c.unsqueeze(-1)
-
-        c_ = c if not self._obs_is1d else c.unsqueeze(-2)
-
-        c_transposed = c_.transpose(-2, -1)
-        o_inv_cov = construct_diag_from_flat(o_var_inv, self._model.event_shape)
-        t2 = c_transposed.matmul(o_inv_cov).matmul(c_)
-
-        cov = (construct_diag_from_flat(h_var_inv, self._model.hidden.event_shape) + t2).inverse()
-        t1 = h_var_inv * loc
-
-        if self._hidden_is1d:
-            t1 = t1.unsqueeze(-1)
-
-        t2 = o_inv_cov.squeeze(-1) * y.unsqueeze(-1) if self._obs_is1d else o_inv_cov.matmul(y)
-        t3 = c_transposed.matmul(t2.unsqueeze(-1))
-        m = cov.matmul(t1.unsqueeze(-1) + t3).squeeze(-1)
-
-        if self._hidden_is1d:
-            return Normal(m.squeeze(-1), cov[..., 0, 0].sqrt())
-
-        return MultivariateNormal(m, scale_tril=cholesky_ex(cov)[0])
+        return super().set_model(model)
 
     def sample_and_weight(self, y, x):
         mean, scale = self._model.hidden.mean_scale(x)
@@ -109,13 +78,13 @@ class LinearGaussianObservations(Proposal):
         a_param, offset = self.get_offset_and_scale(x, parameters)
         o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
 
-        kernel = self._kernel(y - offset, mean, h_var_inv, o_var_inv, a_param)
+        kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a_param, self._model)
         x_result = x_copy.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 
     def pre_weight(self, y, x):
-        h_loc, h_scale = self._model.hidden.mean_scale(x)
+        _, h_scale = self._model.hidden.mean_scale(x)
 
         h_var = h_scale.pow(2.0)
 
@@ -123,22 +92,24 @@ class LinearGaussianObservations(Proposal):
         c, offset = self.get_offset_and_scale(x, observable_parameters)
         o_var = observable_parameters[self._s_index].pow(2.0 if not self._is_variance else 1.0)
 
-        if self._hidden_is1d:
+        if self._model.hidden.n_dim == 0:
             c = c.unsqueeze(-1)
 
-        c_ = c if not self._obs_is1d else c.unsqueeze(-2)
-        c_transposed = c_.transpose(-2, -1)
+        obs_is_1d = self._model.n_dim == 0
+
+        c_unsqueezed = c if not obs_is_1d else c.unsqueeze(-2)
+        c_transposed = c_unsqueezed.transpose(-2, -1)
 
         diag_h_var = construct_diag_from_flat(h_var, self._model.hidden.event_shape)
         diag_o_var = construct_diag_from_flat(o_var, self._model.event_shape)
 
-        cov = diag_o_var + c_.matmul(diag_h_var).matmul(c_transposed)
+        cov = diag_o_var + c_unsqueezed.matmul(diag_h_var).matmul(c_transposed)
 
-        if self._obs_is1d:
+        if obs_is_1d:
             o_loc = offset + c.squeeze() * x.value
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
-            o_loc = offset + (c_ @ x.value.unsqueeze(-1)).squeeze(-1)
+            o_loc = offset + (c_unsqueezed @ x.value.unsqueeze(-1)).squeeze(-1)
             kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
 
         return kernel.log_prob(y)
