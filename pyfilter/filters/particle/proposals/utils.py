@@ -25,7 +25,7 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
         use_second_order (bool, optional): whether to use second order information. Defaults to False.
 
     Returns:
-        Distribution: _description_
+        Distribution: returns a normal approximation of the optimal density utilizing the mode.
     """
 
     mode_state = initial_state.copy(values=mean)
@@ -74,7 +74,7 @@ def find_optimal_density(y: torch.Tensor, loc: torch.Tensor, h_var_inv: torch.Te
         model (StateSpaceModel): the underlying state space model.
 
     Returns:
-        Distribution: _description_
+        Distribution: returns the optimal density.
     """
 
     hidden_is_1d = model.hidden.n_dim == 0
