@@ -60,13 +60,8 @@ class ParticleFilterPrediction(Prediction):
         if not approximate:
             return model.hidden.propagate(self.get_timeseries_state())
 
-        dim = -(model.hidden.n_dim + 1)
         x_new = model.hidden.propagate(self.get_timeseries_state())
-
         mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True)
-
-        mean.unsqueeze_(dim)
-        var.unsqueeze_(dim if dim == -1 else (dim - 1))
 
         if model.hidden.n_dim == 0:
             dist = Normal(mean, var.sqrt())
