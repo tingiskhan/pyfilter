@@ -47,13 +47,15 @@ def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, 
     weights = weights.unsqueeze(-2)
     mean = weights @ values
 
-    de_meaned = values - mean
-    if not covariance or not state.event_shape:
-        var = weights @ de_meaned.pow(2.0)
-    else:
-        de_meaned = values - mean
-        covariances = de_meaned.unsqueeze(-1) @ de_meaned.unsqueeze(-2)
- 
-        var = (weights @ covariances)
+    # TODO: This change brings about filter means to have an extra dimension
+    centered = values - mean
 
-    return mean.squeeze(-2), var.squeeze(-2)
+    if not covariance or not state.event_shape:
+        var = (weights @ centered.pow(2.0)).squeeze(-2)
+    else:
+        centered = values - mean
+        covariances = centered.unsqueeze(-1) @ centered.unsqueeze(-2)
+ 
+        var = torch.einsum("...b,...bij -> ...ij", weights, covariances).squeeze(-3)
+
+    return mean.squeeze(-2), var
