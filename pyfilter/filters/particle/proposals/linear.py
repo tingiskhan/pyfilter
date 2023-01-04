@@ -66,7 +66,9 @@ class LinearGaussianObservations(Proposal):
 
         return super().set_model(model)
 
-    def sample_and_weight(self, y, x):
+    def sample_and_weight(self, y, prediction):
+        x = prediction.get_timeseries_state()
+
         mean, scale = self._model.hidden.mean_scale(x)
         x_dist = self._model.hidden.build_density(x)
 

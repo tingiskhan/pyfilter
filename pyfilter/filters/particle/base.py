@@ -9,10 +9,10 @@ from ...resampling import systematic
 from ..base import BaseFilter
 from ..utils import batched_gather
 from .proposals import Bootstrap, Proposal
-from .state import ParticleFilterState
+from .state import ParticleFilterCorrection, ParticleFilterPrediction
 
 
-class ParticleFilter(BaseFilter, ABC):
+class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPrediction], ABC):
     """
     Abstract base class for particle filters.
     """
@@ -77,7 +77,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
-    def initialize(self) -> ParticleFilterState:        
+    def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
             
         self._proposal.set_model(self._model)
@@ -89,9 +89,9 @@ class ParticleFilter(BaseFilter, ABC):
         prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
         ll = torch.zeros(self.batch_shape, device=device)
 
-        return ParticleFilterState(x, w, ll, prev_inds)
+        return ParticleFilterCorrection(x, w, ll, prev_inds)
 
-    def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
+    def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
         state_dim = -(1 + self.ssm.hidden.n_dim)
         dim = len(self.batch_shape)
 
@@ -113,7 +113,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return torch.stack(res[::-1], dim=0)
 
-    def _do_sample_fl(self, states: Sequence[ParticleFilterState]):
+    def _do_sample_fl(self, states: Sequence[ParticleFilterCorrection]):
         reversed_states = reversed(states)
 
         latest_state = next(reversed_states)
@@ -128,7 +128,7 @@ class ParticleFilter(BaseFilter, ABC):
 
         return torch.stack(result[::-1], dim=0)
 
-    def smooth(self, states: Sequence[ParticleFilterState], method="ffbs") -> torch.Tensor:
+    def smooth(self, states, method="ffbs") -> torch.Tensor:
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)

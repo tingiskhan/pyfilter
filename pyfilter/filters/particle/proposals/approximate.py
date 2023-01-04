@@ -2,11 +2,10 @@ import torch
 from stochproc.timeseries import TimeseriesState, AffineProcess
 from typing import Tuple
 
-from pyro.distributions import Distribution
-
-from ..state import ParticleFilterState
+from ..state import ParticleFilterPrediction
 from .base import Proposal
 from .utils import find_mode_of_distribution, find_optimal_density
+from ..utils import get_filter_mean_and_variance
 
 
 # TODO: Clean up? Perhaps move to separate modules for "exact" and approximate
@@ -16,11 +15,15 @@ class GaussianProposal(Proposal):
     """
 
     # TODO: Perhaps rename?
-    def sample_and_weight(self, y: torch.Tensor, state: ParticleFilterState, predictive_distribution: Distribution) -> Tuple[TimeseriesState, torch.Tensor]:
-        predictive_distribution = predictive_distribution.expand(state.timeseries_state.batch_shape)
+    def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction) -> Tuple[TimeseriesState, torch.Tensor]:
+        predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
+
+        timeseries_state = prediction.get_timeseries_state()
+
+        predictive_distribution = predictive_distribution.expand(timeseries_state.batch_shape)
         x_vals = predictive_distribution.sample()
 
-        x_result = state.timeseries_state.copy(values=x_vals)
+        x_result = timeseries_state.copy(values=x_vals)
   
         observation_density = self._model.build_density(x_result)
         w = observation_density.log_prob(y)
@@ -51,15 +54,21 @@ class LinearizedGaussianProposal(GaussianProposal):
         self._use_second_order = use_second_order
         self._alpha = alpha
 
-    def sample_and_weight(self, y, state, predictive_distribution):
+    def sample_and_weight(self, y, prediction):
         unsqueeze_dim = -(self._model.hidden.n_dim + 1)
-        mean_state = state.timeseries_state.copy(values=state.get_mean().unsqueeze(unsqueeze_dim))
+
+        timeseries_state = prediction.get_timeseries_state()
+        mean, variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+
+        mean_state = timeseries_state.copy(values=mean.unsqueeze(unsqueeze_dim))
         
         mean, std = self._model.hidden.mean_scale(mean_state)
-        std = (state.get_variance().unsqueeze(unsqueeze_dim) + std.pow(2.0)).sqrt()
+        std = (variance.unsqueeze(unsqueeze_dim) + std.pow(2.0)).sqrt()
 
-        kernel = find_mode_of_distribution(self._model, predictive_distribution, mean_state, mean, std, y, self._n_steps, self._alpha, self._use_second_order).expand(state.timeseries_state.batch_shape)        
-        x_result = state.timeseries_state.copy(values=kernel.sample)
+        predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
+        kernel = find_mode_of_distribution(self._model, predictive_distribution, mean_state, mean, std, y, self._n_steps, self._alpha, self._use_second_order).expand(timeseries_state.batch_shape)        
+        
+        x_result = timeseries_state.copy(values=kernel.sample())
 
         return x_result, self._weight_with_kernel(y, predictive_distribution, x_result, kernel)
 
@@ -116,20 +125,25 @@ class LinearGaussianProposal(GaussianProposal):
 
         return super().set_model(model)
 
-    def sample_and_weight(self, y, state, predictive_distribution):
+    def sample_and_weight(self, y, prediction):
         unsqueeze_dim = -(self._model.hidden.n_dim + 1)
-        mean_state = state.timeseries_state.copy(values=state.get_mean().unsqueeze(unsqueeze_dim))
 
+        timeseries_state = prediction.get_timeseries_state()
+        mean, variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+        
+        mean_state = timeseries_state.copy(values=mean.unsqueeze(unsqueeze_dim))
         mean, scale = self._model.hidden.mean_scale(mean_state)
-        h_var_inv = (scale.pow(2.0) + state.get_variance().unsqueeze(unsqueeze_dim)).pow(-1.0)
+        h_var_inv = (scale.pow(2.0) + variance.unsqueeze(unsqueeze_dim)).pow(-1.0)
 
         parameters = self._model.parameters
         a_param, offset = self.get_offset_and_scale(mean_state, parameters)
         o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
 
-        kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a_param, self._model).expand(state.timeseries_state.batch_shape)
-        x_result = state.timeseries_state.propagate_from(values=kernel.sample)
+        kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a_param, self._model).expand(timeseries_state.batch_shape)
+        x_result = timeseries_state.propagate_from(values=kernel.sample())
 
+        predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
+        
         return x_result, self._weight_with_kernel(y, predictive_distribution, x_result, kernel)
 
     def copy(self) -> "Proposal":

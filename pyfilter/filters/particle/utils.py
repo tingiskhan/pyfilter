@@ -1,5 +1,7 @@
 import torch
-from typing import Dict, Any
+from typing import Tuple
+
+from stochproc.timeseries import TimeseriesState
 
 
 def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = None) -> torch.Tensor:
@@ -22,3 +24,36 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
         )
 
     return max_w + temp
+
+
+# TODO: Does not work yet, fix
+def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, covariance: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Gets the filtered mean and variance given a weighted particle set.
+
+    Args:
+        state (TimeseriesState): state of timeseries for which to get mean and variance.
+        weights (torch.Tensor): normalized weights.
+        covariance (bool): whether to calculate the covariance or just variance.
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]:
+    """
+
+    values = state.value
+    if not state.event_shape:
+        values = values.unsqueeze(-1)
+
+    weights = weights.unsqueeze(-2)
+    mean = weights @ values
+
+    de_meaned = values - mean
+    if not covariance or not state.event_shape:
+        var = weights @ de_meaned.pow(2.0)
+    else:
+        de_meaned = values - mean
+        covariances = de_meaned.unsqueeze(-1) @ de_meaned.unsqueeze(-2)
+ 
+        var = (weights @ covariances)
+
+    return mean.squeeze(-2), var.squeeze(-2)

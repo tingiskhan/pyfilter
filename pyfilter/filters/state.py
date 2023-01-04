@@ -6,19 +6,19 @@ from stochproc.timeseries import result as res
 from torch import Tensor
 
 
-class PredictionState(ABC):
+class Prediction(ABC):
     """
     Base class for filter predictions.
     """
 
-    def get_previous_state(self) -> TimeseriesState:
+    def get_timeseries_state(self) -> TimeseriesState:
         """
         Returns the previous timeseries state.
         """
 
         raise NotImplementedError()
 
-    def create_state_from_prediction(self, model: StateSpaceModel) -> "FilterState":
+    def create_state_from_prediction(self, model: StateSpaceModel) -> "Correction":
         """
         Method for creating an instance of :class:`FilterState`.
 
@@ -29,7 +29,8 @@ class PredictionState(ABC):
         raise NotImplementedError()
 
 
-class FilterState(dict, ABC):
+# TODO: Rename to Correction
+class Correction(dict, ABC):
     """
     Abstract base class for all filter states.
     """
@@ -65,7 +66,7 @@ class FilterState(dict, ABC):
 
         raise NotImplementedError()
 
-    def exchange(self, other: "FilterState", mask: Tensor):
+    def exchange(self, other: "Correction", mask: Tensor):
         """
         Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
 

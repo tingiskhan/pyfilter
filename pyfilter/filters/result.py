@@ -5,19 +5,19 @@ import torch
 
 from ..container import make_dequeue
 from ..state import BaseResult
-from .state import FilterState
+from .state import Correction
 
-TState = TypeVar("TState", bound=FilterState)
+TCorrection = TypeVar("TCorrection", bound=Correction)
 BoolOrInt = Union[bool, int]
 
 
-class FilterResult(BaseResult, Generic[TState]):
+class FilterResult(BaseResult, Generic[TCorrection]):
     """
     Implements an object for storing results when running filters.
     """
 
     # TODO: Add dump and load hook for all states instead of just last?
-    def __init__(self, init_state: TState, record_states: BoolOrInt, record_moments: BoolOrInt):
+    def __init__(self, init_state: TCorrection, record_states: BoolOrInt, record_moments: BoolOrInt):
         """
         Initializes the :class:`FilterResult` class.
 
@@ -66,14 +66,14 @@ class FilterResult(BaseResult, Generic[TState]):
         return self.tensor_tuples.get_as_tensor("filter_variances")
 
     @property
-    def states(self) -> List[TState]:
+    def states(self) -> List[TCorrection]:
         return list(self._states)
 
     @property
-    def latest_state(self) -> TState:
+    def latest_state(self) -> TCorrection:
         return self._states[-1]
 
-    def exchange(self, other: "FilterResult[TState]", mask: torch.Tensor):
+    def exchange(self, other: "FilterResult[TCorrection]", mask: torch.Tensor):
         """
         Exchanges the states and tensor tuples with ``res`` at ``mask``. Note that this is only relevant for filters
         that have been run in parallel.
@@ -116,7 +116,7 @@ class FilterResult(BaseResult, Generic[TState]):
 
         return self
 
-    def append(self, state: TState):
+    def append(self, state: TCorrection):
         """
         Appends state to ``self``.
 

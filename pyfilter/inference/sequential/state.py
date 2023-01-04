@@ -1,6 +1,6 @@
 import torch
 
-from ...filters import FilterResult, FilterState
+from ...filters import FilterResult, Correction
 from ...utils import get_ess, normalize
 from ..state import FilterAlgorithmState
 
@@ -33,7 +33,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return self.tensor_tuples.get_as_tensor("ess")
 
-    def append(self, filter_state: FilterState):
+    def append(self, filter_state: Correction):
         """
         Updates ``self`` given a new filter state.
 

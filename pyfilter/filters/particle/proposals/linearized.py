@@ -44,7 +44,9 @@ class Linearized(Proposal):
         
         return super().set_model(model)
 
-    def sample_and_weight(self, y, x):
+    def sample_and_weight(self, y, prediction):
+        x = prediction.get_timeseries_state()
+
         mean, std = self._model.hidden.mean_scale(x)
         x_dist = self._model.hidden.build_density(x)
 

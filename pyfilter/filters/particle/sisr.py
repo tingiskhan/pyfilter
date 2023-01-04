@@ -5,7 +5,7 @@ import torch
 from ...utils import get_ess
 from ..utils import batched_gather
 from .base import ParticleFilter
-from .state import ParticleFilterPrediction, ParticleFilterState
+from .state import ParticleFilterPrediction, ParticleFilterCorrection
 from .utils import log_likelihood
 
 
@@ -22,8 +22,8 @@ class SISR(ParticleFilter):
 
         return self._resampler(w[mask]), mask
 
-    def predict(self, state: ParticleFilterState):
-        old_normalized_w = state.normalized_weights()
+    def predict(self, state):
+        normalized_weigths = state.normalized_weights()
         indices, mask = self._resample_parallel(state.weights)
 
         # TODO: Perhaps slow?
@@ -36,14 +36,14 @@ class SISR(ParticleFilter):
 
         resampled_state = state.timeseries_state.copy(values=resampled_x)
 
-        return ParticleFilterPrediction(resampled_state, old_normalized_w, indices=all_indices, mask=mask)
+        return ParticleFilterPrediction(resampled_state, state.weights, normalized_weigths, indices=all_indices, mask=mask)
 
-    def correct(self, y: torch.Tensor, state: ParticleFilterState, prediction: ParticleFilterPrediction):
-        x, weights = self.proposal.sample_and_weight(y, prediction.prev_x)
+    def correct(self, y, prediction):
+        x, weights = self.proposal.sample_and_weight(y, prediction)
 
         tw = torch.zeros_like(weights)
-        tw[~prediction.mask] = state.weights[~prediction.mask]
+        tw[~prediction.mask] = prediction.weights[~prediction.mask]
 
         w = weights + tw
 
-        return ParticleFilterState(x, w, log_likelihood(weights, prediction.old_weights), prediction.indices)
+        return ParticleFilterCorrection(x, w, log_likelihood(weights, prediction.normalized_weights), prediction.indices)

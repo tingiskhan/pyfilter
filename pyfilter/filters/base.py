@@ -1,19 +1,21 @@
 from abc import ABC
-from typing import Callable, Sequence, TypeVar, Union
+from typing import Callable, Generic, Sequence, TypeVar, Union
 
 import torch
 from stochproc.timeseries import StateSpaceModel
 from tqdm import tqdm
 
 from .result import FilterResult
-from .state import FilterState, PredictionState
+from .state import Correction, Prediction
 
-TState = TypeVar("TState", bound=FilterState)
+TCorrection = TypeVar("TCorrection", bound=Correction)
+TPrediction = TypeVar("TPrediction", bound=Prediction)
+
 BoolOrInt = Union[bool, int]
 ModelObject = Union[StateSpaceModel, Callable[["InferenceContext"], StateSpaceModel]]  # noqa: F821
 
 
-class BaseFilter(ABC):
+class BaseFilter(Generic[TCorrection, TPrediction]):
     """
     Abstract base class for filters.
     """
@@ -116,7 +118,7 @@ class BaseFilter(ABC):
 
         self._batch_shape = batch_shape
 
-    def initialize(self) -> TState:
+    def initialize(self) -> TCorrection:
         """
         Initializes the filter. This is mainly for internal use, consider using
         :meth:`BaseFilter.initialize_with_result` instead.
@@ -124,7 +126,7 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def initialize_with_result(self, state: TState = None) -> FilterResult[TState]:
+    def initialize_with_result(self, state: TCorrection = None) -> FilterResult[TCorrection]:
         """
         Initializes the filter using :meth:`BaseFilter.initialize` if ``state`` is ``None``, and wraps the result using
         :class:`~pyfilter.filters.result.FilterResult`.
@@ -135,7 +137,7 @@ class BaseFilter(ABC):
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
-    def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TState = None) -> FilterResult[TState]:
+    def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TCorrection = None) -> FilterResult[TCorrection]:
         """
         Batch version of :meth:`BaseFilter.filter` where entire data set is parsed.
 
@@ -171,7 +173,7 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def predict(self, state: TState) -> PredictionState:
+    def predict(self, state: TCorrection) -> TPrediction:
         """
         Corresponds to the predict step of the given filter.
 
@@ -181,7 +183,7 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def correct(self, y: torch.Tensor, state: TState, prediction: PredictionState) -> TState:
+    def correct(self, y: torch.Tensor, prediction: TPrediction) -> TCorrection:
         """
         Corresponds to the correct step of the given filter.
 
@@ -193,7 +195,7 @@ class BaseFilter(ABC):
 
         raise NotImplementedError()
 
-    def filter(self, y: torch.Tensor, state: TState, result: FilterResult = None) -> TState:
+    def filter(self, y: torch.Tensor, state: TCorrection, result: FilterResult = None) -> TCorrection:
         """
         Performs one filter move given observation ``y`` and previous state of the filter.
 
@@ -209,7 +211,7 @@ class BaseFilter(ABC):
         prediction = self.predict(state)
 
         result_is_none = result is None
-        while prediction.get_previous_state().time_index % self._model.observe_every_step != 0:
+        while prediction.get_timeseries_state().time_index % self._model.observe_every_step != 0:
             state = prediction.create_state_from_prediction(self._model)
 
             if not result_is_none and self._record_intermediary:
@@ -221,14 +223,14 @@ class BaseFilter(ABC):
         if nan_mask.all():
             state = prediction.create_state_from_prediction(self._model)
         else:
-            state = self.correct(y, state, prediction)
+            state = self.correct(y, prediction)
 
         if not result_is_none:
             result.append(state)
 
         return state
 
-    def smooth(self, states: Sequence[FilterState], method: str) -> torch.Tensor:
+    def smooth(self, states: Sequence[TCorrection], method: str) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 

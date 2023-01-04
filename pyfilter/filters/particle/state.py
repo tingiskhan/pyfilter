@@ -1,48 +1,82 @@
 from collections import OrderedDict
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import torch
-from stochproc.timeseries import TimeseriesState
+from stochproc.timeseries import TimeseriesState, StateSpaceModel
 from torch import Tensor
+from pyro.distributions import Distribution, Normal, MultivariateNormal
 
 from ...utils import normalize
-from ..state import FilterState, PredictionState
+from ..state import Correction, Prediction
 from ..utils import batched_gather
+from .utils import get_filter_mean_and_variance
 
 
-class ParticleFilterPrediction(PredictionState):
+class ParticleFilterPrediction(Prediction):
     """
     Prediction state for particle filters.
     """
 
-    def __init__(self, prev_x: TimeseriesState, old_weights: Tensor, indices: Tensor, mask: Tensor = None):
+    def __init__(self, prev_x: TimeseriesState, weights: Tensor, normalized_weights: Tensor, indices: Tensor, mask: Tensor = None):
         """
         Initializes the :class:`ParticleFilterPrediction` class.
 
         Args:
-            prev_x: the resampled previous state.
-            old_weights: the previous normalized weights.
-            indices: the selected mask
+            prev_x: resampled previous state.
+            weigths: unnormalized weights.
+            normalized_weights: normalized weights.
+            indices: resampled indices.
             mask: mask for which batch to resample, only relevant for filters in parallel.
         """
 
         self.prev_x = prev_x
-        self.old_weights = old_weights
+        self.weights = weights
+        self.normalized_weights = normalized_weights
         self.indices = indices
         self.mask = mask
 
-    def get_previous_state(self) -> TimeseriesState:
+    def get_timeseries_state(self) -> TimeseriesState:
         return self.prev_x
 
     def create_state_from_prediction(self, model):
-        x_new = model.hidden.propagate(self.prev_x)
-        new_ll = torch.zeros(self.old_weights.shape[:-1], device=x_new.value.device)
+        x_new = self.get_predictive_density(model)
+        new_ll = torch.zeros(self.normalized_weights.shape[:-1], device=x_new.value.device)
 
         # TODO: Indicies is wrong
-        return ParticleFilterState(x_new, torch.zeros_like(self.old_weights), new_ll, self.indices)
+        return ParticleFilterCorrection(x_new, torch.zeros_like(self.normalized_weights), new_ll, self.indices)
+
+    def get_predictive_density(self, model: StateSpaceModel, approximate: bool = False) -> Distribution:
+        """
+        Constructs the approximation of the predictive distribution.
+
+        Args:
+            state (ParticleFilterState): current state of the particle filter.
+            approximate (bool): whether to approximate the predictive distribution via Gaussians.
+
+        Returns:
+            Distribution: predictive distribution distribution.
+        """
+
+        if not approximate:
+            return model.hidden.propagate(self.get_timeseries_state())
+
+        dim = -(model.hidden.n_dim + 1)
+        x_new = model.hidden.propagate(self.get_timeseries_state())
+
+        mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True)
+
+        mean.unsqueeze_(dim)
+        var.unsqueeze_(dim if dim == -1 else (dim - 1))
+
+        if model.hidden.n_dim == 0:
+            dist = Normal(mean, var.sqrt())
+        else:
+            dist = MultivariateNormal(mean, covariance_matrix=var)
+        
+        return dist
 
 
-class ParticleFilterState(FilterState):
+class ParticleFilterCorrection(Correction):
     """
     State object for particle based filters.
     """
@@ -64,7 +98,7 @@ class ParticleFilterState(FilterState):
         self["_ll"] = ll
         self["_prev_inds"] = prev_indices
 
-        self["_mean"], self["_var"] = self._calc_mean_and_var()
+        self["_mean"], self["_var"] = get_filter_mean_and_variance(x, self.normalized_weights())
 
     @property
     def timeseries_state(self) -> TimeseriesState:
@@ -87,21 +121,6 @@ class ParticleFilterState(FilterState):
     def get_variance(self) -> Tensor:
         return self["_var"]
 
-    def _calc_mean_and_var(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        normalized_weights = self.normalized_weights()
-
-        sum_axis = -(len(self.timeseries_state.event_shape) + 1)
-        nested = self.weights.dim() > 1
-
-        if sum_axis < -1:
-            normalized_weights.unsqueeze_(-1)
-
-        mean = (self.timeseries_state.value * normalized_weights).sum(sum_axis)
-        var = ((self.timeseries_state.value - (mean if not nested else mean.unsqueeze(1))) ** 2 * normalized_weights).sum(sum_axis)
-
-        return mean, var
-
-    # TODO: Covariance doesn't work for nested
     def get_covariance(self) -> torch.Tensor:
         """
         Returns the covariance of the posterior distribution.
@@ -136,16 +155,16 @@ class ParticleFilterState(FilterState):
         self["_prev_inds"] = batched_gather(self.previous_indices, indices, 1)
 
         # TODO: Resample instead...?
-        self["_mean"], self["_var"] = self._calc_mean_and_var()
+        self["_mean"], self["_var"] = get_filter_mean_and_variance(self["_x"], self.normalized_weights())
 
-    def exchange(self, state: "ParticleFilterState", mask):
+    def exchange(self, state: "ParticleFilterCorrection", mask):
         self["_x"].value[mask] = state.timeseries_state.value[mask]
         self["_w"][mask] = state.weights[mask]
         self["_ll"][mask] = state.get_loglikelihood()[mask]
         self["_prev_inds"][mask] = state.previous_indices[mask]
 
         # TODO: Resample instead...?
-        self["_mean"], self["_var"] = self._calc_mean_and_var()
+        self["_mean"], self["_var"] = get_filter_mean_and_variance(self["_x"], self.normalized_weights())
 
     def get_timeseries_state(self) -> TimeseriesState:
         return self.timeseries_state

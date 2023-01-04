@@ -54,7 +54,7 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
         mean += step * gradient
         mode_state = mode_state.copy(values=mean)
 
-    kernel = Normal(mean, std)
+    kernel = Normal(mean, std.nan_to_num(alpha))
     if model.hidden.event_shape.numel() > 1:
         kernel = kernel.to_event(1)
     

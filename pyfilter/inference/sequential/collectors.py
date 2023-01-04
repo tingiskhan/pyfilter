@@ -4,7 +4,7 @@ import torch.nn
 from stochproc.timeseries import StateSpaceModel
 from torch.distributions import TransformedDistribution
 
-from ...filters.particle.state import ParticleFilterState
+from ...filters.particle.state import ParticleFilterCorrection
 from .base import Callback, SequentialParticleAlgorithm, T
 from .state import SequentialAlgorithmState
 
@@ -80,7 +80,7 @@ class Standardizer(Collector[SequentialAlgorithmState]):
         filter_state = new_state.filter_state.latest_state
 
         residuals = self._standardize(algorithm.filter.ssm, y, filter_state.get_timeseries_state())
-        if isinstance(filter_state, ParticleFilterState):
+        if isinstance(filter_state, ParticleFilterCorrection):
             residuals = (filter_state.normalized_weights() * residuals).sum(dim=-1)
 
         return new_state.normalized_weights() @ residuals
