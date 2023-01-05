@@ -21,9 +21,8 @@ class GPF(ParticleFilter):
         Internal initializer for :class:`GPF`.
         """
 
-        proposal = proposal if proposal is not None else GaussianProposal()
-
-        assert isinstance(proposal, GaussianProposal), f"`proposal` must be of instance '{GaussianProposal}'!"
+        # TODO: Should somehow verify that proposal uses gaussian proposal...?
+        proposal = proposal if proposal is not None else GaussianProposal()        
         super().__init__(model, particles, proposal=proposal, **kwargs)
 
     def predict(self, state):
