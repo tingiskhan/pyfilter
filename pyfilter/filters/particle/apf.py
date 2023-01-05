@@ -29,11 +29,11 @@ class APF(ParticleFilter):
 
         dim = len(self.batch_shape)
         resampled_x = timeseries_state.copy(values=batched_gather(timeseries_state.value, indices, dim))
-        resampled_prediction = ParticleFilterPrediction(resampled_x, prediction.weights, prediction.normalized_weights, prediction.indices)
+        resampled_prediction = ParticleFilterPrediction(resampled_x, torch.zeros_like(resample_weights), torch.ones_like(resample_weights) / resample_weights.shape[-1], None)
 
         x, weights = self._proposal.sample_and_weight(y, resampled_prediction)
 
         w = weights - pre_weights.gather(dim, indices)
-        ll = log_likelihood(w) + (prediction.normalized_weights * pre_weights.exp()).sum(dim=-1).log()
+        ll = log_likelihood(w) + torch.einsum("...i, ...i -> ...", prediction.normalized_weights, pre_weights.exp()).log()
 
         return ParticleFilterCorrection(x, w, ll, indices)
