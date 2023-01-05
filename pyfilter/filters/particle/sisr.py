@@ -38,6 +38,7 @@ class SISR(ParticleFilter):
 
         return ParticleFilterPrediction(resampled_state, state.weights, normalized_weigths, indices=all_indices, mask=mask)
 
+    # TODO: something wrong for SISR and linearized...
     def correct(self, y, prediction):
         x, weights = self.proposal.sample_and_weight(y, prediction)
 
