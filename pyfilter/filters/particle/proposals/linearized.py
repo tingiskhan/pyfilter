@@ -44,14 +44,18 @@ class Linearized(Proposal):
         
         return super().set_model(model)
 
+    # TODO: Something's wrong here
     def sample_and_weight(self, y, prediction):
         x = prediction.get_timeseries_state()
-
+        
+        # TODO: Re-use predictive density?
+        x_dist = prediction.get_predictive_density(self._model)        
         mean, std = self._model.hidden.mean_scale(x)
-        x_dist = self._model.hidden.build_density(x)
 
-        kernel = find_mode_of_distribution(self._model, x_dist, x.propagate_from(values=mean), mean, std, y, self._n_steps, self._alpha, self._use_second_order)
-        x_result = x.copy(values=kernel.sample)
+        initial_state = x.propagate_from(values=mean)
+        kernel = find_mode_of_distribution(self._model, x_dist, initial_state, std, y, self._n_steps, self._alpha, self._use_second_order)
+        
+        x_result = initial_state.copy(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 
