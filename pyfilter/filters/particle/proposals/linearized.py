@@ -52,8 +52,8 @@ class Linearized(Proposal):
         x_dist = prediction.get_predictive_density(self._model)        
         mean, std = self._model.hidden.mean_scale(x)
 
-        initial_state = x.propagate_from(values=mean)
-        kernel = find_mode_of_distribution(self._model, x_dist, initial_state, std, y, self._n_steps, self._alpha, self._use_second_order)
+        initial_state = x.propagate_from(values=mean.clone())
+        kernel = find_mode_of_distribution(self._model, x_dist, initial_state, std.clone(), y, self._n_steps, self._alpha, self._use_second_order)
         
         x_result = initial_state.copy(values=kernel.sample)
 
