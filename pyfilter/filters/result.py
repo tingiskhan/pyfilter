@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import Generic, List, TypeVar, Union
 
+from typing import Generic, List, TypeVar, Union
+
 import torch
 
 from ..container import make_dequeue

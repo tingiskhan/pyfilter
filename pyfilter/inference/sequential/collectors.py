@@ -1,5 +1,6 @@
 from typing import Generic
 
+
 import torch.nn
 from stochproc.timeseries import StateSpaceModel
 from torch.distributions import TransformedDistribution
@@ -13,6 +14,7 @@ __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 class Collector(Generic[T]):
     r"""
+    Defines a collector object that is registered as a callback on
     Defines a collector object that is registered as a callback on
     :meth:`SequentialParticleAlgorithm.step` on a  :class:`SequentialParticleAlgorithm` and calculates some quantity
     that is saved to the associated :class:`SequentialAlgorithmState` object.
@@ -38,6 +40,9 @@ class Collector(Generic[T]):
         if self._name not in state.tensor_tuples:
             state.tensor_tuples.make_deque(self._name)
 
+        state.tensor_tuples[self._name].append(
+            self._f(algorithm, y, state),
+        )
         state.tensor_tuples[self._name].append(
             self._f(algorithm, y, state),
         )

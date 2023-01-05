@@ -4,6 +4,7 @@ from typing import Callable, Generic, Sequence, TypeVar, Union
 import torch
 from stochproc.timeseries import StateSpaceModel
 from tqdm import tqdm
+from tqdm import tqdm
 
 from .result import FilterResult
 from .state import Correction, Prediction
@@ -42,6 +43,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
             record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
                 `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
         """
+        """
 
         super().__init__()
 
@@ -73,6 +75,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
     def ssm(self) -> StateSpaceModel:
         return self._model
 
+    def initialize_model(self, context: "InferenceContext"):  # noqa: F821
     def initialize_model(self, context: "InferenceContext"):  # noqa: F821
         r"""
         Initializes the model.
@@ -109,6 +112,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
             >>> sisr.set_batch_shape(torch.Size([50]))
             >>>
             >>> state = sisr.initialize()
+            >>> state.x.value.shape
             >>> state.x.value.shape
             torch.Size([50, 1000])
         """

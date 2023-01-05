@@ -12,6 +12,11 @@ def median_relative_deviation(y_true, y):
 
 
 def construct_filters(particles=1_500, **kwargs):
+def median_relative_deviation(y_true, y):
+    return np.median(np.abs((y_true - y) / y_true))
+
+
+def construct_filters(particles=1_500, **kwargs):
     particle_types = (part.SISR, part.APF)
 
     for pt in particle_types:
@@ -83,6 +88,8 @@ class TestParticleFilters(object):
 
         means = result.filter_means[1:]
 
+        if model.hidden.n_dim == 0:
+            means.unsqueeze_(-1)
         if model.hidden.n_dim == 0:
             means.unsqueeze_(-1)
 
