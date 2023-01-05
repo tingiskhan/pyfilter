@@ -56,6 +56,6 @@ def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, 
         centered = values - mean
         covariances = centered.unsqueeze(-1) @ centered.unsqueeze(-2)
  
-        var = torch.einsum("...b,...bij -> ...ij", weights, covariances).squeeze(-3)
+        var = torch.einsum("...b,...bij -> ...ij", weights.squeeze(-2), covariances)
 
     return mean.squeeze(-2), var
