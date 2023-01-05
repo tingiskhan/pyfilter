@@ -48,6 +48,7 @@ def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, 
     mean = weights @ values
 
     # TODO: This change brings about filter means to have an extra dimension
+    # TODO: Think about whether the unsqueeze should be kept...
     centered = values - mean
 
     if not covariance or not state.event_shape:
