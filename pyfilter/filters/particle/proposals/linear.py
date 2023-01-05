@@ -113,7 +113,7 @@ class LinearGaussianObservations(Proposal):
             o_loc = offset + c.squeeze() * x.value
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
-            o_loc = offset + (c_ @ x.values.unsqueeze(-1)).squeeze(-1)
+            o_loc = offset + (c_unsqueezed @ x.value.unsqueeze(-1)).squeeze(-1)
             kernel = MultivariateNormal(o_loc, scale_tril=cholesky_ex(cov)[0])
 
         return kernel.log_prob(y)
