@@ -58,7 +58,7 @@ class ParticleFilterPrediction(Prediction):
         """
 
         if not approximate:
-            return model.hidden.propagate(self.get_timeseries_state())
+            return model.hidden.build_density(self.get_timeseries_state())
 
         x_new = model.hidden.propagate(self.get_timeseries_state())
         mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True)
