@@ -9,7 +9,7 @@ from ....utils import construct_diag_from_flat
 
 
 # TODO: Clean this up...
-def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, initial_state: TimeseriesState, mean: torch.Tensor, std: torch.Tensor, y: torch.Tensor, n_steps: int = 1, alpha: float = 1e-3, use_second_order = False) -> Distribution:
+def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, initial_state: TimeseriesState, std: torch.Tensor, y: torch.Tensor, n_steps: int = 1, alpha: float = 1e-3, use_second_order = False) -> Distribution:
     """
     Finds the mode of the joint distribution.
 
@@ -28,12 +28,12 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
         Distribution: returns a normal approximation of the optimal density utilizing the mode.
     """
 
-    mode_state = initial_state.copy(values=mean)
+    mean = initial_state.value
 
     for _ in range(n_steps):
         mean.requires_grad_(True)
 
-        y_dist = model.build_density(mode_state)
+        y_dist = model.build_density(initial_state)
         logl = y_dist.log_prob(y) + x_dist.log_prob(mean)
         gradient = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=use_second_order)[-1]
 
@@ -52,7 +52,7 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
 
         mean = mean.detach()
         mean += step * gradient
-        mode_state = mode_state.copy(values=mean)
+        initial_state = initial_state.copy(values=mean)
 
     kernel = Normal(mean, std.nan_to_num(alpha))
     if model.hidden.event_shape.numel() > 1:
