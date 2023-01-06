@@ -36,8 +36,6 @@ class Linearized(Proposal):
         self._n_steps = n_steps
         self._use_second_order = use_second_order
 
-        self._is_1d = None
-
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
