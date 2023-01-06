@@ -28,7 +28,7 @@ def construct_filters(particles=1_500, **kwargs):
         yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
         yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
-        linear_proposal = part.proposals.LinearGaussianObservations(a_index=0)
+        linear_proposal = part.proposals.LinearGaussianObservations()
         yield _create_partial(pt, particles=particles, proposal=linear_proposal, **kwargs)
 
 
