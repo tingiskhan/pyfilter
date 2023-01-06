@@ -39,7 +39,7 @@ class ParticleFilterPrediction(Prediction):
         return self.prev_x
 
     def create_state_from_prediction(self, model):
-        x_new = self.get_predictive_density(model)
+        x_new = model.hidden.propagate(self.get_timeseries_state())
         new_ll = torch.zeros(self.normalized_weights.shape[:-1], device=x_new.value.device)
 
         # TODO: Indicies is wrong
