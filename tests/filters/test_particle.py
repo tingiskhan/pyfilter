@@ -1,4 +1,4 @@
-import itertools
+from functools import partial
 import pytest
 import torch
 from pyfilter.filters import particle as part
@@ -11,16 +11,25 @@ def median_relative_deviation(y_true, y):
     return np.median(np.abs((y_true - y) / y_true))
 
 
-def construct_filters(particles=1_500, **kwargs):
-    particle_types = (part.SISR, part.APF)
+def _create_partial(filter_class, particles, **kwargs):
+    p = partial(filter_class, particles=particles, **kwargs)
+    p.__repr__ = lambda u: f"{filter_class.__name__}({', '.join((f'{k}={v}' for k, v in kwargs.items()))})"
 
-    for pt in particle_types:
-        yield lambda m: pt(m, particles, proposal=part.proposals.Bootstrap(), **kwargs)
-        yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
-        yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
+    return p
+
+
+def construct_filters(particles=1_500, **kwargs):
+    yield _create_partial(part.GPF, particles=particles, **kwargs)
+    yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(), **kwargs)
+    yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinear(), **kwargs)
+
+    for pt in (part.APF, part.SISR):
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Bootstrap(), **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
         linear_proposal = part.proposals.LinearGaussianObservations(a_index=0)
-        yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=linear_proposal, **kwargs)
 
 
 BATCH_SIZES = [
@@ -79,19 +88,13 @@ class TestParticleFilters(object):
                 assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
-        assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
+        assert (median_relative_deviation(kalman_ll, result.loglikelihood) < self.RELATIVE_TOLERANCE).all()
 
         means = result.filter_means[1:]
 
-        if model.hidden.n_dim == 0:
-            means.unsqueeze_(-1)
-        if model.hidden.n_dim == 0:
-            means.unsqueeze_(-1)
-
         deviation = median_relative_deviation(kalman_mean, means.cpu().numpy())
-        thresh = 5e-2
 
-        assert deviation < thresh
+        assert deviation < self.RELATIVE_TOLERANCE
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
@@ -199,11 +202,10 @@ class TestParticleFilters(object):
 
         means = means.cpu().numpy()
 
-        thresh = 5e-2
         if method != "fl":
-            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < thresh
+            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < self.RELATIVE_TOLERANCE
         else:
-            assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < thresh
+            assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < self.RELATIVE_TOLERANCE
 
     @pytest.mark.parametrize("batch_shape", BATCH_SIZES)
     @pytest.mark.parametrize("linearization", local_linearization())
@@ -223,7 +225,8 @@ class TestParticleFilters(object):
             low = mean - 2 * std
             high = mean + 2 * std
 
-            x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
+            x_ = x.unsqueeze(-1) if not model.hidden.event_shape else x
+            x_ = x_ if batch_shape.numel() == 1 else x_.unsqueeze(1)
 
             # NB: Blunt, but kinda works...
             assert (((low <= x_) & (x_ <= high)).float().mean() > 0.75).all()
