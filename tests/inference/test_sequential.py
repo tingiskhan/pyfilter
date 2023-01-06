@@ -1,15 +1,16 @@
 import pytest
 import torch
+from functools import partial
 
 from pyfilter import inference as inf, filters as filts
 from .models import linear_models
 
 
 def algorithms(particles=400):
-    yield lambda f: inf.sequential.NESS(f, particles)
-    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
-    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=10, distance_threshold=0.1)
-    yield lambda f: inf.sequential.NESSMC2(f, particles)
+    yield partial(inf.sequential.NESS, particles=particles)
+    yield partial(inf.sequential.SMC2, particles=particles, num_steps=5)
+    yield partial(inf.sequential.SMC2, particles=particles, num_steps=10, distance_threshold=0.1)
+    yield partial(inf.sequential.NESSMC2, particles=particles)
 
 
 def callbacks():
@@ -28,7 +29,7 @@ class TestSequential(object):
         _, y = true_model.sample_states(100).get_paths()
 
         with inf.make_context(**kwargs) as context:
-            filter_ = filts.APF(build_model, 200)
+            filter_ = filts.particle.APF(build_model, 200, proposal=filts.particle.proposals.LinearGaussianObservations())
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
