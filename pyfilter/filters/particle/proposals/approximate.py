@@ -95,16 +95,16 @@ class GaussianLinear(LinearGaussianObservations):
 
         mean, h_var_inv = _unsqueeze(mean, h_var_inv, self._model.hidden.n_dim)
 
-        parameters = self._model.parameters
-        a_param, offset = self.get_offset_and_scale(mean_state, parameters)
-        o_var_inv = parameters[self._s_index].pow(-2.0 if not self._is_variance else -1.0)
+        a, b, s = self._model.transformed_parameters()
+        a, offset = self.get_offset_and_scale(mean, a, b)
+        o_var_inv = s.pow(-2.0)
 
-        kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a_param, self._model).expand(timeseries_state.batch_shape)
-        x_result = timeseries_state.propagate_from(values=kernel.sample())
+        kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a, self._model).expand(timeseries_state.batch_shape)
+        x_result = timeseries_state.propagate_from(values=kernel.sample)
 
         predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
         
         return x_result, self._weight_with_kernel(y, predictive_distribution, x_result, kernel)
 
     def copy(self) -> "Proposal":
-        return GaussianLinear(self._a_index, self._b_index, self._s_index, self._is_variance)
+        return GaussianLinear()

@@ -28,7 +28,7 @@ def linear_models():
     ar = ts.models.AR(alpha, beta, sigma)
 
     a, s = 1.0, 0.15
-    obs_1d_1d = ts.StateSpaceModel(ar, build_0d_dist, parameters=(a, s))
+    obs_1d_1d = ts.LinearStateSpaceModel(ar, (a, s), torch.Size([]))
 
     kalman_1d_1d = KalmanFilter(
         transition_matrices=beta,
@@ -46,12 +46,14 @@ def linear_models():
     a, s = np.eye(2), 0.15 * np.ones(2)
 
     inc_dist = Normal(loc=0.0, scale=1.0).expand(torch.Size([2])).to_event(1)
+
+    parameters = (torch.from_numpy(a).float(), torch.from_numpy(sigma).float())
     rw = ts.LinearModel(
-        torch.from_numpy(a).float(), torch.from_numpy(sigma).float(), inc_dist, lambda *args: Normal(0.0, 1.0).expand(torch.Size([2])).to_event(1)
+        parameters, inc_dist, lambda *args: Normal(0.0, 1.0).expand(torch.Size([2])).to_event(1)
     )
 
     params = torch.from_numpy(a).float(), torch.from_numpy(s).float()
-    obs_2d_2d = ts.StateSpaceModel(rw, build_1d_dist, parameters=params)
+    obs_2d_2d = ts.LinearStateSpaceModel(rw, params, torch.Size([2]))
 
     state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
@@ -67,10 +69,10 @@ def linear_models():
     proc_1 = ts.models.RandomWalk(sigma)
     proc_2 = ts.models.RandomWalk(sigma)
 
-    joint = ts.AffineJointStochasticProcess(proc_1=proc_1, proc_2=proc_2)
+    joint = ts.joint_process(proc_1=proc_1, proc_2=proc_2)
 
     eye = torch.eye(2)
-    joint_ssm = ts.StateSpaceModel(joint, build_joint, (eye, params[-1]))
+    joint_ssm = ts.LinearStateSpaceModel(joint, (eye, params[-1]), torch.Size([2]))
 
     state_covariance = sigma ** 2.0 * np.eye(2)
     kalman_2d_2d = KalmanFilter(
