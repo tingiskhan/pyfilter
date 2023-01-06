@@ -36,6 +36,15 @@ class GaussianProposal(Proposal):
         return GaussianProposal()
 
 
+def _unsqueeze(x: torch.Tensor, y: torch.Tensor, dim: bool):
+    if dim == 0:
+        return x.clone(), y.clone()
+    
+    unsqueeze_dim = -(dim + 1)
+
+    return x.unsqueeze(unsqueeze_dim), y.unsqueeze(unsqueeze_dim)
+
+
 class GaussianLinearized(Linearized):
     """
     Same as :class:`Linearized`, but in which we use an approximation of the predictive density.
@@ -50,10 +59,7 @@ class GaussianLinearized(Linearized):
         mean, std = self._model.hidden.mean_scale(mean_state)
         std = (predictive_variance + std.pow(2.0)).sqrt()
 
-        if self._model.hidden.n_dim > 1:
-            unsqueeze_dim = -(self._model.hidden.n_dim + 1)
-            mean.unsqueeze_(unsqueeze_dim)
-            std.unsqueeze_(unsqueeze_dim)
+        mean, std = _unsqueeze(mean, std, self._model.hidden.n_dim)
 
         initial_state = mean_state.propagate_from(values=mean)
 
@@ -86,6 +92,8 @@ class GaussianLinear(LinearGaussianObservations):
 
         mean, scale = self._model.hidden.mean_scale(mean_state)
         h_var_inv = (scale.pow(2.0) + predictive_variance).pow(-1.0)
+
+        mean, h_var_inv = _unsqueeze(mean, h_var_inv, self._model.hidden.n_dim)
 
         parameters = self._model.parameters
         a_param, offset = self.get_offset_and_scale(mean_state, parameters)
