@@ -26,8 +26,8 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
     return max_w + temp
 
 
-# TODO: Does not work yet, fix
-def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, covariance: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+# TODO: The keep_dim is a tad bit weird?
+def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, covariance: bool = False, keep_dim: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Gets the filtered mean and variance given a weighted particle set.
 
@@ -52,11 +52,19 @@ def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, 
     centered = values - mean
 
     if not covariance or not state.event_shape:
-        var = (weights @ centered.pow(2.0)).squeeze(-2)
+        var = weights @ centered.pow(2.0)
+
+        if not keep_dim:
+            var.squeeze_(-2)
     else:
         centered = values - mean
         covariances = centered.unsqueeze(-1) @ centered.unsqueeze(-2)
- 
         var = torch.einsum("...b,...bij -> ...ij", weights.squeeze(-2), covariances)
 
-    return mean.squeeze(-2), var
+        if keep_dim:
+            var.unsqueeze_(-3)
+
+    if not keep_dim:
+        mean.squeeze_(-2)
+
+    return mean, var
