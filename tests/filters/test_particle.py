@@ -35,7 +35,7 @@ def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
 
 BATCH_SIZES = [
     torch.Size([]),
-    torch.Size([10]),
+    torch.Size([3]),
 ]
 
 MISSING_PERC = [0.0, 0.1]
