@@ -33,6 +33,17 @@ def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
         yield _create_partial(pt, particles=particles, proposal=linear_proposal, **kwargs)
 
 
+def mask_missing(missing_percent: float, series_length: int, y, y_tensor):
+    if missing_percent == 0.0:
+        return 
+
+    num_missing = int(missing_percent * series_length)
+    indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+    y[indices] = np.ma.masked
+    y_tensor[indices] = float("nan")
+
+
 BATCH_SIZES = [
     torch.Size([]),
     torch.Size([3]),
@@ -41,10 +52,11 @@ BATCH_SIZES = [
 MISSING_PERC = [0.0, 0.1]
 
 
+# TODO: Clean this up
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
-    NUM_STDS = 3.0
+    NUM_STDS = 3.0    
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
@@ -59,12 +71,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
         y_tensor = torch.from_numpy(y).float()
 
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y[indices] = np.ma.masked
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         kalman_mean, _ = kalman_model.filter(y)
 
@@ -106,11 +113,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
         y_tensor = torch.from_numpy(y).float()
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
@@ -134,11 +137,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
         y_tensor = torch.from_numpy(y).float()
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         f: part.ParticleFilter = filter_(model)
 
@@ -176,12 +175,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
         y_tensor = torch.from_numpy(y).float()
 
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y[indices] = np.ma.masked
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         kalman_mean, _ = kalman_model.smooth(y)
 
