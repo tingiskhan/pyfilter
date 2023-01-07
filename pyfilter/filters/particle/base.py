@@ -128,6 +128,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         return torch.stack(result[::-1], dim=0)
 
+    # NB: Discrepancy between shape of filter means and here
     def smooth(self, states, method="ffbs") -> torch.Tensor:
         lower_method = method.lower()
         if lower_method == "ffbs":
