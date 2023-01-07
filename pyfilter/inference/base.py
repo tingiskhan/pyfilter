@@ -15,11 +15,11 @@ class BaseAlgorithm(ABC):
 
     def __init__(self, filter_: BaseFilter, context: InferenceContext = None):
         """
-        Initializes the :class:`BaseFilterAlgorithm` class.
+        Internal initializer for :class:`BaseFilterAlgorithm`.
 
         Args:
-             filter_: filter to use for approximating the log likelihood.
-             context: parameter context to use. If not passed, tries to get from the stack.
+             filter_ (BaseFilter): filter to use for approximating the log likelihood.
+             context (InferenceContext): parameter context to use. If not passed, tries to get from the stack.
         """
 
         super().__init__()
@@ -36,12 +36,12 @@ class BaseAlgorithm(ABC):
         return self._filter
 
     def fit(self, y: torch.Tensor, logging: DefaultLogger = None) -> AlgorithmState:
-        """
+        r"""
         Method to be overridden by derived classes. This method is intended to fit the data on the entire data set.
 
         Args:
-            y: the data to consider, should of size ``(timesteps, [dimension of observed space])``.
-            logging: class inherited from :class:`~pyfilter.inference.logging.DefaultLogger` to handle logging.
+            y (torch.Tensor): data to fit model with, should be of size ``{timesteps, [dimension of observed space]}``.
+            logging (DefaultLogger): class inherited from :class:`~pyfilter.inference.logging.DefaultLogger` to handle logging.
         """
 
         raise NotImplementedError()

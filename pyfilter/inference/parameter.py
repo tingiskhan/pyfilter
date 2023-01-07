@@ -30,7 +30,7 @@ class PriorBoundParameter(Parameter):
         Sets the name of parameter.
 
         Args:
-            name: name for parameter.
+            name (str): name for parameter.
         """
 
         self._name = name
@@ -42,7 +42,7 @@ class PriorBoundParameter(Parameter):
         Sets the context of the parameter.
 
         Args:
-            context: the context.
+            context (InferenceContext): the context.
         """
 
         self._context = context
@@ -57,21 +57,21 @@ class PriorBoundParameter(Parameter):
 
     def sample_(self, shape: torch.Size = torch.Size([])):
         """
-        Given a prior, sample from it inplace.
+        Given a prior, sample from it in-place.
 
         Args:
-            shape: shape of samples.
+            shape (torch.Size): shape of samples.
         """
 
         self.copy_(self.prior.sample(shape))
 
     def update_values_(self, x: torch.Tensor, constrained=True):
         """
-        Update the values of self with those of ``x`` inplace.
+        Update the values of self with those of ``x`` in-place.
 
         Args:
-            x: values to update self with.
-            constrained: whether the values ``x`` are constrained or not.
+            x (torch.Tensor): values to update self with.
+            constrained (bool): whether the values ``x`` are constrained or not.
         """
 
         value = x if constrained else self.prior.get_constrained(x)
@@ -98,7 +98,7 @@ class PriorBoundParameter(Parameter):
         Evaluates the priors.
 
         Args:
-            constrained: whether to evaluate the constrained parameters.
+            constrained (bool): whether to evaluate the constrained parameters.
         """
 
         if constrained:
@@ -114,12 +114,12 @@ class PriorBoundParameter(Parameter):
         return f"PriorBoundParameter containing:\n{super(Parameter, self).__repr__()}"
 
     def inverse_sample_(self, probs: torch.Tensor, constrained: bool = True):
-        r"""
+        """
         Samples from the prior by means of inversion.
 
         Args:
-            probs: probabilities to use when inverting.
-            constrained: whether to sample constrained.
+            probs (torch.Tensor): probabilities to use when inverting.
+            constrained (bool): whether to sample constrained parameters.
         """
 
         if constrained:

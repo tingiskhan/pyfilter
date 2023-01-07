@@ -11,8 +11,8 @@ def verify_same_prior(x: Distribution, y: Distribution) -> bool:
     Verifies that ``x`` and ``y`` are equivalent.
 
     Args:
-        x: prior ``x``.
-        y: prior ``y``.
+        x (Distribution): prior ``x``.
+        y (Distribution): prior ``y``.
     """
 
     if x.__class__ != y.__class__:
@@ -55,7 +55,7 @@ class PriorMixin(object):
         Returns the unconstrained prior.
 
         Returns:
-            TransformedDistribution: Unconcstrained prior
+            TransformedDistribution: Unconstrained prior
         """
 
         return TransformedDistribution(self, self.bijection().inv)
@@ -65,17 +65,18 @@ class PriorMixin(object):
         Given samples ``x``, map the values to the unconstrained space of the bijected prior distribution.
 
         Args:
-            x: the samples to map to unconstrained space.
+            x (torch.Tensor): samples to map to unconstrained space.
 
         Example:
             In the following example, we construct an exponential prior, sample from it, and then map to the
             unconstrained space (i.e. perform the mapping ``log``):
 
-                >>> from torch.distributions import Exponential
-                >>> from pyfilter.inference.prior import Prior
+                >>> from pyro.distributions import Exponential
+                >>> from pyfilter import inference
+                >>> import torch
                 >>>
-                >>> exponential_prior = Prior(Exponential, rate=1.0)
-                >>> samples = exponential_prior.build_distribution().sample(torch.Size([1000]))
+                >>> exponential_prior = Exponential(rate=1.0)
+                >>> samples = exponential_prior.sample(torch.Size([1000]))
                 >>>
                 >>> unconstrained = exponential_prior.get_unconstrained(samples)  # there should now be negative values
         """
@@ -87,16 +88,17 @@ class PriorMixin(object):
         Given samples ``x``, map the values to the constrained space of the original prior distribution.
 
         Args:
-            x: the samples to map to constrained space.
+            x (torch.Tensor): samples to map to constrained space.
 
         Example:
             In the following example, we construct an exponential prior and a normal distribution, sample from the
             normal and then map to the constrained space (i.e. perform the mapping ``exp``):
 
-                >>> from torch.distributions import Normal, Exponential
-                >>> from pyfilter.inference import Prior
+                >>> from pyro.distributions import Normal, Exponential
+                >>> from pyfilter import inference
+                >>> import torch
                 >>>
-                >>> exponential_prior = Prior(Exponential, rate=1.0)
+                >>> exponential_prior = Exponential(rate=1.0)
                 >>> samples = Normal(0.0, 1.0).sample(torch.Size([1000]))
                 >>>
                 >>> constrained = exponential_prior.get_unconstrained(samples)  # all should be positive
@@ -105,13 +107,13 @@ class PriorMixin(object):
 
         return self.bijection()(x)
 
-    def eval_prior(self, x: torch.Tensor, constrained=True) -> torch.Tensor:
+    def eval_prior(self, x: torch.Tensor, constrained: bool = True) -> torch.Tensor:
         """
         Evaluate the prior at the point ``x``.
 
         Args:
-            x: the point at which to evaluate the prior at. Note that it should always be the constrained values.
-            constrained: whether to transform ``x`` to unconstrained and then evaluate using the bijected prior.
+            x (torch.Tensor): point at which to evaluate the prior at. Note that it should always be the constrained values.
+            constrained (bool): whether to transform ``x`` to unconstrained and then evaluate using the bijected prior.
         """
 
         if constrained:
@@ -119,13 +121,13 @@ class PriorMixin(object):
 
         return self.unconstrained_prior().log_prob(self.get_unconstrained(x))
 
-    def get_numel(self, constrained=True):
+    def get_numel(self, constrained: bool = True):
         """
         Gets the number of elements of the prior, corresponding to ``.numel()`` of the ``.event_shape`` attribute of the
         prior.
 
         Args:
-            constrained: whether to get the number of elements of the constrained or unconstrained distribution.
+            constrained (bool): whether to get the number of elements of the constrained or unconstrained distribution.
         """
 
         return (self.event_shape if not constrained else self.unconstrained_prior().event_shape).numel()
@@ -137,10 +139,10 @@ class PriorMixin(object):
 
     def equivalent_to(self, other: object) -> bool:
         """
-        Checks whether `self` is equivalent in distribution to `other`.
+        Checks whether ``self`` is equivalent in distribution to ``other``.
 
         Args:
-            other: distribution to check equivalency with.
+            other (object): distribution to check equivalency with.
         """
 
         if not isinstance(other, Distribution):
