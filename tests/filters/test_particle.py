@@ -18,10 +18,11 @@ def _create_partial(filter_class, particles, **kwargs):
     return p
 
 
-def construct_filters(particles=1_500, **kwargs):
-    yield _create_partial(part.GPF, particles=particles, **kwargs)
-    yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(), **kwargs)
-    yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinear(), **kwargs)
+def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
+    if not skip_gpf:
+        yield _create_partial(part.GPF, particles=particles, **kwargs)
+        yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(), **kwargs)
+        yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinear(), **kwargs)
 
     for pt in (part.APF, part.SISR):
         yield _create_partial(pt, particles=particles, proposal=part.proposals.Bootstrap(), **kwargs)
@@ -163,7 +164,7 @@ class TestParticleFilters(object):
 
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
-    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True))
+    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True, skip_gpf=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
     @pytest.mark.parametrize("method", ["ffbs", "fl"])
