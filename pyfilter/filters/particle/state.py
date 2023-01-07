@@ -40,15 +40,14 @@ class ParticleFilterPrediction(Prediction):
         x_new = model.hidden.propagate(self.get_timeseries_state())
         new_ll = torch.zeros(self.normalized_weights.shape[:-1], device=x_new.value.device)
 
-        # TODO: Indicies is wrong
-        return ParticleFilterCorrection(x_new, torch.zeros_like(self.normalized_weights), new_ll, self.indices)
+        return ParticleFilterCorrection(x_new, self.weights, new_ll, self.indices)
 
     def get_predictive_density(self, model: StateSpaceModel, approximate: bool = False) -> Distribution:
         """
         Constructs the approximation of the predictive distribution.
 
         Args:
-            state (ParticleFilterState): current state of the particle filter.
+            model (StateSpaceModel): model to use for constructing predictive density.
             approximate (bool): whether to approximate the predictive distribution via Gaussians.
 
         Returns:
@@ -63,11 +62,9 @@ class ParticleFilterPrediction(Prediction):
         mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True, keep_dim=keep_dim)
 
         if model.hidden.n_dim == 0:
-            dist = Normal(mean, var.sqrt())
-        else:
-            dist = MultivariateNormal(mean, covariance_matrix=var)
+            return Normal(mean, var.sqrt())
         
-        return dist
+        return MultivariateNormal(mean, covariance_matrix=var)
 
 
 class ParticleFilterCorrection(Correction):
