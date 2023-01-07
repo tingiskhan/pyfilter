@@ -37,18 +37,17 @@ class SISR(ParticleFilter):
 
         resampled_x = state.timeseries_state.value
         resampled_x[mask] = batched_gather(resampled_x[mask], indices, indices.dim() - 1)
-
         resampled_state = state.timeseries_state.copy(values=resampled_x)
 
-        return ParticleFilterPrediction(resampled_state, state.weights, normalized_weigths, indices=all_indices, mask=mask)
+        unsqueezed_mask = mask.unsqueeze(-1)
+        weights = state.weights.masked_fill(unsqueezed_mask, 0.0)
+        normalized_weigths = normalized_weigths.masked_fill(unsqueezed_mask, 1.0 / weights.shape[-1])
+
+        return ParticleFilterPrediction(resampled_state, weights, normalized_weigths, indices=all_indices)
 
     # TODO: something wrong for SISR and linearized...
     def correct(self, y, prediction):
         x, weights = self.proposal.sample_and_weight(y, prediction)
+        new_weights = weights + prediction.weights
 
-        tw = torch.zeros_like(weights)
-        tw[~prediction.mask] = prediction.weights[~prediction.mask]
-
-        w = weights + tw
-
-        return ParticleFilterCorrection(x, w, log_likelihood(weights, prediction.normalized_weights), prediction.indices)
+        return ParticleFilterCorrection(x, new_weights, log_likelihood(weights, prediction.normalized_weights), prediction.indices)

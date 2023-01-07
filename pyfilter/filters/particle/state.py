@@ -17,7 +17,7 @@ class ParticleFilterPrediction(Prediction):
     Prediction state for particle filters.
     """
 
-    def __init__(self, prev_x: TimeseriesState, weights: Tensor, normalized_weights: Tensor, indices: Tensor, mask: Tensor = None):
+    def __init__(self, prev_x: TimeseriesState, weights: Tensor, normalized_weights: Tensor, indices: Tensor):
         """
         Initializes the :class:`ParticleFilterPrediction` class.
 
@@ -26,14 +26,12 @@ class ParticleFilterPrediction(Prediction):
             weigths: unnormalized weights.
             normalized_weights: normalized weights.
             indices: resampled indices.
-            mask: mask for which batch to resample, only relevant for filters in parallel.
         """
 
         self.prev_x = prev_x
         self.weights = weights
         self.normalized_weights = normalized_weights
         self.indices = indices
-        self.mask = mask
 
     def get_timeseries_state(self) -> TimeseriesState:
         return self.prev_x
