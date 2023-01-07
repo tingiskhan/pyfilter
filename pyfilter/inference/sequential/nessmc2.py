@@ -22,7 +22,7 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         ness_kw: Optional[Dict[str, Any]] = None,
     ):
         """
-        Initializes the :class:`NESSMC2` class.
+        Internal initializer for :class:`NESSMC2`.
 
         Args:
             filter_: see base.

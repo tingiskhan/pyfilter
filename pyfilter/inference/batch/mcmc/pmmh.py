@@ -27,7 +27,7 @@ class PMMH(BaseAlgorithm):
         context=None,
     ):
         r"""
-        Initializes the :class:`PMMH` class.
+        Internal initializer for :class:`PMMH`.
 
         Args:
              filter_: see base.

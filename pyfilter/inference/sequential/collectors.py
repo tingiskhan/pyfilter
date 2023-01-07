@@ -22,7 +22,7 @@ class Collector(Generic[T]):
 
     def __init__(self, name: str, f: Callback):
         """
-        Initializes the :class:`Collector` class.
+        Internal initializer for :class:`Collector`.
 
         Args:
             name: name to assign to the ``tensor_tuple``.
@@ -106,7 +106,7 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
 
     def __init__(self, constrained=True):
         """
-        Initializes the :class:`ParameterPosterior` collector.
+        Internal initializer for :class:`ParameterPosterior` collector.
 
         Args:
             constrained: Whether to record constrained or non-constrained.

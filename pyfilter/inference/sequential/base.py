@@ -18,7 +18,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
     def __init__(self, filter_, num_particles: int, context=None):
         """
-        Initializes the :class:`SequentialParticleAlgorithm` class.
+        Internal initializer for :class:`SequentialParticleAlgorithm`.
 
         Args:
             filter_: see base.
@@ -50,7 +50,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
     def initialize(self) -> SequentialAlgorithmState:
         """
-        Initializes the algorithm by returning a :class:`SequentialAlgorithmState`.
+        Internal initializer for algorithm by returning a :class:`SequentialAlgorithmState`.
         """
 
         self.filter.initialize_model(self.context)
@@ -120,7 +120,7 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None
     ):
         """
-        Initializes the :class:`CombinedSequentialParticleAlgorithm` class.
+        Internal initializer for :class:`CombinedSequentialParticleAlgorithm`.
 
         Args:
             filter_: see base.

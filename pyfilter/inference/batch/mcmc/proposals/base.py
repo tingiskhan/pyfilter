@@ -15,7 +15,7 @@ class BaseProposal(ABC):
 
     def __init__(self):
         """
-        Initializes the :class:`BaseProposal` class.
+        Internal initializer for :class:`BaseProposal`.
         """
 
     def build(

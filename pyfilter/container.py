@@ -28,7 +28,7 @@ class TensorContainer(object):
 
     def __init__(self, **kwargs: torch.Tensor):
         """
-        Initializes the :class:`BufferIterable` class.
+        Internal initializer for :class:`BufferIterable`.
         """
 
         super().__init__()

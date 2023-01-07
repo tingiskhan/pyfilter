@@ -20,7 +20,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
 
     def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False, context=None):
         """
-        Initializes the :class:`BaseOnlineAlgorithm` class.
+        Internal initializer for :class:`BaseOnlineAlgorithm`.
 
         Args:
             filter_: see base.
@@ -73,7 +73,7 @@ class NESS(BaseOnlineAlgorithm):
 
     def __init__(self, filter_, particles, threshold=0.9, **kwargs):
         """
-        Initializes the :class:`NESS` class.
+        Internal initializer for :class:`NESS`.
 
         Args:
             filter_: see base.
@@ -96,7 +96,7 @@ class FixedWidthNESS(BaseOnlineAlgorithm):
 
     def __init__(self, filter_, particles, block_len=125, **kwargs):
         """
-        Initializes the :class:`FixedWidthNESS` class.
+        Internal initializer for :class:`FixedWidthNESS`.
 
         Args:
             filter_: see base.

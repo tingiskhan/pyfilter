@@ -9,7 +9,7 @@ class Thresholder(object):
 
     def __init__(self, min_thresh: float, start_thresh: float):
         """
-        Initializes the :class:`Thresholder` class.
+        Internal initializer for :class:`Thresholder`.
 
         Args:
              min_thresh: the minimum allowed threshold.
@@ -52,7 +52,7 @@ class DecayingThreshold(Thresholder):
 
     def __init__(self, min_thresh: float, start_thresh: float, half_life: int = 1_000):
         """
-        Initializes the :class:`DecayingThreshold` class.
+        Internal initializer for :class:`DecayingThreshold`.
 
         Args:
             half_life: the number of steps at which to achieve a halving of the threshold.
@@ -75,7 +75,7 @@ class IntervalThreshold(Thresholder):
 
     def __init__(self, thresholds: Dict[int, float], ending_threshold: float):
         """
-        Initializes the :class:`IntervalThreshold` class.
+        Internal initializer for :class:`IntervalThreshold`.
 
         Args:
             thresholds: dictionary specifying the thresholds and the ending numer of num_samples.

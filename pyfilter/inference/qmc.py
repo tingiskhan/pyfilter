@@ -8,13 +8,13 @@ from ..constants import EPS2
 
 
 class _EngineContainer(object):
-    r"""
+    """
     Container for QMC engines.
     """
 
     def __init__(self, engine: qr.SobolEngine, randomize: bool):
         """
-        Initializes the :class:`_EngineContainer` class.
+        Internal initializer for :class:`_EngineContainer`.
 
         Args:
             engine: quasi random engine.

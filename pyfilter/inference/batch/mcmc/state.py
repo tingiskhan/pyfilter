@@ -13,7 +13,7 @@ class PMMHResult(FilterAlgorithmState):
 
     def __init__(self, initial_sample: Dict[str, torch.Tensor], filter_result: FilterResult, stack_dim=1):
         """
-        Initializes the :class:`PMMHResult` class.
+        Internal initializer for :class:`PMMHResult`.
 
         Args:
             initial_sample: the initial sample of the Markov chain.

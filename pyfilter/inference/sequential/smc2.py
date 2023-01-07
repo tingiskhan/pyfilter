@@ -26,7 +26,7 @@ class SMC2(SequentialParticleAlgorithm):
         **kwargs,
     ):
         """
-        Initializes the :class:`SMC2` class.
+        Internal initializer for :class:`SMC2`.
 
         Args:
             filter_: see base.

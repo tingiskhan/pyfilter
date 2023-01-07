@@ -14,7 +14,7 @@ class BaseKernel(ABC):
 
     def __init__(self, resampling=systematic):
         """
-        Initializes the :class:`BaseKernel` class.
+        Internal initializer for :class:`BaseKernel`.
 
         Args:
              resampling: the resampling function to use.

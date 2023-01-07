@@ -30,7 +30,7 @@ class LocalLinearization(LinearGaussianObservations):
 
     def __init__(self, f: Fun, linearized_f: Fun, s_index=-1, is_variance=False):
         r"""
-        Initializes the :class:`LocalLinearization` class.
+        Internal initializer for :class:`LocalLinearization`.
 
         Args:
             f: corresponds to :math:`\alpha`.

@@ -21,7 +21,7 @@ class GradientBasedProposal(RandomWalk):
 
     def __init__(self, use_second_order: bool = False, **kwargs):
         """
-        Initializes the ``GradientBasedProposal`` class.
+        Internal initializer for ``GradientBasedProposal``.
 
         Args:
             use_second_order: optional parameter specifying whether to use second order information when constructing

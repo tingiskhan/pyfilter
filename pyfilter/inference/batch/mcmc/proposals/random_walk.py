@@ -18,7 +18,7 @@ class RandomWalk(BaseProposal):
 
     def __init__(self, scale: Union[float, Tensor] = 1e-2):
         """
-        Initializes the :class:`RandomWalk` class.
+        Internal initializer for :class:`RandomWalk`.
 
         Args:
              scale: Optional parameter specifying the scale of the normal distribution. Can be either a "global" scale

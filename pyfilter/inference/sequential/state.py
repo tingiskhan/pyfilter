@@ -12,7 +12,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
-        Initializes the :class:`SequentialAlgorithmState` class.
+        Internal initializer for :class:`SequentialAlgorithmState`.
 
         Args:
             weights: the log weights associated with the particle approximation.
@@ -79,7 +79,7 @@ class SMC2State(SequentialAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
-        Initializes the :class:`SMC2State` class.
+        Internal initializer for :class:`SMC2State`.
 
         Args:
             weights: see base:

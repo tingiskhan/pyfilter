@@ -17,7 +17,7 @@ class FilterAlgorithmState(AlgorithmState):
 
     def __init__(self, filter_state: FilterResult):
         """
-        Initializes the :class:`FilterAlgorithmState` class.
+        Internal initializer for :class:`FilterAlgorithmState`.
 
         Args:
              filter_state: the initial :class:`pyfilter.filters.FilterResult`.
