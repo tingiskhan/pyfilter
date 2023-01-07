@@ -10,8 +10,8 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     Calculates the ESS from an array of (log) weights.
 
     Args:
-        weights: the log weights to calculate ESS for.
-        normalized: optional parameter specifying whether the weights are normalized.
+        weights (torch.Tensor): (log) weights to calculate ESS for.
+        normalized (bool): optional parameter specifying whether the weights are normalized.
     """
 
     if not normalized:
@@ -25,8 +25,8 @@ def construct_diag_from_flat(x: torch.Tensor, event_shape: torch.Size) -> torch.
     Constructs a diagonal matrix based on ``x``. Solution found `here`_:
 
     Args:
-        x: the diagonal of the matrix.
-        event_shape: event shape of the process for which matrix is to be constructed.
+        x (torch.Tensor): the diagonal of the matrix.
+        event_shape (torch.Size): event shape of the process for which matrix is to be constructed.
 
     Example:
         If ``x`` is of shape ``(100, 20)`` and the dimension is 0, then we get a tensor of shape ``(100, 20, 1)``.
@@ -51,7 +51,7 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
     Normalizes a 1D or 2D array of log weights.
 
     Args:
-        weights: the log weights to normalize.
+        weights (torch.Tensor): the log weights to normalize.
     """
 
     is_1d = weights.dim() == 1
