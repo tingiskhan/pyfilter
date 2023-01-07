@@ -9,9 +9,8 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
     Given the importance weights of a particle filter, return an estimate of the log likelihood.
 
     Args:
-        importance_weights: the importance weights of the particle filter.
-        weights: optional parameter specifying whether the weights associated with the importance weights, used in
-            :class:`~pyfilter.filters.particle.APF`.
+        importance_weights (torch.Tensor): importance weights of the particle filter.
+        weights (torch.Tensor): optional parameter specifying whether the weights associated with the importance weights.
     """
 
     max_w, _ = importance_weights.max(-1)
@@ -28,7 +27,7 @@ def log_likelihood(importance_weights: torch.Tensor, weights: torch.Tensor = Non
 
 # TODO: The keep_dim is a tad bit weird?
 def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, covariance: bool = False, keep_dim: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
+    r"""
     Gets the filtered mean and variance given a weighted particle set.
 
     Args:
@@ -37,7 +36,7 @@ def get_filter_mean_and_variance(state: TimeseriesState, weights: torch.Tensor, 
         covariance (bool): whether to calculate the covariance or just variance.
 
     Returns:
-        Tuple[torch.Tensor, torch.Tensor]:
+        Tuple[torch.Tensor, torch.Tensor]: returns the tuple ``{mean, variance}``.
     """
 
     values = state.value

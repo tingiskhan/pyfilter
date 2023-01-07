@@ -20,7 +20,7 @@ class Proposal(ABC):
         self, pre_weight_func: Callable[[StructuralStochasticProcess, TimeseriesState], TimeseriesState] = None
     ):
         """
-        Initializes the :class:`Proposal` object.
+        Internal initializer for :class:`Proposal`.
 
         Args:
             pre_weight_func: function used in :class:`APF` when weighing the particles to be propagated. A common
@@ -37,7 +37,7 @@ class Proposal(ABC):
         Sets the model to be used in the proposal.
 
         Args:
-            model: the model to consider.
+            model (StateSpaceModel): the model to consider.
         """
 
         self._model = model
@@ -54,12 +54,12 @@ class Proposal(ABC):
 
     def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction) -> Tuple[TimeseriesState, torch.Tensor]:
         """
-        Method to be derived by inherited classes. Given the current observation ``y`` and previous state ``x``, this
+        Method to be derived by inherited classes. Given the current observation ``y`` and prediction ``x`` of the particle filter this
         method samples new state values and weighs them accordingly.
 
         Args:
             y (torch.Tensor): current observation.
-            x (Prediction): predicted filter state.
+            x (ParticleFilterPrediction): predicted filter state.
 
         Returns:
             The new state together with the associated weights.

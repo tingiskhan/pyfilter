@@ -19,7 +19,7 @@ class ParticleFilterPrediction(Prediction):
 
     def __init__(self, prev_x: TimeseriesState, weights: Tensor, normalized_weights: Tensor, indices: Tensor):
         """
-        Initializes the :class:`ParticleFilterPrediction` class.
+        Internal initializer for :class:`ParticleFilterPrediction`.
 
         Args:
             prev_x: resampled previous state.
@@ -74,7 +74,7 @@ class ParticleFilterCorrection(Correction):
 
     def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
-        Initializes the :class:`ParticleFilterState` class.
+        Internal initializer for :class:`ParticleFilterState`.
 
         Args:
             x: the state particles of the timeseries.

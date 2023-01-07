@@ -30,17 +30,17 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
         record_intermediary_states: bool = False,
     ):
         """
-        Initializes the :class:`BaseFilter` class.
+        Internal initializer for :class:`BaseFilter`.
 
         Args:
-            model: the state space model to use for filtering.
-            record_states: see :class:`pyfilter.filters.FilterResult`.
-            record_moments: see :class:`pyfilter.filters.FilterResult`.
-            nan_strategy: how to handle ``nan``s in observation data. Can be:
+            model (ModelObject): state space model to use for filtering.
+            record_states (bool): see :class:`pyfilter.filters.FilterResult`.
+            record_moments (bool): see :class:`pyfilter.filters.FilterResult`.
+            nan_strategy (str): how to handle ``nan``s in observation data. Can be:
                 * "skip" - skips the observation.
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
-            record_intermediary_states: whether to record intermediary states in :meth:`filter` for models where
+            record_intermediary_states (bool): whether to record intermediary states in :meth:`filter` for models where
                 `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
         """
 
@@ -76,10 +76,10 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
 
     def initialize_model(self, context: "InferenceContext"):  # noqa: F821
         r"""
-        Initializes the model.
+        Initializes the state space model.
 
         Args:
-            context: context to initialize model with.
+            context (InferenceContext): context to initialize model with.
         """
 
         self._model = self._model_builder(context)
@@ -99,7 +99,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
         objects.
 
         Args:
-             batch_shape: batch size.
+             batch_shape (torch.Size): batch size.
 
         Example:
             >>> from pyfilter.filters.particle import SISR
@@ -134,7 +134,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
         :class:`~pyfilter.filters.result.FilterResult`.
 
         Args:
-            state: optional parameter, if ``None`` calls :meth:`BaseFilter..initialize` otherwise uses ``state``.
+            state (TCorrection): optional parameter, if ``None`` calls :meth:`BaseFilter..initialize` otherwise uses ``state``.
         """
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
@@ -144,9 +144,9 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
         Batch version of :meth:`BaseFilter.filter` where entire data set is parsed.
 
         Args:
-            y: data set to filter.
-            bar: whether to display a ``tqdm`` progress bar.
-            init_state: optional parameter for whether to pass an initial state.
+            y (torch.Tensor): data to filter..
+            bar (bool): whether to display a ``tqdm`` progress bar.
+            init_state (bool): optional parameter for whether to pass an initial state.
         """
 
         iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
@@ -177,68 +177,67 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
 
     def predict(self, state: TCorrection) -> TPrediction:
         """
-        Corresponds to the predict step of the given filter.
+        Corresponds to the predict step of the filter.
 
         Args:
-            state: the previous state of the algorithm.
+            state (TCorrection): previous state of the filter algorithm.
         """
 
         raise NotImplementedError()
 
     def correct(self, y: torch.Tensor, prediction: TPrediction) -> TCorrection:
         """
-        Corresponds to the correct step of the given filter.
+        Corresponds to the correct step of the filter.
 
         Args:
-            y: the observation.
-            state: the previous state of the algorithm.
-            prediction: the predicted state.
+            y (torch.Tensor): observation to use when correcting for.
+            prediction (Prediction): predicted state of the filter.
         """
 
         raise NotImplementedError()
 
-    def filter(self, y: torch.Tensor, state: TCorrection, result: FilterResult = None) -> TCorrection:
+    def filter(self, y: torch.Tensor, correction: TCorrection, result: FilterResult = None) -> TCorrection:
         """
         Performs one filter move given observation ``y`` and previous state of the filter.
 
         Args:
-            y: the observation for which to filter.
-            state: the previous state of the filter.
-            result: optional parameter specifying the result on which to append the resulting states.
+            y (torch.Tensor): see :meth:`correct`.
+            correction (TCorrection): see :meth:`predict`.
+            result (FilterResult): optional parameter specifying the result on which to append the resulting states.
 
         Returns:
-            Updated state.
+            TCorrection: corrected state.
         """
 
-        prediction = self.predict(state)
+        prediction = self.predict(correction)
 
         result_is_none = result is None
         while prediction.get_timeseries_state().time_index % self._model.observe_every_step != 0:
-            state = prediction.create_state_from_prediction(self._model)
+            correction = prediction.create_state_from_prediction(self._model)
 
             if not result_is_none and self._record_intermediary:
-                result.append(state)
+                result.append(correction)
 
-            prediction = self.predict(state)
+            prediction = self.predict(correction)
 
         nan_mask = torch.isnan(y)
         if nan_mask.all():
-            state = prediction.create_state_from_prediction(self._model)
+            correction = prediction.create_state_from_prediction(self._model)
         else:
-            state = self.correct(y, prediction)
+            correction = self.correct(y, prediction)
 
         if not result_is_none:
-            result.append(state)
+            result.append(correction)
 
-        return state
+        return correction
 
     def smooth(self, states: Sequence[TCorrection], method: str) -> torch.Tensor:
         """
         Smooths the estimated trajectory by sampling from :math:`p(x_{1:t} | y_{1:t})`.
 
         Args:
-            states: the filtered states.
-            method: method to use for smoothing.
+            states (Sequence[TCorrection]): states obtained by performing filtering.
+            method (str): method to use for smoothing.
         """
 
         raise NotImplementedError()

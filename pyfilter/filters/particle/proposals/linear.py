@@ -21,22 +21,14 @@ class LinearGaussianObservations(Proposal):
             Y_t = b + A \cdot X_t + V_t, \newline
             X_{t+1} = f_\theta(X_t) + g_\theta(X_t) W_{t+1},
 
-    where :math:`A` is a matrix of dimension ``(observation dimension, latent dimension)``,
+    where :math:`A` is a matrix of dimension ``{observation dimension, latent dimension}``,
     :math:`V_t` and :math:`W_t` two independent zero mean and unit variance Gaussians, and :math:`\theta` denotes the
     parameters of the functions :math:`f` and :math:`g` (excluding :math:`X_t`).
     """
 
-    def get_offset_and_scale(
+    def _get_offset_and_scale(
         self, x: TimeseriesState, a: torch.Tensor, b: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Standardizes the observation.
-
-        Args:
-            x: previous state.
-            parameters: parameters of the observations process.
-        """
-
+    ) -> Tuple[torch.Tensor, torch.Tensor]:        
         return a, b
 
     def set_model(self, model):
@@ -56,7 +48,7 @@ class LinearGaussianObservations(Proposal):
         x_copy = x.copy(values=mean)
 
         a, b, s = self._model.transformed_parameters()
-        a, offset = self.get_offset_and_scale(x, a, b)
+        a, offset = self._get_offset_and_scale(x, a, b)
         o_var_inv = s.pow(-2.0)
 
         kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a, self._model)
@@ -70,7 +62,7 @@ class LinearGaussianObservations(Proposal):
         h_var = h_scale.pow(2.0)
 
         a, b, s = self._model.transformed_parameters()
-        a, offset = self.get_offset_and_scale(x, a, b)
+        a, offset = self._get_offset_and_scale(x, a, b)
         o_var = s.pow(2.0)
 
         if self._model.hidden.n_dim == 0:

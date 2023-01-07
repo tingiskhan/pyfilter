@@ -23,7 +23,7 @@ class Prediction(ABC):
         Method for creating an instance of :class:`FilterState`.
 
         Args:
-            model: the model to use for propagating.
+            model (StateSpaceModel): model to use for constructing predictive density.
         """
 
         raise NotImplementedError()
@@ -32,7 +32,7 @@ class Prediction(ABC):
 # TODO: Rename to Correction
 class Correction(dict, ABC):
     """
-    Abstract base class for all filter states.
+    Abstract base class for filter corrections.
     """
 
     def get_mean(self) -> Tensor:
@@ -54,7 +54,7 @@ class Correction(dict, ABC):
         Resamples the necessary objects of ``self`` at ``indices``. Only matters when running parallel filters.
 
         Args:
-            indices: the indices to select.
+            indices (Tensor): indices to select.
         """
 
         raise NotImplementedError()
@@ -68,11 +68,11 @@ class Correction(dict, ABC):
 
     def exchange(self, other: "Correction", mask: Tensor):
         """
-        Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
+        Exchanges the necessary objects of ``self`` with ``other``. Only matters when running parallel filters.
 
         Args:
-            other: the state to exchange with
-            mask: mask of ``state`` to replace ``self`` with.
+            other (Correction): other state to exchange with
+            mask (Tensor): mask of ``state`` to replace ``self`` with.
         """
 
         raise NotImplementedError()
@@ -89,8 +89,8 @@ class Correction(dict, ABC):
         Predicts ``num_steps`` into the future for ``model``.
 
         Args:
-            model: the model to predict for.
-            num_steps: the number of steps into the future to predict.
+            model (StateSpaceModel): model to predict for.
+            num_steps (num_steps): number of steps into the future to predict.
         """
 
         raise NotImplementedError()
@@ -107,7 +107,7 @@ class Correction(dict, ABC):
         Loads state from existing state dictionary.
 
         Args:
-            state_dict: state dictionary to load from.
+            state_dict (Dict[str, Any]): state dictionary to load from.
         """
 
         raise NotImplementedError()

@@ -43,7 +43,7 @@ class LocalLinearization(LinearGaussianObservations):
         self._f = f
         self._linearized_f = linearized_f
 
-    def get_offset_and_scale(
+    def _get_offset_and_scale(
         self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         mean, _ = self._model.hidden.mean_scale(x)

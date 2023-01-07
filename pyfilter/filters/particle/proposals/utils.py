@@ -11,13 +11,12 @@ from ....utils import construct_diag_from_flat
 # TODO: Clean this up...
 def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, initial_state: TimeseriesState, std: torch.Tensor, y: torch.Tensor, n_steps: int = 1, alpha: float = 1e-3, use_second_order = False) -> Distribution:
     """
-    Finds the mode of the joint distribution.
+    Finds the mode of the joint distribution given by ``model``.
 
     Args:
         model (StateSpaceModel): underlying state space model.
         x_dist (Distribution): predictive distribution of the latent process.
         initial_state (TimeseriesState): state of the timeseries.
-        mean (torch.Tensor): initial mean to linearize around.
         std (torch.Tensor): initial standard deviation to linearize around.
         y (torch.Tensor): observation.
         n_steps (int, optional): number of linearization steps to perform. Defaults to 1.

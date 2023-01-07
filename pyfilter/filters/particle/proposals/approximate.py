@@ -96,7 +96,7 @@ class GaussianLinear(LinearGaussianObservations):
         mean, h_var_inv = _unsqueeze(mean, h_var_inv, self._model.hidden.n_dim)
 
         a, b, s = self._model.transformed_parameters()
-        a, offset = self.get_offset_and_scale(mean, a, b)
+        a, offset = self._get_offset_and_scale(mean, a, b)
         o_var_inv = s.pow(-2.0)
 
         kernel = find_optimal_density(y - offset, mean, h_var_inv, o_var_inv, a, self._model).expand(timeseries_state.batch_shape)

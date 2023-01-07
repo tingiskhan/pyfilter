@@ -27,15 +27,14 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         **kwargs,
     ):
         """
-        Initializes the :class:`ParticleFilter` class.
+        Internal initializer for :class:`ParticleFilter`.
 
         Args:
             model: see base.
-            particles: the number of particles to use for estimating the filter distribution.
-            resampling: the resampling method. Takes as input the log weights and returns mask.
-            proposal: the proposal distribution generator to use.
-            ess_threshold: the relative "effective sample size" threshold at which to perform resampling. Not relevant
-                for ``APF`` as resampling is always performed.
+            particles: number of particles to use for estimating the filter distribution.
+            resampling: resampling method. Takes as input the log weights and returns mask.
+            proposal: proposal distribution generator to use.
+            ess_threshold: relative "effective sample size" threshold at which to perform resampling.
         """
 
         super().__init__(model, **kwargs)
@@ -192,7 +191,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """
-        Performs a filtering procedure in which we acquire the log-likelihood for `pyro` to target.
+        Performs a smoothing procedure in which we acquire the log-likelihood for `pyro` to target.
 
         This is an experimental feature, as the author needs to find theoretical justifications for this approach.
         Currently does not work with vectorized inference.

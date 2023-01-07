@@ -17,7 +17,7 @@ def _missing(mod, state):
 
 def get_pre_weight_func(func: _RESULT, process: StructuralStochasticProcess) -> _RESULT:
     """
-    Gets function for generating a pre-weight for the APF.
+    Gets function for generating a pre-weights for the APF.
 
     Args:
         func: whether to override the choosing by passing your own custom function, else defaults to pre-defined ones.

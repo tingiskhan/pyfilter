@@ -19,11 +19,11 @@ class Linearized(Proposal):
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Initializes the :class:`Linearized` class.
+        Internal initializer for :class:`Linearized`.
 
         Args:
-            n_steps: the number of steps to take when performing gradient descent
-            alpha: the step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+            n_steps: number of steps to take when performing gradient descent.
+            alpha: step size to take when performing gradient descent. Only matters when ``use_second_order`` is
                 ``False``, or when the Hessian is badly conditioned.
             use_second_order: whether to use second order information when constructing the proposal distribution.
                 Amounts to using the diagonal of the Hessian.
@@ -41,8 +41,7 @@ class Linearized(Proposal):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
         
         return super().set_model(model)
-
-    # TODO: Something's wrong here
+        
     def sample_and_weight(self, y, prediction):
         x = prediction.get_timeseries_state()
         

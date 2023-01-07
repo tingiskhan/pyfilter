@@ -7,12 +7,12 @@ def batched_gather(x: torch.Tensor, indices: torch.IntTensor, dim: int):
     Similar to the gather method of :class:`torch.Tensor`.
 
     Args:
-        x: the tensor to select.
-        indices: the indices to choose.
-        dim: the dimension to choose.
+        x (torch.Tensor): tensor to resample.
+        indices (torch.Tensor): indices to choose.
+        dim (int): dimension to choose.
 
     Returns:
-        A selected tensor
+        Resampled ``x``.
     """
 
     if indices.dim() == 1:
