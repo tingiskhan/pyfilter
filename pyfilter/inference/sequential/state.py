@@ -15,9 +15,8 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         Internal initializer for :class:`SequentialAlgorithmState`.
 
         Args:
-            weights: the log weights associated with the particle approximation.
-            filter_state: the current state of the filter. Somewhat misnamed as we keep track of the entire history of
-                the filter, should perhaps be called ``filter_result``.
+            weights (torch.Tensor): initial log weights associated with the particle approximation.
+            filter_state (FilterResult): current state of the filter.
         """
 
         super().__init__(filter_state)
@@ -38,7 +37,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
         Updates ``self`` given a new filter state.
 
         Args:
-            filter_state: The latest filter state.
+            filter_state (Correction): latest filter state.
         """
 
         self.w += filter_state.get_loglikelihood()
@@ -82,8 +81,8 @@ class SMC2State(SequentialAlgorithmState):
         Internal initializer for :class:`SMC2State`.
 
         Args:
-            weights: see base:
-            filter_state: see base.
+            weights: see :class:`SequentialAlgorithmState`.
+            filter_state: see :class:`SequentialAlgorithmState`.
         """
 
         super().__init__(weights, filter_state)

@@ -18,14 +18,14 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     Abstract base class for purely online particle algorithms.
     """
 
-    def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False, context=None):
+    def __init__(self, filter_, particles, kernel: JitterKernel = None, discrete=False, context=None):
         """
         Internal initializer for :class:`BaseOnlineAlgorithm`.
 
         Args:
             filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
             particles (int): see :class:`SequentialParticleAlgorithm`.
-            kernel (Optional[JitterKernel], optional): jittering kernel to use when mutating particles from :math:`t`
+            kernel (JitterKernel, optional): jittering kernel to use when mutating particles from :math:`t`
             to :math:`t+1`. Defaults to None.
             discrete (bool, optional): see :class:`~pyfilter.inference.sequential.kernels.OnlineKernel`. Defaults to False.
             context (InferenceContext, optional): see :class:`SequentialParticleAlgorithm`.. Defaults to None.
@@ -74,7 +74,7 @@ class NESS(BaseOnlineAlgorithm):
 
         Args:
             filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
-            particles (_type_): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
             threshold (float, optional):  relative ESS threshold at when update the particles.. Defaults to 0.9.
         """
 
