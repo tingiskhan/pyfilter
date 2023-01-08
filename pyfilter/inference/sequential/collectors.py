@@ -24,8 +24,8 @@ class Collector(Generic[T]):
         Internal initializer for :class:`Collector`.
 
         Args:
-            name: name to assign to the ``tensor_tuple``.
-            f: function to use when calculating statics.
+            name (str): name to assign to the ``tensor_tuple``.
+            f (Callback): function to use when calculating statics.
         """
 
         self._name = name
@@ -105,10 +105,10 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
 
     def __init__(self, constrained=True):
         """
-        Internal initializer for :class:`ParameterPosterior` collector.
+        Internal initializer for :class:`ParameterPosterior`.
 
         Args:
-            constrained: Whether to record constrained or non-constrained.
+            constrained (bool, optional): whether to record constrained or non-constrained parameters. Defaults to True.
         """
 
         super(ParameterPosterior, self).__init__(name="parameter_means", f=self._mean_var)
