@@ -79,7 +79,7 @@ class LinearGaussianObservations(Proposal):
         cov = diag_o_var + a_unsqueezed.matmul(diag_h_var).matmul(a_transposed)
 
         if obs_is_1d:
-            o_loc = offset + a.squeeze() * x.value
+            o_loc = offset + a.squeeze(-1) * x.value
             kernel = Normal(o_loc, cov[..., 0, 0].sqrt())
         else:
             o_loc = offset + (a_unsqueezed @ x.value.unsqueeze(-1)).squeeze(-1)
