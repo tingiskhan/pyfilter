@@ -21,8 +21,8 @@ class RandomWalk(BaseProposal):
         Internal initializer for :class:`RandomWalk`.
 
         Args:
-             scale: Optional parameter specifying the scale of the normal distribution. Can be either a "global" scale
-                as specified by a ``float``, or a tensor with parameter specific scales.
+            scale (Union[float, Tensor], optional): scale of the normal distribution. Can be either a "global" scale
+            as specified by a ``float``, or a tensor with parameter specific scales. Defaults to 1e-2.
         """
 
         super().__init__()

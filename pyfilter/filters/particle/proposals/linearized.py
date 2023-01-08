@@ -24,9 +24,8 @@ class Linearized(Proposal):
         Args:
             n_steps: number of steps to take when performing gradient descent.
             alpha: step size to take when performing gradient descent. Only matters when ``use_second_order`` is
-                ``False``, or when the Hessian is badly conditioned.
+            ``False``, or when the Hessian is badly conditioned.
             use_second_order: whether to use second order information when constructing the proposal distribution.
-                Amounts to using the diagonal of the Hessian.
         """
         super().__init__()
         self._alpha = alpha

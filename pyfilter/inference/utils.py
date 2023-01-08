@@ -57,15 +57,14 @@ def calc_mean_chol(x: torch.Tensor, w: torch.Tensor) -> MeanChol:
 
 
 def construct_mvn(x: torch.Tensor, w: torch.Tensor, scale=1.0, quasi_key: int = None) -> MultivariateNormal:
-    """
+    r"""
     Constructs a multivariate normal distribution from weighted samples.
 
     Args:
-        x: samples from which to create the the multivariate normal distribution, should be of size
-            ``(batch size, dimension of space)``.
-        w: weights associated to each point of ``x``, should therefore be of size ``batch size``.
-        scale: applies a scaling to the Cholesky factorized covariance matrix of the distribution.
-        quasi: whether to use quasi random sampling.
+        x (torch.Tensor): samples to use for estimating density, of size ``{batch size, dimension of space}``.
+        w (torch.Tensor): weights associated with each row of ``x``.
+        scale (float, optional): applies a scaling to the Cholesky factorized covariance matrix of the distribution. Defaults to 1.0.
+        quasi_key (int, optional): whether to use quasi random sampling. Defaults to None.
     """
 
     mean_chol = calc_mean_chol(x, w)

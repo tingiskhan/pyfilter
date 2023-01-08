@@ -24,8 +24,7 @@ class Proposal(ABC):
 
         Args:
             pre_weight_func: function used in :class:`APF` when weighing the particles to be propagated. A common
-                choice is :math:`p(y_t | E_t[x_{t-1}])`, where :math:`E_t[...]` denotes the expected value of the
-                stochastic process at time :math:`t`` using the values at :math:`t-1`.
+            choice is :math:`p(y_t | E_t[x_{t-1}])`.
         """
 
         super().__init__()

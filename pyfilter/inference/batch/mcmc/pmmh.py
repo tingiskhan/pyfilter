@@ -5,6 +5,7 @@ from ...logging import TQDMWrapper
 from .proposals import BaseProposal, RandomWalk
 from .state import PMMHResult
 from .utils import run_pmmh
+from ...context import InferenceContext
 
 
 class PMMH(BaseAlgorithm):
@@ -24,27 +25,27 @@ class PMMH(BaseAlgorithm):
         num_chains: int = 4,
         proposal: BaseProposal = None,
         initializer: str = "mean",
-        context=None,
+        context: InferenceContext = None,
     ):
-        r"""
+        """
         Internal initializer for :class:`PMMH`.
 
         Args:
-             filter_: see base.
-             num_samples: the number of PMMH samples to draw.
-             num_chains: the number of parallel chains to run. The total number of samples on termination is thus
-                ``samples * num_chains``. Do note that we utilize broadcasting rather than ``for``-loops.
-             proposal: optional parameter specifying how to construct the proposal density for candidate
-                :math:`\theta^*` given the previously accepted candidate :math:`\theta_i`. If not specified, defaults
-                to :class:`pyfilter.inference.batch.mcmc.proposals.RandomWalk`.
-            initializer: Optional parameter specifying how to initialize the chain:
+            filter_ (_type_): see :class:`BaseAlgorithm`.
+            num_samples (int): number of MCMC samples to draw.
+            num_chains (int, optional): number of parallel (vectorized) chains to run. Defaults to 4.
+            proposal (BaseProposal, optional): object for constructing proposal kernel. Defaults to None which results
+            in :class:`RandomWalk`.
+            initializer (str, optional): how to initializes the chain, choices are
                 - ``seed``: Seeds the initial value by running several chains in parallel and choosing the one
                     maximizing the total likelihood
                 - ``mean``: Sets the initial values as the means of the prior distributions. Uses MC sampling for
                     determining the mean.
+            Defaults to "mean".
+            context (_type_, optional): see :class:`BaseAlgorithm`.
         """
 
-        super().__init__(filter_, context=context)
+        super().__init__(filter_=filter_, context=context)
 
         self.num_samples = num_samples
         self._num_chains = torch.Size([num_chains])

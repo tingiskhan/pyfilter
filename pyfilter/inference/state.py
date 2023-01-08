@@ -20,7 +20,7 @@ class FilterAlgorithmState(AlgorithmState):
         Internal initializer for :class:`FilterAlgorithmState`.
 
         Args:
-             filter_state: the initial :class:`pyfilter.filters.FilterResult`.
+             filter_state (FilterResult): the initial :class:`pyfilter.filters.FilterResult`.
         """
 
         super().__init__()
@@ -31,7 +31,7 @@ class FilterAlgorithmState(AlgorithmState):
         Creates a replica (not copy) of the instance with given ``filter_state``.
 
         Args:
-            filter_state: the filter state to use when creating the replica.
+            filter_state (FilterResult): the filter state to use when creating the replica.
         """
 
         return FilterAlgorithmState(filter_state)
@@ -50,7 +50,7 @@ class FilterAlgorithmState(AlgorithmState):
         return f"{self.__class__.__name__}(ll: {self.filter_state.loglikelihood})"
 
     def copy(self) -> "FilterAlgorithmState":
-        r"""
+        """
         Creates a copy of self.
         """
 

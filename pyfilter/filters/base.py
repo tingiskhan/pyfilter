@@ -1,9 +1,7 @@
-from abc import ABC
 from typing import Callable, Generic, Sequence, TypeVar, Union
 
 import torch
 from stochproc.timeseries import StateSpaceModel
-from tqdm import tqdm
 from tqdm import tqdm
 
 from .result import FilterResult
@@ -41,7 +39,7 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
                 * "impute" - imputes the value using the mean of the predicted distribution. If nested, then uses the
                     median of mean.
             record_intermediary_states (bool): whether to record intermediary states in :meth:`filter` for models where
-                `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
+            `observe_every_step` > 1. Must be `True` whenever you are performing smoothing.
         """
 
         super().__init__()

@@ -28,21 +28,18 @@ def run_pmmh(
     probability given by the article.
 
     Args:
-        context: the parameter context of the main algorithm.
-        state: the latest algorithm state.
-        proposal: the proposal to use when generating the candidate sample :math:`\theta^*`.
-        proposal_kernel: the kernel from which to draw the candidate sample :math:`\theta^*`. To clarify, ``proposal``
-            corresponds to the :class`BaseProposal` that was used when generating ``prop_kernel``.
-        proposal_filter: the proposal filter to use.
-        proposal_context: the parameter context of the proposal filter.
-        y: see ``pyfilter.inference.base.BaseAlgorithm``.
-        size: optional parameter specifying the number of num_samples to draw from ``proposal_kernel``. Should be empty
-            if we draw from an independent kernel.
-        mutate_kernel: optional parameter specifying whether to update ``proposal_kernel`` with the newly accepted
-            candidate sample.
+        context (InferenceContext): parameter context of the main algorithm.
+        state (FilterAlgorithmState): latest algorithm state.
+        proposal (BaseProposal): proposal to use when building the the candidate kernel :math:`\theta^*`.
+        proposal_kernel (Distribution): kernel from which to draw the candidate sample :math:`\theta^*`.
+        proposal_filter (BaseFilter): proposal filter to use.
+        proposal_context (InferenceContext): parameter context of the proposal filter.
+        y (torch.Tensor): see :class:`pyfilter.inference.base.BaseAlgorithm`.
+        size (_type_, optional): size of sample to draw from ``proposal_kernel``. Defaults to torch.Size([]).
+        mutate_kernel (bool, optional): whether to mutate ``proposal_kernel`` with newly accepted sample. Defaults to False.
 
     Returns:
-        Returns the candidate sample(s) that were accepted.
+        torch.BoolTensor: indices of accepted particles.
     """
 
     constrained = False

@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Callable, Sequence, Union
 
 import pyro
@@ -12,7 +11,7 @@ from .proposals import Bootstrap, Proposal
 from .state import ParticleFilterCorrection, ParticleFilterPrediction
 
 
-class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPrediction], ABC):
+class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPrediction]):
     """
     Abstract base class for particle filters.
     """
@@ -30,11 +29,11 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         Internal initializer for :class:`ParticleFilter`.
 
         Args:
-            model: see base.
-            particles: number of particles to use for estimating the filter distribution.
-            resampling: resampling method. Takes as input the log weights and returns mask.
-            proposal: proposal distribution generator to use.
-            ess_threshold: relative "effective sample size" threshold at which to perform resampling.
+            model (_type_): see :class:`BaseFilter`.
+            particles (int): number of particles to use for estimating the filter distribution.
+            resampling (Callable[[torch.Tensor], torch.Tensor], optional): resampling method.. Defaults to systematic.
+            proposal (Union[str, Proposal], optional): proposal distribution generator to use. Defaults to None.
+            ess_threshold (float, optional):  relative "effective sample size" threshold at which to perform resampling.. Defaults to 0.9.
         """
 
         super().__init__(model, **kwargs)
@@ -70,8 +69,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         Increases the particle count by ``factor``.
 
         Args:
-            factor: the factor to increase the particles with.
-
+            factor (int): the factor to increase the particles with.
         """
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
@@ -197,9 +195,9 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         Currently does not work with vectorized inference.
 
         Args:
-            y: observations to use when filtering.
-            pyro_lib: pyro library.
-            method: method to use when constructing a target log-likelihood.
+            y (torch.Tensor): observations to use when filtering.
+            pyro_lib (pyro): pyro library.
+            method (str, optional): method to use when constructing a target log-likelihood.. Defaults to "ffbs".
         """
 
         lower_method = method.lower()

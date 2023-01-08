@@ -22,10 +22,10 @@ class ParticleFilterPrediction(Prediction):
         Internal initializer for :class:`ParticleFilterPrediction`.
 
         Args:
-            prev_x: resampled previous state.
-            weigths: unnormalized weights.
-            normalized_weights: normalized weights.
-            indices: resampled indices.
+            prev_x (TimeseriesState): resampled previous state.
+            weights (Tensor): log-weights.
+            normalized_weights (Tensor): normalized weights.
+            indices (Tensor): resampled indices.
         """
 
         self.prev_x = prev_x
@@ -74,13 +74,13 @@ class ParticleFilterCorrection(Correction):
 
     def __init__(self, x: TimeseriesState, w: Tensor, ll: Tensor, prev_indices: Tensor):
         """
-        Internal initializer for :class:`ParticleFilterState`.
+        Internal initializer for :class:`ParticleFilterCorrection`.
 
         Args:
-            x: the state particles of the timeseries.
-            w: the log weights associated with the state particles.
-            ll: the estimate log-likelihood, i.e. :math:`p(y_t)`.
-            prev_indices: the mask of the previous state particles that were used to propagate to this state.
+            x (TimeseriesState): state particles of the timeseries.
+            w (Tensor): log weights associated with the particles.
+            ll (Tensor): estimated log-likelihood, i.e. :math:`p(y_t)`.
+            prev_indices (Tensor): resampled indicies of particles.
         """
 
         super().__init__()

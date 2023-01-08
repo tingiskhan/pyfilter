@@ -43,7 +43,7 @@ def mimic_arviz_posterior(
         context (InferenceContext): parameter context to plot.
         state (SequentialAlgorithmState): associated algorithm state.
         num_cols (int): number of columns.
-        ax (Optional[Axes]): pre-defined axes to use.
+        ax (Axes, optional): pre-defined axes to use.
     """
 
     if ax is None:
