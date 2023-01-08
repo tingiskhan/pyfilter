@@ -22,11 +22,12 @@ class Linearized(Proposal):
         Internal initializer for :class:`Linearized`.
 
         Args:
-            n_steps: number of steps to take when performing gradient descent.
-            alpha: step size to take when performing gradient descent. Only matters when ``use_second_order`` is
-            ``False``, or when the Hessian is badly conditioned.
-            use_second_order: whether to use second order information when constructing the proposal distribution.
+            n_steps (int, optional): number of steps to take when performing gradient descent.. Defaults to 1.
+            alpha (float, optional): step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+            ``False``, or when the Hessian is badly conditioned. Defaults to 1e-4.
+            use_second_order (bool, optional): whether to use second order information when constructing the proposal distribution. Defaults to False.            
         """
+        
         super().__init__()
         self._alpha = alpha
 
