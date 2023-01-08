@@ -7,6 +7,7 @@ from ..base import BaseAlgorithm
 from ..logging import TQDMWrapper
 from .state import SequentialAlgorithmState
 
+
 T = TypeVar("T", bound=SequentialAlgorithmState)
 Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]
 
@@ -21,8 +22,9 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Internal initializer for :class:`SequentialParticleAlgorithm`.
 
         Args:
-            filter_: see base.
-            num_particles: the number of particles to use for approximating the parameter posteriors.
+            filter_ (BaseFilter): see :class:`BaseAlgorithm`.
+            num_particles (int): umber of particles to use for approximating the parameter posteriors.
+            context (InferenceContext, optional): inference context. Defaults to None.
         """
 
         super().__init__(filter_, context=context)
@@ -40,7 +42,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Registers a callback that is called directly after :meth:`step`.
 
         Args:
-            callback: callback to register.
+            callback (Callback): callback to register.
         """
 
         if (callback in self._callbacks) or (callback is None):
@@ -66,11 +68,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Updates the algorithm and filter state given the latest observation ``y``.
 
         Args:
-            y: the latest observation.
-            state: the previous state of the algorithm.
-
-        Returns:
-            The updated state of the algorithm.
+            y (torch.Tensor): latest observation.
+            state (SequentialAlgorithmState): previous state of the algorithm.
         """
 
         result = self._step(y, state)
@@ -87,11 +86,8 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         Defines how to update ``state`` given the latest observation ``y``, should be overridden by derived classes.
 
         Args:
-            y: the latest observation.
-            state: the previous state of the algorithm.
-
-        Returns:
-            The updated state of the algorithm.
+            y (torch.Tensor): latest observation.
+            state (SequentialAlgorithmState): previous state of the algorithm.
         """
 
         raise NotImplementedError()
@@ -108,7 +104,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
             return state
 
 
-class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
+class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm):
     """
     Algorithm combining two instances of :class:`SequentialParticleAlgorithm`, where we let one of them target a
     chronological subset of the data, and the other the remaining points.
@@ -117,23 +113,24 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
     """
 
     def __init__(
-        self, filter_, particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None
+        self, filter_, num_particles, switch: int, first_kw: Dict[str, Any], second_kw: Dict[str, Any], context=None
     ):
         """
         Internal initializer for :class:`CombinedSequentialParticleAlgorithm`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            switch: the number of observations to have parsed before switching algorithms.
-            first_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_first`.
-            second_kw: kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_second`.
+            filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
+            switch (int): number of observations to have parsed before switching algorithms.
+            first_kw (Dict[str, Any]): kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_first`.
+            second_kw (Dict[str, Any]): kwargs sent to :meth:`CombinedSequentialParticleAlgorithm.make_second`.
+            context (InferenceContext, optional): see :class:`SequentialParticleAlgorithm`.. Defaults to None.
         """
 
-        super().__init__(filter_, particles)
+        super().__init__(filter_=filter_, num_particles=num_particles, context=context)
 
-        self._first = self.make_first(filter_, context, particles, **(first_kw or dict()))
-        self._second = self.make_second(filter_, context, particles, **(second_kw or dict()))
+        self._first = self.make_first(filter_, context, num_particles, **(first_kw or dict()))
+        self._second = self.make_second(filter_, context, num_particles, **(second_kw or dict()))
 
         self._when_to_switch = switch
         self._is_switched = False
@@ -143,12 +140,9 @@ class CombinedSequentialParticleAlgorithm(SequentialParticleAlgorithm, ABC):
         Creates the algorithm to be used for the first part of the data.
 
         Args:
-            filter_: see ``__init__``.
-            particles: see ``__init__``.
-            kwargs: corresponds to ``first_kw`` of ``__init__``.
-
-        Returns:
-            Instance of algorithm to be used for first part of the data.
+            filter_ (BaseFilter): see :meth:`__init__`.
+            context (InferenceContext): see :meth:`__init__`.
+            particles (int): see :meth:`__init__`.
         """
 
         raise NotImplementedError()

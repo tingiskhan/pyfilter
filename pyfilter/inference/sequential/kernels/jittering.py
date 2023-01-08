@@ -15,11 +15,8 @@ def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Te
             \hat{\theta} = \theta + \epsilon, \: \epsilon \sim \mathcal{N}(0, \sigma).
 
     Args:
-        values: values to jitter, i.e. :math:`\theta`.
-        scale: scale of the normal distribution used for jittering.
-
-    Returns:
-        Jittered values.
+        values (torch.Tensor): values to jitter, i.e. :math:`\theta`.
+        scale (Union[float, torch.Tensor]): scale of the normal distribution used for jittering.
     """
 
     return values + scale * torch.empty_like(values).normal_()

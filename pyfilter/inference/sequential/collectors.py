@@ -14,10 +14,9 @@ __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 class Collector(Generic[T]):
     r"""
-    Defines a collector object that is registered as a callback on
-    Defines a collector object that is registered as a callback on
-    :meth:`SequentialParticleAlgorithm.step` on a  :class:`SequentialParticleAlgorithm` and calculates some quantity
-    that is saved to the associated :class:`SequentialAlgorithmState` object.
+    Defines a collector object that is registered as a callback on :meth:`SequentialParticleAlgorithm.step` on a
+    :class:`SequentialParticleAlgorithm` and calculates some quantity that is saved to the associated
+    :class:`SequentialAlgorithmState` object.
     """
 
     def __init__(self, name: str, f: Callback):
