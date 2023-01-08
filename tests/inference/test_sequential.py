@@ -55,7 +55,7 @@ class TestSequential(object):
         train_split = y.shape[0] // 2
         particles = 250
         with inf.make_context() as context:
-            filter_ = filts.APF(build_model, particles)
+            filter_ = filts.particle.APF(build_model, particles)
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
@@ -66,7 +66,7 @@ class TestSequential(object):
             context_state = context.state_dict()
 
         with inf.make_context() as new_context:
-            new_filter = filts.APF(build_model, filter_.particles[-1])
+            new_filter = filts.particle.APF(build_model, filter_.particles[-1])
             new_alg = algorithm(new_filter)
             new_result = new_alg.initialize()
 

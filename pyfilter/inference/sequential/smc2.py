@@ -1,6 +1,6 @@
 from typing import Union
 
-from ...filters import ParticleFilter
+from ...filters.particle import ParticleFilter
 from ..batch.mcmc.proposals import BaseProposal
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings

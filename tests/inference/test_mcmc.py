@@ -17,7 +17,7 @@ class TestPMCMC(object):
 
         with inf.make_context() as context:
             kernel, record_states = kernel_and_record_states
-            filter_ = filts.APF(lambda u: build_model(u, use_cuda=False), 150, record_states=record_states)
+            filter_ = filts.particle.APF(lambda u: build_model(u, use_cuda=False), 150, record_states=record_states)
 
             # TODO: Just make sure it runs
             pmcmc = inf.batch.mcmc.PMMH(filter_, 10, initializer="mean", proposal=kernel)
