@@ -1,6 +1,4 @@
 from abc import ABC
-from typing import Optional
-
 from torch import isfinite
 
 from ..context import InferenceContext
