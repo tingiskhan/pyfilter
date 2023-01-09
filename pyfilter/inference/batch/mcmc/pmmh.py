@@ -31,7 +31,7 @@ class PMMH(BaseAlgorithm):
         Internal initializer for :class:`PMMH`.
 
         Args:
-            filter_ (_type_): see :class:`BaseAlgorithm`.
+            filter_ (BaseFilter): see :class:`BaseAlgorithm`.
             num_samples (int): number of MCMC samples to draw.
             num_chains (int, optional): number of parallel (vectorized) chains to run. Defaults to 4.
             proposal (BaseProposal, optional): object for constructing proposal kernel. Defaults to None which results

@@ -29,7 +29,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         Internal initializer for :class:`ParticleFilter`.
 
         Args:
-            model (_type_): see :class:`BaseFilter`.
+            model (ModelObject): see :class:`BaseFilter`.
             particles (int): number of particles to use for estimating the filter distribution.
             resampling (Callable[[torch.Tensor], torch.Tensor], optional): resampling method.. Defaults to systematic.
             proposal (Union[str, Proposal], optional): proposal distribution generator to use. Defaults to None.
