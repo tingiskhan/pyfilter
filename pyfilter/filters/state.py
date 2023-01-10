@@ -6,32 +6,33 @@ from stochproc.timeseries import result as res
 from torch import Tensor
 
 
-class PredictionState(ABC):
+class Prediction(ABC):
     """
     Base class for filter predictions.
     """
 
-    def get_previous_state(self) -> TimeseriesState:
+    def get_timeseries_state(self) -> TimeseriesState:
         """
         Returns the previous timeseries state.
         """
 
         raise NotImplementedError()
 
-    def create_state_from_prediction(self, model: StateSpaceModel) -> "FilterState":
+    def create_state_from_prediction(self, model: StateSpaceModel) -> "Correction":
         """
         Method for creating an instance of :class:`FilterState`.
 
         Args:
-            model: the model to use for propagating.
+            model (StateSpaceModel): model to use for constructing predictive density.
         """
 
         raise NotImplementedError()
 
 
-class FilterState(dict, ABC):
+# TODO: Rename to Correction
+class Correction(dict, ABC):
     """
-    Abstract base class for all filter states.
+    Abstract base class for filter corrections.
     """
 
     def get_mean(self) -> Tensor:
@@ -53,7 +54,7 @@ class FilterState(dict, ABC):
         Resamples the necessary objects of ``self`` at ``indices``. Only matters when running parallel filters.
 
         Args:
-            indices: the indices to select.
+            indices (Tensor): indices to select.
         """
 
         raise NotImplementedError()
@@ -65,13 +66,13 @@ class FilterState(dict, ABC):
 
         raise NotImplementedError()
 
-    def exchange(self, other: "FilterState", mask: Tensor):
+    def exchange(self, other: "Correction", mask: Tensor):
         """
-        Exchanges the necessary objects of ``self`` with ``state``. Only matters when running parallel filters.
+        Exchanges the necessary objects of ``self`` with ``other``. Only matters when running parallel filters.
 
         Args:
-            other: the state to exchange with
-            mask: mask of ``state`` to replace ``self`` with.
+            other (Correction): other state to exchange with
+            mask (Tensor): mask of ``state`` to replace ``self`` with.
         """
 
         raise NotImplementedError()
@@ -88,8 +89,8 @@ class FilterState(dict, ABC):
         Predicts ``num_steps`` into the future for ``model``.
 
         Args:
-            model: the model to predict for.
-            num_steps: the number of steps into the future to predict.
+            model (StateSpaceModel): model to predict for.
+            num_steps (num_steps): number of steps into the future to predict.
         """
 
         raise NotImplementedError()
@@ -106,7 +107,7 @@ class FilterState(dict, ABC):
         Loads state from existing state dictionary.
 
         Args:
-            state_dict: state dictionary to load from.
+            state_dict (Dict[str, Any]): state dictionary to load from.
         """
 
         raise NotImplementedError()

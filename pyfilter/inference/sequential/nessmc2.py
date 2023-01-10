@@ -18,18 +18,18 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         filter_,
         particles,
         switch=500,
-        smc2_kw: Optional[Dict[str, Any]] = None,
-        ness_kw: Optional[Dict[str, Any]] = None,
+        smc2_kw: Dict[str, Any] = None,
+        ness_kw: Dict[str, Any] = None,
     ):
         """
-        Initializes the :class:`NESSMC2` class.
+        Internal initializer for :class:`NESSMC2`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            switch: see base.
-            smc2_kw: kwargs passed to ``SMC2``.
-            ness_kw: kwargs passed to ``NESS``.
+            filter_ (BaseFilter): see :class:`CombinedSequentialParticleAlgorithm`.
+            particles (int): see :class:`CombinedSequentialParticleAlgorithm`.
+            switch (int, optional): see :class:`CombinedSequentialParticleAlgorithm`. Defaults to 500.
+            smc2_kw (Dict[str, Any], optional): see :class:`CombinedSequentialParticleAlgorithm`. Defaults to None.
+            ness_kw (Dict[str, Any], optional): see :class:`CombinedSequentialParticleAlgorithm`. Defaults to None.
         """
 
         super().__init__(filter_, particles, switch, first_kw=smc2_kw, second_kw=ness_kw)

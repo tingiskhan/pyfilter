@@ -1,10 +1,11 @@
 from typing import Generic
 
+
 import torch.nn
 from stochproc.timeseries import StateSpaceModel
 from torch.distributions import TransformedDistribution
 
-from ...filters.particle.state import ParticleFilterState
+from ...filters.particle.state import ParticleFilterCorrection
 from .base import Callback, SequentialParticleAlgorithm, T
 from .state import SequentialAlgorithmState
 
@@ -13,18 +14,18 @@ __all__ = ["Collector", "MeanCollector", "Standardizer", "ParameterPosterior"]
 
 class Collector(Generic[T]):
     r"""
-    Defines a collector object that is registered as a callback on
-    :meth:`SequentialParticleAlgorithm.step` on a  :class:`SequentialParticleAlgorithm` and calculates some quantity
-    that is saved to the associated :class:`SequentialAlgorithmState` object.
+    Defines a collector object that is registered as a callback on :meth:`SequentialParticleAlgorithm.step` on a
+    :class:`SequentialParticleAlgorithm` and calculates some quantity that is saved to the associated
+    :class:`SequentialAlgorithmState` object.
     """
 
     def __init__(self, name: str, f: Callback):
         """
-        Initializes the :class:`Collector` class.
+        Internal initializer for :class:`Collector`.
 
         Args:
-            name: name to assign to the ``tensor_tuple``.
-            f: function to use when calculating statics.
+            name (str): name to assign to the ``tensor_tuple``.
+            f (Callback): function to use when calculating statics.
         """
 
         self._name = name
@@ -38,6 +39,9 @@ class Collector(Generic[T]):
         if self._name not in state.tensor_tuples:
             state.tensor_tuples.make_deque(self._name)
 
+        state.tensor_tuples[self._name].append(
+            self._f(algorithm, y, state),
+        )
         state.tensor_tuples[self._name].append(
             self._f(algorithm, y, state),
         )
@@ -80,7 +84,7 @@ class Standardizer(Collector[SequentialAlgorithmState]):
         filter_state = new_state.filter_state.latest_state
 
         residuals = self._standardize(algorithm.filter.ssm, y, filter_state.get_timeseries_state())
-        if isinstance(filter_state, ParticleFilterState):
+        if isinstance(filter_state, ParticleFilterCorrection):
             residuals = (filter_state.normalized_weights() * residuals).sum(dim=-1)
 
         return new_state.normalized_weights() @ residuals
@@ -101,10 +105,10 @@ class ParameterPosterior(Collector[SequentialAlgorithmState]):
 
     def __init__(self, constrained=True):
         """
-        Initializes the :class:`ParameterPosterior` collector.
+        Internal initializer for :class:`ParameterPosterior`.
 
         Args:
-            constrained: Whether to record constrained or non-constrained.
+            constrained (bool, optional): whether to record constrained or non-constrained parameters. Defaults to True.
         """
 
         super(ParameterPosterior, self).__init__(name="parameter_means", f=self._mean_var)

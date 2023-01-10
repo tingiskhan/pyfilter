@@ -7,7 +7,7 @@ from .base import BaseProposal
 
 class SymmetricMH(BaseProposal):
     """
-    Builds a symmetric proposal as defined in the original `SMC2` paper.
+    Builds a symmetric proposal as defined in the original :class:`~pyfilter.inference.sequential.SMC2` paper.
     """
 
     def build(self, context, state, filter_, y):

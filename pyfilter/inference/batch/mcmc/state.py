@@ -13,12 +13,12 @@ class PMMHResult(FilterAlgorithmState):
 
     def __init__(self, initial_sample: Dict[str, torch.Tensor], filter_result: FilterResult, stack_dim=1):
         """
-        Initializes the :class:`PMMHResult` class.
+        Internal initializer for :class:`PMMHResult`.
 
         Args:
-            initial_sample: the initial sample of the Markov chain.
-            filter_result: the filter result object.
-            stack_dim: which dimension to stack along.
+            initial_sample (Dict[str, torch.Tensor]): initial sample of the Markov chain.
+            filter_result (FilterResult): filter result object.
+            stack_dim (int, optional): which dimension to stack along. Defaults to 1.
         """
 
         super().__init__(filter_result)
@@ -30,7 +30,7 @@ class PMMHResult(FilterAlgorithmState):
         Updates the Markov chain with the newly accepted candidate.
 
         Args:
-            sample: the next accepted sample of the chain.
+            sample (Dict[str, torch.Tensor]): next accepted sample of the chain.
         """
 
         for n, p in sample.items():

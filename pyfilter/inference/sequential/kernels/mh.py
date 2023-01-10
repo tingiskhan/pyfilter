@@ -14,17 +14,15 @@ class ParticleMetropolisHastings(BaseKernel):
 
     def __init__(self, num_steps=1, proposal: BaseProposal = None, distance_threshold: float = None, **kwargs):
         """
-        Initializes the :class:`ParticleMetropolisHastings` class.
+        Internal initializer for :class:`ParticleMetropolisHastings`.
 
         Args:
-            num_steps: the number of successive PMMH steps to perform at each update.
-            proposal: the method of how to generate the proposal distribution.
-            distance_threshold: when the relative distance between two consecutive PMCMC moves is lower than
-                ``distance_threshold``, abort. If ``None`` defaults to regular behaviour, i.e. iterating ``n_steps``.
-                times.
-            kwargs: see base.
+            num_steps (int, optional): number of successive PMMH steps to perform at each update.. Defaults to 1.
+            proposal (BaseProposal, optional): method for how to generate the proposal distribution.. Defaults to None.
+            distance_threshold (float, optional): when the relative distance between two consecutive PMCMC moves is lower than
+            ``distance_threshold``, stop iterating. Defaults to None.
         """
-
+        
         super().__init__(**kwargs)
 
         self._n_steps = num_steps

@@ -1,15 +1,16 @@
 import pytest
 import torch
+from functools import partial
 
 from pyfilter import inference as inf, filters as filts
 from .models import linear_models
 
 
 def algorithms(particles=400):
-    yield lambda f: inf.sequential.NESS(f, particles)
-    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=5)
-    yield lambda f: inf.sequential.SMC2(f, particles, num_steps=10, distance_threshold=0.1)
-    yield lambda f: inf.sequential.NESSMC2(f, particles)
+    yield partial(inf.sequential.NESS, particles=particles)
+    yield partial(inf.sequential.SMC2, particles=particles, num_steps=5)
+    yield partial(inf.sequential.SMC2, particles=particles, num_steps=10, distance_threshold=0.1)
+    yield partial(inf.sequential.NESSMC2, particles=particles)
 
 
 def callbacks():
@@ -28,7 +29,7 @@ class TestSequential(object):
         _, y = true_model.sample_states(100).get_paths()
 
         with inf.make_context(**kwargs) as context:
-            filter_ = filts.APF(build_model, 200)
+            filter_ = filts.particle.APF(build_model, 200, proposal=filts.particle.proposals.LinearGaussianObservations())
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
@@ -54,7 +55,7 @@ class TestSequential(object):
         train_split = y.shape[0] // 2
         particles = 250
         with inf.make_context() as context:
-            filter_ = filts.APF(build_model, particles)
+            filter_ = filts.particle.APF(build_model, particles)
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
@@ -65,7 +66,7 @@ class TestSequential(object):
             context_state = context.state_dict()
 
         with inf.make_context() as new_context:
-            new_filter = filts.APF(build_model, filter_.particles[-1])
+            new_filter = filts.particle.APF(build_model, filter_.particles[-1])
             new_alg = algorithm(new_filter)
             new_result = new_alg.initialize()
 
@@ -82,7 +83,7 @@ class TestSequential(object):
 
             assert (
                     (new_result.ess.shape[0] == y.shape[0] + 1) and
-                    (new_result.filter_state.latest_state.x.time_index == y.shape[0]).all()
+                    (new_result.filter_state.latest_state.timeseries_state.time_index == y.shape[0]).all()
             )
 
     @pytest.mark.parametrize("models", linear_models())

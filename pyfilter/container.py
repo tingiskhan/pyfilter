@@ -11,7 +11,7 @@ def make_dequeue(maxlen: BoolOrInt = None) -> deque:
     """
     Creates a deque given ``maxlen``.
     Args:
-        maxlen: The maximum length of the deque. Can be either a ``bool`` or an ``int``. If ``bool``, then it ``maxlen``
+        maxlen (BoolOrInt): maximum length of the deque. Can be either a ``bool`` or an ``int``. If ``bool``, then it ``maxlen``
             corresponds to 1 if ``False`` or ``None`` if ``True``. If an ``int``, then corresponds to the value.
     """
 
@@ -28,7 +28,7 @@ class TensorContainer(object):
 
     def __init__(self, **kwargs: torch.Tensor):
         """
-        Initializes the :class:`BufferIterable` class.
+        Internal initializer for :class:`BufferIterable`.
         """
 
         super().__init__()

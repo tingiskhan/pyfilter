@@ -21,12 +21,11 @@ class GradientBasedProposal(RandomWalk):
 
     def __init__(self, use_second_order: bool = False, **kwargs):
         """
-        Initializes the ``GradientBasedProposal`` class.
+        Internal initializer for :class:`GradientBasedProposal`.
 
         Args:
-            use_second_order: optional parameter specifying whether to use second order information when constructing
-                the proposal kernel. In practice this means that we utilize the diagonal of the Hessian.
-            kwargs: see base.
+            use_second_order (bool, optional): whether to use seconrd order information when constructing proposal
+            kernel. Defaults to False.
         """
 
         super().__init__(**kwargs)
@@ -41,7 +40,7 @@ class GradientBasedProposal(RandomWalk):
 
         context.unstack_parameters(params, constrained=False)
 
-        time = torch.stack(tuple(s.x.time_index for s in state.filter_state.states))
+        time = torch.stack(tuple(s.timeseries_state.time_index for s in state.filter_state.states))
 
         # As the first state's time value is zero, we use that
         first_state = state.filter_state.states[0].get_timeseries_state()

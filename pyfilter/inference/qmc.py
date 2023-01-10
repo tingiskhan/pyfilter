@@ -8,17 +8,17 @@ from ..constants import EPS2
 
 
 class _EngineContainer(object):
-    r"""
+    """
     Container for QMC engines.
     """
 
     def __init__(self, engine: qr.SobolEngine, randomize: bool):
         """
-        Initializes the :class:`_EngineContainer` class.
+        Internal initializer for :class:`_EngineContainer`.
 
         Args:
-            engine: quasi random engine.
-            randomize: whether to randomize.
+            engine (qr.SobolEngine): quasi random engine.
+            randomize (bool): whether to randomize.
         """
 
         self._engine = engine
@@ -30,7 +30,7 @@ class _EngineContainer(object):
         Draws samples from the QMC engine.
 
         Args:
-            shape: shape to draw.
+            shape (torch.Size): shape to draw.
         """
 
         numel = shape.numel()
@@ -69,10 +69,10 @@ class QuasiRegistry(object):
         Adds an engine to the QMC registry.
 
         Args:
-            key: the key to use for the engine.
-            dim: dimension of to sample.
-            randomize: whether to randomize the QMC points via rotation.
-            raise_if_exists: raise error if trying to create an engine that already exists.
+            key (int): key to use for the engine.
+            dim (int): dimension of to sample.
+            randomize (bool): whether to randomize the QMC points via rotation.
+            raise_if_exists (bool): raise error if trying to create an engine that already exists.
 
         Returns:
             Returns the key to use when sampling. The key is currently the dimension of the space.

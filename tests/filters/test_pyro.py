@@ -46,6 +46,7 @@ class TestPyroIntegration(object):
                 filt = part.APF(ssm, 100, record_states=True)
                 filt.do_sample_pyro(y, pyro)
 
+        torch.manual_seed(123)
         true_sigma = 0.05
         ssm = build_ssm(true_sigma)
 

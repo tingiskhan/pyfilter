@@ -11,12 +11,11 @@ class OnlineKernel(BaseKernel):
 
     def __init__(self, kernel: JitterKernel = None, discrete=False, **kwargs):
         """
-        Initializes the :class:`OnlineKernel` class.
+        Internal initializer for :class:`OnlineKernel`.
 
         Args:
-            kernel: the kernel to use for jittering the parameter particles.
-            discrete: whether to mutate all particles, or just some of them with a probability proportional to ESS.
-            kwargs: see base.
+            kernel (JitterKernel, optional): kernel to use for jittering the parameter particles.. Defaults to None.
+            discrete (bool, optional): whether to mutate all particles, or just some of them with a probability proportional to ESS.. Defaults to False.
         """
 
         super().__init__(**kwargs)

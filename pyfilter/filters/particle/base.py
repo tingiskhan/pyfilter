@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Callable, Sequence, Union
 
 import pyro
@@ -9,10 +8,10 @@ from ...resampling import systematic
 from ..base import BaseFilter
 from ..utils import batched_gather
 from .proposals import Bootstrap, Proposal
-from .state import ParticleFilterState
+from .state import ParticleFilterCorrection, ParticleFilterPrediction
 
 
-class ParticleFilter(BaseFilter, ABC):
+class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPrediction]):
     """
     Abstract base class for particle filters.
     """
@@ -27,15 +26,14 @@ class ParticleFilter(BaseFilter, ABC):
         **kwargs,
     ):
         """
-        Initializes the :class:`ParticleFilter` class.
+        Internal initializer for :class:`ParticleFilter`.
 
         Args:
-            model: see base.
-            particles: the number of particles to use for estimating the filter distribution.
-            resampling: the resampling method. Takes as input the log weights and returns mask.
-            proposal: the proposal distribution generator to use.
-            ess_threshold: the relative "effective sample size" threshold at which to perform resampling. Not relevant
-                for ``APF`` as resampling is always performed.
+            model (ModelObject): see :class:`BaseFilter`.
+            particles (int): number of particles to use for estimating the filter distribution.
+            resampling (Callable[[torch.Tensor], torch.Tensor], optional): resampling method.. Defaults to systematic.
+            proposal (Union[str, Proposal], optional): proposal distribution generator to use. Defaults to None.
+            ess_threshold (float, optional):  relative "effective sample size" threshold at which to perform resampling.. Defaults to 0.9.
         """
 
         super().__init__(model, **kwargs)
@@ -71,13 +69,12 @@ class ParticleFilter(BaseFilter, ABC):
         Increases the particle count by ``factor``.
 
         Args:
-            factor: the factor to increase the particles with.
-
+            factor (int): the factor to increase the particles with.
         """
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
 
-    def initialize(self) -> ParticleFilterState:        
+    def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
             
         self._proposal.set_model(self._model)
@@ -89,16 +86,16 @@ class ParticleFilter(BaseFilter, ABC):
         prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
         ll = torch.zeros(self.batch_shape, device=device)
 
-        return ParticleFilterState(x, w, ll, prev_inds)
+        return ParticleFilterCorrection(x, w, ll, prev_inds)
 
-    def _do_sample_ffbs(self, states: Sequence[ParticleFilterState]):
+    def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
         state_dim = -(1 + self.ssm.hidden.n_dim)
         dim = len(self.batch_shape)
 
-        res = [batched_gather(states[-1].x.value, self._resampler(states[-1].w), dim=dim)]
+        res = [batched_gather(states[-1].timeseries_state.value, self._resampler(states[-1].weights), dim=dim)]
 
         for state in reversed(states[:-1]):
-            density = self.ssm.hidden.build_density(state.x)
+            density = self.ssm.hidden.build_density(state.timeseries_state)
 
             # TODO: Last transpose might not be necessary, figure it out
             w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
@@ -106,29 +103,30 @@ class ParticleFilter(BaseFilter, ABC):
             if self.batch_shape:
                 w_state = w_state.transpose(0, 1)
 
-            w = state.w.unsqueeze(-2) + w_state
+            w = state.weights.unsqueeze(-2) + w_state
 
             cat = Categorical(logits=w)
-            res.append(batched_gather(state.x.value, cat.sample(), dim=dim))
+            res.append(batched_gather(state.timeseries_state.value, cat.sample(), dim=dim))
 
         return torch.stack(res[::-1], dim=0)
 
-    def _do_sample_fl(self, states: Sequence[ParticleFilterState]):
+    def _do_sample_fl(self, states: Sequence[ParticleFilterCorrection]):
         reversed_states = reversed(states)
 
         latest_state = next(reversed_states)
-        result = (latest_state.x.value,)
-        prev_inds = torch.ones_like(latest_state.prev_inds).cumsum(dim=-1) - 1
+        result = (latest_state.timeseries_state.value,)
+        prev_inds = torch.ones_like(latest_state.previous_indices).cumsum(dim=-1) - 1
 
         dim = len(self.batch_shape)
         for s in reversed_states:
-            prev_inds = batched_gather(latest_state.prev_inds, prev_inds, dim=dim)
-            result += (batched_gather(s.x.value, prev_inds, dim=dim),)
+            prev_inds = batched_gather(latest_state.previous_indices, prev_inds, dim=dim)
+            result += (batched_gather(s.timeseries_state.value, prev_inds, dim=dim),)
             latest_state = s
 
         return torch.stack(result[::-1], dim=0)
 
-    def smooth(self, states: Sequence[ParticleFilterState], method="ffbs") -> torch.Tensor:
+    # NB: Discrepancy between shape of filter means and here
+    def smooth(self, states, method="ffbs") -> torch.Tensor:
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
@@ -179,6 +177,7 @@ class ParticleFilter(BaseFilter, ABC):
         hidden_dens = self.ssm.hidden.build_density(x_tm1)
         obs_dens = self.ssm.build_density(x_t)
         init_dens = self.ssm.hidden.initial_distribution
+        init_dens = self.ssm.hidden.initial_distribution
 
         shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
         y_ = y.view(shape)
@@ -190,15 +189,15 @@ class ParticleFilter(BaseFilter, ABC):
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """
-        Performs a filtering procedure in which we acquire the log-likelihood for `pyro` to target.
+        Performs a smoothing procedure in which we acquire the log-likelihood for `pyro` to target.
 
         This is an experimental feature, as the author needs to find theoretical justifications for this approach.
         Currently does not work with vectorized inference.
 
         Args:
-            y: observations to use when filtering.
-            pyro_lib: pyro library.
-            method: method to use when constructing a target log-likelihood.
+            y (torch.Tensor): observations to use when filtering.
+            pyro_lib (pyro): pyro library.
+            method (str, optional): method to use when constructing a target log-likelihood.. Defaults to "ffbs".
         """
 
         lower_method = method.lower()

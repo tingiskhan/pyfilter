@@ -14,10 +14,10 @@ class BaseKernel(ABC):
 
     def __init__(self, resampling=systematic):
         """
-        Initializes the :class:`BaseKernel` class.
+        Internal initializer for :class:`BaseKernel`.
 
         Args:
-             resampling: the resampling function to use.
+            resampling (_type_, optional): resampling function to use.. Defaults to systematic.
         """
 
         self._resampler = resampling
@@ -28,9 +28,9 @@ class BaseKernel(ABC):
         parameter posteriors.
 
         Args:
-            context: the parameter context.
-            filter_: the filter used by the calling algorithm.
-            state: the current state of the algorithm.
-        """
+            context (InferenceContext): parameter context.
+            filter_ (BaseFilter): filter associated with ``context``.
+            state (SequentialAlgorithmState): current state of the algorithm.
+        """        
 
         raise NotImplementedError()

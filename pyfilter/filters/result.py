@@ -1,29 +1,31 @@
 from copy import deepcopy
 from typing import Generic, List, TypeVar, Union
 
+from typing import Generic, List, TypeVar, Union
+
 import torch
 
 from ..container import make_dequeue
 from ..state import BaseResult
-from .state import FilterState
+from .state import Correction
 
-TState = TypeVar("TState", bound=FilterState)
+TCorrection = TypeVar("TCorrection", bound=Correction)
 BoolOrInt = Union[bool, int]
 
 
-class FilterResult(BaseResult, Generic[TState]):
+class FilterResult(BaseResult, Generic[TCorrection]):
     """
     Implements an object for storing results when running filters.
     """
 
     # TODO: Add dump and load hook for all states instead of just last?
-    def __init__(self, init_state: TState, record_states: BoolOrInt, record_moments: BoolOrInt):
+    def __init__(self, init_state: TCorrection, record_states: BoolOrInt, record_moments: BoolOrInt):
         """
-        Initializes the :class:`FilterResult` class.
+        Internal initializer for :class:`FilterResult`.
 
         Args:
-            init_state: the initial state.
-            record_states: parameter for whether to record all, or some of the states of the filter. Do note that
+            init_state (TCorrection): initial state of the filter.
+            record_states (bool): parameter for whether to record all, or some of the states of the filter. Do note that
                 recording all states will be very memory intensive for particle filters. See
                 :func:`pyfilter.container.make_dequeue` for more details.
             record_moments: same as ``record_states`` but for the filter means and variances.
@@ -51,7 +53,7 @@ class FilterResult(BaseResult, Generic[TState]):
     def filter_means(self) -> torch.Tensor:
         """
         Returns the estimated filter means, of shape
-        ``(timesteps, [batch shape], latent dimension)``.
+        ``{timesteps, [batch shape], latent dimension}``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_means")
@@ -60,27 +62,27 @@ class FilterResult(BaseResult, Generic[TState]):
     def filter_variance(self) -> torch.Tensor:
         """
         Returns the estimated filter variances, of shape
-        ``(timesteps, [batch shape], latent dimension)``.
+        ``{timesteps, [batch shape], latent dimension}``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_variances")
 
     @property
-    def states(self) -> List[TState]:
+    def states(self) -> List[TCorrection]:
         return list(self._states)
 
     @property
-    def latest_state(self) -> TState:
+    def latest_state(self) -> TCorrection:
         return self._states[-1]
 
-    def exchange(self, other: "FilterResult[TState]", mask: torch.Tensor):
+    def exchange(self, other: "FilterResult[TCorrection]", mask: torch.Tensor):
         """
-        Exchanges the states and tensor tuples with ``res`` at ``mask``. Note that this is only relevant for filters
+        Exchanges the states and tensor tuples with ``other`` at ``mask``. Note that this is only relevant for filters
         that have been run in parallel.
 
         Args:
-            other: the object to exchange states and tensor tuples with.
-            mask: mask specifying which values to exchange.
+            other (FilterResult[TCorrection]): object to exchange states and tensor tuples with.
+            mask (torch.Tensor): mask specifying which values to exchange.
         """
 
         self._loglikelihood[mask] = other.loglikelihood[mask]
@@ -99,9 +101,9 @@ class FilterResult(BaseResult, Generic[TState]):
         Resamples tensor tuples and states.
 
         Args:
-            indices: the indices to select.
-            entire_history: optional parameter for whether to resample entire history or not. If ``False``, we ignore
-                resampling the tensor tuples.
+            indices (torch.Tensor): the indices to select.
+            entire_history (bool): optional parameter for whether to resample entire history or not. If ``False``, we 
+                ignore resampling the tensor tuples.
         """
 
         self._loglikelihood.copy_(self._loglikelihood[indices])
@@ -116,12 +118,12 @@ class FilterResult(BaseResult, Generic[TState]):
 
         return self
 
-    def append(self, state: TState):
+    def append(self, state: TCorrection):
         """
         Appends state to ``self``.
 
         Args:
-            state: The state to append.
+            state (TCorrection): state to append.
         """
 
         self.tensor_tuples["filter_means"].append(state.get_mean())
@@ -145,13 +147,6 @@ class FilterResult(BaseResult, Generic[TState]):
         return res
 
     def load_state_dict(self, state_dict):
-        """
-        Loads state from existing state dictionary.
-
-        Args:
-            state_dict: state dictionary to load from.
-        """
-
         super().load_state_dict(state_dict)
         self._loglikelihood = state_dict["log_likelihood"]
 

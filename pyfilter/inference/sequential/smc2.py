@@ -1,6 +1,6 @@
 from typing import Union
 
-from ...filters import ParticleFilter
+from ...filters.particle import ParticleFilter
 from ..batch.mcmc.proposals import BaseProposal
 from .base import SequentialParticleAlgorithm
 from .kernels import ParticleMetropolisHastings
@@ -26,22 +26,17 @@ class SMC2(SequentialParticleAlgorithm):
         **kwargs,
     ):
         """
-        Initializes the :class:`SMC2` class.
+        Internal initializer for :class:`SMC2`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            threshold: the threshold of the relative ESS at which to perform a rejuvenation of the particles. Note that
-                using anything other than an ``float`` is experimental and is not supported in any literature.
-            kernel: optional parameter. The kernel to use for mutating the particles.
-            max_increases: whenever the acceptance rate of the rejuvenation step falls below 20% we double the amount
-                of state particles (as recommended in the original article). However, to avoid cases where there is
-                such a mismatch between the observed data and the model that we just continue to get low acceptance
-                rates, we allow capping the number of increases. This is especially useful if running multiple parallel
-                instances to avoid one of them from hogging all resources.
-            kwargs: kwargs passed to :class:`pyfilter.inference.sequential.kernels.ParticleMetropolisHastings`.
+            filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
+            threshold (Union[float, Thresholder], optional): threshold of the relative ESS at which to perform a rejuvenation of the particles. Defaults to 0.2.
+            kernel (BaseProposal, optional): kernel to use for mutating the particle during rejuvenation. Defaults to None.
+            max_increases (int, optional): max number of increases for achieving an acceptance rate of atleast 20% in the MCMC rejuvenation step. Defaults to 5.
+            context (_type_, optional): _description_. Defaults to None.
         """
-
+        
         super().__init__(filter_, particles, context=context)
 
         self._threshold = threshold if isinstance(threshold, Thresholder) else ConstantThreshold(threshold)
@@ -115,5 +110,6 @@ class SMC2(SequentialParticleAlgorithm):
 
         res = SMC2State(w, new_filter_state)
         res.tensor_tuples = state.tensor_tuples
+        res.current_iteration = state.current_iteration
 
         return res

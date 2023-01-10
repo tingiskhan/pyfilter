@@ -10,9 +10,9 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     Performs systematic resampling on either a 1D or 2D array.
 
     Args:
-        w: the log weights to use for resampling.
-        normalized: whether the weights are normalized are not.
-        u: parameter for overriding the sampled index, only used for testing.
+        w (torch.Tensor): log weights to use for resampling.
+        normalized (bool): whether the weights are normalized are not.
+        u (torch.Tensor, float): parameter for overriding the sampled index, only used for testing.
     """
 
     is_1d = w.dim() == 1
@@ -41,8 +41,8 @@ def multinomial(w: torch.Tensor, normalized=False) -> torch.Tensor:
     Performs multinomial sampling.
 
     Args:
-        w: see ``systematic``.
-        normalized: see ``systematic``.
+        w: see :func:`systematic`.
+        normalized: see :func:`systematic`.
     """
 
     return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
@@ -55,8 +55,8 @@ def residual(w: torch.Tensor, normalized=False) -> torch.Tensor:
     .. _`particles`: https://github.com/nchopin/particles
 
     Args:
-        w: see ``systematic``.
-        normalized: see ``systematic``.
+        w: see :func:`systematic`.
+        normalized: see :func:`systematic`.
     """
 
     if w.dim() > 1:

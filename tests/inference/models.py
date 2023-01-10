@@ -2,14 +2,11 @@ import torch.cuda
 from stochproc import timeseries as ts
 from pyro.distributions import Normal, LogNormal, Exponential
 from pyfilter import inference as inf
-
-
-def build_0d_dist(x, a, s):
-    return Normal(loc=a * x.value, scale=s)
+import torch
 
 
 def build_obs_1d(model, a, s):
-    return ts.StateSpaceModel(model, build_0d_dist, parameters=(a, s))
+    return ts.LinearStateSpaceModel(model, (a, s), torch.Size([]))
 
 
 def linear_models():

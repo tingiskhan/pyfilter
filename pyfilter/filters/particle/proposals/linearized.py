@@ -1,9 +1,7 @@
-import torch
-from pyro.distributions import Normal
 from stochproc.timeseries import AffineProcess
-from torch.autograd import grad
 
 from .base import Proposal
+from .utils import find_mode_of_distribution
 
 
 class Linearized(Proposal):
@@ -21,15 +19,15 @@ class Linearized(Proposal):
 
     def __init__(self, n_steps=1, alpha: float = 1e-4, use_second_order: bool = False):
         """
-        Initializes the :class:`Linearized` class.
+        Internal initializer for :class:`Linearized`.
 
         Args:
-            n_steps: the number of steps to take when performing gradient descent
-            alpha: the step size to take when performing gradient descent. Only matters when ``use_second_order`` is
-                ``False``, or when the Hessian is badly conditioned.
-            use_second_order: whether to use second order information when constructing the proposal distribution.
-                Amounts to using the diagonal of the Hessian.
+            n_steps (int, optional): number of steps to take when performing gradient descent.. Defaults to 1.
+            alpha (float, optional): step size to take when performing gradient descent. Only matters when ``use_second_order`` is
+            ``False``, or when the Hessian is badly conditioned. Defaults to 1e-4.
+            use_second_order (bool, optional): whether to use second order information when constructing the proposal distribution. Defaults to False.            
         """
+        
         super().__init__()
         self._alpha = alpha
 
@@ -38,54 +36,23 @@ class Linearized(Proposal):
         self._n_steps = n_steps
         self._use_second_order = use_second_order
 
-        self._is1d = None
-
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
+        
+        return super().set_model(model)
+        
+    def sample_and_weight(self, y, prediction):
+        x = prediction.get_timeseries_state()
+        
+        # TODO: Re-use predictive density?
+        x_dist = prediction.get_predictive_density(self._model)
 
-        super(Linearized, self).set_model(model)
-        self._is1d = self._model.hidden.n_dim == 0
-
-        return self
-
-    def sample_and_weight(self, y, x):
         mean, std = self._model.hidden.mean_scale(x)
-
-        std = std.clone()
-        x_copy = x.copy(values=mean)
-
-        # TODO: Would optimally build density utilizing the mean and scale from above
-        x_dist = self._model.hidden.build_density(x)
-
-        for _ in range(self._n_steps):
-            mean.requires_grad_(True)
-
-            y_dist = self._model.build_density(x_copy)
-            logl = y_dist.log_prob(y) + x_dist.log_prob(mean)
-            g = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=self._use_second_order)[-1]
-
-            ones_like_g = torch.ones_like(g)
-            step = self._alpha * ones_like_g
-            if self._use_second_order:
-                neg_inv_hess = -grad(g, mean, grad_outputs=ones_like_g)[-1].pow(-1.0)
-
-                # TODO: There is a better approach in Dahlin, find it
-                mask = neg_inv_hess > 0.0
-
-                step[mask] = neg_inv_hess[mask]
-                std[mask] = neg_inv_hess[mask].sqrt()
-
-                g = g.detach()
-
-            mean = mean.detach()
-            mean += step * g
-
-        kernel = Normal(mean, std)
-        if not self._is1d:
-            kernel = kernel.to_event(1)
-
-        x_result = x_copy.copy(values=kernel.sample)
+        initial_state = x.propagate_from(values=mean.clone())
+        
+        kernel = find_mode_of_distribution(self._model, x_dist, initial_state, std.clone(), y, self._n_steps, self._alpha, self._use_second_order)
+        x_result = initial_state.copy(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 

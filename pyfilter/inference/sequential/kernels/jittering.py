@@ -15,11 +15,8 @@ def _jitter(values: torch.Tensor, scale: Union[float, torch.Tensor]) -> torch.Te
             \hat{\theta} = \theta + \epsilon, \: \epsilon \sim \mathcal{N}(0, \sigma).
 
     Args:
-        values: values to jitter, i.e. :math:`\theta`.
-        scale: scale of the normal distribution used for jittering.
-
-    Returns:
-        Jittered values.
+        values (torch.Tensor): values to jitter, i.e. :math:`\theta`.
+        scale (Union[float, torch.Tensor]): scale of the normal distribution used for jittering.
     """
 
     return values + scale * torch.empty_like(values).normal_()
@@ -93,7 +90,7 @@ class JitterKernel(ABC):
 
     def __init__(self, std_threshold: float = EPS):
         """
-        Initializes :class:`JitterKernel` class.
+        Internal initializer for :class:`JitterKernel`.
 
         Args:
             std_threshold: the minimum allowed standard deviation to avoid issues relating to numerical precision
@@ -186,7 +183,7 @@ class LiuWestShrinkage(ShrinkingKernel):
 
     def __init__(self, a=0.98):
         """
-        Initializes the :class:`LiuWestShrinkage` class.
+        Internal initializer for :class:`LiuWestShrinkage`.
 
         Args:
              a: ``a`` parameter of the shrinkage kernel, controls the amount of shrinkage applied to the mean of
@@ -213,7 +210,7 @@ class ConstantKernel(ShrinkingKernel):
 
     def __init__(self, scale: Union[float, torch.Tensor]):
         """
-        Initializes the ``ConstantKernel`` class.
+        Internal initializer for ``ConstantKernel``.
 
         Args:
             scale: The constant bandwidth/scale to use.

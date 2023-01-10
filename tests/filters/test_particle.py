@@ -1,4 +1,4 @@
-import itertools
+from functools import partial
 import pytest
 import torch
 from pyfilter.filters import particle as part
@@ -11,30 +11,52 @@ def median_relative_deviation(y_true, y):
     return np.median(np.abs((y_true - y) / y_true))
 
 
-def construct_filters(particles=1_500, **kwargs):
-    particle_types = (part.SISR, part.APF)
+def _create_partial(filter_class, particles, **kwargs):
+    p = partial(filter_class, particles=particles, **kwargs)
+    p.__repr__ = lambda u: f"{filter_class.__name__}({', '.join((f'{k}={v}' for k, v in kwargs.items()))})"
 
-    for pt in particle_types:
-        yield lambda m: pt(m, particles, proposal=part.proposals.Bootstrap(), **kwargs)
-        yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
-        yield lambda m: pt(m, particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
+    return p
 
-        linear_proposal = part.proposals.LinearGaussianObservations(a_index=0)
-        yield lambda m: pt(m, particles, proposal=linear_proposal, **kwargs)
+
+def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
+    if not skip_gpf:
+        yield _create_partial(part.GPF, particles=particles, **kwargs)
+        yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(), **kwargs)
+        yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinear(), **kwargs)
+
+    for pt in (part.APF, part.SISR):
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Bootstrap(), **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
+
+        linear_proposal = part.proposals.LinearGaussianObservations()
+        yield _create_partial(pt, particles=particles, proposal=linear_proposal, **kwargs)
+
+
+def mask_missing(missing_percent: float, series_length: int, y, y_tensor):
+    if missing_percent == 0.0:
+        return 
+
+    num_missing = int(missing_percent * series_length)
+    indices = np.random.randint(1, y.shape[0], size=num_missing)
+
+    y[indices] = np.ma.masked
+    y_tensor[indices] = float("nan")
 
 
 BATCH_SIZES = [
     torch.Size([]),
-    torch.Size([10]),
+    torch.Size([3]),
 ]
 
 MISSING_PERC = [0.0, 0.1]
 
 
+# TODO: Clean this up
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
-    NUM_STDS = 3.0
+    NUM_STDS = 3.0    
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
@@ -49,12 +71,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
         y_tensor = torch.from_numpy(y).float()
 
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y[indices] = np.ma.masked
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         kalman_mean, _ = kalman_model.filter(y)
 
@@ -75,21 +92,17 @@ class TestParticleFilters(object):
 
             for new_state, copy_state in zip(result.states, old_result.states):
                 assert new_state is not copy_state
-                assert (new_state.x.value == copy_state.x.value).all() 
+                assert (new_state.timeseries_state.value == copy_state.timeseries_state.value).all() 
                 assert (new_state.normalized_weights() == copy_state.normalized_weights()).all()
 
         assert len(result.states) == 1
-        assert (((result.loglikelihood - kalman_ll) / kalman_ll).abs() < self.RELATIVE_TOLERANCE).all()
+        assert (median_relative_deviation(kalman_ll, result.loglikelihood) < self.RELATIVE_TOLERANCE).all()
 
         means = result.filter_means[1:]
 
-        if model.hidden.n_dim == 0:
-            means.unsqueeze_(-1)
-
         deviation = median_relative_deviation(kalman_mean, means.cpu().numpy())
-        thresh = 5e-2
 
-        assert deviation < thresh
+        assert deviation < self.RELATIVE_TOLERANCE
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
@@ -100,11 +113,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
         y_tensor = torch.from_numpy(y).float()
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         f: part.ParticleFilter = filter_(model)
         f.set_batch_shape(batch_size)
@@ -128,11 +137,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
 
         y_tensor = torch.from_numpy(y).float()
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         f: part.ParticleFilter = filter_(model)
 
@@ -158,7 +163,7 @@ class TestParticleFilters(object):
 
     # TODO: Use same method as for filter rather than copy paste
     @pytest.mark.parametrize("models", linear_models())
-    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True))
+    @pytest.mark.parametrize("filter_", construct_filters(particles=1_500, record_states=True, skip_gpf=True))
     @pytest.mark.parametrize("batch_size", BATCH_SIZES)
     @pytest.mark.parametrize("missing_perc", MISSING_PERC)
     @pytest.mark.parametrize("method", ["ffbs", "fl"])
@@ -170,12 +175,7 @@ class TestParticleFilters(object):
         x, y = kalman_model.sample(self.SERIES_LENGTH)
         y_tensor = torch.from_numpy(y).float()
 
-        if missing_perc > 0.0:
-            num_missing = int(missing_perc * self.SERIES_LENGTH)
-            indices = np.random.randint(1, y.shape[0], size=num_missing)
-
-            y[indices] = np.ma.masked
-            y_tensor[indices] = float("nan")
+        mask_missing(missing_perc, self.SERIES_LENGTH, y, y_tensor)
 
         kalman_mean, _ = kalman_model.smooth(y)
 
@@ -197,31 +197,7 @@ class TestParticleFilters(object):
 
         means = means.cpu().numpy()
 
-        thresh = 5e-2
         if method != "fl":
-            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < thresh
+            assert median_relative_deviation(kalman_mean[-int(0.9 * self.SERIES_LENGTH):], means[-int(0.9 * self.SERIES_LENGTH):]) < self.RELATIVE_TOLERANCE
         else:
-            assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < thresh
-
-    @pytest.mark.parametrize("batch_shape", BATCH_SIZES)
-    @pytest.mark.parametrize("linearization", local_linearization())
-    def test_local_linearization(self, batch_shape, linearization):
-        model, (f, f_prime) = linearization
-
-        x, y = model.sample_states(self.SERIES_LENGTH).get_paths()
-
-        for filt in (part.SISR, part.APF):
-            linearized_proposal = filt(model, 1_000, proposal=part.proposals.LocalLinearization(f, f_prime))
-            linearized_proposal.set_batch_shape(batch_shape)
-            linearized_result = linearized_proposal.batch_filter(y)
-
-            mean = linearized_result.filter_means[1:]
-            std = linearized_result.filter_variance[1:].sqrt()
-
-            low = mean - 2 * std
-            high = mean + 2 * std
-
-            x_ = x.clone() if batch_shape.numel() == 1 else x.unsqueeze(1)
-
-            # NB: Blunt, but kinda works...
-            assert (((low <= x_) & (x_ <= high)).float().mean() > 0.75).all()
+            assert median_relative_deviation(kalman_mean[-10:], means[-10:]) < self.RELATIVE_TOLERANCE

@@ -40,10 +40,10 @@ def mimic_arviz_posterior(
     Helper function for mimicking arviz plotting functionality.
 
     Args:
-        context: parameter context to plot.
-        state: associated state.
-        num_cols: the number of columns.
-        ax: pre-defined axes to use.
+        context (InferenceContext): parameter context to plot.
+        state (SequentialAlgorithmState): associated algorithm state.
+        num_cols (int): number of columns.
+        ax (Axes, optional): pre-defined axes to use.
     """
 
     if ax is None:

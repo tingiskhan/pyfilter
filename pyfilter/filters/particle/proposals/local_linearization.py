@@ -8,6 +8,7 @@ from .linear import LinearGaussianObservations
 Fun = Callable[[TimeseriesState, Tuple[torch.Tensor, ...]], torch.Tensor]
 
 
+# TODO: Fix this...
 class LocalLinearization(LinearGaussianObservations):
     r"""
     Proposal utilizing a local linearization of the observation dynamics around the mean of the latent process. That is,
@@ -29,18 +30,20 @@ class LocalLinearization(LinearGaussianObservations):
 
     def __init__(self, f: Fun, linearized_f: Fun, s_index=-1, is_variance=False):
         r"""
-        Initializes the :class:`LocalLinearization` class.
+        Internal initializer for :class:`LocalLinearization`.
 
         Args:
             f: corresponds to :math:`\alpha`.
             linearized_f: corresponds to :math:`\frac{d \alpha}{d x}`.
         """
 
-        super().__init__(s_index=s_index, is_variance=is_variance)
+        raise NotImplementedError("Currently does not work!")
+
+        super().__init__()
         self._f = f
         self._linearized_f = linearized_f
 
-    def get_offset_and_scale(
+    def _get_offset_and_scale(
         self, x: TimeseriesState, parameters: Tuple[torch.Tensor, ...]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         mean, _ = self._model.hidden.mean_scale(x)

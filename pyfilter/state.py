@@ -11,7 +11,7 @@ class BaseResult(dict):
 
     def __init__(self):
         """
-        Initializes the :class:`BaseResult` class.
+        Internal initializer for :class:`BaseResult`.
         """
 
         super().__init__()
@@ -22,7 +22,7 @@ class BaseResult(dict):
         Exchanges the :attr:`tensor_tuples` of self with that of ``other``.
 
         Args:
-            other: the other state to exchange with.
+            other (BaseResult): the other state to exchange with.
         """
 
         for k, v in other.tensor_tuples.items():
@@ -40,7 +40,7 @@ class BaseResult(dict):
         Loads state from existing state dictionary.
 
         Args:
-            state_dict: state dictionary to load from.
+            state_dict (OrderedDict[str, Any]): state dictionary to load from.
         """
 
         self.tensor_tuples.load_state_dict(state_dict["tensor_tuples"])

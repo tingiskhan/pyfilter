@@ -15,21 +15,20 @@ class BaseProposal(ABC):
 
     def __init__(self):
         """
-        Initializes the :class:`BaseProposal` class.
+        Internal initializer for :class:`BaseProposal`.
         """
 
     def build(
         self, context: InferenceContext, state: FilterAlgorithmState, filter_: BaseFilter, y: torch.Tensor
     ) -> Distribution:
         r"""
-        Method to be overridden by derived classes. Given the latest state, filter and dataset, generate a proposal
-        kernel from which to sample a candidate sample :math:`\theta^*`.
+        Method to be overridden by derived classes. Generates a proposal kernel from which to sample a candidate sample :math:`\theta^*`.
 
         Args:
-            context: the context to use.
-            state: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
-            filter_: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
-            y: see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
+            context (InferenceContext): context to use.
+            state (FilterAlgorithmState): see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
+            filter_ (BaseFilter): see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
+            y (torch.Tensor): see :meth:`pyfilter.inference.batch.mcmc.utils.run_pmmh`.
         """
 
         raise NotImplementedError()
@@ -41,11 +40,9 @@ class BaseProposal(ABC):
         should be given the parameters of ``candidate``.
 
         Args:
-            latest: the latest kernel, the distribution that is supposed to receive distributional parameters from
-                ``candidate``.
-            candidate: The candidate kernel.
-            mask: the accepted mask of ``candidate``.
-
+            latest (Distribution): kernel whose parameters are to be exchange with ``candidate``.
+            candidate (Distribution): candidate kernel.
+            mask (torch.Tensor): mask of parameters of ``candidate`` to exchange with ``latest``.
         """
 
         raise NotImplementedError()

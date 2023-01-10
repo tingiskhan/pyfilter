@@ -41,7 +41,7 @@ class InferenceContext(object):
 
     def __init__(self):
         """
-        Initializes the :class:`InferenceContext` class.
+        Internal initializer for :class:`InferenceContext`.
         """
 
         self._prior_dict: Dict[str, Distribution] = OrderedDict([])
@@ -114,11 +114,8 @@ class InferenceContext(object):
         Registers a prior on the global prior dictionary, and creates a corresponding parameter.
 
         Args:
-            name: name of the prior and parameter to register.
-            prior: prior object.
-
-        Returns:
-            Returns a :class:`PriorBoundParameter`.
+            name (str): name of the prior and parameter to register.
+            prior (Distribution): prior object.
         """
 
         if self.batch_shape is None:
@@ -153,10 +150,7 @@ class InferenceContext(object):
         Gets the parameter named ``name``.
 
         Args:
-            name: name of the parameter.
-
-        Returns:
-            Returns the prior.
+            name (str): name of the parameter.
         """
 
         if name in self._parameter_dict:
@@ -178,7 +172,7 @@ class InferenceContext(object):
         total batch shape, and the last corresponds to the stacked and flattened samples of the distributions.
 
         Args:
-             constrained: whether to stack the constrained or unconstrained parameters.
+             constrained (bool): whether to stack the constrained or unconstrained parameters.
         """
 
         res = tuple()
@@ -192,10 +186,6 @@ class InferenceContext(object):
         return torch.cat(res, dim=-1)
 
     def _apply_to_params(self, x: torch.Tensor, shape_dict, f):
-        r"""
-        Utility method.
-        """
-
         index = 0
         for n, p in self.get_parameters():
             numel = shape_dict[n].numel()
@@ -210,8 +200,8 @@ class InferenceContext(object):
         Un-stacks and updates parameters given the :class:`torch.Tensor` ``x``.
 
         Args:
-            x: the tensor to unstack and use for updating.
-            constrained: whether the values of ``x`` are considered constrained.
+            x (torch.Tensor): tensor to unstack and use for updating.
+            constrained (bool): whether the values of ``x`` are considered constrained.
         """
 
         shape_dict = self._shape_dict if constrained else self._unconstrained_shape_dict
@@ -233,7 +223,7 @@ class InferenceContext(object):
         Evaluates the priors.
 
         Args:
-            constrained: whether to evaluate the constrained parameters.
+            constrained (bool): whether to evaluate the constrained parameters.
         """
 
         return sum(p.eval_prior(constrained=constrained) for _, p in self.get_parameters())
@@ -243,8 +233,8 @@ class InferenceContext(object):
         Exchanges the parameters of ``self`` with that of ``other``.
 
         Args:
-            other: the :class:`InferenceContext` to take the values from.
-            mask: the mask from where to take.
+            other (InferenceContext): :class:`InferenceContext` to exchange with.
+            mask (torch.Tensor): a mask indicating what to exchange.
         """
 
         for n, p in self.get_parameters():
@@ -257,7 +247,7 @@ class InferenceContext(object):
         Resamples the parameters of ``self`` given ``indices``.
 
         Args:
-            indices: the indices at which to resample.
+            indices (torch.Tensor): the indices at which to resample.
         """
 
         for _, p in self.get_parameters():
@@ -289,7 +279,7 @@ class InferenceContext(object):
         are same as when saving the initial state, it does not compare the actual distribution.
 
         Args:
-            state_dict: state of other context.
+            state_dict (OrderedDict[str, Any]): state of context to load.
         """
 
         assert set(self.parameters.keys()) == set(state_dict[self._PARAMETER_KEY].keys())
@@ -307,7 +297,7 @@ class InferenceContext(object):
         Applies ``f`` to each parameter of ``self`` and returns a new :class:`InferenceContext`.
 
         Args:
-            f: function to apply.
+            f (Callable[[PriorBoundParameter], torch.Tensor]): function to apply.
         """
 
         new_context = self.make_new()
@@ -339,7 +329,10 @@ class QuasiInferenceContext(InferenceContext):
 
     def __init__(self, randomize: bool = True):
         """
-        Initializes the :class:`QuasiInferenceContext` class.
+        Internal initializer for :class:`QuasiInferenceContext`.
+
+        Args:
+            randomize (bool): whether to randomize the quasi samples.
         """
 
         super().__init__()
@@ -369,6 +362,10 @@ class QuasiInferenceContext(InferenceContext):
 def make_context(use_quasi: bool = False, randomize: bool = True) -> InferenceContext:
     """
     Helper method for creating a context.
+
+    Args:
+        use_quasi (bool): whether to use quasi Monte Carlo.
+        randomize (bool): see :class:`QuasiInferenceContext`.
     """
 
     if use_quasi:

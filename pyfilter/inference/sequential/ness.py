@@ -1,6 +1,4 @@
 from abc import ABC
-from typing import Optional
-
 from torch import isfinite
 
 from ..context import InferenceContext
@@ -18,17 +16,17 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     Abstract base class for purely online particle algorithms.
     """
 
-    def __init__(self, filter_, particles, kernel: Optional[JitterKernel] = None, discrete=False, context=None):
+    def __init__(self, filter_, particles, kernel: JitterKernel = None, discrete=False, context=None):
         """
-        Initializes the :class:`BaseOnlineAlgorithm` class.
+        Internal initializer for :class:`BaseOnlineAlgorithm`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            kernel: optional parameter. The jittering kernel to use when mutating particles from :math:`t` to
-                :math:`t+1`. If ``None`` defaults to using
-                :class:`pyfilter.inference.sequential.kernels.NonShrinkingKernel`.
-            discrete: see :class:`pyfilter.inference.sequential.kernels.OnlineKernel`.
+            filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
+            kernel (JitterKernel, optional): jittering kernel to use when mutating particles from :math:`t`
+            to :math:`t+1`. Defaults to None.
+            discrete (bool, optional): see :class:`~pyfilter.inference.sequential.kernels.OnlineKernel`. Defaults to False.
+            context (InferenceContext, optional): see :class:`SequentialParticleAlgorithm`.. Defaults to None.
         """
 
         super().__init__(filter_, particles, context=context)
@@ -45,10 +43,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
         Method to be overridden by derived subclasses, decides when to perform an update step of particle approximation.
 
         Args:
-            state: the current state of the algorithm
-
-        Returns:
-              A bool indicating whether to perform an update.
+            state (SequentialAlgorithmState): current state of the algorithm.
         """
 
         raise NotImplementedError()
@@ -73,12 +68,12 @@ class NESS(BaseOnlineAlgorithm):
 
     def __init__(self, filter_, particles, threshold=0.9, **kwargs):
         """
-        Initializes the :class:`NESS` class.
+        Internal initializer for :class:`NESS`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            threshold: the relative ESS threshold at when update the particles.
+            filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
+            threshold (float, optional):  relative ESS threshold at when update the particles.. Defaults to 0.9.
         """
 
         super().__init__(filter_, particles, **kwargs)
@@ -96,12 +91,12 @@ class FixedWidthNESS(BaseOnlineAlgorithm):
 
     def __init__(self, filter_, particles, block_len=125, **kwargs):
         """
-        Initializes the :class:`FixedWidthNESS` class.
+        Internal initializer for :class:`FixedWidthNESS`.
 
         Args:
-            filter_: see base.
-            particles: see base.
-            block_len: the length of the block of observations to parse before updating the particles.
+            filter_ (BaseFilter): see :class:`SequentialParticleAlgorithm`.
+            particles (int): see :class:`SequentialParticleAlgorithm`.
+            block_len (int, optional): length of the block of observations to parse before updating the particles. Defaults to 125.
         """
 
         super().__init__(filter_, particles, **kwargs)

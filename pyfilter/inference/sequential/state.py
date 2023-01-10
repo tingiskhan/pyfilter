@@ -1,6 +1,6 @@
 import torch
 
-from ...filters import FilterResult, FilterState
+from ...filters import FilterResult, Correction
 from ...utils import get_ess, normalize
 from ..state import FilterAlgorithmState
 
@@ -12,12 +12,11 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
-        Initializes the :class:`SequentialAlgorithmState` class.
+        Internal initializer for :class:`SequentialAlgorithmState`.
 
         Args:
-            weights: the log weights associated with the particle approximation.
-            filter_state: the current state of the filter. Somewhat misnamed as we keep track of the entire history of
-                the filter, should perhaps be called ``filter_result``.
+            weights (torch.Tensor): initial log weights associated with the particle approximation.
+            filter_state (FilterResult): current state of the filter.
         """
 
         super().__init__(filter_state)
@@ -33,12 +32,12 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
         return self.tensor_tuples.get_as_tensor("ess")
 
-    def append(self, filter_state: FilterState):
+    def append(self, filter_state: Correction):
         """
         Updates ``self`` given a new filter state.
 
         Args:
-            filter_state: The latest filter state.
+            filter_state (Correction): latest filter state.
         """
 
         self.w += filter_state.get_loglikelihood()
@@ -66,6 +65,7 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
+        super().load_state_dict(state_dict)
         self.w = state_dict["w"]
         self.current_iteration = state_dict["current_iteration"]
 
@@ -78,11 +78,11 @@ class SMC2State(SequentialAlgorithmState):
 
     def __init__(self, weights: torch.Tensor, filter_state: FilterResult):
         """
-        Initializes the :class:`SMC2State` class.
+        Internal initializer for :class:`SMC2State`.
 
         Args:
-            weights: see base:
-            filter_state: see base.
+            weights: see :class:`SequentialAlgorithmState`.
+            filter_state: see :class:`SequentialAlgorithmState`.
         """
 
         super().__init__(weights, filter_state)

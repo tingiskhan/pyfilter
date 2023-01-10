@@ -1,6 +1,12 @@
 # Changelog
 
 # v0.26.1
+ - Adds the Gaussian Particle Filter
+ - Reworks correct/predict logic by enforcing that correct only takes a prediction as input
+ - Simplifies proposal logic
+ - Uses latest version of stoch-proc
+
+# v0.26.0
  - Reworks how we define parameters by initializing all parameters to their "correct" shapes from the get-go by introducing a shape object stored on `InferenceContext`.
 
 # v0.25.1

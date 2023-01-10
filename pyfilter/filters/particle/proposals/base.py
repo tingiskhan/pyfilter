@@ -1,12 +1,14 @@
 from abc import ABC
-from typing import Callable
+from typing import Callable, Tuple
 
 import torch
 from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
                                   TimeseriesState)
 from torch.distributions import Distribution
-
+from typing import Callable
+from abc import ABC
 from .pre_weight_funcs import get_pre_weight_func
+from ..state import ParticleFilterPrediction
 
 
 class Proposal(ABC):
@@ -18,16 +20,15 @@ class Proposal(ABC):
         self, pre_weight_func: Callable[[StructuralStochasticProcess, TimeseriesState], TimeseriesState] = None
     ):
         """
-        Initializes the :class:`Proposal` object.
+        Internal initializer for :class:`Proposal`.
 
         Args:
-            pre_weight_func: `f`unction used in the :class:`APF` when weighing the particles to be propagated. A common
-                choice is :math:`p(y_t | E_t[x_{t-1}])`, where :math:`E_t[...]` denotes the expected value of the
-                stochastic process at time :math:`t`` using the values at :math:`t-1`.
+            pre_weight_func: function used in :class:`APF` when weighing the particles to be propagated. A common
+            choice is :math:`p(y_t | E_t[x_{t-1}])`.
         """
 
         super().__init__()
-        self._model = None  # type: StateSpaceModel
+        self._model: StateSpaceModel = None
         self._pre_weight_func = pre_weight_func
 
     def set_model(self, model: StateSpaceModel):
@@ -35,7 +36,7 @@ class Proposal(ABC):
         Sets the model to be used in the proposal.
 
         Args:
-            model: the model to consider.
+            model (StateSpaceModel): the model to consider.
         """
 
         self._model = model
@@ -47,16 +48,17 @@ class Proposal(ABC):
         self, y: torch.Tensor, x_dist: Distribution, x_new: TimeseriesState, kernel: Distribution
     ) -> torch.Tensor:
         y_dist = self._model.build_density(x_new)
-        return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)
 
-    def sample_and_weight(self, y: torch.Tensor, x: TimeseriesState) -> (TimeseriesState, torch.Tensor):
+        return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)        
+
+    def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction) -> Tuple[TimeseriesState, torch.Tensor]:
         """
-        Method to be derived by inherited classes. Given the current observation ``y`` and previous state ``x``, this
+        Method to be derived by inherited classes. Given the current observation ``y`` and prediction ``x`` of the particle filter this
         method samples new state values and weighs them accordingly.
 
         Args:
-            y: the current observation.
-            x: the previous state.
+            y (torch.Tensor): current observation.
+            x (ParticleFilterPrediction): predicted filter state.
 
         Returns:
             The new state together with the associated weights.
@@ -70,8 +72,8 @@ class Proposal(ABC):
         candidate particles to select for propagation.
 
         Args:
-            y: the current observation.
-            x: the previous state.
+            y (torch.Tensor): the current observation.
+            x (TimeseriesState): the previous state.
 
         Returns:
             Returns the log weights associated with the previous state particles.
