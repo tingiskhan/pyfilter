@@ -16,7 +16,7 @@ def filterpy_systematic_resample(weights, u):
     # make N subdivisions, and choose positions with a consistent random offset
     positions = (u + np.arange(N)) / N
 
-    indexes = np.zeros(N, "i")
+    indexes = np.zeros(N)
     cumulative_sum = np.cumsum(weights)
     i, j = 0, 0
     while i < N:
@@ -28,14 +28,16 @@ def filterpy_systematic_resample(weights, u):
     return indexes
 
 
+torch.random.manual_seed(123)
+
+
 @fixture
 def weights():
-    return normalize(torch.randn((10, 300)))
+    return normalize(torch.randn((10, 300), dtype=torch.float64))
 
 
 class TestResampling(object):
-    def test_systematic(self, weights):
-        torch.random.manual_seed(123)
+    def test_systematic(self, weights):        
         u = torch.rand(weights.shape)
 
         pyfilter_inds = systematic(weights, u=u, normalized=True).numpy()
