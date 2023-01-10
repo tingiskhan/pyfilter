@@ -43,7 +43,7 @@ class FilterResult(BaseResult, Generic[TCorrection]):
 
     @property
     def loglikelihood(self) -> torch.Tensor:
-        """
+        r"""
         Returns the current estimate of the total log likelihood, :math:`\log p(y_{1:t})`.
         """
 
@@ -53,7 +53,7 @@ class FilterResult(BaseResult, Generic[TCorrection]):
     def filter_means(self) -> torch.Tensor:
         """
         Returns the estimated filter means, of shape
-        ``(timesteps, [batch shape], latent dimension)``.
+        ``{timesteps, [batch shape], latent dimension}``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_means")
@@ -62,7 +62,7 @@ class FilterResult(BaseResult, Generic[TCorrection]):
     def filter_variance(self) -> torch.Tensor:
         """
         Returns the estimated filter variances, of shape
-        ``(timesteps, [batch shape], latent dimension)``.
+        ``{timesteps, [batch shape], latent dimension}``.
         """
 
         return self.tensor_tuples.get_as_tensor("filter_variances")
