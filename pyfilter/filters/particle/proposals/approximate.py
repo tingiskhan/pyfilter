@@ -17,7 +17,7 @@ class GaussianProposal(Proposal):
     """
 
     # TODO: Perhaps rename?
-    def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction) -> Tuple[TimeseriesState, torch.Tensor]:
+    def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction):
         predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
 
         timeseries_state = prediction.get_timeseries_state()
@@ -36,15 +36,6 @@ class GaussianProposal(Proposal):
         return GaussianProposal()
 
 
-def _unsqueeze(x: torch.Tensor, y: torch.Tensor, dim: bool):
-    if dim == 0:
-        return x.clone(), y.clone()
-    
-    unsqueeze_dim = -(dim + 1)
-
-    return x.unsqueeze(unsqueeze_dim), y.unsqueeze(unsqueeze_dim)
-
-
 class GaussianLinearized(Linearized):
     """
     Same as :class:`Linearized`, but in which we use an approximation of the predictive density.
@@ -52,19 +43,17 @@ class GaussianLinearized(Linearized):
 
     def sample_and_weight(self, y, prediction):        
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=self._model.hidden.n_dim > 0)
 
         mean_state = timeseries_state.copy(values=predictive_mean)
         
         mean, std = self._model.hidden.mean_scale(mean_state)
         std = (predictive_variance + std.pow(2.0)).sqrt()
 
-        mean, std = _unsqueeze(mean, std, self._model.hidden.n_dim)
-
-        initial_state = mean_state.propagate_from(values=mean)
+        initial_state = mean_state.propagate_from(values=mean.clone())
 
         predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
-        kernel = find_mode_of_distribution(self._model, predictive_distribution, initial_state, std, y, self._n_steps, self._alpha, self._use_second_order).expand(timeseries_state.batch_shape)
+        kernel = find_mode_of_distribution(self._model, predictive_distribution, initial_state, std.clone(), y, self._n_steps, self._alpha, self._use_second_order).expand(timeseries_state.batch_shape)
         
         x_result = timeseries_state.copy(values=kernel.sample())
 
@@ -86,14 +75,12 @@ class GaussianLinear(LinearGaussianObservations):
 
     def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=self._model.hidden.n_dim > 0)
         
         mean_state = timeseries_state.copy(values=predictive_mean)
 
         mean, scale = self._model.hidden.mean_scale(mean_state)
         h_var_inv = (scale.pow(2.0) + predictive_variance).pow(-1.0)
-
-        mean, h_var_inv = _unsqueeze(mean, h_var_inv, self._model.hidden.n_dim)
 
         a, b, s = self._model.transformed_parameters()
         a, offset = self._get_offset_and_scale(mean, a, b)
