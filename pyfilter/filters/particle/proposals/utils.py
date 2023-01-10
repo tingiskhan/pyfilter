@@ -8,7 +8,7 @@ from torch.autograd import grad
 from ....utils import construct_diag_from_flat
 
 
-# TODO: Clean this up...
+# TODO: Use functorch...?
 def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, initial_state: TimeseriesState, std: torch.Tensor, y: torch.Tensor, n_steps: int = 1, alpha: float = 1e-3, use_second_order = False) -> Distribution:
     """
     Finds the mode of the joint distribution given by ``model``.
@@ -27,6 +27,9 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
         Distribution: returns a normal approximation of the optimal density utilizing the mode.
     """
 
+    fill_mean = initial_state.value.clone()
+    fill_std = std.clone()
+
     mean = initial_state.value
 
     for _ in range(n_steps):
@@ -36,25 +39,35 @@ def find_mode_of_distribution(model: StateSpaceModel, x_dist: Distribution, init
         logl = y_dist.log_prob(y) + x_dist.log_prob(mean)
         gradient = grad(logl, mean, grad_outputs=torch.ones_like(logl), create_graph=use_second_order)[-1]
 
-        ones_like_g = torch.ones_like(gradient)
-        step = alpha * ones_like_g
         if use_second_order:
-            neg_inv_hess = -grad(gradient, mean, grad_outputs=ones_like_g)[-1].pow(-1.0)
+            diag_hess = grad(gradient, mean, grad_outputs=torch.ones_like(gradient))[-1]
 
-            # TODO: There is a better approach in Dahlin, find it
-            mask = neg_inv_hess > 0.0
+            if model.n_dim > 0:
+                v = diag_hess.min(dim=-1).values.unsqueeze(-1)
+            else:
+                v = diag_hess
 
-            step[mask] = neg_inv_hess[mask]
-            std[mask] = neg_inv_hess[mask].sqrt()
+            dh = (2 * v).clip(min=0.0)
+            
+            step = -(diag_hess - dh).pow(-1)
+            std = step.sqrt()
 
             gradient = gradient.detach()
-
+        else:
+            step = alpha
+        
         mean = mean.detach()
         mean += step * gradient
         initial_state = initial_state.copy(values=mean)
 
-    kernel = Normal(mean, std.nan_to_num(alpha))
-    if model.hidden.event_shape.numel() > 1:
+    # TODO: Use masked scatter
+    mask = ~(mean.isfinite() & std.isfinite())
+
+    mean[mask] = fill_mean[mask]
+    std[mask] = fill_std[mask]
+
+    kernel = Normal(mean, std)
+    if model.hidden.n_dim > 0:
         kernel = kernel.to_event(1)
     
     return kernel
