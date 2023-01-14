@@ -1,12 +1,10 @@
 import torch
-from stochproc.timeseries import TimeseriesState
-from typing import Tuple
 
 from ..state import ParticleFilterPrediction
 from .base import Proposal
 from .linearized import Linearized
 from .linear import LinearGaussianObservations
-from .utils import find_mode_of_distribution, find_optimal_density
+from .utils import find_optimal_density
 from ..utils import get_filter_mean_and_variance
 
 
@@ -41,7 +39,7 @@ class GaussianLinearized(Linearized):
     Same as :class:`Linearized`, but in which we use an approximation of the predictive density.
     """
 
-    def sample_and_weight(self, y, prediction):        
+    def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
         predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=self._model.hidden.n_dim > 0)
 
@@ -53,9 +51,9 @@ class GaussianLinearized(Linearized):
         initial_state = mean_state.propagate_from(values=mean.clone())
 
         predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
-        kernel = find_mode_of_distribution(self._model, predictive_distribution, initial_state, std.clone(), y, self._n_steps, self._alpha, self._use_second_order).expand(timeseries_state.batch_shape)
+        kernel = self._mode_finder.find_mode_legacy(predictive_distribution, initial_state, std, y)
         
-        x_result = timeseries_state.copy(values=kernel.sample())
+        x_result = timeseries_state.copy(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, predictive_distribution, x_result, kernel)
 
