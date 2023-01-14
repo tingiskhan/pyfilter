@@ -26,11 +26,14 @@ def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
 
     for pt in (part.APF, part.SISR):
         yield _create_partial(pt, particles=particles, proposal=part.proposals.Bootstrap(), **kwargs)
-        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5), **kwargs)
-        yield _create_partial(pt, particles=particles, proposal=part.proposals.Linearized(n_steps=5, use_second_order=True), **kwargs)
 
-        linear_proposal = part.proposals.LinearGaussianObservations()
-        yield _create_partial(pt, particles=particles, proposal=linear_proposal, **kwargs)
+        for use_hessian in [False, True]:
+            for use_functorch in [False, True]:
+                proposal = part.proposals.Linearized(n_steps=2, use_second_order=use_hessian, use_functorch=use_functorch)
+                yield _create_partial(pt, particles=particles, proposal=proposal, **kwargs)
+
+        proposal = part.proposals.LinearGaussianObservations()
+        yield _create_partial(pt, particles=particles, proposal=proposal, **kwargs)
 
 
 def mask_missing(missing_percent: float, series_length: int, y, y_tensor):
@@ -56,7 +59,6 @@ MISSING_PERC = [0.0, 0.1]
 class TestParticleFilters(object):
     RELATIVE_TOLERANCE = 1e-1
     SERIES_LENGTH = 100
-    NUM_STDS = 3.0    
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("filter_", construct_filters())
