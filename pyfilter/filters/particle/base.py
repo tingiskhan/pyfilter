@@ -47,6 +47,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         self._proposal: Proposal = proposal
 
+    # TODO: Invert this and rejoice
     @property
     def particles(self) -> torch.Size:
         """

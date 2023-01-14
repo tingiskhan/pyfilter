@@ -54,6 +54,8 @@ class ModeFinder(object):
 
         self.initialized = False
     
+    # TODO: Nesting doesn't work out of the box as the last dimension of the parameters aren't congruent. 
+    # Perhaps use vmap in filters instead? Or invert shapes, i.e. we [filter_shape, parameter_shape]... This would enable smoother batching?
     def initialize(self, batch_shape: torch.Size):
         """
         Initializes the class for the first time.
@@ -76,8 +78,8 @@ class ModeFinder(object):
 
             in_dims = (j, None, j, parameter_dims, None, None)
   
-            grad_fun = vmap(grad_fun, in_dims=in_dims)
-            hess_fun = vmap(hess_fun, in_dims=in_dims)
+            grad_fun = vmap(grad_fun, in_dims=in_dims, out_dims=j)
+            hess_fun = vmap(hess_fun, in_dims=in_dims, out_dims=j)
 
         self._grad_fun = grad_fun
         self._hess_fun = hess_fun
