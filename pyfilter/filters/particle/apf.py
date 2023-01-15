@@ -19,7 +19,7 @@ class APF(ParticleFilter):
         old_indices = torch.arange(normalized_weigths.shape[0], device=normalized_weigths.device)
 
         if self.batch_shape:
-            old_indices = old_indices.unsqueeze(-1).repeat_interleave(self.batch_shape[0], dim=-1)
+            old_indices = old_indices.unsqueeze(-1).expand(self.particles)
 
         return ParticleFilterPrediction(state.timeseries_state, state.weights, normalized_weigths, old_indices)
 
