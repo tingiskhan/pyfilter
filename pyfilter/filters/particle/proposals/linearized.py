@@ -55,15 +55,15 @@ class Linearized(Proposal):
         # TODO: Re-use predictive density?
         mean, std = self._model.hidden.mean_scale(x)
 
-        if not self._mode_finder.initialized:
+        if not self._mode_finder.initialized and self._use_functorch:
             self._mode_finder.initialize(x.batch_shape)
 
         x_dist = prediction.get_predictive_density(self._model)
 
         if self._use_functorch:
-            kernel = self._mode_finder.find_mode(x.value, mean, y, std, x)
+            kernel = self._mode_finder.find_mode(x.value, mean, y, std.clone(), x)
         else:
-            kernel = self._mode_finder.find_mode_legacy(x_dist, x.propagate_from(values=mean), std, y)
+            kernel = self._mode_finder.find_mode_legacy(x_dist, x.propagate_from(values=mean.clone()), std.clone(), y)
 
         x_result = x.propagate_from(values=kernel.sample)        
 
