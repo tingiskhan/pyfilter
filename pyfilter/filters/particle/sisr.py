@@ -40,7 +40,7 @@ class SISR(ParticleFilter):
 
         unsqueezed_mask = mask.unsqueeze(0)
         weights = state.weights.masked_fill(unsqueezed_mask, 0.0)
-        normalized_weigths = normalized_weigths.masked_fill(unsqueezed_mask, 1.0 / weights.shape[-1])
+        normalized_weigths = normalized_weigths.masked_fill(unsqueezed_mask, 1.0 / weights.shape[0])
 
         return ParticleFilterPrediction(resampled_state, weights, normalized_weigths, indices=all_indices)
 
