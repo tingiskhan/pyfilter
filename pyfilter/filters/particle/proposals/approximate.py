@@ -8,7 +8,7 @@ from .utils import find_optimal_density
 from ..utils import get_filter_mean_and_variance
 
 
-# TODO: Clean up? Perhaps move to separate modules for "exact" and approximate
+# TODO: Fix GPF proposals shapes, a bit whacky
 class GaussianProposal(Proposal):
     """
     Implements a proposal distribution based on a Gaussian approximation.
@@ -41,8 +41,9 @@ class GaussianLinearized(Linearized):
 
     def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=self._model.hidden.n_dim > 0)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
 
+        # TODO: Figure out broadcasting
         mean_state = timeseries_state.copy(values=predictive_mean)
         
         mean, std = self._model.hidden.mean_scale(mean_state)
@@ -53,7 +54,7 @@ class GaussianLinearized(Linearized):
         predictive_distribution = prediction.get_predictive_density(self._model, approximate=True)
         kernel = self._mode_finder.find_mode_legacy(predictive_distribution, initial_state, std, y)
         
-        x_result = timeseries_state.copy(values=kernel.sample)
+        x_result = timeseries_state.copy(values=kernel.expand(timeseries_state.batch_shape).sample)
 
         return x_result, self._weight_with_kernel(y, predictive_distribution, x_result, kernel)
 
@@ -73,7 +74,7 @@ class GaussianLinear(LinearGaussianObservations):
 
     def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=self._model.hidden.n_dim > 0)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
         
         mean_state = timeseries_state.copy(values=predictive_mean)
 
