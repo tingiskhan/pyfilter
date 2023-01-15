@@ -38,7 +38,7 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
         w = w.unsqueeze(0)
 
     shape = (w.shape[0], 1)
-    u = u if u is not None else (torch.empty(shape, device=w.device)).uniform_()
+    u = u if u is not None else torch.empty(shape, device=w.device).uniform_()
 
     n = w.shape[1]
     index_range = torch.arange(n, dtype=u.dtype, device=w.device).unsqueeze(0)
