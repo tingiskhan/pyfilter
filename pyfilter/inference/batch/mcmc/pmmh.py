@@ -49,9 +49,8 @@ class PMMH(BaseAlgorithm):
 
         self.num_samples = num_samples
         self._num_chains = torch.Size([num_chains])
-        self._parameter_shape = torch.Size([num_chains, 1])
 
-        self.context.set_batch_shape(self._parameter_shape)
+        self.context.set_batch_shape(self._num_chains)
         self.filter.set_batch_shape(self._num_chains)
 
         self._proposal = proposal or RandomWalk()
@@ -84,7 +83,7 @@ class PMMH(BaseAlgorithm):
 
             with self.context.make_new() as sub_context:
                 proposal_filter = self.filter.copy()
-                sub_context.set_batch_shape(self._parameter_shape)
+                sub_context.set_batch_shape(self._num_chains)
                 proposal_filter.initialize_model(sub_context)
 
             for i in range(self.num_samples):

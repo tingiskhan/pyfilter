@@ -55,7 +55,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         ``torch.Size([number of parallel filters, number of particles])``, else ``torch.Size([number of particles])``.
         """
 
-        return torch.Size([*self.batch_shape, *self._base_particles])
+        return torch.Size([*self._base_particles, *self.batch_shape, ])
 
     @property
     def proposal(self) -> Proposal:
@@ -84,30 +84,28 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         device = x.value.device
 
         w = torch.zeros(self.particles, device=device)
-        prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
+        prev_inds = torch.arange(w.shape[0], device=device)
+        
+        if self.batch_shape:
+            prev_inds = prev_inds.unsqueeze(-1).repeat_interleave(self.batch_shape[0], dim=-1)
+            
         ll = torch.zeros(self.batch_shape, device=device)
 
         return ParticleFilterCorrection(x, w, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
-        state_dim = -(1 + self.ssm.hidden.n_dim)
-        dim = len(self.batch_shape)
-
+        dim = 0
         res = [batched_gather(states[-1].timeseries_state.value, self._resampler(states[-1].weights), dim=dim)]
 
         for state in reversed(states[:-1]):
             density = self.ssm.hidden.build_density(state.timeseries_state)
 
-            # TODO: Last transpose might not be necessary, figure it out
-            w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
+            # TODO: Something is wrong here, fix
+            w_state = density.log_prob(res[-1].unsqueeze(1))
+            w = state.weights.unsqueeze(1) + w_state
 
-            if self.batch_shape:
-                w_state = w_state.transpose(0, 1)
-
-            w = state.weights.unsqueeze(-2) + w_state
-
-            cat = Categorical(logits=w)
-            res.append(batched_gather(state.timeseries_state.value, cat.sample(), dim=dim))
+            indices = Categorical(logits=w.moveaxis(0, 1)).sample()
+            res.append(batched_gather(state.timeseries_state.value, indices, dim=dim))
 
         return torch.stack(res[::-1], dim=0)
 
@@ -116,9 +114,12 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         latest_state = next(reversed_states)
         result = (latest_state.timeseries_state.value,)
-        prev_inds = torch.ones_like(latest_state.previous_indices).cumsum(dim=-1) - 1
+        prev_inds = torch.arange(0, self._base_particles[0], device=result[-1].device)
+        
+        if self.batch_shape:
+            prev_inds = prev_inds.unsqueeze(-1).repeat_interleave(self.batch_shape[-1], dim=-1)
 
-        dim = len(self.batch_shape)
+        dim = 0
         for s in reversed_states:
             prev_inds = batched_gather(latest_state.previous_indices, prev_inds, dim=dim)
             result += (batched_gather(s.timeseries_state.value, prev_inds, dim=dim),)

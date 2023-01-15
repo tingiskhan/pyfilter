@@ -2,7 +2,6 @@ import torch
 
 from ..utils import batched_gather
 
-from ..utils import batched_gather
 from .base import ParticleFilter
 from .state import ParticleFilterPrediction, ParticleFilterCorrection
 from .utils import log_likelihood
@@ -17,7 +16,10 @@ class APF(ParticleFilter):
 
     def predict(self, state):
         normalized_weigths = state.normalized_weights()
-        old_indices = torch.zeros_like(state.previous_indices) + torch.arange(normalized_weigths.shape[-1], device=normalized_weigths.device)
+        old_indices = torch.arange(normalized_weigths.shape[0], device=normalized_weigths.device)
+
+        if self.batch_shape:
+            old_indices = old_indices.unsqueeze(-1).repeat_interleave(self.batch_shape[0], dim=-1)
 
         return ParticleFilterPrediction(state.timeseries_state, state.weights, normalized_weigths, old_indices)
 
@@ -29,13 +31,15 @@ class APF(ParticleFilter):
 
         indices = self._resampler(resample_weights)
 
-        dim = len(self.batch_shape)
+        dim = 0
         resampled_x = timeseries_state.copy(values=batched_gather(timeseries_state.value, indices, dim))
-        resampled_prediction = ParticleFilterPrediction(resampled_x, torch.zeros_like(resample_weights), torch.ones_like(resample_weights) / resample_weights.shape[-1], None)
+
+        temp_weights = torch.zeros_like(resample_weights)
+        resampled_prediction = ParticleFilterPrediction(resampled_x, temp_weights, temp_weights + 1.0 / pre_weights.shape[0], None)
 
         x, weights = self._proposal.sample_and_weight(y, resampled_prediction)
 
-        w = weights - pre_weights.gather(dim, indices)
-        ll = log_likelihood(w) + torch.einsum("...i, ...i -> ...", prediction.normalized_weights, pre_weights.exp()).log()
+        weights = weights - pre_weights.gather(dim, indices)
+        ll = log_likelihood(weights) + (prediction.normalized_weights * pre_weights.exp()).sum(dim=0).log()
 
-        return ParticleFilterCorrection(x, w, ll, indices)
+        return ParticleFilterCorrection(x, weights, ll, indices)

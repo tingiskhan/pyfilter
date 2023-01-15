@@ -30,10 +30,9 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
         super().__init__(filter_, context=context)
 
         self.particles = torch.Size([num_particles])
-        self._parameter_shape = torch.Size([num_particles, 1])
 
         self.filter.set_batch_shape(self.particles)
-        self.context.set_batch_shape(self._parameter_shape)
+        self.context.set_batch_shape(self.particles)
 
         self._callbacks: List[Callback] = list()
 

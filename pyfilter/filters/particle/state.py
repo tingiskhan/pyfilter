@@ -8,7 +8,6 @@ from pyro.distributions import Distribution, Normal, MultivariateNormal
 
 from ...utils import normalize
 from ..state import Correction, Prediction
-from ..utils import batched_gather
 from .utils import get_filter_mean_and_variance
 
 
@@ -38,7 +37,7 @@ class ParticleFilterPrediction(Prediction):
 
     def create_state_from_prediction(self, model):
         x_new = model.hidden.propagate(self.get_timeseries_state())
-        new_ll = torch.zeros(self.normalized_weights.shape[:-1], device=x_new.value.device)
+        new_ll = torch.zeros(self.normalized_weights.shape[1:], device=x_new.value.device)
 
         return ParticleFilterCorrection(x_new, self.weights, new_ll, self.indices)
 
@@ -58,11 +57,14 @@ class ParticleFilterPrediction(Prediction):
             return model.hidden.build_density(self.get_timeseries_state())
 
         x_new = model.hidden.propagate(self.get_timeseries_state())
-        keep_dim = (self.weights.dim() > 1) and (self.prev_x.event_shape.numel() > 1)
-        mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True, keep_dim=keep_dim)
+        mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True)
 
+        if self.weights.dim() > 1:
+            mean.unsqueeze_(0)
+            var.unsqueeze_(0)
+        
         if model.hidden.n_dim == 0:
-            return Normal(mean, var.sqrt())
+            return Normal(mean.squeeze(-1), var.squeeze(-1).sqrt())
         
         return MultivariateNormal(mean, covariance_matrix=var)
 
@@ -89,6 +91,7 @@ class ParticleFilterCorrection(Correction):
         self["_ll"] = ll
         self["_prev_inds"] = prev_indices
 
+        # TODO: Speed up and use resampling instead
         self["_mean"], self["_var"] = get_filter_mean_and_variance(x, self.normalized_weights())
 
     @property
@@ -117,6 +120,7 @@ class ParticleFilterCorrection(Correction):
         Returns the covariance of the posterior distribution.
         """
 
+        # TODO: Fix this
         if len(self.timeseries_state.event_shape) == 0:
             return self.get_variance()
         
@@ -124,38 +128,42 @@ class ParticleFilterCorrection(Correction):
         w = self.normalized_weights()
         x = self.timeseries_state.value
 
-        mean = w.unsqueeze(-2) @ x
+        mean = (w * x).sum(dim=0)
         centralized = x - mean
         weighted_covariance = w.view(w.shape + torch.Size([1, 1])) * (centralized.unsqueeze(-1) @ centralized.unsqueeze(-2))
         
-        return weighted_covariance.sum(dim=-3)
+        return weighted_covariance.sum(dim=0)
 
-    def normalized_weights(self):
+    # TODO: Cache?
+    def normalized_weights(self) -> torch.Tensor:
+        """
+        Returns the normalized weights.
+
+        Returns:
+            torch.Tensor: normalized weights.
+        """
+
         return normalize(self.weights)
 
     def resample(self, indices):
-        resampled_values = batched_gather(
-            self.timeseries_state.value,
-            indices,
-            self.timeseries_state.value.dim() - self.timeseries_state.event_shape.numel()
-        )
-                
-        self["_x"] = self.timeseries_state.copy(values=resampled_values)
-        self["_w"] = batched_gather(self.weights, indices, 0)
-        self["_ll"] = batched_gather(self.get_loglikelihood(), indices, 0)
-        self["_prev_inds"] = batched_gather(self.previous_indices, indices, 1)
+        self["_x"] = self.timeseries_state.copy(values=self.timeseries_state.value[:, indices])
+        self["_w"] = self.weights[:, indices]
 
-        # TODO: Resample instead...?
-        self["_mean"], self["_var"] = get_filter_mean_and_variance(self["_x"], self.normalized_weights())
+        self["_ll"][indices] = self["_ll"][indices]
+        self["_prev_inds"] = self["_prev_inds"][:, indices]
 
-    def exchange(self, state: "ParticleFilterCorrection", mask):
-        self["_x"].value[mask] = state.timeseries_state.value[mask]
-        self["_w"][mask] = state.weights[mask]
-        self["_ll"][mask] = state.get_loglikelihood()[mask]
-        self["_prev_inds"][mask] = state.previous_indices[mask]
+        self["_mean"] = self["_mean"][indices]
+        self["_var"] = self["_var"][indices]
 
-        # TODO: Resample instead...?
-        self["_mean"], self["_var"] = get_filter_mean_and_variance(self["_x"], self.normalized_weights())
+    def exchange(self, other, mask):
+        # TODO: Try to find a more general way of doing this...?
+        self["_x"].value[:, mask] = other.timeseries_state.value[:, mask]
+        self["_w"][:, mask] = other.weights[:, mask]
+        self["_ll"][mask] = other.get_loglikelihood()[mask]
+        self["_prev_inds"][:, mask] = other.previous_indices[:, mask]
+
+        self["_mean"][mask] = other["_mean"][mask]
+        self["_var"][mask] = other["_var"][mask]
 
     def get_timeseries_state(self) -> TimeseriesState:
         return self.timeseries_state

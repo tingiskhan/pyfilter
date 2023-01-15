@@ -1,6 +1,4 @@
-import torch
 from typing import Union
-from pyro.distributions import Normal, MultivariateNormal, Distribution
 
 from .base import ParticleFilter
 from .state import ParticleFilterPrediction, ParticleFilterCorrection

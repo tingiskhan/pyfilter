@@ -15,12 +15,8 @@ def batched_gather(x: torch.Tensor, indices: torch.IntTensor, dim: int):
         Resampled ``x``.
     """
 
-    if indices.dim() == 1:
-        return x[indices]
-    elif indices.dim() == 2:
-        if x.dim() > indices.dim():
-            indices = indices.unsqueeze(-1).repeat_interleave(x.shape[-1], dim=-1)
+    # TODO: This is somewhat adhoc, should perhaps be done outside...
+    if x.dim() > indices.dim():
+        indices = indices.unsqueeze(-1).repeat_interleave(x.shape[-1], dim=-1)
 
-        return x.gather(dim, indices)
-
-    raise NotImplementedError("Currently do not support more batch dimensions than 1!")
+    return x.gather(dim, indices)

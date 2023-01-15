@@ -5,6 +5,23 @@ import torch
 from .utils import normalize
 
 
+def _wrapper(f):
+    def _inner(w, normalized=False, **kwargs):
+        if not normalized:
+            w = normalize(w)
+
+        if w.dim() == 1:
+            return f(w, *kwargs)
+        
+        new_w = w.moveaxis(0, 1)
+        result = f(new_w, **kwargs)
+
+        return result.moveaxis(0, 1)
+    
+    return _inner
+
+
+@_wrapper
 def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] = None) -> torch.Tensor:
     """
     Performs systematic resampling on either a 1D or 2D array.
@@ -22,7 +39,6 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
 
     shape = (w.shape[0], 1)
     u = u if u is not None else (torch.empty(shape, device=w.device)).uniform_()
-    w = normalize(w) if not normalized else w
 
     n = w.shape[1]
     index_range = torch.arange(n, dtype=u.dtype, device=w.device).unsqueeze(0)
@@ -36,6 +52,7 @@ def systematic(w: torch.Tensor, normalized=False, u: Union[torch.Tensor, float] 
     return res.squeeze(0) if is_1d else res
 
 
+@_wrapper
 def multinomial(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs multinomial sampling.
@@ -45,9 +62,10 @@ def multinomial(w: torch.Tensor, normalized=False) -> torch.Tensor:
         normalized: see :func:`systematic`.
     """
 
-    return torch.multinomial(normalize(w) if not normalized else w, w.shape[-1], replacement=True)
+    return torch.multinomial(w, w.shape[-1], replacement=True)
 
 
+@_wrapper
 def residual(w: torch.Tensor, normalized=False) -> torch.Tensor:
     """
     Performs residual resampling. Inspired by solution provided by the package `particles`_.
@@ -61,8 +79,6 @@ def residual(w: torch.Tensor, normalized=False) -> torch.Tensor:
 
     if w.dim() > 1:
         raise NotImplementedError("Not implemented for multidimensional arrays!")
-
-    w = normalize(w) if not normalized else w
 
     mw = w.shape[-1] * w
     floored = mw.floor()

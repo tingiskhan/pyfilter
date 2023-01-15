@@ -21,31 +21,29 @@ class SISR(ParticleFilter):
     """
 
     def _resample_parallel(self, w: torch.Tensor) -> Tuple[torch.Tensor, torch.BoolTensor]:
-        ess: torch.Tensor = get_ess(w) / w.shape[-1]
+        ess: torch.Tensor = get_ess(w) / w.shape[0]
         mask: torch.BoolTensor = ess < self._resample_threshold
 
-        return self._resampler(w[mask]), mask
+        return self._resampler(w[..., mask]), mask
 
     def predict(self, state):
         normalized_weigths = state.normalized_weights()
-        indices, mask = self._resample_parallel(state.weights)
+        resampled_indices, mask = self._resample_parallel(state.weights)
 
         # TODO: Perhaps slow?
-        all_indices = torch.empty_like(state.previous_indices)
-        all_indices[mask] = indices
-        all_indices[~mask] = torch.arange(0, state.previous_indices.shape[-1], device=all_indices.device)
-
-        resampled_x = state.timeseries_state.value
-        resampled_x[mask] = batched_gather(resampled_x[mask], indices, indices.dim() - 1)
+        all_indices = state.previous_indices.clone()
+        all_indices.masked_scatter_(mask.unsqueeze(0), resampled_indices)
+ 
+        resampled_x = state.timeseries_state.value.clone()
+        resampled_x[:, mask] = resampled_x[resampled_indices, mask]
         resampled_state = state.timeseries_state.copy(values=resampled_x)
 
-        unsqueezed_mask = mask.unsqueeze(-1)
+        unsqueezed_mask = mask.unsqueeze(0)
         weights = state.weights.masked_fill(unsqueezed_mask, 0.0)
         normalized_weigths = normalized_weigths.masked_fill(unsqueezed_mask, 1.0 / weights.shape[-1])
 
         return ParticleFilterPrediction(resampled_state, weights, normalized_weigths, indices=all_indices)
 
-    # TODO: something wrong for SISR and linearized...
     def correct(self, y, prediction):
         x, weights = self.proposal.sample_and_weight(y, prediction)
         new_weights = weights + prediction.weights
