@@ -195,7 +195,7 @@ class TestParticleFilters(object):
 
         smoothed = f.smooth(result.states, method=method)
 
-        means = smoothed[1:].mean(dim=len(batch_size) + 1)
+        means = smoothed[1:].mean(1)
 
         if model.hidden.n_dim == 0:
             means.unsqueeze_(-1)
