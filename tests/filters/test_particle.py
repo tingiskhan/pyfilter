@@ -21,7 +21,10 @@ def _create_partial(filter_class, particles, **kwargs):
 def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
     if not skip_gpf:
         yield _create_partial(part.GPF, particles=particles, **kwargs)
-        yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(), **kwargs)
+
+        for use_second_order in [False, True]:
+            yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinearized(n_steps=5, use_second_order=use_second_order), **kwargs)
+
         yield _create_partial(part.GPF, particles=particles, proposal=part.proposals.GaussianLinear(), **kwargs)
 
     for pt in (part.APF, part.SISR):
@@ -29,7 +32,7 @@ def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
 
         for use_hessian in [False, True]:
             for use_functorch in [False, True]:
-                proposal = part.proposals.Linearized(n_steps=2, use_second_order=use_hessian, use_functorch=use_functorch)
+                proposal = part.proposals.Linearized(n_steps=5, use_second_order=use_hessian, use_functorch=use_functorch)
                 yield _create_partial(pt, particles=particles, proposal=proposal, **kwargs)
 
         proposal = part.proposals.LinearGaussianObservations()
