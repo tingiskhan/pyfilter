@@ -1,7 +1,6 @@
 import torch
 
 
-#: TODO: Improve this to allow for arbitrary batching...
 def batched_gather(x: torch.Tensor, indices: torch.IntTensor, dim: int):
     """
     Similar to the gather method of :class:`torch.Tensor`.
