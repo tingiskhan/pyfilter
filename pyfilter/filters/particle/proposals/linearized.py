@@ -61,7 +61,7 @@ class Linearized(Proposal):
         x_dist = prediction.get_predictive_density(self._model)
 
         if self._use_functorch:
-            kernel = self._mode_finder.find_mode(x.value, mean, y, std.clone(), x)
+            kernel = self._mode_finder.find_mode(x.value, mean, y, std.clone(), x.copy(values=mean.clone()))
         else:
             kernel = self._mode_finder.find_mode_legacy(x_dist, x.propagate_from(values=mean.clone()), std.clone(), y)
 
