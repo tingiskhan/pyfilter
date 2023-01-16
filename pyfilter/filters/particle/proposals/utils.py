@@ -16,7 +16,7 @@ def _infer_shapes(parameters, i):
 
     if isinstance(parameters, tuple):
         # NB: We always assume that the dimension of parameters are batched as the state. Might be wrong
-        return tuple(None if not isinstance(p, PriorBoundParameter) else i for p in parameters)
+        return tuple(None if not isinstance(p, PriorBoundParameter) else (0 if p.dim() > i else None) for p in parameters)
     elif not isinstance(parameters, dict):
         raise NotImplementedError(f"Does not support {parameters.__class__}")
 
@@ -33,7 +33,7 @@ class ModeFinder(object):
     Implements a class for finding the mode of the joint distribution of a state space model.
     """
 
-    def __init__(self, model: StateSpaceModel, num_steps: int, alpha: float = 1e-3, use_hessian: bool = False):
+    def __init__(self, model: StateSpaceModel, num_steps: int, alpha: float = 1e-2, use_hessian: bool = False):
         """
         Internal initializer for :class:`ModeFinder`.
 
@@ -53,9 +53,7 @@ class ModeFinder(object):
         self._hess_fun = None
 
         self.initialized = False
-    
-    # TODO: Nesting doesn't work out of the box as the last dimension of the parameters aren't congruent. 
-    # Perhaps use vmap in filters instead? Or invert shapes, i.e. we [filter_shape, parameter_shape]... This would enable smoother batching?
+        
     def initialize(self, batch_shape: torch.Size):
         """
         Initializes the class for the first time.
@@ -67,19 +65,16 @@ class ModeFinder(object):
         grad_fun = grad(self._model_likelihood)
         hess_fun = hessian(self._model_likelihood)
 
-        batch_len = -len(batch_shape) + 1
         for i, _ in enumerate(batch_shape):
-            j = batch_len + i
- 
             parameter_dims = {
-                "hidden": _infer_shapes(self._model.hidden.yield_parameters()["parameters"], j),
-                "ssm": _infer_shapes(self._model.yield_parameters()["parameters"], j)
+                "hidden": _infer_shapes(self._model.hidden.yield_parameters()["parameters"], i),
+                "ssm": _infer_shapes(self._model.yield_parameters()["parameters"], i)
             }
 
-            in_dims = (j, None, j, parameter_dims, None, None)
+            in_dims = (0, None, 0, parameter_dims, None, None)
   
-            grad_fun = vmap(grad_fun, in_dims=in_dims, out_dims=j)
-            hess_fun = vmap(hess_fun, in_dims=in_dims, out_dims=j)
+            grad_fun = vmap(grad_fun, in_dims=in_dims)
+            hess_fun = vmap(hess_fun, in_dims=in_dims)
 
         self._grad_fun = grad_fun
         self._hess_fun = hess_fun
@@ -94,6 +89,7 @@ class ModeFinder(object):
 
             return y_dist.log_prob(y) + x_dist.log_prob(x)
     
+    # TODO: Something is wonky with second order information for models with multiple observations
     def find_mode(self, prev_x: torch.Tensor, x: torch.Tensor, y: torch.Tensor, std: torch.Tensor, dummy_state: TimeseriesState) -> Distribution:
         """
         Finds the mode of the state space model's joint distribution.
@@ -114,7 +110,6 @@ class ModeFinder(object):
         fill_std = std.clone()
 
         step = self._alpha
-        std = fill_std
 
         parameters = {
             "hidden": self._model.hidden.yield_parameters()["parameters"],
@@ -129,19 +124,19 @@ class ModeFinder(object):
 
                 if self._model.hidden.n_dim == 0:
                     d_h = (2.0 * hess).clip(min=0.0)        
-                    neg_inv_hess = (-hess + d_h).pow(-1).squeeze(-1)
+                    cov = -(hess - d_h).pow(-1).squeeze(-1)
 
-                    step = neg_inv_hess * gradient
-                    std = neg_inv_hess.sqrt()
+                    step = cov * gradient
+                    std = cov.sqrt()
                 else:
-                    lamda_min = torch.linalg.eigvals(hess).real.min(dim=-1).values
+                    lamda_min = torch.linalg.eigvalsh(hess).real.min(dim=-1).values
 
                     # TODO: Can we replace this...?
                     d_h = (2.0 * lamda_min).clip(min=0.0).view(*hess.shape[:-2], 1, 1) * torch.eye(hess.shape[-1])
-                    neg_inv_hess = torch.linalg.pinv(-hess + d_h)
+                    cov = -torch.linalg.pinv(hess - d_h)
                     
-                    step = (neg_inv_hess @ gradient.unsqueeze(-1)).squeeze(-1)
-                    std = torch.linalg.cholesky_ex(neg_inv_hess)[0]
+                    step = (cov @ gradient.unsqueeze(-1)).squeeze(-1)
+                    std = torch.linalg.cholesky_ex(cov)[0]
 
             x += step
                 
