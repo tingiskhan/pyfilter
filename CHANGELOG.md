@@ -1,5 +1,9 @@
 # Changelog
 
+# v0.27.0
+ - Major change in backend by interchaning batch and sample shape in inference algorithms. This enables much more natural handling of parameters.
+ - Adds support for finding mode of distribution by means of `functorch
+
 # v0.26.1
  - Adds the Gaussian Particle Filter
  - Reworks correct/predict logic by enforcing that correct only takes a prediction as input
