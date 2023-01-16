@@ -1,6 +1,5 @@
 from typing import Generic
 
-
 import torch.nn
 from stochproc.timeseries import StateSpaceModel
 from torch.distributions import TransformedDistribution

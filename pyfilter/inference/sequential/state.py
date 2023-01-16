@@ -1,6 +1,6 @@
 import torch
 
-from ...filters import FilterResult, Correction
+from ...filters import Correction, FilterResult
 from ...utils import get_ess, normalize
 from ..state import FilterAlgorithmState
 

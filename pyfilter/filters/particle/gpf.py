@@ -1,9 +1,9 @@
 from typing import Union
 
 from .base import ParticleFilter
-from .state import ParticleFilterPrediction, ParticleFilterCorrection
-from .utils import log_likelihood
 from .proposals import GaussianProposal
+from .state import ParticleFilterCorrection, ParticleFilterPrediction
+from .utils import log_likelihood
 
 
 # TODO: Add kernels

@@ -7,7 +7,6 @@ from ..base import BaseAlgorithm
 from ..logging import TQDMWrapper
 from .state import SequentialAlgorithmState
 
-
 T = TypeVar("T", bound=SequentialAlgorithmState)
 Callback = Callable[["SequentialParticleAlgorithm", torch.Tensor, T], None]
 

@@ -4,7 +4,7 @@ import torch
 
 from ...utils import get_ess
 from .base import ParticleFilter
-from .state import ParticleFilterPrediction, ParticleFilterCorrection
+from .state import ParticleFilterCorrection, ParticleFilterPrediction
 from .utils import log_likelihood
 
 

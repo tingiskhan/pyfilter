@@ -1,11 +1,11 @@
 import torch
 
 from ...base import BaseAlgorithm
+from ...context import InferenceContext
 from ...logging import TQDMWrapper
 from .proposals import BaseProposal, RandomWalk
 from .state import PMMHResult
 from .utils import run_pmmh
-from ...context import InferenceContext
 
 
 class PMMH(BaseAlgorithm):

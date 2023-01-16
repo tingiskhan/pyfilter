@@ -1,11 +1,11 @@
 import torch
 
 from ..state import ParticleFilterPrediction
-from .base import Proposal
-from .linearized import Linearized
-from .linear import LinearGaussianObservations
-from .utils import find_optimal_density
 from ..utils import get_filter_mean_and_variance
+from .base import Proposal
+from .linear import LinearGaussianObservations
+from .linearized import Linearized
+from .utils import find_optimal_density
 
 
 # TODO: Fix GPF proposals shapes, a bit whacky

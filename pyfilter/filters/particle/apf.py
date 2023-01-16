@@ -1,9 +1,8 @@
 import torch
 
 from ..utils import batched_gather
-
 from .base import ParticleFilter
-from .state import ParticleFilterPrediction, ParticleFilterCorrection
+from .state import ParticleFilterCorrection, ParticleFilterPrediction
 from .utils import log_likelihood
 
 

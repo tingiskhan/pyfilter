@@ -1,11 +1,11 @@
 from typing import OrderedDict
-import torch
 
+import torch
+from functorch import grad, hessian, vmap
+from pyro.distributions import Distribution, MultivariateNormal, Normal
 from stochproc.timeseries import StateSpaceModel, TimeseriesState
-from pyro.distributions import Distribution, Normal, MultivariateNormal
-from torch.linalg import cholesky_ex
-from functorch import vmap, hessian, grad
 from torch.autograd import grad as agrad
+from torch.linalg import cholesky_ex
 
 from ....utils import construct_diag_from_flat
 

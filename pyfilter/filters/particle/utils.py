@@ -1,6 +1,6 @@
-import torch
 from typing import Tuple
 
+import torch
 from stochproc.timeseries import TimeseriesState
 
 

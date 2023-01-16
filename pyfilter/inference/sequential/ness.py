@@ -1,4 +1,5 @@
 from abc import ABC
+
 from torch import isfinite
 
 from ..context import InferenceContext

@@ -2,12 +2,12 @@ from abc import ABC
 from typing import Callable, Tuple
 
 import torch
-from stochproc.timeseries import StateSpaceModel, StructuralStochasticProcess, TimeseriesState
+from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
+                                  TimeseriesState)
 from torch.distributions import Distribution
-from typing import Callable
-from abc import ABC
-from .pre_weight_funcs import get_pre_weight_func
+
 from ..state import ParticleFilterPrediction
+from .pre_weight_funcs import get_pre_weight_func
 
 
 class Proposal(ABC):

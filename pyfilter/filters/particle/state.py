@@ -2,9 +2,9 @@ from collections import OrderedDict
 from typing import Any, Dict
 
 import torch
-from stochproc.timeseries import TimeseriesState, StateSpaceModel
+from pyro.distributions import Distribution, MultivariateNormal, Normal
+from stochproc.timeseries import StateSpaceModel, TimeseriesState
 from torch import Tensor
-from pyro.distributions import Distribution, Normal, MultivariateNormal
 
 from ...utils import normalize
 from ..state import Correction, Prediction

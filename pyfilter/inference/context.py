@@ -1,6 +1,8 @@
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Iterable, List, OrderedDict as tOrderedDict, Tuple
+from typing import Any, Callable, Dict, Iterable, List
+from typing import OrderedDict as tOrderedDict
+from typing import Tuple
 
 import torch
 from pyro.distributions import Distribution
