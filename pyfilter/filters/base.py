@@ -146,25 +146,14 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
             bar (bool): whether to display a ``tqdm`` progress bar.
             init_state (bool): optional parameter for whether to pass an initial state.
         """
+        
+        state = init_state or self.initialize()
+        result = self.initialize_with_result(state)
 
-        iter_bar = y if not bar else tqdm(desc=str(self.__class__.__name__), total=len(y))
+        for y_t in (y if not bar else tqdm(y, desc=str(self.__class__.__name__))):
+            state = self.filter(y_t, state, result=result)
 
-        try:
-            state = init_state or self.initialize()
-            result = self.initialize_with_result(state)
-
-            for yt in y:
-                state = self.filter(yt, state, result=result)
-
-                if bar:
-                    iter_bar.update(1)
-
-            return result
-        except Exception as e:
-            raise e
-        finally:
-            if bar:
-                iter_bar.close()
+        return result
 
     def copy(self) -> "BaseFilter":
         """
