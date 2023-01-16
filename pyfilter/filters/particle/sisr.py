@@ -3,11 +3,6 @@ from typing import Tuple
 import torch
 
 from ...utils import get_ess
-from ..utils import batched_gather
-import torch
-
-from ...utils import get_ess
-from ..utils import batched_gather
 from .base import ParticleFilter
 from .state import ParticleFilterPrediction, ParticleFilterCorrection
 from .utils import log_likelihood
@@ -30,7 +25,6 @@ class SISR(ParticleFilter):
         normalized_weigths = state.normalized_weights()
         resampled_indices, mask = self._resample_parallel(state.weights)
 
-        # TODO: Perhaps slow?
         all_indices = state.previous_indices.clone()
         all_indices.masked_scatter_(mask.unsqueeze(0), resampled_indices)
  
