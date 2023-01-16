@@ -15,8 +15,8 @@ def _infer_shapes(parameters, i):
     from ....inference.parameter import PriorBoundParameter
 
     if isinstance(parameters, tuple):
-        # NB: We always assume that the dimension of parameters are batched as the state. Might be wrong
-        return tuple(None if not isinstance(p, PriorBoundParameter) else (0 if p.dim() > i else None) for p in parameters)
+        # NB: We always assume that the parameters can only be batched in one dimension
+        return tuple(None if not isinstance(p, PriorBoundParameter) else (0 if i == 0 else None) for p in parameters)
     elif not isinstance(parameters, dict):
         raise NotImplementedError(f"Does not support {parameters.__class__}")
 
@@ -63,7 +63,8 @@ class ModeFinder(object):
         """
 
         grad_fun = grad(self._model_likelihood)
-        hess_fun = hessian(self._model_likelihood)
+        # TODO: Consider using second order without Hessian as we seem to have some issues with memory consumption
+        hess_fun = hessian(self._model_likelihood)        
 
         for i, _ in enumerate(batch_shape):
             parameter_dims = {
