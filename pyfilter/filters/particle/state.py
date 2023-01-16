@@ -47,7 +47,7 @@ class ParticleFilterPrediction(Prediction):
 
         Args:
             model (StateSpaceModel): model to use for constructing predictive density.
-            approximate (bool): whether to approximate the predictive distribution via Gaussians.
+            approximate (bool): whether to approximate the predictive distribution via Gaussians.            
 
         Returns:
             Distribution: predictive distribution distribution.
@@ -57,14 +57,14 @@ class ParticleFilterPrediction(Prediction):
             return model.hidden.build_density(self.get_timeseries_state())
 
         x_new = model.hidden.propagate(self.get_timeseries_state())
-        mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True)
+        mean, var = get_filter_mean_and_variance(x_new, self.normalized_weights, covariance=True, keep_dim=False)
 
         if self.weights.dim() > 1:
             mean.unsqueeze_(0)
             var.unsqueeze_(0)
         
         if model.hidden.n_dim == 0:
-            return Normal(mean.squeeze(-1), var.squeeze(-1).sqrt())
+            return Normal(mean, var.sqrt())
         
         return MultivariateNormal(mean, covariance_matrix=var)
 

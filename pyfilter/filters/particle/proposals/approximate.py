@@ -41,7 +41,10 @@ class GaussianLinearized(Linearized):
 
     def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=False)
+
+        predictive_mean.unsqueeze_(0)
+        predictive_variance.unsqueeze_(0)
 
         # TODO: Figure out broadcasting
         mean_state = timeseries_state.copy(values=predictive_mean)
@@ -74,7 +77,10 @@ class GaussianLinear(LinearGaussianObservations):
 
     def sample_and_weight(self, y, prediction):
         timeseries_state = prediction.get_timeseries_state()
-        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights)
+        predictive_mean, predictive_variance = get_filter_mean_and_variance(timeseries_state, prediction.normalized_weights, keep_dim=False)
+
+        predictive_mean.unsqueeze_(0)
+        predictive_variance.unsqueeze_(0)
         
         mean_state = timeseries_state.copy(values=predictive_mean)
 
