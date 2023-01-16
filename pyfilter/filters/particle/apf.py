@@ -35,7 +35,9 @@ class APF(ParticleFilter):
         resampled_x = timeseries_state.copy(values=batched_gather(timeseries_state.value, indices, dim))
 
         temp_weights = torch.zeros_like(resample_weights)
-        resampled_prediction = ParticleFilterPrediction(resampled_x, temp_weights, temp_weights + 1.0 / pre_weights.shape[0], None)
+        resampled_prediction = ParticleFilterPrediction(
+            resampled_x, temp_weights, temp_weights + 1.0 / pre_weights.shape[0], None
+        )
 
         x, weights = self._proposal.sample_and_weight(y, resampled_prediction)
 

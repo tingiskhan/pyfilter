@@ -55,7 +55,12 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         ``torch.Size([number of parallel filters, number of particles])``, else ``torch.Size([number of particles])``.
         """
 
-        return torch.Size([*self._base_particles, *self.batch_shape, ])
+        return torch.Size(
+            [
+                *self._base_particles,
+                *self.batch_shape,
+            ]
+        )
 
     @property
     def proposal(self) -> Proposal:
@@ -77,7 +82,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
     def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
-            
+
         self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
@@ -85,10 +90,10 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         w = torch.zeros(self.particles, device=device)
         prev_inds = torch.arange(w.shape[0], device=device)
-        
+
         if self.batch_shape:
             prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
-            
+
         ll = torch.zeros(self.batch_shape, device=device)
 
         return ParticleFilterCorrection(x, w, ll, prev_inds)
@@ -123,7 +128,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         latest_state = next(reversed_states)
         result = (latest_state.timeseries_state.value,)
         prev_inds = torch.arange(0, self._base_particles[0], device=result[-1].device)
-        
+
         if self.batch_shape:
             prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
 
@@ -140,7 +145,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
-        
+
         if method == "fl":
             return self._do_sample_fl(states)
 
@@ -186,12 +191,14 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         hidden_density = self.ssm.hidden.build_density(x_tm1)
         obs_density = self.ssm.build_density(x_t)
-        init_density = self.ssm.hidden.initial_distribution        
+        init_density = self.ssm.hidden.initial_distribution
 
-        shape = (y.shape[0], *(len(obs_density.batch_shape[1:]) * [1]), *y.shape[1:])        
+        shape = (y.shape[0], *(len(obs_density.batch_shape[1:]) * [1]), *y.shape[1:])
         y_ = y.view(shape)
         tot_prob = (
-            hidden_density.log_prob(smoothed[1:]).sum(0) + obs_density.log_prob(y_).sum(0) + init_density.log_prob(smoothed[0])
+            hidden_density.log_prob(smoothed[1:]).sum(0)
+            + obs_density.log_prob(y_).sum(0)
+            + init_density.log_prob(smoothed[0])
         )
 
         pyro_lib.factor("log_prob", tot_prob.mean(0))

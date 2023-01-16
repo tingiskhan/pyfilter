@@ -12,12 +12,12 @@ def _wrapper(f):
 
         if w.dim() == 1:
             return f(w, *kwargs)
-        
+
         new_w = w.moveaxis(0, 1)
         result = f(new_w, **kwargs)
 
         return result.moveaxis(0, 1)
-    
+
     return _inner
 
 

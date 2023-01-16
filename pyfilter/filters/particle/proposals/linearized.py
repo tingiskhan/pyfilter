@@ -30,28 +30,28 @@ class Linearized(Proposal):
         """
 
         assert n_steps > 0, "``n_steps`` must be >= 1"
-        
+
         super().__init__()
-        
+
         self._alpha = alpha
-        self._n_steps = n_steps        
-        self._use_second_order = use_second_order        
+        self._n_steps = n_steps
+        self._use_second_order = use_second_order
         self._use_functorch = use_functorch
-        
+
         self._mode_finder: ModeFinder = None
 
     def set_model(self, model):
         if not isinstance(model.hidden, AffineProcess):
             raise ValueError(f"Hidden must be of type {AffineProcess.__class__.__name__}!")
-        
+
         res = super().set_model(model)
         self._mode_finder = ModeFinder(self._model, self._n_steps, self._alpha, self._use_second_order)
 
         return res
-        
+
     def sample_and_weight(self, y, prediction):
         x = prediction.get_timeseries_state()
-        
+
         # TODO: Re-use predictive density?
         mean, std = self._model.hidden.mean_scale(x)
 
@@ -65,7 +65,7 @@ class Linearized(Proposal):
         else:
             kernel = self._mode_finder.find_mode_legacy(x_dist, x.propagate_from(values=mean.clone()), std.clone(), y)
 
-        x_result = x.propagate_from(values=kernel.sample)        
+        x_result = x.propagate_from(values=kernel.sample)
 
         return x_result, self._weight_with_kernel(y, x_dist, x_result, kernel)
 

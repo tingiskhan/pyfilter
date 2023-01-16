@@ -31,6 +31,6 @@ class BaseKernel(ABC):
             context (InferenceContext): parameter context.
             filter_ (BaseFilter): filter associated with ``context``.
             state (SequentialAlgorithmState): current state of the algorithm.
-        """        
+        """
 
         raise NotImplementedError()

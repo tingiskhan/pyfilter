@@ -28,7 +28,7 @@ class LinearGaussianObservations(Proposal):
 
     def _get_offset_and_scale(
         self, x: TimeseriesState, a: torch.Tensor, b: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:        
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         return a, b
 
     def set_model(self, model):

@@ -27,7 +27,7 @@ class SISR(ParticleFilter):
 
         all_indices = state.previous_indices.clone()
         all_indices.masked_scatter_(mask.unsqueeze(0), resampled_indices)
- 
+
         resampled_x = state.timeseries_state.value.clone()
         resampled_x[:, mask] = resampled_x[resampled_indices, mask]
         resampled_state = state.timeseries_state.copy(values=resampled_x)
@@ -42,4 +42,6 @@ class SISR(ParticleFilter):
         x, weights = self.proposal.sample_and_weight(y, prediction)
         new_weights = weights + prediction.weights
 
-        return ParticleFilterCorrection(x, new_weights, log_likelihood(weights, prediction.normalized_weights), prediction.indices)
+        return ParticleFilterCorrection(
+            x, new_weights, log_likelihood(weights, prediction.normalized_weights), prediction.indices
+        )

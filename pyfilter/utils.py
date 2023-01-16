@@ -58,7 +58,7 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
 
     normalized = (weights - weights.max(dim=0)[0]).softmax(dim=0)
     ax_sum = normalized.sum(dim=0)
-    
+
     normalized.masked_fill_(ax_sum == 0.0, 1.0 / normalized.shape[0])
 
     return normalized

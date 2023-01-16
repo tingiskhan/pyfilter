@@ -1,6 +1,6 @@
 import itertools
 from collections import OrderedDict, deque
-from typing import (Deque, Dict, Iterable, Iterator, Tuple, Union)
+from typing import Deque, Dict, Iterable, Iterator, Tuple, Union
 
 import torch
 

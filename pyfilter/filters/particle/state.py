@@ -47,7 +47,7 @@ class ParticleFilterPrediction(Prediction):
 
         Args:
             model (StateSpaceModel): model to use for constructing predictive density.
-            approximate (bool): whether to approximate the predictive distribution via Gaussians.            
+            approximate (bool): whether to approximate the predictive distribution via Gaussians.
 
         Returns:
             Distribution: predictive distribution distribution.
@@ -62,10 +62,10 @@ class ParticleFilterPrediction(Prediction):
         if self.weights.dim() > 1:
             mean.unsqueeze_(0)
             var.unsqueeze_(0)
-        
+
         if model.hidden.n_dim == 0:
             return Normal(mean, var.sqrt())
-        
+
         return MultivariateNormal(mean, covariance_matrix=var)
 
 
@@ -101,17 +101,17 @@ class ParticleFilterCorrection(Correction):
     @property
     def weights(self) -> torch.Tensor:
         return self["_w"]
-    
+
     @property
     def previous_indices(self) -> torch.Tensor:
         return self["_prev_inds"]
-    
+
     def get_loglikelihood(self):
         return self["_ll"]
 
     def get_mean(self) -> Tensor:
         return self["_mean"]
-    
+
     def get_variance(self) -> Tensor:
         return self["_var"]
 
@@ -123,15 +123,17 @@ class ParticleFilterCorrection(Correction):
         # TODO: Fix this
         if len(self.timeseries_state.event_shape) == 0:
             return self.get_variance()
-        
+
         # TODO: Duplication
         w = self.normalized_weights()
         x = self.timeseries_state.value
 
         mean = (w * x).sum(dim=0)
         centralized = x - mean
-        weighted_covariance = w.view(w.shape + torch.Size([1, 1])) * (centralized.unsqueeze(-1) @ centralized.unsqueeze(-2))
-        
+        weighted_covariance = w.view(w.shape + torch.Size([1, 1])) * (
+            centralized.unsqueeze(-1) @ centralized.unsqueeze(-2)
+        )
+
         return weighted_covariance.sum(dim=0)
 
     # TODO: Cache?
@@ -177,11 +179,8 @@ class ParticleFilterCorrection(Correction):
         for k, v in self.items():
             if isinstance(v, torch.Tensor):
                 result[k] = v
-        
-        result["_x"] = {
-            "time_index": self.timeseries_state.time_index,
-            "value": self.timeseries_state.value
-        }
+
+        result["_x"] = {"time_index": self.timeseries_state.time_index, "value": self.timeseries_state.value}
 
         return result
 
@@ -199,8 +198,7 @@ class ParticleFilterCorrection(Correction):
         assert self.timeseries_state.value.shape == values_to_load.shape, msg
 
         self["_x"] = self.timeseries_state.propagate_from(
-            values=values_to_load, 
-            time_increment=-self.timeseries_state.time_index + state_dict["_x"]["time_index"]
+            values=values_to_load, time_increment=-self.timeseries_state.time_index + state_dict["_x"]["time_index"]
         )
 
         self["_w"] = state_dict["_w"]

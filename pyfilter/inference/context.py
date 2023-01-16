@@ -190,7 +190,7 @@ class InferenceContext(object):
         for n, p in self.get_parameters():
             numel = shape_dict[n].numel()
 
-            param = x[..., index: index + numel]
+            param = x[..., index : index + numel]
             f(p, param)
 
             index += numel
@@ -305,7 +305,7 @@ class InferenceContext(object):
         for k, v in self._prior_dict.items():
             new_tensor = f(self.get_parameter(k).clone())
 
-            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]):]
+            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]) :]
             new_context.set_batch_shape(new_batch_shape)
 
             p = new_context.named_parameter(k, v.copy())

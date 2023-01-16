@@ -2,8 +2,7 @@ from abc import ABC
 from typing import Callable, Tuple
 
 import torch
-from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
-                                  TimeseriesState)
+from stochproc.timeseries import StateSpaceModel, StructuralStochasticProcess, TimeseriesState
 from torch.distributions import Distribution
 from typing import Callable
 from abc import ABC
@@ -49,9 +48,11 @@ class Proposal(ABC):
     ) -> torch.Tensor:
         y_dist = self._model.build_density(x_new)
 
-        return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)        
+        return y_dist.log_prob(y) + x_dist.log_prob(x_new.value) - kernel.log_prob(x_new.value)
 
-    def sample_and_weight(self, y: torch.Tensor, prediction: ParticleFilterPrediction) -> Tuple[TimeseriesState, torch.Tensor]:
+    def sample_and_weight(
+        self, y: torch.Tensor, prediction: ParticleFilterPrediction
+    ) -> Tuple[TimeseriesState, torch.Tensor]:
         """
         Method to be derived by inherited classes. Given the current observation ``y`` and prediction ``x`` of the particle filter this
         method samples new state values and weighs them accordingly.
