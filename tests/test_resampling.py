@@ -40,7 +40,7 @@ class TestResampling(object):
     def test_systematic(self, weights):        
         u = torch.rand(weights.shape)
 
-        pyfilter_inds = systematic(weights, u=u, normalized=True).numpy()
+        pyfilter_inds = systematic(weights.moveaxis(0, 1), u=u, normalized=True).moveaxis(0, 1).numpy()
 
         for i in range(weights.shape[0]):
             filterpy_inds = filterpy_systematic_resample(weights[i], u[i])
