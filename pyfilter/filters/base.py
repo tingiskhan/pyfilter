@@ -209,8 +209,8 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
 
             prediction = self.predict(correction)
 
-        nan_mask = torch.isnan(y)
-        if nan_mask.all():
+        # TODO: Might have to check `any` instead...
+        if y.isnan().all():
             correction = prediction.create_state_from_prediction(self._model)
         else:
             correction = self.correct(y, prediction)
