@@ -65,7 +65,6 @@ class SequentialAlgorithmState(FilterAlgorithmState):
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
-        super().load_state_dict(state_dict)
         self.w = state_dict["w"]
         self.current_iteration = state_dict["current_iteration"]
 
