@@ -47,6 +47,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         self._proposal: Proposal = proposal
 
+    # TODO: Invert this and rejoice
     @property
     def particles(self) -> torch.Size:
         """
@@ -54,7 +55,12 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         ``torch.Size([number of parallel filters, number of particles])``, else ``torch.Size([number of particles])``.
         """
 
-        return torch.Size([*self.batch_shape, *self._base_particles])
+        return torch.Size(
+            [
+                *self._base_particles,
+                *self.batch_shape,
+            ]
+        )
 
     @property
     def proposal(self) -> Proposal:
@@ -76,37 +82,43 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
     def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
-            
+
         self._proposal.set_model(self._model)
         x = self._model.hidden.initial_sample(self.particles)
 
         device = x.value.device
 
         w = torch.zeros(self.particles, device=device)
-        prev_inds = torch.ones(w.shape, dtype=torch.int, device=device) * torch.arange(w.shape[-1], device=device)
+        prev_inds = torch.arange(w.shape[0], device=device)
+
+        if self.batch_shape:
+            prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
+
         ll = torch.zeros(self.batch_shape, device=device)
 
         return ParticleFilterCorrection(x, w, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
-        state_dim = -(1 + self.ssm.hidden.n_dim)
-        dim = len(self.batch_shape)
-
+        dim = 0
         res = [batched_gather(states[-1].timeseries_state.value, self._resampler(states[-1].weights), dim=dim)]
 
         for state in reversed(states[:-1]):
             density = self.ssm.hidden.build_density(state.timeseries_state)
 
-            # TODO: Last transpose might not be necessary, figure it out
-            w_state = density.log_prob(res[-1].unsqueeze(0).transpose(0, state_dim))
+            # TODO: Something is wrong here, fix
+            w_state = density.log_prob(res[-1].unsqueeze(1))
+            w = state.weights.unsqueeze(0) + w_state
 
             if self.batch_shape:
-                w_state = w_state.transpose(0, 1)
+                w = w.moveaxis(1, 2)
 
-            w = state.weights.unsqueeze(-2) + w_state
+            indices = Categorical(logits=w).sample()
 
-            cat = Categorical(logits=w)
-            res.append(batched_gather(state.timeseries_state.value, cat.sample(), dim=dim))
+            if self.ssm.hidden.n_dim > 0:
+                indices = indices.unsqueeze(-1).expand(self.particles + self.ssm.hidden.event_shape)
+
+            resampled = state.timeseries_state.value.gather(0, indices)
+            res.append(resampled)
 
         return torch.stack(res[::-1], dim=0)
 
@@ -115,9 +127,12 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         latest_state = next(reversed_states)
         result = (latest_state.timeseries_state.value,)
-        prev_inds = torch.ones_like(latest_state.previous_indices).cumsum(dim=-1) - 1
+        prev_inds = torch.arange(0, self._base_particles[0], device=result[-1].device)
 
-        dim = len(self.batch_shape)
+        if self.batch_shape:
+            prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
+
+        dim = 0
         for s in reversed_states:
             prev_inds = batched_gather(latest_state.previous_indices, prev_inds, dim=dim)
             result += (batched_gather(s.timeseries_state.value, prev_inds, dim=dim),)
@@ -130,7 +145,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         lower_method = method.lower()
         if lower_method == "ffbs":
             return self._do_sample_ffbs(states)
-        
+
         if method == "fl":
             return self._do_sample_fl(states)
 
@@ -174,18 +189,19 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
                 time_increment=time_indexes[1 :: self.ssm.observe_every_step],
             )
 
-        hidden_dens = self.ssm.hidden.build_density(x_tm1)
-        obs_dens = self.ssm.build_density(x_t)
-        init_dens = self.ssm.hidden.initial_distribution
-        init_dens = self.ssm.hidden.initial_distribution
+        hidden_density = self.ssm.hidden.build_density(x_tm1)
+        obs_density = self.ssm.build_density(x_t)
+        init_density = self.ssm.hidden.initial_distribution
 
-        shape = (y.shape[0], *(len(obs_dens.batch_shape[1:]) * [1]), *obs_dens.event_shape)
+        shape = (y.shape[0], *(len(obs_density.batch_shape[1:]) * [1]), *y.shape[1:])
         y_ = y.view(shape)
         tot_prob = (
-            hidden_dens.log_prob(smoothed[1:]).sum(0) + obs_dens.log_prob(y_).sum(0) + init_dens.log_prob(smoothed[0])
+            hidden_density.log_prob(smoothed[1:]).sum(0)
+            + obs_density.log_prob(y_).sum(0)
+            + init_density.log_prob(smoothed[0])
         )
 
-        pyro_lib.factor("log_prob", tot_prob.mean(-1))
+        pyro_lib.factor("log_prob", tot_prob.mean(0))
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """

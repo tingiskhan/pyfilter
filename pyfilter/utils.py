@@ -17,7 +17,7 @@ def get_ess(weights: torch.Tensor, normalized: bool = False) -> torch.Tensor:
     if not normalized:
         weights = normalize(weights)
 
-    return weights.sum(-1) ** 2 / (weights**2).sum(-1)
+    return weights.sum(dim=0) ** 2 / weights.pow(2.0).sum(dim=0)
 
 
 def construct_diag_from_flat(x: torch.Tensor, event_shape: torch.Size) -> torch.Tensor:
@@ -54,21 +54,14 @@ def normalize(weights: torch.Tensor) -> torch.Tensor:
         weights (torch.Tensor): the log weights to normalize.
     """
 
-    is_1d = weights.dim() == 1
+    weights = weights.nan_to_num_(-INFTY, posinf=-INFTY)
 
-    if is_1d:
-        weights = weights.unsqueeze(0)
+    normalized = (weights - weights.max(dim=0)[0]).softmax(dim=0)
+    ax_sum = normalized.sum(dim=0)
 
-    mask = ~weights.isfinite()
-    weights[mask] = -INFTY
+    normalized.masked_fill_(ax_sum == 0.0, 1.0 / normalized.shape[0])
 
-    reweighed = torch.exp(weights - weights.max(-1)[0].unsqueeze(-1))
-    normalized = reweighed / reweighed.sum(-1).unsqueeze(-1)
-
-    ax_sum = normalized.sum(dim=-1)
-    normalized[ax_sum == 0.0] = 1 / normalized.shape[-1]
-
-    return normalized.squeeze(0) if is_1d else normalized
+    return normalized
 
 
 def is_documented_by(original):

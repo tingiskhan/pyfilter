@@ -1,9 +1,8 @@
 from typing import Tuple
 
 import torch
-from stochproc.timeseries import AffineProcess, TimeseriesState, LinearStateSpaceModel
-from torch.distributions import MultivariateNormal, Normal
-from torch.linalg import cholesky_ex
+from stochproc.timeseries import (AffineProcess, LinearStateSpaceModel,
+                                  TimeseriesState)
 from torch.distributions import MultivariateNormal, Normal
 from torch.linalg import cholesky_ex
 
@@ -28,7 +27,7 @@ class LinearGaussianObservations(Proposal):
 
     def _get_offset_and_scale(
         self, x: TimeseriesState, a: torch.Tensor, b: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:        
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         return a, b
 
     def set_model(self, model):

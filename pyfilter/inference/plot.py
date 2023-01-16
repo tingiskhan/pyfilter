@@ -10,17 +10,15 @@ from .context import InferenceContext
 from .sequential.state import SequentialAlgorithmState
 
 
-def _do_plot(v: torch.Tensor, w: torch.Tensor, ax_, name, handled, **kwargs):
+def _do_plot(v: np.ndarray, w: np.ndarray, ax_, name, handled, **kwargs):
     """
     Utility function for plotting.
     """
 
-    v_numpy = v.cpu().numpy()
-
-    kde = KDEUnivariate(v_numpy)
+    kde = KDEUnivariate(v)
     kde.fit(weights=w, fft=False)
 
-    x_linspace = np.linspace(v_numpy.min(), v_numpy.max(), 250)
+    x_linspace = np.linspace(v.min(), v.max(), 250)
 
     ax_.plot(x_linspace, kde.evaluate(x_linspace), **kwargs)
 
@@ -59,7 +57,7 @@ def mimic_arviz_posterior(
     for p, v in context.parameters.items():
         if v.prior.get_numel() == 1:
             ax_ = flat_axes[fig_index]
-            _do_plot(v, w, ax_, p, handled, **kwargs)
+            _do_plot(v.cpu().numpy(), w, ax_, p, handled, **kwargs)
             fig_index += 1
         else:
             for i in range(v.shape[-1]):

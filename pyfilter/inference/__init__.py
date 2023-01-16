@@ -1,10 +1,4 @@
-from .prior import PriorMixin
-from .context import make_context, InferenceContext
+from . import batch, plot, qmc, sequential, utils
+from .context import InferenceContext, make_context
 from .parameter import PriorBoundParameter
-
-from . import batch
-from . import sequential
-
-from . import utils
-from . import plot
-from . import qmc
+from .prior import PriorMixin

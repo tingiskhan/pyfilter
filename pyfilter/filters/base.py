@@ -137,7 +137,9 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
 
         return FilterResult(state or self.initialize(), self.record_states, self.record_moments)
 
-    def batch_filter(self, y: Sequence[torch.Tensor], bar=True, init_state: TCorrection = None) -> FilterResult[TCorrection]:
+    def batch_filter(
+        self, y: Sequence[torch.Tensor], bar=True, init_state: TCorrection = None
+    ) -> FilterResult[TCorrection]:
         """
         Batch version of :meth:`BaseFilter.filter` where entire data set is parsed.
 
@@ -146,11 +148,11 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
             bar (bool): whether to display a ``tqdm`` progress bar.
             init_state (bool): optional parameter for whether to pass an initial state.
         """
-        
+
         state = init_state or self.initialize()
         result = self.initialize_with_result(state)
 
-        for y_t in (y if not bar else tqdm(y, desc=str(self.__class__.__name__))):
+        for y_t in y if not bar else tqdm(y, desc=str(self.__class__.__name__)):
             state = self.filter(y_t, state, result=result)
 
         return result
@@ -207,8 +209,8 @@ class BaseFilter(Generic[TCorrection, TPrediction]):
 
             prediction = self.predict(correction)
 
-        nan_mask = torch.isnan(y)
-        if nan_mask.all():
+        # TODO: Might have to check `any` instead...
+        if y.isnan().all():
             correction = prediction.create_state_from_prediction(self._model)
         else:
             correction = self.correct(y, prediction)

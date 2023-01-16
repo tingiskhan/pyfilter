@@ -32,6 +32,7 @@ class GradientBasedProposal(RandomWalk):
         self._eps = self._scale**2.0 / 2.0
         self._use_second_order = use_second_order
 
+    # TODO: Use functorch...
     def build(self, context, state, filter_, y):
         smoothed = filter_.smooth(state.filter_state.states)
 
@@ -53,9 +54,9 @@ class GradientBasedProposal(RandomWalk):
         hidden_dens = filter_.ssm.hidden.build_density(xtm1)
         obs_dens = filter_.ssm.build_density(xt)
 
-        logl = filter_.ssm.hidden.initial_distribution.log_prob(smoothed[0]).mean(-1)
-        logl += context.eval_priors(constrained=False).squeeze(-1)
-        logl += (hidden_dens.log_prob(xt.value) + obs_dens.log_prob(y)).mean(-1).sum(0)
+        logl = filter_.ssm.hidden.initial_distribution.log_prob(smoothed[0]).mean(0)
+        logl += context.eval_priors(constrained=False)
+        logl += (hidden_dens.log_prob(xt.value) + obs_dens.log_prob(y)).mean(0).sum(0)
 
         g = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 

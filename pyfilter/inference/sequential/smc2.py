@@ -36,7 +36,7 @@ class SMC2(SequentialParticleAlgorithm):
             max_increases (int, optional): max number of increases for achieving an acceptance rate of atleast 20% in the MCMC rejuvenation step. Defaults to 5.
             context (_type_, optional): _description_. Defaults to None.
         """
-        
+
         super().__init__(filter_, particles, context=context)
 
         self._threshold = threshold if isinstance(threshold, Thresholder) else ConstantThreshold(threshold)

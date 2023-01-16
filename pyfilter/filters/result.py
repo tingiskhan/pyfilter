@@ -1,8 +1,6 @@
 from copy import deepcopy
 from typing import Generic, List, TypeVar, Union
 
-from typing import Generic, List, TypeVar, Union
-
 import torch
 
 from ..container import make_dequeue
@@ -102,7 +100,7 @@ class FilterResult(BaseResult, Generic[TCorrection]):
 
         Args:
             indices (torch.Tensor): the indices to select.
-            entire_history (bool): optional parameter for whether to resample entire history or not. If ``False``, we 
+            entire_history (bool): optional parameter for whether to resample entire history or not. If ``False``, we
                 ignore resampling the tensor tuples.
         """
 

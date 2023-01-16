@@ -1,8 +1,8 @@
-__version__ = "0.26.2"
+__version__ = "0.27.0"
 
-from . import filters
-from . import inference
 
 from torch.distributions import Distribution
+
+from . import filters, inference
 
 Distribution.set_default_validate_args(False)

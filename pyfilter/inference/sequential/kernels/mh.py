@@ -22,7 +22,7 @@ class ParticleMetropolisHastings(BaseKernel):
             distance_threshold (float, optional): when the relative distance between two consecutive PMCMC moves is lower than
             ``distance_threshold``, stop iterating. Defaults to None.
         """
-        
+
         super().__init__(**kwargs)
 
         self._n_steps = num_steps

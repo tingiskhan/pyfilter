@@ -50,7 +50,7 @@ class DecayingThreshold(Thresholder):
     Defines a decaying threshold.
     """
 
-    def __init__(self, min_thresh: float, start_thresh: float, half_life: int = 1_000):        
+    def __init__(self, min_thresh: float, start_thresh: float, half_life: int = 1_000):
         """
         Internal initializer for :class:`DecayingThreshold`.
 
@@ -58,7 +58,7 @@ class DecayingThreshold(Thresholder):
             min_thresh (float): see :class:`Thresholder`.
             start_thresh (float):  see :class:`Thresholder`.
             half_life (int, optional): required number of steps to halve ``start_thresh``. Defaults to 1_000.
-        """        
+        """
 
         super().__init__(min_thresh, start_thresh)
         self._alpha = log(2.0) / half_life
@@ -89,8 +89,8 @@ class IntervalThreshold(Thresholder):
             >>> from pyfilter.inference.sequential.threshold import IntervalThreshold
             >>>
             >>> threshold = IntervalThreshold({100: 0.5}, 0.1)
-        
-        """        
+
+        """
 
         super(IntervalThreshold, self).__init__(ending_threshold, ending_threshold)
         self._thresholds: List[Tuple[int, float]] = sorted(thresholds.items(), key=lambda u: u[0])

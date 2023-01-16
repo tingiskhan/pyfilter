@@ -1,3 +1,3 @@
-from .pmmh import PMMH
 from . import proposals
+from .pmmh import PMMH
 from .state import PMMHResult

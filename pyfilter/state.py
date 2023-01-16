@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from typing import Any, OrderedDict as tOrderedDict
+from typing import Any
+from typing import OrderedDict as tOrderedDict
 
 from .container import TensorContainer
 
