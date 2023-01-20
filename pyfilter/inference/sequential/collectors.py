@@ -41,9 +41,6 @@ class Collector(Generic[T]):
         state.tensor_tuples[self._name].append(
             self._f(algorithm, y, state),
         )
-        state.tensor_tuples[self._name].append(
-            self._f(algorithm, y, state),
-        )
 
 
 class MeanCollector(Collector[SequentialAlgorithmState]):

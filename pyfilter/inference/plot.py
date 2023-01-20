@@ -62,7 +62,7 @@ def mimic_arviz_posterior(
         else:
             for i in range(v.shape[-1]):
                 ax_ = flat_axes[fig_index]
-                _do_plot(v[..., i], w, ax_, f"{p}_{i:d}", handled, **kwargs)
+                _do_plot(v[..., i].cpu().numpy(), w, ax_, f"{p}_{i:d}", handled, **kwargs)
                 fig_index += 1
 
     for ax_ in (ax_ for ax_ in flat_axes if ax_ not in handled):
