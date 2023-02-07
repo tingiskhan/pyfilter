@@ -79,24 +79,28 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         """
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
+    
+    def initialize_model(self, context):
+        super().initialize_model(context)
+        self._proposal.set_model(self._model)
 
     def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
-
-        self._proposal.set_model(self._model)
+        
+        self._proposal.set_model(self.ssm)
         x = self._model.hidden.initial_sample(self.particles)
 
         device = x.value.device
 
-        w = torch.zeros(self.particles, device=device)
-        prev_inds = torch.arange(w.shape[0], device=device)
+        weights = torch.zeros(self.particles, device=device)
+        prev_inds = torch.arange(weights.shape[0], device=device)
 
         if self.batch_shape:
             prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
 
         ll = torch.zeros(self.batch_shape, device=device)
 
-        return ParticleFilterCorrection(x, w, ll, prev_inds)
+        return ParticleFilterCorrection(x, weights, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
         dim = 0
