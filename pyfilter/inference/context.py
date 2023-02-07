@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import threading
 from collections import OrderedDict
 from typing import Any, Callable, Dict, Iterable, List
@@ -53,6 +54,8 @@ class InferenceContext(object):
         self._unconstrained_shape_dict: Dict[str, torch.Size] = OrderedDict([])
 
         self.batch_shape: torch.Size = None
+
+        self.verify_prior = True
 
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
@@ -124,7 +127,7 @@ class InferenceContext(object):
             raise BatchShapeNotSet("property `batch_shape` not set! Have you called `set_batch_shape`?")
 
         if name in self._prior_dict:
-            if self._prior_dict[name].equivalent_to(prior):
+            if not self.verify_prior or self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
 
             raise NotSamePriorError(
@@ -321,6 +324,21 @@ class InferenceContext(object):
         """
 
         return self.apply_fun(lambda p: p)
+    
+    @contextmanager
+    def no_prior_verification(self) -> "InferenceContext":
+        """
+        Skips verifying that priors are similar when instantiating parameters.
+
+        Returns:
+            InferenceContext: self.
+        """
+
+        try:
+            self.verify_prior = False
+            yield self
+        finally:
+            self.verify_prior = True
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?

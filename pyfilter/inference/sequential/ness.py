@@ -52,6 +52,7 @@ class BaseOnlineAlgorithm(SequentialParticleAlgorithm, ABC):
     def _step(self, y, state):
         if self.do_update_particles(state):
             self._kernel.update(self.context, self.filter, state)
+            self.filter.initialize_model(self.context)
 
         filter_state = self.filter.filter(y, state.filter_state.latest_state, result=state.filter_state)
         state.append(filter_state)
