@@ -35,7 +35,7 @@ def linear_models():
 
     parameters = (torch.from_numpy(a).float(), torch.from_numpy(sigma).float())
     rw = ts.LinearModel(
-        parameters, inc_dist, lambda m_, s_: Normal(0.0, s_).expand(torch.Size([2])).to_event(1)
+        parameters, inc_dist, lambda m_, _, s_: Normal(0.0, s_).expand(torch.Size([2])).to_event(1)
     )
 
     params = torch.from_numpy(a).float(), torch.from_numpy(s).float()
