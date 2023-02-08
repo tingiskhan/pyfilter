@@ -87,7 +87,7 @@ class GaussianLinear(LinearGaussianObservations):
         mean, scale = self._model.hidden.mean_scale(mean_state)
         h_var_inv = (scale.pow(2.0) + predictive_variance).pow(-1.0)
 
-        a, b, s = self._model.transformed_parameters()
+        a, b, s = self._model.parameters
         a, offset = self._get_offset_and_scale(mean, a, b)
         o_var_inv = s.pow(-2.0)
 
