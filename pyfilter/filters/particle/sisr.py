@@ -24,7 +24,7 @@ class SISR(ParticleFilter):
         all_indices = state.previous_indices.masked_scatter(mask.unsqueeze(0), resampled_indices)
 
         temp_resampled = state.timeseries_state.value[resampled_indices, mask]
-        resampled_x = resampled_x = state.timeseries_state.value.masked_scatter(mask.unsqueeze(0), temp_resampled)
+        resampled_x = state.timeseries_state.value.masked_scatter(mask.unsqueeze(0), temp_resampled)
         resampled_state = state.timeseries_state.copy(values=resampled_x)
 
         unsqueezed_mask = mask.unsqueeze(0)
