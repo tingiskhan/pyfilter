@@ -1,7 +1,3 @@
-from typing import Tuple
-
-import torch
-
 from ...utils import get_ess
 from .base import ParticleFilter
 from .state import ParticleFilterCorrection, ParticleFilterPrediction
@@ -20,16 +16,15 @@ class SISR(ParticleFilter):
         normalized_weigths = state.normalized_weights()
 
         ess = get_ess(normalized_weigths, normalized=True)
-        mask = ess < (self._resample_threshold * normalized_weigths.shape[0])
+        mask = ess < self._resample_threshold
 
         resampled_indices = self._resampler(normalized_weigths[..., mask], normalized=True)
 
         # Resample
-        all_indices = state.previous_indices.clone()
-        all_indices.masked_scatter_(mask.unsqueeze(0), resampled_indices)
+        all_indices = state.previous_indices.masked_scatter(mask.unsqueeze(0), resampled_indices)
 
-        resampled_x = state.timeseries_state.value.clone()
-        resampled_x[:, mask] = resampled_x[resampled_indices, mask]
+        temp_resampled = state.timeseries_state.value[resampled_indices, mask]
+        resampled_x = resampled_x = state.timeseries_state.value.masked_scatter(mask.unsqueeze(0), temp_resampled)
         resampled_state = state.timeseries_state.copy(values=resampled_x)
 
         unsqueezed_mask = mask.unsqueeze(0)

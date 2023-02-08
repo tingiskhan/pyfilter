@@ -39,7 +39,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         super().__init__(model, **kwargs)
 
         self._base_particles = torch.Size([particles])
-        self._resample_threshold = ess_threshold
+        self._resample_threshold = ess_threshold * particles
         self._resampler = resampling
 
         if proposal is None:
@@ -79,6 +79,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         """
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
+        self._resample_threshold *= factor
     
     def initialize_model(self, context):
         super().initialize_model(context)
