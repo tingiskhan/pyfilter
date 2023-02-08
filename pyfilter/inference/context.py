@@ -1,6 +1,6 @@
-from contextlib import contextmanager
 import threading
 from collections import OrderedDict
+from contextlib import contextmanager
 from typing import Any, Callable, Dict, Iterable, List
 from typing import OrderedDict as tOrderedDict
 from typing import Tuple
