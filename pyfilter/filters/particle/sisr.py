@@ -13,18 +13,18 @@ class SISR(ParticleFilter):
     Implements the `Sequential Importance Sampling Resampling`_ filter by Gordon et al.
 
     .. _`Sequential Importance Sampling Resampling`: https://en.wikipedia.org/wiki/Particle_filter#Sequential_Importance_Resampling_(SIR)
-    """
-
-    def _resample_parallel(self, w: torch.Tensor) -> Tuple[torch.Tensor, torch.BoolTensor]:
-        ess: torch.Tensor = get_ess(w) / w.shape[0]
-        mask: torch.BoolTensor = ess < self._resample_threshold
-
-        return self._resampler(w[..., mask]), mask
+    """    
 
     def predict(self, state):
+        # Get indices for resampling
         normalized_weigths = state.normalized_weights()
-        resampled_indices, mask = self._resample_parallel(state.weights)
 
+        ess = get_ess(normalized_weigths, normalized=True)
+        mask = ess < (self._resample_threshold * normalized_weigths.shape[0])
+
+        resampled_indices = self._resampler(normalized_weigths[..., mask], normalized=True)
+
+        # Resample
         all_indices = state.previous_indices.clone()
         all_indices.masked_scatter_(mask.unsqueeze(0), resampled_indices)
 
