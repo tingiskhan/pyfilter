@@ -79,7 +79,7 @@ class SMC2(SequentialParticleAlgorithm):
         """
 
         self._kernel.update(self.context, self.filter, state)
-        
+
         with self.context.no_prior_verification():
             self.filter.initialize_model(self.context)
 

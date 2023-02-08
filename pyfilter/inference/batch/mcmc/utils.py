@@ -47,10 +47,10 @@ def run_pmmh(
     # Sample parameters and override context
     rvs = proposal_kernel.sample(size)
     proposal_context.unstack_parameters(rvs, constrained=constrained)
-    
+
     with proposal_context.no_prior_verification():
         proposal_filter.initialize_model(proposal_context)
-    
+
     # Run proposal filter
     new_res = proposal_filter.batch_filter(y, bar=False)
 

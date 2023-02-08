@@ -324,7 +324,7 @@ class InferenceContext(object):
         """
 
         return self.apply_fun(lambda p: p)
-    
+
     @contextmanager
     def no_prior_verification(self) -> "InferenceContext":
         """

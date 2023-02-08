@@ -79,14 +79,14 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
         self._resample_threshold *= factor
-    
+
     def initialize_model(self, context):
         super().initialize_model(context)
         self._proposal.set_model(self._model)
 
     def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
-        
+
         self._proposal.set_model(self.ssm)
         x = self._model.hidden.initial_sample(self.particles)
 
