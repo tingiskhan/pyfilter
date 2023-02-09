@@ -17,26 +17,33 @@ class SISR(ParticleFilter):
 
         ess = get_ess(normalized_weigths, normalized=True)
         mask = ess < self._resample_threshold
+        
+        ts_state = state.get_timeseries_state()
+        weights = state.weights
+        prev_inds = state.previous_indices
 
-        resampled_indices = self._resampler(normalized_weigths[..., mask], normalized=True)
+        if not mask.any():
+            return ParticleFilterPrediction(ts_state, weights, normalized_weigths, indices=prev_inds)
 
         # Resample
-        unsqueezed_mask = mask.unsqueeze(0)
-        all_indices = state.previous_indices.masked_scatter(unsqueezed_mask, resampled_indices)
+        sub_indices = self._resampler(normalized_weigths[..., mask], normalized=True)
         
-        weights = state.weights.masked_fill(unsqueezed_mask, 0.0)
+        unsqueezed_mask = mask.unsqueeze(0)
+        resampled_indices = prev_inds.masked_scatter(unsqueezed_mask, sub_indices)
+        
+        resampled_weights = weights.masked_fill(unsqueezed_mask, 0.0)
         normalized_weigths = normalized_weigths.masked_fill(unsqueezed_mask, 1.0 / weights.shape[0])
         
-        timeseries_state = state.timeseries_state.value
-        temp_resampled = timeseries_state[resampled_indices, mask]                
+        ts_vals = ts_state.value
+        temp_resampled = ts_vals[sub_indices, mask]
 
         if self._model.n_dim > 0:
             unsqueezed_mask.unsqueeze_(-1)
 
-        resampled_x = timeseries_state.masked_scatter(unsqueezed_mask, temp_resampled)
-        resampled_state = state.timeseries_state.copy(values=resampled_x)
-                
-        return ParticleFilterPrediction(resampled_state, weights, normalized_weigths, indices=all_indices)
+        resampled_x = ts_vals.masked_scatter(unsqueezed_mask, temp_resampled)
+        resampled_state = ts_state.copy(values=resampled_x)
+                            
+        return ParticleFilterPrediction(resampled_state, resampled_weights, normalized_weigths, indices=resampled_indices)
 
     def correct(self, y, prediction):
         x, weights = self.proposal.sample_and_weight(y, prediction)
