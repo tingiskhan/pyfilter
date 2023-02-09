@@ -126,14 +126,15 @@ class TestContext(object):
                 assert p1 is not p2
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
-    def test_multidimensional_parameters(self, shape):
+    @pytest.mark.parametrize("constrained", [True, False])
+    def test_multidimensional_parameters(self, shape, constrained):
         with inf.make_context() as context:
             context.set_batch_shape(shape)
 
             alpha = context.named_parameter("alpha", Normal(loc=0.0, scale=1.0).expand(torch.Size([2, 2])).to_event(2))
             beta = context.named_parameter("beta", LogNormal(loc=0.0, scale=1.0))
 
-            stacked = context.stack_parameters()
+            stacked = context.stack_parameters(constrained)
             assert stacked.shape == torch.Size([shape.numel(), 5])
 
     def test_verify_not_batched(self):
