@@ -197,15 +197,16 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         obs_density = self.ssm.build_density(x_t)
         init_density = self.ssm.hidden.initial_distribution
 
-        shape = (y.shape[0], *(len(obs_density.batch_shape[1:]) * [1]), *y.shape[1:])
-        y_ = y.view(shape)
-        tot_prob = (
-            hidden_density.log_prob(smoothed[1:]).sum(0)
-            + obs_density.log_prob(y_).sum(0)
-            + init_density.log_prob(smoothed[0])
-        )
+        shape = y.shape[:1] + torch.Size([1 for _ in obs_density.batch_shape[1:]]) + y.shape[1:]
+        y_reshaped = y.view(shape)
 
-        pyro_lib.factor("log_prob", tot_prob.mean(0))
+        log_likelihood = (
+            hidden_density.log_prob(smoothed[1:]).sum(0)
+            + obs_density.log_prob(y_reshaped).sum(0)
+            + init_density.log_prob(smoothed[0])
+        ).mean(0)
+ 
+        pyro_lib.factor("log_prob", log_likelihood)
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """
