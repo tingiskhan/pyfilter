@@ -244,7 +244,12 @@ class InferenceContext(object):
         
         for name, parameter in self.get_parameters():
             other_p = other.get_parameter(name)
-            parameter.masked_scatter_(mask, other_p[mask])
+
+            expanded_mask = mask
+            if parameter.dim() > mask.dim():
+                expanded_mask = mask.reshape(mask.shape + torch.Size([1 for _ in parameter.prior.event_shape]))
+            
+            parameter.masked_scatter_(expanded_mask, other_p[mask])
 
     def resample(self, indices: torch.IntTensor):
         """
