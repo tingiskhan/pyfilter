@@ -37,7 +37,7 @@ class SISR(ParticleFilter):
         ts_vals = ts_state.value
         temp_resampled = ts_vals[sub_indices, mask]
 
-        if self._model.n_dim > 0:
+        if self._model.hidden.n_dim > 0:
             unsqueezed_mask.unsqueeze_(-1)
 
         resampled_x = ts_vals.masked_scatter(unsqueezed_mask, temp_resampled)
