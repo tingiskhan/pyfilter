@@ -28,8 +28,11 @@ class GradientBasedProposal(RandomWalk):
             kernel. Defaults to False.
         """
 
+        if use_second_order:
+            raise NotImplementedError("Currently does not support `use_second_order`!")
+
         super().__init__(**kwargs)
-        self._eps = self._scale**2.0 / 2.0
+        self._eps = self._scale ** 2.0 / 2.0
         self._use_second_order = use_second_order
 
     # TODO: Use functorch...
@@ -40,34 +43,36 @@ class GradientBasedProposal(RandomWalk):
         params.requires_grad_(True)
 
         context.unstack_parameters(params, constrained=False)
+        
+        with context.no_prior_verification():
+            filter_.initialize_model(context)
 
-        time = torch.stack(tuple(s.timeseries_state.time_index for s in state.filter_state.states))
+        time = torch.stack([s.timeseries_state.time_index for s in state.filter_state.states])
 
         # As the first state's time value is zero, we use that
         first_state = state.filter_state.states[0].get_timeseries_state()
 
         xtm1 = first_state.propagate_from(values=smoothed[:-1], time_increment=time[:-1])
-        xt = first_state.propagate_from(values=smoothed[1:], time_increment=time[1:])
-
-        y = y.view(y.shape[0], 1, 1, *y.shape[1:])
-
+        x_t = first_state.propagate_from(values=smoothed[1:], time_increment=time[1:])
+        
         hidden_dens = filter_.ssm.hidden.build_density(xtm1)
-        obs_dens = filter_.ssm.build_density(xt)
+        obs_dens = filter_.ssm.build_density(x_t)
+
+        y = y.reshape(y.shape[:1] + torch.Size([1 for _ in hidden_dens.batch_shape[1:]]) + obs_dens.event_shape)
 
         logl = filter_.ssm.hidden.initial_distribution.log_prob(smoothed[0]).mean(0)
         logl += context.eval_priors(constrained=False)
-        logl += (hidden_dens.log_prob(xt.value) + obs_dens.log_prob(y)).mean(0).sum(0)
+        logl += (hidden_dens.log_prob(x_t.value) + obs_dens.log_prob(y)).mean(0).sum(0)
 
-        g = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]
+        gradient = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]
 
-        ones = torch.ones_like(params)
-        step = self._eps * ones
-        scale = self._scale * ones
+        step = torch.full_like(params, self._eps)
+        scale = torch.full_like(params, self._scale)
 
         if self._use_second_order:
             raise NotImplementedError("Second order information is currently not implemented!")
 
-        loc = params.detach_() + step * g
+        loc = params.detach_() + step * gradient
 
         for _, v in context.get_parameters():
             v.detach_()
