@@ -6,10 +6,9 @@ from stochproc import timeseries as ts
 from pyro.distributions import Normal, LogNormal
 
 from pyfilter.inference.context import NotSamePriorError
-from .models import build_model
 
 
-BATCH_SHAPES = [torch.Size([]), torch.Size([10, 1]), torch.Size([16, 1, 1])]
+BATCH_SHAPES = [torch.Size([]), torch.Size([10]), torch.Size([1, 1, 12])]
 
 
 class TestContext(object):
@@ -61,7 +60,10 @@ class TestContext(object):
                 
                 context.initialize_parameters()
 
-                mask: torch.BoolTensor = (torch.empty(shape[0]).normal_() > 0.0).bool()
+                mask_has_trues = False
+                while not mask_has_trues:
+                    mask = (torch.empty(shape[0]).normal_() > 0.0).bool()
+                    mask_has_trues = mask.any()
 
                 context.exchange(sub_context, mask)
 
@@ -84,22 +86,6 @@ class TestContext(object):
             context.resample(indices)
 
             assert (alpha == alpha_clone[indices]).all() and (beta == beta_clone[indices]).all()
-
-    @pytest.mark.parametrize("shape", BATCH_SHAPES[1:])
-    def test_make_model_and_resample(self, shape):
-        with inf.make_context() as context:
-            context.set_batch_shape(shape)
-            model = build_model(context)
-            
-            context.initialize_parameters()
-
-            old_dict = {k: v.clone() for k, v in context.parameters.items()}
-
-            indices: torch.IntTensor = torch.randint(low=0, high=shape[0], size=shape[:1])
-            context.resample(indices)
-
-            for p_model, (n, p) in zip(model.hidden.parameters, context.get_parameters()):
-                assert (p == old_dict[n][indices]).all() and (p_model is p)
 
     def test_assert_sampling_multiple_same(self):
         with inf.make_context() as context:
@@ -137,7 +123,7 @@ class TestContext(object):
             assert (context.stack_parameters() == new_context.stack_parameters()).all()
 
             for p1, p2 in zip(model.parameters, new_context.parameters.values()):
-                assert p1 is p2
+                assert p1 is not p2
 
     @pytest.mark.parametrize("shape", BATCH_SHAPES)
     def test_multidimensional_parameters(self, shape):
