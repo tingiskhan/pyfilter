@@ -1,5 +1,3 @@
-from random import sample
-from xml.etree.ElementTree import TreeBuilder
 import pytest
 import torch
 
@@ -7,8 +5,10 @@ from pyfilter.filters import particle as part
 import pyro
 from pyro.infer import autoguide, SVI
 from pyro.optim import Adam
-from pyro.distributions import LogNormal, Normal
+from pyro.distributions import LogNormal
 from stochproc import timeseries as ts
+
+from pyfilter.filters.particle import proposals
 
 
 def do_infer_with_pyro(model, data, num_samples=1_000, niter=250, num_particles=1):
@@ -35,17 +35,16 @@ class TestPyroIntegration(object):
     def test_vi(self, num_particles):
         def build_ssm(sigma_):
             latent = ts.models.RandomWalk(sigma_)
-            return ts.StateSpaceModel(latent, lambda u: Normal(u.value, 0.1), ())
+            return ts.LinearStateSpaceModel(latent, (1.0, 0.0, 0.1), torch.Size([]))
 
         def pyro_model(y, sample_filter=True):
-            # TODO: I think the filter should keep track of when to unsqueeze etc...
             sigma = pyro.sample("sigma", LogNormal(0.0, 1.0))
             ssm = build_ssm(sigma)
 
             if not sample_filter:
                 return
             
-            filt = part.APF(ssm, 100, record_states=True)
+            filt = part.APF(ssm, 100, record_states=True, proposal=proposals.LinearGaussianObservations())
             filt.set_batch_shape(sigma.shape)
             filt.do_sample_pyro(y, pyro)
 
