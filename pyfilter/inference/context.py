@@ -55,7 +55,7 @@ class InferenceContext(object):
 
         self.batch_shape: torch.Size = None
 
-        self.verify_prior = True
+        self._verify_prior = True
 
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
@@ -127,7 +127,7 @@ class InferenceContext(object):
             raise BatchShapeNotSet("property `batch_shape` not set! Have you called `set_batch_shape`?")
 
         if name in self._prior_dict:
-            if not self.verify_prior or self._prior_dict[name].equivalent_to(prior):
+            if not self._verify_prior or self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
 
             raise NotSamePriorError(
@@ -241,11 +241,10 @@ class InferenceContext(object):
             other (InferenceContext): :class:`InferenceContext` to exchange with.
             mask (torch.Tensor): a mask indicating what to exchange.
         """
-
-        for n, p in self.get_parameters():
-            other_p = other.get_parameter(n)
-            # TODO: Change when masked_scatter works
-            p[mask] = other_p[mask]
+        
+        for name, parameter in self.get_parameters():
+            other_p = other.get_parameter(name)
+            parameter.masked_scatter_(mask, other_p[mask])
 
     def resample(self, indices: torch.IntTensor):
         """
@@ -335,10 +334,10 @@ class InferenceContext(object):
         """
 
         try:
-            self.verify_prior = False
+            self._verify_prior = False
             yield self
         finally:
-            self.verify_prior = True
+            self._verify_prior = True
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?
