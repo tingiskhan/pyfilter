@@ -89,6 +89,20 @@ class InferenceContext(object):
             return cls._contexts.stack[-1]
 
         raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
+    
+    def get_shape(self, name: str, constrained=True) -> torch.Size:
+        """
+        Gets the shape of the parameter.
+
+        Args:
+            name (str): name of the parameter.
+            constrained (bool): whether to get constrained.
+        """
+
+        if constrained:
+            return self._shape_dict[name]
+
+        return self._unconstrained_shape_dict[name]
 
     def set_batch_shape(self, batch_shape: torch.Size):
         """
