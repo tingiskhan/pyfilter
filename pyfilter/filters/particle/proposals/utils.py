@@ -86,15 +86,14 @@ class ModeFinder(object):
         x: torch.Tensor,
         y: torch.Tensor,
         old_x: torch.Tensor,
-        parameters,
+        parameters, # We pass parameters as they need to be included, they're used implicitly
         state: TimeseriesState,
         model: StateSpaceModel,
     ) -> torch.Tensor:
-        with model.hidden.override_parameters(parameters["hidden"]), model.override_parameters(parameters["ssm"]):
-            x_dist = model.hidden.build_density(state.copy(values=old_x))
-            y_dist = model.build_density(state.propagate_from(values=x))
+        x_dist = model.hidden.build_density(state.copy(values=old_x))
+        y_dist = model.build_density(state.propagate_from(values=x))
 
-            return y_dist.log_prob(y) + x_dist.log_prob(x)
+        return y_dist.log_prob(y) + x_dist.log_prob(x)
 
     # TODO: Something is wonky with second order information for models with multiple observations
     def find_mode(
@@ -116,7 +115,6 @@ class ModeFinder(object):
 
         y_squeezed = y.squeeze(-1)
         x = x.clone()
-        fill_std = std.clone()
 
         step = self._alpha
 

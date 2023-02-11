@@ -80,6 +80,9 @@ class SMC2(SequentialParticleAlgorithm):
 
         self._kernel.update(self.context, self.filter, state)
 
+        with self.context.no_prior_verification():
+            self.filter.initialize_model(self.context)
+
         if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
             state = self._increase_states(state)
 

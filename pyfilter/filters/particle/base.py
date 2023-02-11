@@ -39,7 +39,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         super().__init__(model, **kwargs)
 
         self._base_particles = torch.Size([particles])
-        self._resample_threshold = ess_threshold
+        self._resample_threshold = ess_threshold * particles
         self._resampler = resampling
 
         if proposal is None:
@@ -47,7 +47,6 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         self._proposal: Proposal = proposal
 
-    # TODO: Invert this and rejoice
     @property
     def particles(self) -> torch.Size:
         """
@@ -79,24 +78,29 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         """
 
         self._base_particles = torch.Size([int(factor * self._base_particles[0])])
+        self._resample_threshold *= factor
+
+    def initialize_model(self, context):
+        super().initialize_model(context)
+        self._proposal.set_model(self._model)
 
     def initialize(self):
         assert self._model is not None, "Model has not been initialized!"
 
-        self._proposal.set_model(self._model)
+        self._proposal.set_model(self.ssm)
         x = self._model.hidden.initial_sample(self.particles)
 
         device = x.value.device
 
-        w = torch.zeros(self.particles, device=device)
-        prev_inds = torch.arange(w.shape[0], device=device)
+        weights = torch.zeros(self.particles, device=device)
+        prev_inds = torch.arange(weights.shape[0], device=device)
 
         if self.batch_shape:
             prev_inds = prev_inds.unsqueeze(-1).expand(self.particles)
 
         ll = torch.zeros(self.batch_shape, device=device)
 
-        return ParticleFilterCorrection(x, w, ll, prev_inds)
+        return ParticleFilterCorrection(x, weights, ll, prev_inds)
 
     def _do_sample_ffbs(self, states: Sequence[ParticleFilterCorrection]):
         dim = 0
@@ -193,15 +197,16 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         obs_density = self.ssm.build_density(x_t)
         init_density = self.ssm.hidden.initial_distribution
 
-        shape = (y.shape[0], *(len(obs_density.batch_shape[1:]) * [1]), *y.shape[1:])
-        y_ = y.view(shape)
-        tot_prob = (
-            hidden_density.log_prob(smoothed[1:]).sum(0)
-            + obs_density.log_prob(y_).sum(0)
-            + init_density.log_prob(smoothed[0])
-        )
+        shape = y.shape[:1] + torch.Size([1 for _ in obs_density.batch_shape[1:]]) + y.shape[1:]
+        y_reshaped = y.view(shape)
 
-        pyro_lib.factor("log_prob", tot_prob.mean(0))
+        log_likelihood = (
+            hidden_density.log_prob(smoothed[1:]).sum(0)
+            + obs_density.log_prob(y_reshaped).sum(0)
+            + init_density.log_prob(smoothed[0])
+        ).mean(0)
+ 
+        pyro_lib.factor("log_prob", log_likelihood)
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
         """

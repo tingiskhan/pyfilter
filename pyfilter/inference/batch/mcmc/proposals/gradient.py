@@ -5,6 +5,33 @@ from torch.autograd import grad
 from .random_walk import RandomWalk
 
 
+# Merge...
+def _model_likelihood(
+        time: torch.Tensor,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        parameters, # We pass parameters as they need to be included, they're used implicitly
+        state,
+        model,
+        context
+        ) -> torch.Tensor:
+    # Create states
+    x_tm1 = state.propagate_from(values=x[:-1], time_increment=time[:-1])
+    x_t = state.propagate_from(values=x[1:], time_increment=time[1:])
+
+    # Create densities
+    hidden_dens = model.hidden.build_density(x_tm1)
+    obs_dens = model.build_density(x_t)
+
+    y = y.reshape(y.shape[:1] + torch.Size([1 for _ in hidden_dens.batch_shape[1:]]) + obs_dens.event_shape)        
+
+    return (
+        model.hidden.initial_distribution.log_prob(x[0]).mean(0) +
+        context.eval_priors(constrained=False) +
+        (hidden_dens.log_prob(x_t.value) + obs_dens.log_prob(y)).sum(0).mean(0)
+    )
+
+
 class GradientBasedProposal(RandomWalk):
     r"""
     Implements a proposal kernel that utilizes the gradient of the total log likelihood, which we define as
@@ -28,48 +55,41 @@ class GradientBasedProposal(RandomWalk):
             kernel. Defaults to False.
         """
 
+        if use_second_order:
+            raise NotImplementedError("Currently does not support `use_second_order`!")
+
         super().__init__(**kwargs)
-        self._eps = self._scale**2.0 / 2.0
+        self._eps = self._scale ** 2.0 / 2.0
         self._use_second_order = use_second_order
 
-    # TODO: Use functorch...
     def build(self, context, state, filter_, y):
-        smoothed = filter_.smooth(state.filter_state.states)
-
-        params = context.stack_parameters(constrained=False)
-        params.requires_grad_(True)
-
-        context.unstack_parameters(params, constrained=False)
-
-        time = torch.stack(tuple(s.timeseries_state.time_index for s in state.filter_state.states))
+        # Smooth
+        smoothed = filter_.smooth(state.filter_state.states)        
+        time = torch.stack([s.timeseries_state.time_index for s in state.filter_state.states])
 
         # As the first state's time value is zero, we use that
         first_state = state.filter_state.states[0].get_timeseries_state()
+                
+        # Create densities
+        parameters = context.parameters.values()
+        for parameter in parameters:
+            parameter.requires_grad_(True)
 
-        xtm1 = first_state.propagate_from(values=smoothed[:-1], time_increment=time[:-1])
-        xt = first_state.propagate_from(values=smoothed[1:], time_increment=time[1:])
-
-        y = y.view(y.shape[0], 1, 1, *y.shape[1:])
-
-        hidden_dens = filter_.ssm.hidden.build_density(xtm1)
-        obs_dens = filter_.ssm.build_density(xt)
-
-        logl = filter_.ssm.hidden.initial_distribution.log_prob(smoothed[0]).mean(0)
-        logl += context.eval_priors(constrained=False)
-        logl += (hidden_dens.log_prob(xt.value) + obs_dens.log_prob(y)).mean(0).sum(0)
-
-        g = grad(logl, params, torch.ones_like(logl), create_graph=self._use_second_order)[-1]
-
-        ones = torch.ones_like(params)
-        step = self._eps * ones
-        scale = self._scale * ones
+        # TODO: Use functorch...
+        model = filter_._model_builder(context)     # We recreate model as the gradients haven't been registered
+        logl = _model_likelihood(time, smoothed, y, parameters, first_state, model, context)
+        logl.backward(torch.ones_like(logl))
 
         if self._use_second_order:
             raise NotImplementedError("Second order information is currently not implemented!")
 
-        loc = params.detach_() + step * g
+        locs = tuple()
+        for name, parameter in context.get_parameters():
+            parameter.detach_()
+            numel = context.get_shape(name, False).numel()            
+            unconstrained = (parameter.get_unconstrained() + self._eps * parameter.grad).view(-1, numel)
+            
+            locs += (unconstrained,)
 
-        for _, v in context.get_parameters():
-            v.detach_()
-
-        return Normal(loc=loc, scale=scale).to_event(1)
+        loc = torch.cat(locs, dim=-1)
+        return Normal(loc=loc, scale=self._scale).to_event(1)

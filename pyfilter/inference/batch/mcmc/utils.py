@@ -44,11 +44,17 @@ def run_pmmh(
 
     constrained = False
 
+    # Sample parameters and override context
     rvs = proposal_kernel.sample(size)
     proposal_context.unstack_parameters(rvs, constrained=constrained)
 
+    with proposal_context.no_prior_verification():
+        proposal_filter.initialize_model(proposal_context)
+
+    # Run proposal filter
     new_res = proposal_filter.batch_filter(y, bar=False)
 
+    # Compare likelihood, prior and proposal kernel
     diff_logl = new_res.loglikelihood - state.filter_state.loglikelihood
     diff_prior = proposal_context.eval_priors(constrained=constrained) - context.eval_priors(constrained=constrained)
 
@@ -57,9 +63,11 @@ def run_pmmh(
 
     diff_prop = new_prop_kernel.log_prob(params_as_tensor) - proposal_kernel.log_prob(rvs)
 
-    log_acc_prob = diff_prop + diff_prior.squeeze(-1) + diff_logl
+    # Generate acceptance probabilities
+    log_acc_prob = diff_prop + diff_prior + diff_logl
     accepted: torch.BoolTensor = torch.empty_like(log_acc_prob).uniform_().log() < log_acc_prob
 
+    # Exchange filters and states
     state.filter_state.exchange(new_res, accepted)
     context.exchange(proposal_context, accepted)
 

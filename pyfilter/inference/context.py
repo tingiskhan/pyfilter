@@ -1,5 +1,6 @@
 import threading
 from collections import OrderedDict
+from contextlib import contextmanager
 from typing import Any, Callable, Dict, Iterable, List
 from typing import OrderedDict as tOrderedDict
 from typing import Tuple
@@ -54,6 +55,8 @@ class InferenceContext(object):
 
         self.batch_shape: torch.Size = None
 
+        self._verify_prior = True
+
     @property
     def parameters(self) -> Dict[str, PriorBoundParameter]:
         """
@@ -86,6 +89,20 @@ class InferenceContext(object):
             return cls._contexts.stack[-1]
 
         raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
+    
+    def get_shape(self, name: str, constrained=True) -> torch.Size:
+        """
+        Gets the shape of the parameter.
+
+        Args:
+            name (str): name of the parameter.
+            constrained (bool): whether to get constrained.
+        """
+
+        if constrained:
+            return self._shape_dict[name]
+
+        return self._unconstrained_shape_dict[name]
 
     def set_batch_shape(self, batch_shape: torch.Size):
         """
@@ -124,7 +141,7 @@ class InferenceContext(object):
             raise BatchShapeNotSet("property `batch_shape` not set! Have you called `set_batch_shape`?")
 
         if name in self._prior_dict:
-            if self._prior_dict[name].equivalent_to(prior):
+            if not self._verify_prior or self._prior_dict[name].equivalent_to(prior):
                 return self.get_parameter(name)
 
             raise NotSamePriorError(
@@ -238,11 +255,15 @@ class InferenceContext(object):
             other (InferenceContext): :class:`InferenceContext` to exchange with.
             mask (torch.Tensor): a mask indicating what to exchange.
         """
+        
+        for name, parameter in self.get_parameters():
+            other_p = other.get_parameter(name)
 
-        for n, p in self.get_parameters():
-            other_p = other.get_parameter(n)
-            # TODO: Change when masked_scatter works
-            p[mask] = other_p[mask]
+            expanded_mask = mask
+            if parameter.dim() > mask.dim():
+                expanded_mask = mask.reshape(mask.shape + torch.Size([1 for _ in parameter.prior.event_shape]))
+            
+            parameter.masked_scatter_(expanded_mask, other_p[mask])
 
     def resample(self, indices: torch.IntTensor):
         """
@@ -321,6 +342,21 @@ class InferenceContext(object):
         """
 
         return self.apply_fun(lambda p: p)
+
+    @contextmanager
+    def no_prior_verification(self) -> "InferenceContext":
+        """
+        Skips verifying that priors are similar when instantiating parameters.
+
+        Returns:
+            InferenceContext: self.
+        """
+
+        try:
+            self._verify_prior = False
+            yield self
+        finally:
+            self._verify_prior = True
 
 
 # TODO: Figure out whether you need to save the QMC state in the state dict?

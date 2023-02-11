@@ -46,7 +46,7 @@ class LinearGaussianObservations(Proposal):
 
         x_copy = x.copy(values=mean)
 
-        a, b, s = self._model.transformed_parameters()
+        a, b, s = self._model.parameters
         a, offset = self._get_offset_and_scale(x, a, b)
         o_var_inv = s.pow(-2.0)
 
@@ -60,7 +60,7 @@ class LinearGaussianObservations(Proposal):
 
         h_var = h_scale.pow(2.0)
 
-        a, b, s = self._model.transformed_parameters()
+        a, b, s = self._model.parameters
         a, offset = self._get_offset_and_scale(x, a, b)
         o_var = s.pow(2.0)
 

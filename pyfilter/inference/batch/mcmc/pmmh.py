@@ -77,13 +77,13 @@ class PMMH(BaseAlgorithm):
         state = self.initialize(y)
 
         logging = logging or TQDMWrapper()
+        proposal_filter = self.filter.copy()
 
         with logging.initialize(self, self.num_samples):
             prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
-            with self.context.make_new() as sub_context:
-                proposal_filter = self.filter.copy()
-                sub_context.set_batch_shape(self._num_chains)
+            with self.context.make_new() as sub_context:                
+                sub_context.set_batch_shape(self._num_chains)                
                 proposal_filter.initialize_model(sub_context)
 
             for i in range(self.num_samples):
