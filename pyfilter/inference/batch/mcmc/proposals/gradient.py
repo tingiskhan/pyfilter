@@ -62,7 +62,6 @@ class GradientBasedProposal(RandomWalk):
         self._eps = self._scale ** 2.0 / 2.0
         self._use_second_order = use_second_order
 
-    # TODO: Use functorch...
     def build(self, context, state, filter_, y):
         # Smooth
         smoothed = filter_.smooth(state.filter_state.states)        
@@ -79,17 +78,18 @@ class GradientBasedProposal(RandomWalk):
         # TODO: Use functorch...
         model = filter_._model_builder(context)     # We recreate model as the gradients haven't been registered
         logl = _model_likelihood(time, smoothed, y, parameters, first_state, model, context)
-        gradients = grad(logl, parameters, torch.ones_like(logl), is_grads_batched=True)
+        logl.backward(torch.ones_like(logl))
 
         if self._use_second_order:
             raise NotImplementedError("Second order information is currently not implemented!")
 
         locs = tuple()
-        for (name, parameter), g in zip(context.get_parameters(), gradients):
+        for name, parameter in context.get_parameters():
             parameter.detach_()
-            unconstrained = (parameter.get_unconstrained() + self._eps * g).view(-1, context.get_shape(name, False).numel())
+            numel = context.get_shape(name, False).numel()            
+            unconstrained = (parameter.get_unconstrained() + self._eps * parameter.grad).view(-1, numel)
             
             locs += (unconstrained,)
 
-        loc = torch.cat(locs, dim=-1)        
+        loc = torch.cat(locs, dim=-1)
         return Normal(loc=loc, scale=self._scale).to_event(1)
