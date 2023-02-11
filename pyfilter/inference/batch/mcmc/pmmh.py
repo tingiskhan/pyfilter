@@ -65,7 +65,7 @@ class PMMH(BaseAlgorithm):
             for p in self.context.parameters.values():
                 dist = p.prior
                 mean = dist.sample(self.MONTE_CARLO_SAMPLES).mean(dim=0)
-                p.fill_(mean)
+                p.copy_(mean)
         else:
             raise NotImplementedError(f"``{self._initializer}`` is not configured!")
 
