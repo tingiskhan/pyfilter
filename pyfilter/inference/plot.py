@@ -1,7 +1,7 @@
 from math import ceil
 
 import numpy as np
-import torch
+from typing import Union, Dict
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from statsmodels.nonparametric.kde import KDEUnivariate
@@ -31,8 +31,9 @@ def _do_plot(v: np.ndarray, w: np.ndarray, ax_, name, handled, **kwargs):
     handled.append(ax_)
 
 
+# TODO: Pretty ugly...
 def mimic_arviz_posterior(
-    context: InferenceContext, state: SequentialAlgorithmState, num_cols: int = 3, ax: Axes = None, **kwargs
+    context: InferenceContext, state: SequentialAlgorithmState, num_cols: int = 3, ax: Axes = None, constrained: Union[bool, Dict[str, bool]] = True, **kwargs
 ) -> Axes:
     """
     Helper function for mimicking arviz plotting functionality.
@@ -43,27 +44,43 @@ def mimic_arviz_posterior(
         num_cols (int): number of columns.
         ax (Axes, optional): pre-defined axes to use.
     """
+    
+    if not isinstance(constrained, dict):
+        constrained = {k: constrained for k in context.parameters.keys()}
+    
+    for name in context.parameters.keys():
+        if name not in constrained:
+            constrained[name] = True
 
     if ax is None:
-        num_rows = ceil(sum(p.prior.event_shape.numel() for p in context.parameters.values()) / num_cols)
+        num_rows = ceil(sum(p.prior.get_numel(constrained[n]) for n, p in context.parameters.items()) / num_cols)
         _, ax = plt.subplots(num_rows, num_cols)
 
-    w = state.normalized_weights().cpu().numpy()
     flat_axes = ax.ravel()
-
-    handled = list()
+    weights = state.normalized_weights().cpu().numpy()
+    
+    handled = []
     fig_index = 0
 
-    for p, v in context.parameters.items():
-        if v.prior.get_numel() == 1:
+    for name, parameter in context.parameters.items():
+        numel = parameter.prior.get_numel(constrained[name])
+        
+        if not constrained[name]:
+            parameter = parameter.prior.get_unconstrained(parameter)
+        
+        if numel == 1:
             ax_ = flat_axes[fig_index]
-            _do_plot(v.cpu().numpy(), w, ax_, p, handled, **kwargs)
+            _do_plot(parameter.cpu().numpy(), weights, ax_, name, handled, **kwargs)
             fig_index += 1
-        else:
-            for i in range(v.shape[-1]):
-                ax_ = flat_axes[fig_index]
-                _do_plot(v[..., i].cpu().numpy(), w, ax_, f"{p}_{i:d}", handled, **kwargs)
-                fig_index += 1
+
+            continue
+
+        flattened = parameter.view(-1, numel).cpu().numpy()
+        
+        for i in range(numel):
+            ax_ = flat_axes[fig_index]
+            _do_plot(flattened[..., i], weights, ax_, f"{name}_{i:d}", handled, **kwargs)
+            fig_index += 1
 
     for ax_ in (ax_ for ax_ in flat_axes if ax_ not in handled):
         ax_.axis("off")
