@@ -67,16 +67,8 @@ def mimic_arviz_posterior(
         
         if not constrained[name]:
             parameter = parameter.prior.get_unconstrained(parameter)
-        
-        if numel == 1:
-            ax_ = flat_axes[fig_index]
-            _do_plot(parameter.cpu().numpy(), weights, ax_, name, handled, **kwargs)
-            fig_index += 1
-
-            continue
-
+   
         flattened = parameter.view(-1, numel).cpu().numpy()
-        
         for i in range(numel):
             ax_ = flat_axes[fig_index]
             _do_plot(flattened[..., i], weights, ax_, f"{name}_{i:d}", handled, **kwargs)
