@@ -1,5 +1,15 @@
 # Changelog
 
+# v0.28.2
+ - Bug fix for matrix shaped parameters.
+
+# v0.28.1
+ - Use `torch.Tensor.copy_` instead of `fill_`.
+
+# v0.28.0
+ - Uses stoch-proc version 0.3.0, which means that whenever the context is updated in an inference algorithm we rebuild the model.
+ - Speed improvement for SISR.
+
 # v0.27.0
  - Major change in backend by interchaning batch and sample shape in inference algorithms. This enables much more natural handling of parameters.
  - Adds support for finding mode of distribution by means of `functorch
