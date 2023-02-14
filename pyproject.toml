@@ -51,7 +51,7 @@ line-length = 120
 include = ["pyfilter*"]
 
 [tool.bumpver]
-current_version = "0.28.1"
+current_version = "0.28.2"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = false

@@ -2,7 +2,8 @@ from copy import deepcopy
 from typing import Tuple
 
 import torch
-from pyro.distributions import Distribution, TransformedDistribution
+from torch.distributions import Distribution
+from pyro.distributions import TransformedDistribution
 from pyro.distributions.transforms import Transform, biject_to
 
 
@@ -130,7 +131,7 @@ class PriorMixin(object):
             constrained (bool): whether to get the number of elements of the constrained or unconstrained distribution.
         """
 
-        return (self.event_shape if not constrained else self.unconstrained_prior().event_shape).numel()
+        return (self.event_shape if constrained else self.unconstrained_prior().event_shape).numel()
 
     def get_slice_for_parameter(self, prev_index, constrained=True) -> Tuple[slice, int]:
         numel = self.get_numel(constrained)

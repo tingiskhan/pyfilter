@@ -106,19 +106,20 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
         dim = 0
         res = [batched_gather(states[-1].timeseries_state.value, self._resampler(states[-1].weights), dim=dim)]
 
+        unsqueeze_inds = self.ssm.hidden.n_dim > 0
         for state in reversed(states[:-1]):
             density = self.ssm.hidden.build_density(state.timeseries_state)
 
             # TODO: Something is wrong here, fix
             w_state = density.log_prob(res[-1].unsqueeze(1))
-            w = state.weights.unsqueeze(0) + w_state
+            weights = state.weights.unsqueeze(0) + w_state
 
             if self.batch_shape:
-                w = w.moveaxis(1, 2)
+                weights = weights.moveaxis(1, 2)
 
-            indices = Categorical(logits=w).sample()
+            indices = Categorical(logits=weights).sample()
 
-            if self.ssm.hidden.n_dim > 0:
+            if unsqueeze_inds:
                 indices = indices.unsqueeze(-1).expand(self.particles + self.ssm.hidden.event_shape)
 
             resampled = state.timeseries_state.value.gather(0, indices)
@@ -223,6 +224,6 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         lower_method = method.lower()
         if lower_method == "ffbs":
-            self._do_pyro_ffbs(y, pyro_lib)
+            self._do_pyro_ffbs(y, pyro_lib)            
         else:
             raise NotImplementedError(f"Currently do not support '{method}'!")
