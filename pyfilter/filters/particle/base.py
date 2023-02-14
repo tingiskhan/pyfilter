@@ -224,9 +224,6 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         lower_method = method.lower()
         if lower_method == "ffbs":
-            try:
-                self._do_pyro_ffbs(y, pyro_lib)
-            except RuntimeError:
-                return
+            self._do_pyro_ffbs(y, pyro_lib)            
         else:
             raise NotImplementedError(f"Currently do not support '{method}'!")
