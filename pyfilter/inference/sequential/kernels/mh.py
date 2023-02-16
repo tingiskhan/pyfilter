@@ -38,8 +38,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
         context.resample(indices)
         state.filter_state.resample(indices)
-
-        accepted = torch.zeros_like(state.w).bool()
+        
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.batch_shape
 
         # NB: The adaptive part is inspired by https://github.com/nchopin/particles
@@ -52,6 +51,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             proposal_filter.initialize_model(sub_context)
 
+        accepted = ()
         for _ in range(self._n_steps):
             to_accept = run_pmmh(
                 context,
@@ -65,7 +65,7 @@ class ParticleMetropolisHastings(BaseKernel):
                 mutate_kernel=False,
             )
 
-            accepted |= to_accept
+            accepted += (to_accept,)
 
             if not self._is_adaptive:
                 continue
@@ -78,7 +78,7 @@ class ParticleMetropolisHastings(BaseKernel):
 
             previous_distance = distance
 
-        self.accepted = accepted.float().mean()
+        self.accepted = torch.stack(accepted, dim=0).float().mean()
         state.w.fill_(0.0)
 
         return self
