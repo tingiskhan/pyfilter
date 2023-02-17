@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.28.3
+ - Check average acceptance rate for MH kernel instead.
+
 # v0.28.2
  - Bug fix for matrix shaped parameters.
 

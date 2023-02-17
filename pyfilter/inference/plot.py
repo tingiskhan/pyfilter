@@ -71,7 +71,9 @@ def mimic_arviz_posterior(
         flattened = parameter.view(-1, numel).cpu().numpy()
         for i in range(numel):
             ax_ = flat_axes[fig_index]
-            _do_plot(flattened[..., i], weights, ax_, f"{name}_{i:d}", handled, **kwargs)
+
+            title = f"{name}_{i:d}" if numel > 1 else name
+            _do_plot(flattened[..., i], weights, ax_, title, handled, **kwargs)
             fig_index += 1
 
     for ax_ in (ax_ for ax_ in flat_axes if ax_ not in handled):
