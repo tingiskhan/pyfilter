@@ -50,8 +50,9 @@ class ParticleMetropolisHastings(BaseKernel):
         self._increases = 0
 
     def update(self, context, filter_, state: SMC2State):
-        indices = self._resampler(state.normalized_weights(), normalized=True)
+        original_context = context.copy()
 
+        indices = self._resampler(state.normalized_weights(), normalized=True)
         dist = self._proposal.build(context, state, filter_, state.parsed_data)
 
         context.resample(indices)
@@ -85,8 +86,8 @@ class ParticleMetropolisHastings(BaseKernel):
             acceptance_rate = (to_accept.float().mean() + i * acceptance_rate) / (i + 1)
 
             if acceptance_rate < self._acceptance_threshold:
-                state = self._increase_states(filter_, state)
-                return self.update(context, filter_, state)
+                state = self._increase_states(filter_, state, original_context)
+                return self.update(original_context, filter_, state)
 
             if not self._is_adaptive:
                 continue
@@ -105,7 +106,7 @@ class ParticleMetropolisHastings(BaseKernel):
         state.w.fill_(0.0)
         return state
 
-    def _increase_states(self, filter_: BaseFilter, state: SMC2State) -> SMC2State:
+    def _increase_states(self, filter_: BaseFilter, state: SMC2State, original_context) -> SMC2State:
         """
         Method that increases the number of state particles, called whenever the acceptance rate of
         :meth:`rejuvenate` falls below 20%.
@@ -117,8 +118,11 @@ class ParticleMetropolisHastings(BaseKernel):
             The updated algorithm state.
         """
 
-        if self._increases >= self._max_increases:
+        if self._increases > self._max_increases:
             raise TooManyIncreases(f"Configuration only allows {self._max_increases}!")
+
+        with original_context.no_prior_verification():
+            filter_.initialize_model(original_context)
 
         filter_.increase_particles(2.0)
         filter_.set_batch_shape(filter_.batch_shape)
