@@ -63,56 +63,6 @@ class SMC2(SequentialParticleAlgorithm):
         ess = state.tensor_tuples["ess"]
 
         if ess[-1] < (self._threshold.get_threshold(len(ess) - 1) * self.particles[0]) or any_nans:
-            state = self.rejuvenate(state)
+            state = self._kernel.update(self.context, self.filter, state)
 
         return state
-
-    def rejuvenate(self, state: SMC2State):
-        """
-        Rejuvenates the particles using a PMCMC move, called whenever the relative ESS falls below :attr:`_threshold`.
-
-        Args:
-            state: the current state of the algorithm.
-
-        Returns:
-            The updated algorithm state.
-        """
-
-        self._kernel.update(self.context, self.filter, state)
-
-        with self.context.no_prior_verification():
-            self.filter.initialize_model(self.context)
-
-        if self._kernel.accepted < 0.2 and isinstance(self.filter, ParticleFilter):
-            state = self._increase_states(state)
-
-        return state
-
-    def _increase_states(self, state: SMC2State) -> SMC2State:
-        """
-        Method that increases the number of state particles, called whenever the acceptance rate of
-        :meth:`rejuvenate` falls below 20%.
-
-        Args:
-            state: the current state of the algorithm.
-
-        Returns:
-            The updated algorithm state.
-        """
-
-        if self._increases >= self._max_increases:
-            raise Exception(f"Configuration only allows {self._max_increases}!")
-
-        self.filter.increase_particles(2.0)
-        self.filter.set_batch_shape(self.particles)
-
-        new_filter_state = self.filter.batch_filter(state.parsed_data, bar=False)
-
-        w = new_filter_state.loglikelihood - state.filter_state.loglikelihood
-        self._increases += 1
-
-        res = SMC2State(w, new_filter_state)
-        res.tensor_tuples = state.tensor_tuples
-        res.current_iteration = state.current_iteration
-
-        return res
