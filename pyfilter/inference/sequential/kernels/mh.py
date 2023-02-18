@@ -50,8 +50,11 @@ class ParticleMetropolisHastings(BaseKernel):
         self._increases = 0
 
     def update(self, context, filter_, state: SMC2State):
+        # Create copies of state and context
+        original_state = state.copy()
         original_context = context.copy()
 
+        # Resample state and context
         indices = self._resampler(state.normalized_weights(), normalized=True)
         dist = self._proposal.build(context, state, filter_, state.parsed_data)
 
@@ -63,11 +66,13 @@ class ParticleMetropolisHastings(BaseKernel):
         # NB: The adaptive part is inspired by https://github.com/nchopin/particles
         old_params = context.stack_parameters(constrained=False)
 
+        # Create a proposal context and filter
         with context.make_new() as sub_context:
             proposal_filter = filter_.copy()
             sub_context.set_batch_shape(context.batch_shape)
             proposal_filter.initialize_model(sub_context)
 
+        # Run PMMH
         previous_distance = 0.0
         acceptance_rate = 0.0
         for i in range(self._n_steps):
@@ -86,8 +91,11 @@ class ParticleMetropolisHastings(BaseKernel):
             acceptance_rate = (to_accept.float().mean() + i * acceptance_rate) / (i + 1)
 
             if acceptance_rate < self._acceptance_threshold:
-                state = self._increase_states(filter_, state, original_context)
-                return self.update(original_context, filter_, state)
+                state = original_state
+                context = original_context
+
+                state = self._increase_states(filter_, state, context)
+                return self.update(context, filter_, state)
 
             if not self._is_adaptive:
                 continue
