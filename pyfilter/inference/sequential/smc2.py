@@ -40,13 +40,10 @@ class SMC2(SequentialParticleAlgorithm):
         super().__init__(filter_, particles, context=context)
 
         self._threshold = threshold if isinstance(threshold, Thresholder) else ConstantThreshold(threshold)
-        self._kernel = ParticleMetropolisHastings(proposal=kernel, **kwargs)
+        self._kernel = ParticleMetropolisHastings(proposal=kernel, max_increases=max_increases, **kwargs)
 
         if not isinstance(self._kernel, ParticleMetropolisHastings):
             raise ValueError(f"The kernel must be of instance {ParticleMetropolisHastings.__class__.__name__}!")
-
-        self._max_increases = max_increases
-        self._increases = 0
 
     def initialize(self) -> SMC2State:
         state = super(SMC2, self).initialize()
