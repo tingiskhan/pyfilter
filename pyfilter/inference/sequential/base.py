@@ -90,7 +90,7 @@ class SequentialParticleAlgorithm(BaseAlgorithm, ABC):
 
         raise NotImplementedError()
 
-    def fit(self, y, logging=None, **kwargs) -> SequentialAlgorithmState:
+    def fit(self, y, logging=None) -> SequentialAlgorithmState:
         logging = logging or TQDMWrapper()
 
         with logging.initialize(self, y.shape[0]):
