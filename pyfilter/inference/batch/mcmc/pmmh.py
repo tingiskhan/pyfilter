@@ -82,8 +82,8 @@ class PMMH(BaseAlgorithm):
         with logging.initialize(self, self.num_samples):
             prop_dist = self._proposal.build(self.context, state, self._filter, y)
 
-            with self.context.make_new() as sub_context:                
-                sub_context.set_batch_shape(self._num_chains)                
+            with self.context.make_new() as sub_context:
+                sub_context.set_batch_shape(self._num_chains)
                 proposal_filter.initialize_model(sub_context)
 
             for i in range(self.num_samples):

@@ -86,7 +86,7 @@ class ModeFinder(object):
         x: torch.Tensor,
         y: torch.Tensor,
         old_x: torch.Tensor,
-        parameters, # We pass parameters as they need to be included, they're used implicitly
+        parameters,  # We pass parameters as they need to be included, they're used implicitly
         state: TimeseriesState,
         model: StateSpaceModel,
     ) -> torch.Tensor:

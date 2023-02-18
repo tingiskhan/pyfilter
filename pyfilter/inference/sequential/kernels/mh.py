@@ -1,8 +1,7 @@
 import torch
 
-from ....filters.base import BaseFilter
-
 from ....constants import INFTY
+from ....filters.base import BaseFilter
 from ...batch.mcmc.proposals import BaseProposal, SymmetricMH
 from ...batch.mcmc.utils import run_pmmh
 from ..state import SMC2State
@@ -11,14 +10,22 @@ from .base import BaseKernel
 
 class TooManyIncreases(Exception):
     pass
-    
+
 
 class ParticleMetropolisHastings(BaseKernel):
     """
     Implements the Particle Metropolis Hastings kernel.
     """
 
-    def __init__(self, num_steps=1, proposal: BaseProposal = None, distance_threshold: float = None, acceptance_threshold: float = 0.2, max_increases: int = 5, **kwargs):
+    def __init__(
+        self,
+        num_steps=1,
+        proposal: BaseProposal = None,
+        distance_threshold: float = None,
+        acceptance_threshold: float = 0.2,
+        max_increases: int = 5,
+        **kwargs,
+    ):
         """
         Internal initializer for :class:`ParticleMetropolisHastings`.
 
@@ -49,11 +56,11 @@ class ParticleMetropolisHastings(BaseKernel):
 
         context.resample(indices)
         state.filter_state.resample(indices)
-        
+
         shape = torch.Size([]) if any(dist.batch_shape) else filter_.batch_shape
 
         # NB: The adaptive part is inspired by https://github.com/nchopin/particles
-        old_params = context.stack_parameters(constrained=False)        
+        old_params = context.stack_parameters(constrained=False)
 
         with context.make_new() as sub_context:
             proposal_filter = filter_.copy()

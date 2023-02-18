@@ -89,7 +89,7 @@ class InferenceContext(object):
             return cls._contexts.stack[-1]
 
         raise Exception(f"There are currently no active '{InferenceContext.__name__}'!")
-    
+
     def get_shape(self, name: str, constrained=True) -> torch.Size:
         """
         Gets the shape of the parameter.
@@ -255,14 +255,14 @@ class InferenceContext(object):
             other (InferenceContext): :class:`InferenceContext` to exchange with.
             mask (torch.Tensor): a mask indicating what to exchange.
         """
-        
+
         for name, parameter in self.get_parameters():
             other_p = other.get_parameter(name)
 
             expanded_mask = mask
             if parameter.dim() > mask.dim():
                 expanded_mask = mask.reshape(mask.shape + torch.Size([1 for _ in parameter.prior.event_shape]))
-            
+
             parameter.masked_scatter_(expanded_mask, other_p[mask])
 
     def resample(self, indices: torch.IntTensor):

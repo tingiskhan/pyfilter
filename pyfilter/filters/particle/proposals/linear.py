@@ -1,8 +1,7 @@
 from typing import Tuple
 
 import torch
-from stochproc.timeseries import (AffineProcess, LinearStateSpaceModel,
-                                  TimeseriesState)
+from stochproc.timeseries import AffineProcess, LinearStateSpaceModel, TimeseriesState
 from torch.distributions import MultivariateNormal, Normal
 from torch.linalg import cholesky_ex
 

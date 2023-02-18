@@ -206,7 +206,7 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
             + obs_density.log_prob(y_reshaped).sum(0)
             + init_density.log_prob(smoothed[0])
         ).mean(0)
- 
+
         pyro_lib.factor("log_prob", log_likelihood)
 
     def do_sample_pyro(self, y: torch.Tensor, pyro_lib: pyro, method="ffbs"):
@@ -224,6 +224,6 @@ class ParticleFilter(BaseFilter[ParticleFilterCorrection, ParticleFilterPredicti
 
         lower_method = method.lower()
         if lower_method == "ffbs":
-            self._do_pyro_ffbs(y, pyro_lib)            
+            self._do_pyro_ffbs(y, pyro_lib)
         else:
             raise NotImplementedError(f"Currently do not support '{method}'!")

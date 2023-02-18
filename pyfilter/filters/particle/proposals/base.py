@@ -2,8 +2,7 @@ from abc import ABC
 from typing import Callable, Tuple
 
 import torch
-from stochproc.timeseries import (StateSpaceModel, StructuralStochasticProcess,
-                                  TimeseriesState)
+from stochproc.timeseries import StateSpaceModel, StructuralStochasticProcess, TimeseriesState
 from torch.distributions import Distribution
 
 from ..state import ParticleFilterPrediction
