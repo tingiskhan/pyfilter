@@ -322,17 +322,26 @@ class InferenceContext(object):
         Args:
             f (Callable[[PriorBoundParameter], torch.Tensor]): function to apply.
         """
-
-        new_context = self.make_new()
-
+        
+        temp = ()
         for k, v in self._prior_dict.items():
             new_tensor = f(self.get_parameter(k).clone())
 
-            new_batch_shape = new_tensor.shape[-len(self._shape_dict[k]) :]
-            new_context.set_batch_shape(new_batch_shape)
+            tot_len = len(new_tensor.shape)
+            new_batch_shape = new_tensor.shape[:tot_len - len(self._shape_dict[k])]
 
-            p = new_context.named_parameter(k, v.copy())
-            p.data = new_tensor
+            temp += ((new_batch_shape, k, v, new_tensor),)
+        
+        new_batch_shape = temp[0][0]
+        assert all(new_batch_shape == t[0] for t in temp), "All resulting batch shapes not congruent as a result of the parameter transform!"
+        
+        new_context = self.make_new()
+        new_context.set_batch_shape(new_batch_shape)
+        
+        for _, k, v, new_tensor in temp:
+            # TODO: Do I really need to copy?
+            param = new_context.named_parameter(k, v.copy())
+            param.copy_(new_tensor)
 
         return new_context
 
