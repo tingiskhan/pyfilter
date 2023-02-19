@@ -45,4 +45,4 @@ class NESSMC2(CombinedSequentialParticleAlgorithm):
         )
 
     def do_on_switch(self, first: SMC2, second: NESS, state):
-        return self._first.rejuvenate(state)
+        return state
