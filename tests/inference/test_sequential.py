@@ -10,7 +10,7 @@ def algorithms(particles=400):
     yield partial(inf.sequential.NESS, particles=particles)
     yield partial(inf.sequential.SMC2, particles=particles, num_steps=5)
     yield partial(inf.sequential.SMC2, particles=particles, num_steps=10, distance_threshold=0.1)
-    yield partial(inf.sequential.NESSMC2, particles=particles)
+    yield partial(inf.sequential.NESSMC2, particles=particles, switch=10)
 
 
 def callbacks():
