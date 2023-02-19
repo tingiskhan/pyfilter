@@ -50,10 +50,6 @@ class ParticleMetropolisHastings(BaseKernel):
         self._increases = 0
 
     def update(self, context, filter_, state: SMC2State):
-        # Create copies of state and context
-        original_state = state.copy()
-        original_context = context.copy()
-
         # Resample state and context
         indices = self._resampler(state.normalized_weights(), normalized=True)
         dist = self._proposal.build(context, state, filter_, state.parsed_data)
