@@ -11,7 +11,7 @@ authors = [
 ]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 
 keywords = ["stochastic", "timeseries"]
 
@@ -51,7 +51,7 @@ line-length = 120
 include = ["pyfilter*"]
 
 [tool.bumpver]
-current_version = "0.28.3"
+current_version = "0.28.4"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = false

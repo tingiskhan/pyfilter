@@ -44,6 +44,10 @@ class OnlineKernel(BaseKernel):
             jittered = (1 - to_jitter) * stacked[indices] + to_jitter * jittered
 
         context.unstack_parameters(jittered, constrained=False)
+
+        with context.no_prior_verification():
+            filter_.initialize_model(context)
+
         state.w.fill_(0.0)
 
-        return self
+        return state

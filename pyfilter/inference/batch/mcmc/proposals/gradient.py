@@ -7,14 +7,14 @@ from .random_walk import RandomWalk
 
 # Merge...
 def _model_likelihood(
-        time: torch.Tensor,
-        x: torch.Tensor,
-        y: torch.Tensor,
-        parameters, # We pass parameters as they need to be included, they're used implicitly
-        state,
-        model,
-        context
-        ) -> torch.Tensor:
+    time: torch.Tensor,
+    x: torch.Tensor,
+    y: torch.Tensor,
+    parameters,  # We pass parameters as they need to be included, they're used implicitly
+    state,
+    model,
+    context,
+) -> torch.Tensor:
     # Create states
     x_tm1 = state.propagate_from(values=x[:-1], time_increment=time[:-1])
     x_t = state.propagate_from(values=x[1:], time_increment=time[1:])
@@ -23,12 +23,12 @@ def _model_likelihood(
     hidden_dens = model.hidden.build_density(x_tm1)
     obs_dens = model.build_density(x_t)
 
-    y = y.reshape(y.shape[:1] + torch.Size([1 for _ in hidden_dens.batch_shape[1:]]) + obs_dens.event_shape)        
+    y = y.reshape(y.shape[:1] + torch.Size([1 for _ in hidden_dens.batch_shape[1:]]) + obs_dens.event_shape)
 
     return (
-        model.hidden.initial_distribution.log_prob(x[0]).mean(0) +
-        context.eval_priors(constrained=False) +
-        (hidden_dens.log_prob(x_t.value) + obs_dens.log_prob(y)).sum(0).mean(0)
+        model.hidden.initial_distribution.log_prob(x[0]).mean(0)
+        + context.eval_priors(constrained=False)
+        + (hidden_dens.log_prob(x_t.value) + obs_dens.log_prob(y)).sum(0).mean(0)
     )
 
 
@@ -59,24 +59,26 @@ class GradientBasedProposal(RandomWalk):
             raise NotImplementedError("Currently does not support `use_second_order`!")
 
         super().__init__(**kwargs)
-        self._eps = self._scale ** 2.0 / 2.0
+        self._eps = self._scale**2.0 / 2.0
         self._use_second_order = use_second_order
 
     def build(self, context, state, filter_, y):
         # Smooth
-        smoothed = filter_.smooth(state.filter_state.states)        
+        smoothed = filter_.smooth(state.filter_state.states)
         time = torch.stack([s.timeseries_state.time_index for s in state.filter_state.states])
 
         # As the first state's time value is zero, we use that
         first_state = state.filter_state.states[0].get_timeseries_state()
-                
+
         # Create densities
         parameters = context.parameters.values()
         for parameter in parameters:
             parameter.requires_grad_(True)
 
         # TODO: Use functorch...
-        model = filter_._model_builder(context)     # We recreate model as the gradients haven't been registered
+        with context.no_prior_verification():
+            model = filter_._model_builder(context)  # We recreate model as the gradients haven't been registered
+            
         logl = _model_likelihood(time, smoothed, y, parameters, first_state, model, context)
         logl.backward(torch.ones_like(logl))
 
@@ -86,9 +88,9 @@ class GradientBasedProposal(RandomWalk):
         locs = tuple()
         for name, parameter in context.get_parameters():
             parameter.detach_()
-            numel = context.get_shape(name, False).numel()            
+            numel = context.get_shape(name, False).numel()
             unconstrained = (parameter.get_unconstrained() + self._eps * parameter.grad).view(-1, numel)
-            
+
             locs += (unconstrained,)
 
         loc = torch.cat(locs, dim=-1)

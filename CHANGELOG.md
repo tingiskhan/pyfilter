@@ -1,5 +1,8 @@
 # Changelog
 
+# v0.28.4
+ - Improves speed of SMC^2 when we require an increase in state particles by checking acceptance rate threshold in kernel instead.
+
 # v0.28.3
  - Check average acceptance rate for MH kernel instead.
 

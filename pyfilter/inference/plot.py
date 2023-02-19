@@ -1,7 +1,7 @@
 from math import ceil
+from typing import Dict, Union
 
 import numpy as np
-from typing import Union, Dict
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from statsmodels.nonparametric.kde import KDEUnivariate
@@ -33,7 +33,12 @@ def _do_plot(v: np.ndarray, w: np.ndarray, ax_, name, handled, **kwargs):
 
 # TODO: Pretty ugly...
 def mimic_arviz_posterior(
-    context: InferenceContext, state: SequentialAlgorithmState, num_cols: int = 3, ax: Axes = None, constrained: Union[bool, Dict[str, bool]] = True, **kwargs
+    context: InferenceContext,
+    state: SequentialAlgorithmState,
+    num_cols: int = 3,
+    ax: Axes = None,
+    constrained: Union[bool, Dict[str, bool]] = True,
+    **kwargs,
 ) -> Axes:
     """
     Helper function for mimicking arviz plotting functionality.
@@ -44,10 +49,10 @@ def mimic_arviz_posterior(
         num_cols (int): number of columns.
         ax (Axes, optional): pre-defined axes to use.
     """
-    
+
     if not isinstance(constrained, dict):
         constrained = {k: constrained for k in context.parameters.keys()}
-    
+
     for name in context.parameters.keys():
         if name not in constrained:
             constrained[name] = True
@@ -58,16 +63,16 @@ def mimic_arviz_posterior(
 
     flat_axes = ax.ravel()
     weights = state.normalized_weights().cpu().numpy()
-    
+
     handled = []
     fig_index = 0
 
     for name, parameter in context.parameters.items():
         numel = parameter.prior.get_numel(constrained[name])
-        
+
         if not constrained[name]:
             parameter = parameter.prior.get_unconstrained(parameter)
-   
+
         flattened = parameter.view(-1, numel).cpu().numpy()
         for i in range(numel):
             ax_ = flat_axes[fig_index]
