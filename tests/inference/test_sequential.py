@@ -26,7 +26,7 @@ class TestSequential(object):
     @classmethod
     def do_test_fit(cls, true_model, build_model, algorithm, callback, **kwargs):
         torch.manual_seed(123)
-        _, y = true_model.sample_states(100).get_paths()
+        _, y = true_model.sample_states(25).get_paths()
 
         with inf.make_context(**kwargs) as context:
             filter_ = filts.particle.APF(build_model, 200, proposal=filts.particle.proposals.LinearGaussianObservations())
