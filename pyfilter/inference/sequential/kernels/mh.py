@@ -88,14 +88,11 @@ class ParticleMetropolisHastings(BaseKernel):
                 mutate_kernel=False,
             )
 
+            # NB: We abort as soon as possible to avoid wasting a lot of compute time
             acceptance_rate = (to_accept.float().mean() + i * acceptance_rate) / (i + 1)
 
             if acceptance_rate < self._acceptance_threshold:
-                state = original_state
-                context = original_context
-
-                state = self._increase_states(filter_, state, context)
-                return self.update(context, filter_, state)
+                return self._increase_states(filter_, state, context)
 
             if not self._is_adaptive:
                 continue
