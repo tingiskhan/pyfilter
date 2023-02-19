@@ -46,7 +46,7 @@ class TestSequential(object):
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("callback", callbacks())
     def test_enforce_particle_increase(self, models, callback):
-        algorithm = partial(inf.sequential.NESSMC2, particles=400, switch=10)
+        algorithm = partial(inf.sequential.SMC2, particles=400)
         self.do_test_fit(*models, algorithm, callback, particles=5)
 
     @pytest.mark.parametrize("models", linear_models())
