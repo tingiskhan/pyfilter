@@ -24,12 +24,12 @@ def quasi_supported_algorithms(particles=400):
 
 class TestSequential(object):
     @classmethod
-    def do_test_fit(cls, true_model, build_model, algorithm, callback, **kwargs):
+    def do_test_fit(cls, true_model, build_model, algorithm, callback, particles=200, **kwargs):
         torch.manual_seed(123)
         _, y = true_model.sample_states(25).get_paths()
 
         with inf.make_context(**kwargs) as context:
-            filter_ = filts.particle.APF(build_model, 200, proposal=filts.particle.proposals.LinearGaussianObservations())
+            filter_ = filts.particle.APF(build_model, particles, proposal=filts.particle.proposals.LinearGaussianObservations())
             alg = algorithm(filter_)
 
             alg.register_callback(callback)
@@ -42,6 +42,12 @@ class TestSequential(object):
     @pytest.mark.parametrize("callback", callbacks())
     def test_algorithms(self, models, algorithm, callback):
         self.do_test_fit(*models, algorithm, callback)
+
+    @pytest.mark.parametrize("models", linear_models())
+    @pytest.mark.parametrize("callback", callbacks())
+    def test_enforce_particle_increase(self, models, callback):
+        algorithm = partial(inf.sequential.NESSMC2, particles=400, switch=10)
+        self.do_test_fit(*models, algorithm, callback, particles=5)
 
     @pytest.mark.parametrize("models", linear_models())
     @pytest.mark.parametrize("algorithm", algorithms())
