@@ -119,6 +119,7 @@ class ParticleMetropolisHastings(BaseKernel):
             The updated algorithm state.
         """
 
+        self._increases += 1
         if self._increases > self._max_increases:
             raise TooManyIncreases(f"Configuration only allows {self._max_increases}!")
 
@@ -129,9 +130,7 @@ class ParticleMetropolisHastings(BaseKernel):
         filter_.set_batch_shape(filter_.batch_shape)
 
         new_filter_state = filter_.batch_filter(state.parsed_data, bar=False)
-
-        weight = new_filter_state.loglikelihood - state.filter_state.loglikelihood
-        self._increases += 1
+        weight = new_filter_state.loglikelihood - state.filter_state.loglikelihood        
 
         # TODO: This manual specification is not great...
         res = SMC2State(weight, new_filter_state)
