@@ -39,3 +39,7 @@ class NestedProposal(Proposal):
         best_particle = samples.take_along_dim(best_sample.unsqueeze(0), dim=0).squeeze(0)
         
         return temp_state.copy(values=best_particle), log_prob.exp().mean(dim=0).log()
+
+    def copy(self) -> "Proposal":
+        return NestedProposal(self._num_samples[0])
+    
