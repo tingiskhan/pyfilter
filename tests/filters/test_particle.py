@@ -29,6 +29,7 @@ def construct_filters(particles=1_500, skip_gpf=False, **kwargs):
 
     for pt in (part.APF, part.SISR):
         yield _create_partial(pt, particles=particles, proposal=part.proposals.Bootstrap(), **kwargs)
+        yield _create_partial(pt, particles=particles, proposal=part.proposals.NestedProposal(50), **kwargs)
 
         for use_hessian in [False, True]:
             for use_functorch in [False, True]:
