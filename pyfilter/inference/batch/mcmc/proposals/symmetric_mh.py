@@ -19,7 +19,7 @@ class SymmetricMH(BaseProposal):
             values,
             weights,
             scale=1.1,
-            quasi_key=context.quasi_key if isinstance(context, QuasiInferenceContext) else None,
+            quasi_engine=context.quasi_engine if isinstance(context, QuasiInferenceContext) else None,
         )
 
     def exchange(self, latest, candidate, mask: torch.Tensor) -> None:
