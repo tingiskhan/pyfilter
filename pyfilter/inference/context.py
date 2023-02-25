@@ -10,7 +10,7 @@ from pyro.distributions import Distribution
 
 from .parameter import PriorBoundParameter
 from .prior import PriorMixin
-from .qmc import QuasiRegistry
+from .qmc import EngineContainer
 
 
 class NotSamePriorError(Exception):
@@ -40,7 +40,12 @@ class InferenceContext(object):
 
     # NB: Same approach as in PyMC3
     _contexts = threading.local()
-    _contexts.stack = list()
+
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls._contexts, "stack"):
+            cls._contexts.stack = []
+        
+        return super(InferenceContext, cls).__new__(cls)
 
     def __init__(self):
         """
@@ -383,24 +388,21 @@ class QuasiInferenceContext(InferenceContext):
         """
 
         super().__init__()
-        self.quasi_key: int = None
+        self.quasi_engine: EngineContainer = None
         self._randomize = randomize
 
     def initialize_parameters(self):
         # NB: We use the un-constrained shape as that is what all algorithms use
         out = self.stack_parameters(constrained=False)
 
-        self.quasi_key = QuasiRegistry.add_engine(id(self), out.shape[-1], self._randomize)
-        probs = QuasiRegistry.sample(self.quasi_key, self.batch_shape).to(out.device)
+        self.quasi_engine = EngineContainer(out.shape[-1], self._randomize)
+        probs = self.quasi_engine.sample(self.batch_shape).to(out.device)
 
         self._apply_to_params(
             probs,
             self._unconstrained_shape_dict,
             lambda u, v: u.inverse_sample_(v.view(self.batch_shape + u.prior.event_shape), constrained=False),
         )
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        super().__exit__(exc_type, exc_val, exc_tb)
 
     def make_new(self) -> "InferenceContext":
         return QuasiInferenceContext(randomize=self._randomize)

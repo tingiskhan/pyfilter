@@ -4,6 +4,7 @@ import torch
 from pyfilter import inference as inf
 from stochproc import timeseries as ts
 from pyro.distributions import Normal, LogNormal
+from concurrent import futures
 
 from pyfilter.inference.context import NotSamePriorError
 
@@ -178,3 +179,16 @@ class TestContext(object):
 
         for (ck, cv), (k, v) in zip(copy_context.parameters.items(), context.parameters.items()):
             assert (ck == k) and (cv == v).all() and (cv.prior.equivalent_to(v.prior))
+
+    @pytest.mark.parametrize("use_quasi", [False, True])
+    @pytest.mark.parametrize("shape", BATCH_SHAPES)
+    def test_threading(self, use_quasi, shape):
+        def initialize(uq, s):
+            with inf.make_context(uq) as context:
+                context.set_batch_shape(s)
+
+                assert (context.stack[-1] is context) and len(context.stack) == 1
+
+        n = 5
+        with futures.ThreadPoolExecutor(n) as pool:
+            pool.map(initialize, n * ((use_quasi, shape)))

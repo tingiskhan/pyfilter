@@ -1,31 +1,28 @@
-import threading
-from collections import OrderedDict
-
 import torch
 import torch.quasirandom as qr
 
 from ..constants import EPS2
 
 
-class _EngineContainer(object):
+class EngineContainer(object):
     """
     Container for QMC engines.
     """
 
-    def __init__(self, engine: qr.SobolEngine, randomize: bool):
+    def __init__(self, dim: int, randomize: bool):
         """
         Internal initializer for :class:`_EngineContainer`.
 
         Args:
-            engine (qr.SobolEngine): quasi random engine.
+            dim (int): dimension of sample space.
             randomize (bool): whether to randomize.
         """
 
-        self._engine = engine
+        self._engine = qr.SobolEngine(dim, scramble=True)
         self._randomize = randomize
         self._rotation_vector: torch.Tensor = None
 
-    def draw(self, shape: torch.Size) -> torch.Tensor:
+    def sample(self, shape: torch.Size) -> torch.Tensor:
         """
         Draws samples from the QMC engine.
 
@@ -53,55 +50,3 @@ class _EngineContainer(object):
 
         new_shape = shape + torch.Size([self._engine.dimension])
         return safe_probs.reshape(new_shape)
-
-
-class QuasiRegistry(object):
-    r"""
-    Registry for quasi random engines.
-    """
-
-    _registry = threading.local()
-    _registry.registry = OrderedDict([])
-
-    @classmethod
-    def add_engine(cls, key: int, dim: int, randomize: bool, raise_if_exists: int = False) -> int:  # noqa: F821
-        """
-        Adds an engine to the QMC registry.
-
-        Args:
-            key (int): key to use for the engine.
-            dim (int): dimension of to sample.
-            randomize (bool): whether to randomize the QMC points via rotation.
-            raise_if_exists (bool): raise error if trying to create an engine that already exists.
-
-        Returns:
-            Returns the key to use when sampling. The key is currently the dimension of the space.
-        """
-
-        if key in cls._registry.registry:
-            if raise_if_exists:
-                raise KeyError("Already have an engine with the same dimension!")
-
-            return key
-
-        cls._registry.registry[key] = _EngineContainer(qr.SobolEngine(dimension=dim, scramble=True), randomize)
-
-        return key
-
-    @classmethod
-    def get_engine(cls, key: int) -> _EngineContainer:
-        return cls._registry.registry[key]
-
-    @classmethod
-    def sample(cls, key: int, shape: torch.Size) -> torch.Tensor:
-        engine = cls.get_engine(key)
-        return engine.draw(shape)
-
-    @classmethod
-    def clear_registry(cls):
-        cls._registry.registry.clear()
-
-    @classmethod
-    def remove_engine(cls, key: int):
-        if key in cls._registry.registry:
-            cls._registry.registry.pop(key)
