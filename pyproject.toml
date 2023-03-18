@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "torch>1.9.0",
+    "torch>=2.0",
     "pyro-ppl>=1.8.2",
     "tqdm>=4.26",
     "stochproc @ git+https://github.com/tingiskhan/stoch-proc.git@v0.3.0#egg=stochproc",
@@ -38,7 +38,8 @@ dependencies = [
 dev = [
     "pytest>=7.1.2",
     "pykalman @ git+https://github.com/osh/pykalman@loglikelihood-fix#egg=pykalman", # Watch out for this one...
-    "numpy>=1.21.6"
+    "numpy>=1.21.6",
+    "bumpver>=2022.1120"
 ]
 
 [project.urls]
@@ -51,7 +52,7 @@ line-length = 120
 include = ["pyfilter*"]
 
 [tool.bumpver]
-current_version = "0.29.0"
+current_version = "0.30.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = false
