@@ -2,6 +2,8 @@ from collections import OrderedDict
 
 import torch
 from torch.nn import Parameter
+from torch.utils.weak import WeakTensorKeyDictionary
+from threading import local
 
 from .prior import PriorMixin
 
@@ -16,14 +18,21 @@ def _rebuild_parameter(data, requires_grad, backward_hooks, name, context):
     return param
 
 
+_LOCALS = local()
+_LOCALS.context_map = WeakTensorKeyDictionary()
+
+
 class PriorBoundParameter(Parameter):
     """
     Extends :class:`torch.nn.Parameter` by adding helper methods relating to sampling and updating values from
     its bound prior.
     """
 
-    _context: "InferenceContext" = None  # noqa: F821
     _name: str = None
+
+    @property
+    def _context(self) -> "InferenceContext":
+        return _LOCALS.context_map[self]
 
     def set_name(self, name: str):
         """
@@ -35,8 +44,6 @@ class PriorBoundParameter(Parameter):
 
         self._name = name
 
-    # TODO: Should be done on __init__/__new__
-    # TODO: Might have to add
     def set_context(self, context: "InferenceContext"):  # noqa: F821
         """
         Sets the context of the parameter.
@@ -45,7 +52,7 @@ class PriorBoundParameter(Parameter):
             context (InferenceContext): the context.
         """
 
-        self._context = context
+        _LOCALS.context_map[self] = context
 
     @property
     def prior(self) -> PriorMixin:
